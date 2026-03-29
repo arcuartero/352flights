@@ -26,8 +26,9 @@ This repo starts the product in three layers:
 ### Web
 
 - A launch-ready landing page for `Lux Flight Deals`
-- A `POST /api/subscribe` route that stores emails in Supabase when env vars are present
-- A public preference flow at `/preferences` for routes, trip shapes, stops, and budget
+- A `POST /api/subscribe` route with welcome email + double opt-in
+- Public confirmation and unsubscribe flows at `/confirm` and `/unsubscribe`
+- A public preference flow at `/preferences` for trip style, stops, cadence, and budget
 - A protected internal dashboard at `/ops`
 - A route seed view so the product story matches the scanner configuration
 
@@ -69,6 +70,7 @@ Optional scanner tuning:
 - `SCANNER_FLASH_RATIO`
 - `SCANNER_HISTORY_WINDOW`
 - `RESEND_REPLY_TO_EMAIL`
+- `CRON_SECRET`
 
 ## Web App
 
@@ -99,7 +101,13 @@ The ops board now also includes:
 
 ### Preference Flow
 
-After a successful signup, the homepage redirects the subscriber to:
+After a successful signup, the homepage sends a welcome email. The subscriber confirms via:
+
+```text
+http://localhost:3000/confirm?token=...
+```
+
+Then they manage their profile at:
 
 ```text
 http://localhost:3000/preferences?token=...
@@ -107,10 +115,8 @@ http://localhost:3000/preferences?token=...
 
 That page stores:
 
-- preferred route buckets
-- chosen destinations
+- preferred trip styles
 - max stops preference
-- trip-night range
 - optional EUR budget ceiling
 - delivery mode
 
@@ -121,7 +127,7 @@ Run these SQL files in order:
 1. `supabase/schema.sql`
 2. `supabase/seed.sql`
 
-If you already ran an earlier version of the schema, run the updated `supabase/schema.sql` again so the new email campaign tables and deal review timestamps are added.
+If you already ran an earlier version of the schema, run the updated `supabase/schema.sql` again so the new opt-in tokens, automation settings, and deal lifecycle fields are added.
 
 The API route uses the service role key on the server, so RLS can stay enabled.
 
@@ -129,20 +135,21 @@ The API route uses the service role key on the server, so RLS can stay enabled.
 
 `/ops` can now send:
 
-- `digest` campaigns to subscribers whose saved profile matches approved digest deals
-- `flash` campaigns to subscribers whose saved profile matches approved flash deals
+- `digest` campaigns to subscribers whose saved profile matches reviewed digest deals
+- `flash` campaigns to subscribers whose saved profile matches reviewed flash deals
 
 Matching logic currently checks:
 
 - preferred route bucket
-- selected destination routes
+- routes implied by the selected trip styles
 - max stops preference
-- trip-night range
 - budget ceiling
 - delivery mode
 
 Emails are sent through Resend with:
 
+- welcome emails and confirmation links
+- preview + send-test support from `/ops`
 - per-recipient rendering
 - Supabase campaign logs in `email_campaigns`
 - per-recipient delivery logs in `email_deliveries`
@@ -167,6 +174,8 @@ Behavior:
 
 `.github/workflows/scan-lux-deals.yml` runs the scanner daily.
 
+`.github/workflows/send-daily-digest.yml` can trigger the scheduled digest endpoint every 5 minutes, while `/ops` decides the actual Luxembourg local send time.
+
 The schedule is:
 
 - every day at `08:00` Luxembourg time (`Europe/Luxembourg`)
@@ -177,6 +186,8 @@ Add these repository secrets before enabling it:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SCANNER_CURRENCY`
+- `APP_BASE_URL`
+- `CRON_SECRET`
 
 ### Activation Checklist
 
@@ -188,12 +199,15 @@ To make the cron actually run in GitHub:
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SCANNER_CURRENCY`
+   - `APP_BASE_URL`
+   - `CRON_SECRET`
 4. Open the `Actions` tab and enable workflows if GitHub asks.
 5. Trigger `Scan Lux Flight Deals` once with `Run workflow` to verify the first run.
-6. After that, the daily schedule will keep running automatically.
+6. Trigger `Send Daily Lux Digest` once after deployment to verify the cron endpoint.
+7. After that, the daily schedules will keep running automatically.
 
 ## Next Steps
 
-1. Move campaign sending into a background job once the audience grows past manual-ops size.
-2. Add click tracking and booking-link instrumentation per route.
-3. Add unsubscribe and one-click pause flows in outbound emails.
+1. Add click tracking and booking-link instrumentation per route.
+2. Add deal deduping/expiry heuristics beyond the manual `expired` state.
+3. Tighten sender reputation with a verified domain and domain-level monitoring.

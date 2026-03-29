@@ -252,6 +252,7 @@ main {
 .newsletter-form__input:focus-visible,
 .newsletter-form__button:focus-visible,
 .preferences-field input:focus-visible,
+.ops-inline-field input:focus-visible,
 .preferences-submit:focus-visible,
 .preferences-link:focus-visible,
 .ops-button:focus-visible {
@@ -831,43 +832,129 @@ main {
 .preferences-shell {
   min-height: 100svh;
   padding-bottom: 4rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 84%, transparent), color-mix(in srgb, var(--panel) 94%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 42%, transparent), transparent 34%);
 }
 
 .preferences-hero {
-  padding: 1.4rem 0 1.9rem;
-  border-bottom: 1px solid var(--line);
+  padding: 1.35rem 0 1.9rem;
 }
 
-.preferences-hero__grid {
+.preferences-hero__bento {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.66fr);
-  gap: 1.4rem;
-  align-items: end;
+  grid-template-columns: 1.25fr 0.7fr 0.7fr;
+  grid-auto-rows: minmax(140px, auto);
+  gap: 0.95rem;
 }
 
-.preferences-hero__notes {
+.preferences-bento {
+  position: relative;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
-.preferences-hero__notes article {
-  padding: 1rem 1rem 1.05rem;
+  gap: 0.55rem;
+  min-height: 100%;
+  padding: 1rem;
   border: var(--border-soft);
-  border-radius: 1.25rem;
-  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border-radius: 1.45rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 96%, transparent), color-mix(in srgb, var(--panel) 94%, transparent));
+  box-shadow: var(--shadow-sm);
 }
 
-.preferences-hero__notes span {
+.preferences-bento::after {
+  content: "";
+  position: absolute;
+  inset: auto -12% -38% auto;
+  width: 180px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 26%, transparent);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.preferences-bento span,
+.preferences-overview-card span {
   display: block;
   color: var(--muted);
   font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
 }
 
-.preferences-hero__notes strong {
+.preferences-bento strong,
+.preferences-overview-card strong {
   display: block;
-  margin-top: 0.36rem;
+  margin-top: 0.18rem;
   color: var(--text-strong);
+}
+
+.preferences-bento small,
+.preferences-overview-card small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.preferences-bento p,
+.preferences-overview-card p {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 86%, transparent);
+  line-height: 1.55;
+}
+
+.preferences-bento--headline {
+  grid-column: span 2;
+  grid-row: span 2;
+  padding: 1.25rem;
+}
+
+.preferences-bento--headline p:last-child {
+  max-width: 48ch;
+}
+
+.preferences-bento--stat {
+  align-content: start;
+}
+
+.preferences-bento--stat strong {
+  font-family: var(--font-display), serif;
+  font-size: 1.55rem;
+}
+
+.preferences-bento--narrative {
+  align-content: end;
+  min-height: 220px;
+}
+
+.preferences-bento--narrative strong {
+  font-family: var(--font-display), serif;
+  font-size: clamp(1.45rem, 2.6vw, 2.15rem);
+}
+
+.preferences-bento--photo {
+  padding: 0;
+  min-height: 220px;
+}
+
+.preferences-bento--photo::after {
+  display: none;
+}
+
+.preferences-bento--photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preferences-bento--photo-wing {
+  grid-row: span 2;
+}
+
+.preferences-bento--photo-city {
+  grid-column: span 2;
+  min-height: 180px;
 }
 
 .preferences-kicker,
@@ -884,18 +971,18 @@ main {
 }
 
 .preferences-hero h1 {
-  margin-top: 0.8rem;
-  max-width: 12ch;
-  font-size: clamp(2.8rem, 6vw, 4.8rem);
+  margin-top: 0.65rem;
+  max-width: 10ch;
+  font-size: clamp(3rem, 6vw, 5.2rem);
 }
 
 .preferences-panel {
-  margin-top: 1.3rem;
-  padding: 1.35rem;
+  margin-top: 0.65rem;
+  padding: 1.1rem;
   border: var(--border-soft);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 94%, transparent), color-mix(in srgb, var(--panel) 96%, transparent));
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 96%, transparent), color-mix(in srgb, var(--panel) 95%, transparent));
   box-shadow: var(--shadow-md);
 }
 
@@ -921,7 +1008,7 @@ main {
   padding: 1rem 1.1rem;
   border: var(--border-soft);
   border-radius: 1.2rem;
-  background: color-mix(in srgb, var(--panel-muted) 92%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), color-mix(in srgb, var(--panel) 94%, transparent));
 }
 
 .preferences-summary span {
@@ -941,14 +1028,86 @@ main {
   margin-top: 1.2rem;
 }
 
+.preferences-form--bento {
+  gap: 1.05rem;
+}
+
+.preferences-overview-bento {
+  display: grid;
+  grid-template-columns: 1.15fr 0.72fr 0.72fr;
+  gap: 0.9rem;
+  margin-top: 1.15rem;
+}
+
+.preferences-overview-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 0.45rem;
+  min-height: 100%;
+  padding: 1rem 1.05rem;
+  border: var(--border-soft);
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-muted) 92%, transparent));
+  box-shadow: var(--shadow-sm);
+}
+
+.preferences-overview-card::after {
+  content: "";
+  position: absolute;
+  inset: auto auto -40% -10%;
+  width: 150px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 24%, transparent);
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.preferences-overview-card--summary {
+  grid-row: span 2;
+  align-content: start;
+  padding: 1.15rem;
+}
+
+.preferences-overview-card--summary h2 {
+  margin: 0.12rem 0 0;
+  max-width: 12ch;
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  line-height: 0.98;
+}
+
+.preferences-overview-card--wide {
+  grid-column: span 2;
+}
+
 .preferences-section {
+  position: relative;
+  overflow: hidden;
   padding: 1.25rem;
   border: var(--border-soft);
   border-radius: 1.35rem;
-  background: color-mix(in srgb, var(--panel-muted) 90%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-muted) 94%, transparent), color-mix(in srgb, var(--panel) 90%, transparent));
+  box-shadow: var(--shadow-sm);
+}
+
+.preferences-section::after {
+  content: "";
+  position: absolute;
+  inset: auto -5% -38% auto;
+  width: 180px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 18%, transparent);
+  filter: blur(36px);
+  pointer-events: none;
 }
 
 .preferences-section__intro {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 0.5rem;
   margin-bottom: 1rem;
@@ -1051,12 +1210,22 @@ main {
 
 .preferences-section--controls {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.95rem;
 }
 
 .preferences-control-block {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 0.9rem;
+  align-content: start;
+  min-height: 100%;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel-muted) 88%, transparent));
 }
 
 .preferences-field {
@@ -1078,6 +1247,151 @@ main {
   color: var(--text);
 }
 
+.preferences-field select {
+  min-height: 3.15rem;
+  padding: 0 0.95rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.95rem;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  color: var(--text);
+}
+
+.preferences-subcopy {
+  margin: 0;
+  color: var(--muted);
+}
+
+.preferences-weekday-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.preferences-weekday {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    transform var(--ease-standard),
+    border-color var(--ease-standard),
+    background var(--ease-standard),
+    box-shadow var(--ease-standard);
+}
+
+.preferences-weekday:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--accent-wash) 90%, transparent);
+}
+
+.preferences-weekday input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.preferences-weekday span {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.preferences-weekday.is-selected {
+  border-color: color-mix(in srgb, var(--accent-strong) 72%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 84%, transparent), color-mix(in srgb, var(--panel) 94%, transparent));
+}
+
+.preferences-custom-rules {
+  display: grid;
+  gap: 1rem;
+}
+
+.preferences-rule-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: var(--border-soft);
+  border-radius: 1.2rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, transparent), color-mix(in srgb, var(--panel-muted) 90%, transparent));
+  box-shadow: var(--shadow-sm);
+}
+
+.preferences-rule-card::after {
+  content: "";
+  position: absolute;
+  inset: auto auto -44% -8%;
+  width: 160px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 18%, transparent);
+  filter: blur(34px);
+  pointer-events: none;
+}
+
+.preferences-rule-card__header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.preferences-rule-card__header h3 {
+  margin: 0.25rem 0 0;
+  font-size: 1.1rem;
+}
+
+.preferences-rule-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.preferences-rule-block {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.preferences-inline-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.8rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.preferences-inline-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.preferences-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--muted);
+}
+
+.preferences-toggle input {
+  accent-color: var(--accent-strong);
+}
+
 .preferences-footer {
   position: sticky;
   bottom: 1rem;
@@ -1090,6 +1404,14 @@ main {
   border-radius: 1.2rem;
   background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
   backdrop-filter: blur(16px);
+}
+
+.preferences-inline-note {
+  margin-top: 1rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 1.2rem;
+  background: linear-gradient(90deg, var(--accent-wash), transparent);
 }
 
 .preferences-status {
@@ -1110,9 +1432,28 @@ main {
   width: fit-content;
 }
 
+.preferences-link--ghost {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.preferences-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
 .preferences-loading,
 .preferences-empty {
   padding: 1.2rem 0.2rem;
+}
+
+.preferences-empty--stacked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
 }
 
 .ops-shell {
@@ -1208,6 +1549,35 @@ main {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.9rem;
   margin-top: 1.4rem;
+}
+
+.ops-state-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  width: min(calc(100% - 0.5rem), var(--max-width));
+  margin: 0.95rem auto 0;
+}
+
+.ops-state-strip article {
+  padding: 0.95rem 1rem 1.05rem;
+  border: var(--border-soft);
+  border-radius: 1.15rem;
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.ops-state-strip span {
+  display: block;
+  color: var(--muted);
+}
+
+.ops-state-strip strong {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-strong);
+  font-family: var(--font-display), serif;
+  font-size: 1.7rem;
 }
 
 .ops-metrics article {
@@ -1347,6 +1717,39 @@ main {
   display: flex;
 }
 
+.ops-send-form--stacked,
+.ops-automation-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ops-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
+.ops-inline-field {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.ops-inline-field span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.ops-inline-field input {
+  min-height: 3rem;
+  padding: 0 0.95rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  color: var(--text);
+}
+
 .ops-pill-row {
   display: flex;
   flex-wrap: wrap;
@@ -1357,6 +1760,80 @@ main {
   border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
   background: color-mix(in srgb, var(--accent-soft) 90%, transparent);
   color: var(--text);
+}
+
+.ops-preview-meta {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.ops-preview-meta div {
+  padding: 0.9rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--panel-muted) 92%, transparent);
+}
+
+.ops-preview-meta span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ops-preview-meta strong,
+.ops-preview-deal strong {
+  color: var(--text-strong);
+}
+
+.ops-preview-meta p,
+.ops-preview-deal p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.ops-preview-deals {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.ops-preview-deal {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: flex-start;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--panel-muted) 92%, transparent);
+}
+
+.ops-preview-deal span {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.ops-email-preview {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--panel-muted) 92%, transparent);
+  overflow: hidden;
+}
+
+.ops-email-preview summary {
+  cursor: pointer;
+  padding: 0.95rem 1rem;
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.ops-email-preview iframe {
+  width: 100%;
+  min-height: 31rem;
+  border: 0;
+  background: white;
 }
 
 .ops-deals {
@@ -1681,6 +2158,55 @@ main {
   gap: 1rem;
 }
 
+.price-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  background: color-mix(in srgb, var(--bg) 42%, rgba(3, 8, 16, 0.72));
+  backdrop-filter: blur(10px);
+}
+
+.price-modal__panel {
+  width: min(1180px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.price-modal__chrome {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.price-modal__close {
+  min-height: 2.9rem;
+  padding: 0 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  color: var(--text-strong);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform var(--ease-standard),
+    border-color var(--ease-standard),
+    background var(--ease-standard);
+}
+
+.price-modal__close:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 54%, transparent);
+}
+
+.price-modal__close:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 3px;
+}
+
 .price-focus__header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1812,15 +2338,18 @@ main {
 
 @media (max-width: 1080px) {
   .hero__content,
-  .preferences-hero__grid,
+  .preferences-hero__bento,
+  .preferences-overview-bento,
   .ops-grid,
   .ops-send-grid,
+  .ops-state-strip,
   .price-intelligence__intro,
   .price-route-grid,
   .ops-metrics,
   .preferences-chip-grid,
   .preferences-choice-grid,
   .preferences-fields,
+  .preferences-rule-grid,
   .workflow,
   .bucket-list,
   .hero__ticker {
@@ -1835,6 +2364,10 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .price-modal__panel {
+    width: min(100%, calc(100vw - 1.5rem));
+  }
+
   .hero__visual {
     justify-content: flex-start;
   }
@@ -1845,6 +2378,7 @@ main {
   .route-table__row--body,
   .ops-deal__facts,
   .ops-send-stats,
+  .ops-state-strip,
   .price-chart__legend,
   .price-intelligence__meta,
   .price-focus__stats,
@@ -1860,8 +2394,16 @@ main {
     grid-template-columns: 1fr;
   }
 
-  .preferences-hero__notes {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .preferences-overview-card--summary,
+  .preferences-overview-card--wide,
+  .preferences-bento--headline,
+  .preferences-bento--photo-city {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .preferences-weekday-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -1889,6 +2431,7 @@ main {
   .ops-list__item,
   .ops-send-stats,
   .price-controls,
+  .price-modal__chrome,
   .price-focus__header,
   .price-chart__legend,
   .price-focus__stats,
@@ -1901,13 +2444,17 @@ main {
     display: grid;
   }
 
+  .price-modal {
+    padding: 0.75rem;
+  }
+
   .preferences-summary,
   .ops-auth-note {
     justify-items: start;
   }
 
-  .preferences-hero__notes {
-    grid-template-columns: 1fr;
+  .preferences-weekday-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .ops-auth-note {
@@ -1948,6 +2495,22 @@ main {
     padding: 1rem;
   }
 
+  .preferences-hero {
+    padding-top: 0.35rem;
+  }
+
+  .preferences-panel {
+    padding: 0.9rem;
+  }
+
+  .preferences-bento,
+  .preferences-overview-card,
+  .preferences-section,
+  .preferences-control-block,
+  .preferences-rule-card {
+    border-radius: 1.1rem;
+  }
+
   .hero__content {
     padding: 1.25rem 0.1rem 0.5rem;
   }
@@ -1986,6 +2549,10 @@ main {
   .route-table__row--body span {
     display: grid;
     gap: 0.18rem;
+  }
+
+  .preferences-weekday-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .price-route-grid {

@@ -26,7 +26,17 @@ type RenderCampaignEmailInput = {
   subject: string;
   previewText: string;
   managePreferencesUrl: string;
+  unsubscribeUrl: string;
   deals: RenderableDeal[];
+};
+
+type RenderWelcomeEmailInput = {
+  email: string;
+  confirmUrl: string;
+  managePreferencesUrl: string;
+  unsubscribeUrl: string;
+  alreadyConfirmed: boolean;
+  onboardingCompleted: boolean;
 };
 
 type SendResendEmailInput = {
@@ -34,7 +44,8 @@ type SendResendEmailInput = {
   subject: string;
   html: string;
   text: string;
-  sendType: CampaignSendType;
+  emailType: "campaign" | "campaign_test" | "welcome";
+  sendType?: CampaignSendType;
   idempotencyKey: string;
 };
 
@@ -249,7 +260,8 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                       <p style="margin: 0; color: #6b7780; font-size: 13px; line-height: 1.7;">
                         You are receiving this because you asked for Luxembourg flight deals matched to your route profile.
                         <a href="${escapeHtml(input.managePreferencesUrl)}" style="color: #bb7a21; font-weight: 700;">Manage preferences</a>
-                        or revisit <a href="${escapeHtml(siteUrl)}" style="color: #bb7a21; font-weight: 700;">Lux Flight Deals</a>.
+                        or <a href="${escapeHtml(input.unsubscribeUrl)}" style="color: #bb7a21; font-weight: 700;">unsubscribe</a>.
+                        You can also revisit <a href="${escapeHtml(siteUrl)}" style="color: #bb7a21; font-weight: 700;">Lux Flight Deals</a>.
                       </p>
                     </td>
                   </tr>
@@ -287,12 +299,109 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
     ]),
     "Search in Skyscanner: https://www.skyscanner.net",
     `Manage preferences: ${input.managePreferencesUrl}`,
+    `Unsubscribe: ${input.unsubscribeUrl}`,
     `Homepage: ${siteUrl}`,
   ];
 
   return {
     html,
     text: textLines.join("\n"),
+  };
+}
+
+export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
+  const siteUrl = getSiteUrl();
+  const subject = input.alreadyConfirmed
+    ? "Your Lux Flight Deals links are ready"
+    : "Confirm your Lux Flight Deals subscription";
+  const previewText = input.alreadyConfirmed
+    ? "Your Luxembourg fare profile is already active."
+    : "Confirm your email and choose the alerts you want.";
+  const headline = input.alreadyConfirmed
+    ? "Your Luxembourg fare feed is already active."
+    : "Confirm your email to start receiving Luxembourg fare drops.";
+  const intro = input.alreadyConfirmed
+    ? "We noticed you tried to join again, so we are sending your direct access links one more time."
+    : "One quick confirmation finishes the double opt-in. After that, you can tailor the feed to city breaks, beach escapes, and long haul alerts.";
+  const primaryLabel = input.alreadyConfirmed ? "Edit preferences" : "Confirm subscription";
+  const primaryUrl = input.alreadyConfirmed ? input.managePreferencesUrl : input.confirmUrl;
+  const secondaryLabel = input.onboardingCompleted ? "Manage my preferences" : "Open preferences";
+
+  const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charSet="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin: 0; padding: 32px 16px; background: #07131d; color: #0a1a28; font-family: Avenir Next, Segoe UI, Helvetica Neue, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px; background: #fffaf0; border-radius: 28px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08);">
+            <tr>
+              <td style="padding: 36px 34px 24px; background: linear-gradient(135deg, #0a1622 0%, #09111a 100%); color: #f6efe1;">
+                <p style="margin: 0; color: #f5af4a; font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;">Lux Flight Deals</p>
+                <h1 style="margin: 14px 0 10px; font-family: Iowan Old Style, Palatino Linotype, Book Antiqua, serif; font-size: 38px; line-height: 0.98;">${escapeHtml(
+                  headline,
+                )}</h1>
+                <p style="margin: 0; color: rgba(246, 239, 225, 0.78); font-size: 16px; line-height: 1.7;">${escapeHtml(
+                  intro,
+                )}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 30px 34px 34px;">
+                <p style="margin: 0; color: #44515b; font-size: 16px; line-height: 1.75;">
+                  This email is linked to <strong>${escapeHtml(input.email)}</strong>.
+                </p>
+                <p style="margin: 16px 0 0; color: #44515b; font-size: 15px; line-height: 1.75;">
+                  Once confirmed, you can keep the feed simple: city breaks, beach escapes, long haul, budget and stop limits.
+                </p>
+                <p style="margin: 22px 0 0;">
+                  <a href="${escapeHtml(primaryUrl)}" style="display: inline-block; padding: 13px 18px; border-radius: 999px; background: #bb7a21; color: #fffaf0; font-size: 14px; font-weight: 700; text-decoration: none;">${escapeHtml(
+                    primaryLabel,
+                  )}</a>
+                </p>
+                <p style="margin: 18px 0 0; color: #44515b; font-size: 14px; line-height: 1.7;">
+                  Already confirmed? <a href="${escapeHtml(input.managePreferencesUrl)}" style="color: #bb7a21; font-weight: 700;">${escapeHtml(
+                    secondaryLabel,
+                  )}</a>.
+                </p>
+                <p style="margin: 24px 0 0; color: #6b7780; font-size: 13px; line-height: 1.7;">
+                  If this was not you, you can <a href="${escapeHtml(input.unsubscribeUrl)}" style="color: #bb7a21; font-weight: 700;">unsubscribe instantly</a> or revisit <a href="${escapeHtml(
+                    siteUrl,
+                  )}" style="color: #bb7a21; font-weight: 700;">Lux Flight Deals</a>.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  const text = [
+    "Lux Flight Deals",
+    "",
+    headline,
+    intro,
+    "",
+    `Email: ${input.email}`,
+    input.alreadyConfirmed
+      ? `Edit preferences: ${input.managePreferencesUrl}`
+      : `Confirm subscription: ${input.confirmUrl}`,
+    `Manage preferences: ${input.managePreferencesUrl}`,
+    `Unsubscribe: ${input.unsubscribeUrl}`,
+    `Homepage: ${siteUrl}`,
+  ].join("\n");
+
+  return {
+    subject,
+    previewText,
+    html,
+    text,
   };
 }
 
@@ -319,9 +428,17 @@ export async function sendResendEmail(input: SendResendEmailInput) {
           value: "luxflightdeals",
         },
         {
-          name: "send_type",
-          value: input.sendType,
+          name: "email_type",
+          value: input.emailType,
         },
+        ...(input.sendType
+          ? [
+              {
+                name: "send_type",
+                value: input.sendType,
+              },
+            ]
+          : []),
       ],
     }),
   });

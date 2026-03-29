@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 type FormStatus =
@@ -14,7 +13,6 @@ const initialStatus: FormStatus = {
 };
 
 export function NewsletterForm() {
-  const router = useRouter();
   const [status, setStatus] = useState<FormStatus>(initialStatus);
   const [isPending, startTransition] = useTransition();
 
@@ -46,7 +44,7 @@ export function NewsletterForm() {
             const payload = (await response.json()) as {
               message?: string;
               error?: string;
-              preferencesPath?: string;
+              requiresConfirmation?: boolean;
             };
 
             if (!response.ok) {
@@ -56,12 +54,12 @@ export function NewsletterForm() {
             form.reset();
             setStatus({
               tone: "success",
-              message: payload.message ?? "You're in.",
+              message:
+                payload.message ??
+                (payload.requiresConfirmation
+                  ? "Check your inbox to confirm your subscription."
+                  : "You're in."),
             });
-
-            if (payload.preferencesPath) {
-              router.push(payload.preferencesPath);
-            }
           } catch (error) {
             setStatus({
               tone: "error",

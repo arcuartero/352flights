@@ -11,6 +11,10 @@ const resendSchema = z.object({
   RESEND_REPLY_TO_EMAIL: z.string().email().optional(),
 });
 
+const cronSchema = z.object({
+  CRON_SECRET: z.string().min(1),
+});
+
 function emptyToUndefined(value: string | undefined) {
   if (!value) {
     return undefined;
@@ -40,6 +44,16 @@ export function getResendEnv() {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     RESEND_REPLY_TO_EMAIL: emptyToUndefined(process.env.RESEND_REPLY_TO_EMAIL),
+  });
+}
+
+export function hasCronSecret() {
+  return Boolean(process.env.CRON_SECRET);
+}
+
+export function getCronSecret() {
+  return cronSchema.parse({
+    CRON_SECRET: process.env.CRON_SECRET,
   });
 }
 

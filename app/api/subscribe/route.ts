@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { hasSupabaseAdminEnv } from "@/lib/env";
-import { getSupabaseAdminClient } from "@/lib/supabase";
+import { subscribeEmailAddress } from "@/lib/subscriptions";
 
 const subscribeSchema = z.object({
   email: z.string().trim().email(),
@@ -27,43 +27,20 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-
-  const supabase = getSupabaseAdminClient();
-
-  const { data, error } = await supabase
-    .from("newsletter_subscribers")
-    .upsert(
-      {
-        email: payload.data.email,
-        origin_city: "Luxembourg",
-        home_airport: "LUX",
-        source: "landing_page",
-        status: "pending",
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "email",
-        ignoreDuplicates: false,
-      },
-    )
-    .select("preference_token")
-    .single();
-
-  if (error) {
+  try {
+    const result = await subscribeEmailAddress(payload.data.email);
+    return NextResponse.json({
+      message: result.message,
+      requiresConfirmation: !result.alreadyConfirmed,
+    });
+  } catch (error) {
     const message =
-      typeof error.message === "string" && error.message.includes("schema cache")
+      error instanceof Error && error.message.includes("schema cache")
         ? "The subscription database is not ready yet. Run the SQL setup in Supabase first."
-        : "We could not save your subscription right now.";
+        : error instanceof Error
+          ? error.message
+          : "We could not save your subscription right now.";
 
-    return NextResponse.json(
-      { error: message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  return NextResponse.json({
-    message: "You are on the list. Next, tell us which routes you actually care about.",
-    preferencesPath: `/preferences?token=${data.preference_token}`,
-  });
 }
-

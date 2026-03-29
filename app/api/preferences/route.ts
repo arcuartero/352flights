@@ -54,9 +54,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    await savePreferencesByToken(payload.data);
+    const result = await savePreferencesByToken(payload.data);
     return NextResponse.json({
-      message: "Preferences saved. Your Luxembourg flight profile is live.",
+      message: result.emailConfirmed
+        ? "Preferences saved. Your Luxembourg flight profile is live."
+        : "Preferences saved. Confirm your email from the welcome message to activate alerts.",
     });
   } catch (error) {
     return NextResponse.json(

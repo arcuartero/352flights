@@ -14,22 +14,50 @@ create table if not exists public.newsletter_subscribers (
 
 alter table public.newsletter_subscribers
   add column if not exists preference_token uuid not null default gen_random_uuid(),
+  add column if not exists confirmation_token uuid not null default gen_random_uuid(),
+  add column if not exists unsubscribe_token uuid not null default gen_random_uuid(),
+  add column if not exists email_confirmed boolean not null default false,
   add column if not exists onboarding_completed boolean not null default false,
+  add column if not exists confirmed_at timestamptz,
+  add column if not exists unsubscribed_at timestamptz,
+  add column if not exists welcome_email_sent_at timestamptz,
   add column if not exists updated_at timestamptz not null default timezone('utc', now());
 
 create unique index if not exists newsletter_subscribers_preference_token_idx
   on public.newsletter_subscribers (preference_token);
+
+create unique index if not exists newsletter_subscribers_confirmation_token_idx
+  on public.newsletter_subscribers (confirmation_token);
+
+create unique index if not exists newsletter_subscribers_unsubscribe_token_idx
+  on public.newsletter_subscribers (unsubscribe_token);
+
+update public.newsletter_subscribers
+set
+  email_confirmed = true,
+  confirmed_at = coalesce(confirmed_at, created_at),
+  updated_at = timezone('utc', now())
+where status = 'active' and email_confirmed = false;
 
 create table if not exists public.subscriber_preferences (
   subscriber_id uuid primary key references public.newsletter_subscribers(id) on delete cascade,
   preferred_buckets text[] not null default array['weekend_europe', 'sun_breaks', 'long_haul'],
   max_stops_preference text not null default 'ONE_STOP_OR_FEWER'
     check (max_stops_preference in ('ANY', 'NON_STOP', 'ONE_STOP_OR_FEWER')),
+  max_stops_preferences text[] not null default array['ONE_STOP_OR_FEWER']
+    check (cardinality(max_stops_preferences) > 0)
+    check (max_stops_preferences <@ array['ANY', 'NON_STOP', 'ONE_STOP_OR_FEWER']::text[]),
+  departure_weekdays text[] not null default array['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+    check (cardinality(departure_weekdays) > 0)
+    check (departure_weekdays <@ array['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']::text[]),
   min_trip_nights integer,
   max_trip_nights integer,
   budget_ceiling_eur integer,
   delivery_mode text not null default 'daily_digest'
     check (delivery_mode in ('daily_digest', 'flash_only', 'weekly_best_of')),
+  delivery_modes text[] not null default array['daily_digest']
+    check (cardinality(delivery_modes) > 0)
+    check (delivery_modes <@ array['daily_digest', 'flash_only', 'weekly_best_of']::text[]),
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   check (min_trip_nights is null or min_trip_nights > 0),
@@ -40,6 +68,92 @@ create table if not exists public.subscriber_preferences (
     or min_trip_nights <= max_trip_nights
   ),
   check (budget_ceiling_eur is null or budget_ceiling_eur > 0)
+);
+
+alter table public.subscriber_preferences
+  add column if not exists max_stops_preferences text[] not null default array['ONE_STOP_OR_FEWER'],
+  add column if not exists departure_weekdays text[] not null default array['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+  add column if not exists delivery_modes text[] not null default array['daily_digest'];
+
+alter table public.subscriber_preferences
+  drop constraint if exists subscriber_preferences_max_stops_preferences_check,
+  drop constraint if exists subscriber_preferences_departure_weekdays_check,
+  drop constraint if exists subscriber_preferences_delivery_modes_check,
+  drop constraint if exists subscriber_preferences_max_stops_preferences_values_check,
+  drop constraint if exists subscriber_preferences_departure_weekdays_values_check,
+  drop constraint if exists subscriber_preferences_delivery_modes_values_check;
+
+alter table public.subscriber_preferences
+  add constraint subscriber_preferences_max_stops_preferences_check
+    check (cardinality(max_stops_preferences) > 0),
+  add constraint subscriber_preferences_max_stops_preferences_values_check
+    check (max_stops_preferences <@ array['ANY', 'NON_STOP', 'ONE_STOP_OR_FEWER']::text[]),
+  add constraint subscriber_preferences_departure_weekdays_check
+    check (cardinality(departure_weekdays) > 0),
+  add constraint subscriber_preferences_departure_weekdays_values_check
+    check (departure_weekdays <@ array['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']::text[]),
+  add constraint subscriber_preferences_delivery_modes_check
+    check (cardinality(delivery_modes) > 0),
+  add constraint subscriber_preferences_delivery_modes_values_check
+    check (delivery_modes <@ array['daily_digest', 'flash_only', 'weekly_best_of']::text[]);
+
+update public.subscriber_preferences
+set
+  max_stops_preferences = case
+    when max_stops_preferences is null
+      or cardinality(max_stops_preferences) = 0
+      or (
+        max_stops_preferences = array['ONE_STOP_OR_FEWER']::text[]
+        and max_stops_preference <> 'ONE_STOP_OR_FEWER'
+      )
+    then array[max_stops_preference]
+    else max_stops_preferences
+  end,
+  departure_weekdays = case
+    when departure_weekdays is null or cardinality(departure_weekdays) = 0
+    then array['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']::text[]
+    else departure_weekdays
+  end,
+  delivery_modes = case
+    when delivery_modes is null
+      or cardinality(delivery_modes) = 0
+      or (
+        delivery_modes = array['daily_digest']::text[]
+        and delivery_mode <> 'daily_digest'
+      )
+    then array[delivery_mode]
+    else delivery_modes
+  end,
+  updated_at = timezone('utc', now());
+
+create table if not exists public.subscriber_custom_alerts (
+  id uuid primary key default gen_random_uuid(),
+  subscriber_id uuid not null references public.newsletter_subscribers(id) on delete cascade,
+  name text not null,
+  destination_city text,
+  bucket text
+    check (bucket is null or bucket in ('weekend_europe', 'sun_breaks', 'long_haul')),
+  max_stops_preferences text[] not null default array['ONE_STOP_OR_FEWER']
+    check (cardinality(max_stops_preferences) > 0)
+    check (max_stops_preferences <@ array['ANY', 'NON_STOP', 'ONE_STOP_OR_FEWER']::text[]),
+  budget_ceiling_eur integer
+    check (budget_ceiling_eur is null or budget_ceiling_eur > 0),
+  departure_weekdays text[] not null default array['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+    check (cardinality(departure_weekdays) > 0)
+    check (departure_weekdays <@ array['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']::text[]),
+  min_trip_nights integer
+    check (min_trip_nights is null or min_trip_nights > 0),
+  max_trip_nights integer
+    check (max_trip_nights is null or max_trip_nights > 0),
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  check (
+    min_trip_nights is null
+    or max_trip_nights is null
+    or min_trip_nights <= max_trip_nights
+  )
 );
 
 create table if not exists public.subscriber_route_preferences (
@@ -121,14 +235,33 @@ create table if not exists public.deal_candidates (
   score numeric(6, 2) not null,
   send_type text not null default 'digest'
     check (send_type in ('digest', 'flash')),
-  status text not null default 'pending_review'
-    check (status in ('pending_review', 'approved', 'sent', 'rejected')),
+  status text not null default 'new'
+    check (status in ('new', 'reviewed', 'sent', 'expired')),
   created_at timestamptz not null default timezone('utc', now())
 );
 
 alter table public.deal_candidates
   add column if not exists reviewed_at timestamptz,
   add column if not exists sent_at timestamptz;
+
+update public.deal_candidates
+set status = 'new'
+where status = 'pending_review';
+
+update public.deal_candidates
+set status = 'reviewed'
+where status = 'approved';
+
+update public.deal_candidates
+set status = 'expired'
+where status = 'rejected';
+
+alter table public.deal_candidates
+  drop constraint if exists deal_candidates_status_check;
+
+alter table public.deal_candidates
+  add constraint deal_candidates_status_check
+    check (status in ('new', 'reviewed', 'sent', 'expired'));
 
 create table if not exists public.email_campaigns (
   id uuid primary key default gen_random_uuid(),
@@ -166,6 +299,24 @@ create table if not exists public.email_deliveries (
   sent_at timestamptz
 );
 
+create table if not exists public.ops_automation_settings (
+  id text primary key default 'default'
+    check (id = 'default'),
+  daily_digest_enabled boolean not null default false,
+  daily_digest_hour integer not null default 9
+    check (daily_digest_hour between 0 and 23),
+  daily_digest_minute integer not null default 5
+    check (daily_digest_minute between 0 and 59),
+  test_email citext,
+  last_digest_sent_on date,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+insert into public.ops_automation_settings (id)
+values ('default')
+on conflict (id) do nothing;
+
 create index if not exists price_snapshots_route_scanned_at_idx
   on public.price_snapshots (route_id, scanned_at desc);
 
@@ -174,6 +325,9 @@ create index if not exists deal_candidates_status_created_at_idx
 
 create index if not exists subscriber_route_preferences_subscriber_idx
   on public.subscriber_route_preferences (subscriber_id);
+
+create index if not exists subscriber_custom_alerts_subscriber_idx
+  on public.subscriber_custom_alerts (subscriber_id, sort_order);
 
 create index if not exists email_campaigns_created_at_idx
   on public.email_campaigns (created_at desc);
@@ -186,9 +340,11 @@ create index if not exists email_deliveries_subscriber_idx
 
 alter table public.newsletter_subscribers enable row level security;
 alter table public.subscriber_preferences enable row level security;
+alter table public.subscriber_custom_alerts enable row level security;
 alter table public.subscriber_route_preferences enable row level security;
 alter table public.scanned_routes enable row level security;
 alter table public.price_snapshots enable row level security;
 alter table public.deal_candidates enable row level security;
 alter table public.email_campaigns enable row level security;
 alter table public.email_deliveries enable row level security;
+alter table public.ops_automation_settings enable row level security;

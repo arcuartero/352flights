@@ -2,11 +2,15 @@ import "server-only";
 
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import {
+  type CustomAlertRuleValue,
   defaultPreferenceValues,
+  type DeliveryModeValue,
   makeRouteSelectionKey,
+  type MaxStopsPreferenceValue,
   routePreferenceMap,
   type PreferencesBundle,
   type PreferencePayload,
+  type WeekdayValue,
 } from "@/lib/preferences-shared";
 
 function formatError(error: unknown) {
@@ -15,6 +19,94 @@ function formatError(error: unknown) {
   }
 
   return "Unknown error";
+}
+
+function unique<T>(values: readonly T[]) {
+  return values.filter((value, index) => values.indexOf(value) === index);
+}
+
+function normalizeDeliveryModes(
+  values: DeliveryModeValue[] | null | undefined,
+  legacyValue: DeliveryModeValue | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  if (legacyValue) {
+    return [legacyValue];
+  }
+
+  return [...defaultPreferenceValues.deliveryModes];
+}
+
+function normalizeMaxStopsPreferences(
+  values: MaxStopsPreferenceValue[] | null | undefined,
+  legacyValue: MaxStopsPreferenceValue | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  if (legacyValue) {
+    return [legacyValue];
+  }
+
+  return [...defaultPreferenceValues.maxStopsPreferences];
+}
+
+function deriveLegacyDeliveryMode(values: DeliveryModeValue[]) {
+  if (values.includes("daily_digest")) {
+    return "daily_digest" as const;
+  }
+
+  if (values.includes("flash_only")) {
+    return "flash_only" as const;
+  }
+
+  return "weekly_best_of" as const;
+}
+
+function deriveLegacyMaxStopsPreference(values: MaxStopsPreferenceValue[]) {
+  if (values.includes("ANY")) {
+    return "ANY" as const;
+  }
+
+  if (values.includes("ONE_STOP_OR_FEWER")) {
+    return "ONE_STOP_OR_FEWER" as const;
+  }
+
+  return "NON_STOP" as const;
+}
+
+function normalizeDepartureWeekdays(
+  values: WeekdayValue[] | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  return [...defaultPreferenceValues.departureWeekdays];
+}
+
+function normalizeCustomRuleMaxStops(
+  values: MaxStopsPreferenceValue[] | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  return [...defaultPreferenceValues.maxStopsPreferences];
+}
+
+function normalizeCustomRuleWeekdays(
+  values: WeekdayValue[] | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  return [...defaultPreferenceValues.departureWeekdays];
 }
 
 export type PreferenceLookupResult =
@@ -33,7 +125,7 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
 
   const subscriberQuery = await supabase
     .from("newsletter_subscribers")
-    .select("id,email,home_airport,preference_token,onboarding_completed")
+    .select("id,email,home_airport,preference_token,onboarding_completed,email_confirmed,status,unsubscribe_token")
     .eq("preference_token", token)
     .maybeSingle();
 
@@ -56,9 +148,7 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
   const [preferencesQuery, routePreferencesQuery] = await Promise.all([
     supabase
       .from("subscriber_preferences")
-      .select(
-        "preferred_buckets,max_stops_preference,min_trip_nights,max_trip_nights,budget_ceiling_eur,delivery_mode",
-      )
+      .select("*")
       .eq("subscriber_id", subscriberQuery.data.id)
       .maybeSingle(),
     supabase
@@ -67,6 +157,12 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
       .eq("subscriber_id", subscriberQuery.data.id)
       .eq("is_enabled", true),
   ]);
+
+  const customRulesQuery = await supabase
+    .from("subscriber_custom_alerts")
+    .select("*")
+    .eq("subscriber_id", subscriberQuery.data.id)
+    .order("sort_order", { ascending: true });
 
   if (preferencesQuery.error) {
     return {
@@ -81,6 +177,14 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
       ok: false,
       status: 500,
       error: formatError(routePreferencesQuery.error),
+    };
+  }
+
+  if (customRulesQuery.error) {
+    return {
+      ok: false,
+      status: 500,
+      error: formatError(customRulesQuery.error),
     };
   }
 
@@ -101,6 +205,33 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
       ? preferencesQuery.data.preferred_buckets
       : defaultPreferenceValues.preferredBuckets;
 
+  const deliveryModes = normalizeDeliveryModes(
+    preferencesQuery.data?.delivery_modes,
+    preferencesQuery.data?.delivery_mode,
+  );
+
+  const maxStopsPreferences = normalizeMaxStopsPreferences(
+    preferencesQuery.data?.max_stops_preferences,
+    preferencesQuery.data?.max_stops_preference,
+  );
+
+  const departureWeekdays = normalizeDepartureWeekdays(
+    preferencesQuery.data?.departure_weekdays,
+  );
+
+  const customAlertRules: CustomAlertRuleValue[] = (customRulesQuery.data ?? []).map((rule) => ({
+    id: rule.id,
+    name: rule.name,
+    destinationCity: rule.destination_city,
+    bucket: rule.bucket,
+    maxStopsPreferences: normalizeCustomRuleMaxStops(rule.max_stops_preferences),
+    budgetCeilingEur: rule.budget_ceiling_eur,
+    departureWeekdays: normalizeCustomRuleWeekdays(rule.departure_weekdays),
+    minTripNights: rule.min_trip_nights,
+    maxTripNights: rule.max_trip_nights,
+    isActive: rule.is_active,
+  }));
+
   return {
     ok: true,
     bundle: {
@@ -108,19 +239,22 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
       email: subscriberQuery.data.email,
       homeAirport: subscriberQuery.data.home_airport,
       onboardingCompleted: subscriberQuery.data.onboarding_completed,
+      emailConfirmed: subscriberQuery.data.email_confirmed,
+      status: subscriberQuery.data.status,
+      unsubscribePath: `/unsubscribe?token=${subscriberQuery.data.unsubscribe_token}`,
       form: {
         preferredBuckets,
         selectedRoutes,
-        maxStopsPreference:
-          preferencesQuery.data?.max_stops_preference ?? defaultPreferenceValues.maxStopsPreference,
+        maxStopsPreferences,
+        departureWeekdays,
         minTripNights:
           preferencesQuery.data?.min_trip_nights ?? defaultPreferenceValues.minTripNights,
         maxTripNights:
           preferencesQuery.data?.max_trip_nights ?? defaultPreferenceValues.maxTripNights,
         budgetCeilingEur:
           preferencesQuery.data?.budget_ceiling_eur ?? defaultPreferenceValues.budgetCeilingEur,
-        deliveryMode:
-          preferencesQuery.data?.delivery_mode ?? defaultPreferenceValues.deliveryMode,
+        deliveryModes,
+        customAlertRules,
       },
     },
   };
@@ -135,7 +269,7 @@ export async function savePreferencesByToken(input: PreferencePayload) {
   const supabase = getSupabaseAdminClient();
   const subscriberQuery = await supabase
     .from("newsletter_subscribers")
-    .select("id")
+    .select("id,status,email_confirmed")
     .eq("preference_token", input.token)
     .single();
 
@@ -144,16 +278,26 @@ export async function savePreferencesByToken(input: PreferencePayload) {
   }
 
   const subscriberId = subscriberQuery.data.id;
+  const normalizedMaxStopsPreferences = unique(input.maxStopsPreferences);
+  const normalizedDeliveryModes = unique(input.deliveryModes);
+  const normalizedDepartureWeekdays = unique(input.departureWeekdays);
+
+  if (subscriberQuery.data.status === "unsubscribed") {
+    throw new Error("This subscription has been unsubscribed and cannot be updated.");
+  }
 
   const preferenceUpsert = await supabase.from("subscriber_preferences").upsert(
     {
       subscriber_id: subscriberId,
       preferred_buckets: input.preferredBuckets,
-      max_stops_preference: input.maxStopsPreference,
+      max_stops_preference: deriveLegacyMaxStopsPreference(normalizedMaxStopsPreferences),
+      max_stops_preferences: normalizedMaxStopsPreferences,
+      departure_weekdays: normalizedDepartureWeekdays,
       min_trip_nights: input.minTripNights,
       max_trip_nights: input.maxTripNights,
       budget_ceiling_eur: input.budgetCeilingEur,
-      delivery_mode: input.deliveryMode,
+      delivery_mode: deriveLegacyDeliveryMode(normalizedDeliveryModes),
+      delivery_modes: normalizedDeliveryModes,
       updated_at: new Date().toISOString(),
     },
     {
@@ -173,6 +317,15 @@ export async function savePreferencesByToken(input: PreferencePayload) {
 
   if (deleteQuery.error) {
     throw new Error(formatError(deleteQuery.error));
+  }
+
+  const deleteCustomRulesQuery = await supabase
+    .from("subscriber_custom_alerts")
+    .delete()
+    .eq("subscriber_id", subscriberId);
+
+  if (deleteCustomRulesQuery.error) {
+    throw new Error(formatError(deleteCustomRulesQuery.error));
   }
 
   const selectedRouteRows = input.selectedRoutes.map((routeKey) => {
@@ -198,11 +351,35 @@ export async function savePreferencesByToken(input: PreferencePayload) {
     throw new Error(formatError(insertRoutesQuery.error));
   }
 
+  if (input.customAlertRules.length > 0) {
+    const customRulesInsert = await supabase
+      .from("subscriber_custom_alerts")
+      .insert(
+        input.customAlertRules.map((rule, index) => ({
+          subscriber_id: subscriberId,
+          name: rule.name,
+          destination_city: rule.destinationCity,
+          bucket: rule.bucket,
+          max_stops_preferences: unique(rule.maxStopsPreferences),
+          budget_ceiling_eur: rule.budgetCeilingEur,
+          departure_weekdays: unique(rule.departureWeekdays),
+          min_trip_nights: rule.minTripNights,
+          max_trip_nights: rule.maxTripNights,
+          is_active: rule.isActive,
+          sort_order: index,
+        })),
+      );
+
+    if (customRulesInsert.error) {
+      throw new Error(formatError(customRulesInsert.error));
+    }
+  }
+
   const subscriberUpdate = await supabase
     .from("newsletter_subscribers")
     .update({
       onboarding_completed: true,
-      status: "active",
+      status: subscriberQuery.data.email_confirmed ? "active" : "pending",
       updated_at: new Date().toISOString(),
     })
     .eq("id", subscriberId);
@@ -210,4 +387,8 @@ export async function savePreferencesByToken(input: PreferencePayload) {
   if (subscriberUpdate.error) {
     throw new Error(formatError(subscriberUpdate.error));
   }
+
+  return {
+    emailConfirmed: subscriberQuery.data.email_confirmed,
+  };
 }

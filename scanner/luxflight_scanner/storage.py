@@ -79,7 +79,7 @@ class LocalStore:
                 "drop_ratio": deal.drop_ratio,
                 "score": deal.score,
                 "send_type": deal.send_type,
-                "status": "pending_review",
+                "status": "new",
                 "created_at": utcnow_iso(),
             }
         )

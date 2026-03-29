@@ -200,7 +200,8 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
 export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
   const [searchValue, setSearchValue] = useState("");
   const [bucketFilter, setBucketFilter] = useState("all");
-  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(data.series[0]?.routeId ?? null);
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(searchValue);
 
@@ -232,16 +233,39 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
   useEffect(() => {
     if (filteredSeries.length === 0) {
       setSelectedRouteId(null);
+      setIsModalOpen(false);
       return;
     }
 
-    if (!selectedRouteId || !filteredSeries.some((series) => series.routeId === selectedRouteId)) {
-      setSelectedRouteId(filteredSeries[0].routeId);
+    if (selectedRouteId && !filteredSeries.some((series) => series.routeId === selectedRouteId)) {
+      setSelectedRouteId(isModalOpen ? filteredSeries[0].routeId : null);
     }
-  }, [filteredSeries, selectedRouteId]);
+  }, [filteredSeries, isModalOpen, selectedRouteId]);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsModalOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isModalOpen]);
 
   const selectedSeries =
-    filteredSeries.find((series) => series.routeId === selectedRouteId) ?? filteredSeries[0] ?? null;
+    filteredSeries.find((series) => series.routeId === selectedRouteId) ?? null;
 
   const filteredRows = useMemo(() => {
     if (filteredSeries.length === 0) {
@@ -329,7 +353,12 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
           <button
             className={`price-card ${series.routeId === selectedRouteId ? "is-active" : ""}`}
             key={series.routeId}
-            onClick={() => setSelectedRouteId(series.routeId)}
+            aria-controls="price-route-dialog"
+            aria-expanded={isModalOpen && series.routeId === selectedRouteId}
+            onClick={() => {
+              setSelectedRouteId(series.routeId);
+              setIsModalOpen(true);
+            }}
             type="button"
           >
             <div className="price-card__header">
@@ -354,74 +383,9 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
             <p className="price-card__delta">
               {series.latestAirlineSummary ?? "Latest airline pending"}
             </p>
-            {series.latestBookingUrl ? (
-              <span className="price-card__delta">Open this search in Skyscanner</span>
-            ) : null}
           </button>
         ))}
       </section>
-
-      {selectedSeries ? (
-        <section className="price-focus">
-          <div className="price-focus__header">
-            <div>
-              <p className="ops-panel__eyebrow">Selected route</p>
-              <h2>{selectedSeries.routeLabel}</h2>
-              <p>
-                Scans {formatSearchRange(selectedSeries)} ·{" "}
-                {selectedSeries.latestTripNights !== null
-                  ? `latest cheapest ${formatNightsLabel(selectedSeries.latestTripNights)}`
-                  : "no winner yet"}{" "}
-                · {formatStops(selectedSeries.maxStops)} · {selectedSeries.points.length} cron snapshots
-              </p>
-              <p>
-                Latest airline: {selectedSeries.latestAirlineSummary ?? "Awaiting itinerary detail"}
-              </p>
-              {selectedSeries.latestBookingUrl ? (
-                <p>
-                  <a href={selectedSeries.latestBookingUrl} rel="noreferrer" target="_blank">
-                    Open this search in Skyscanner
-                  </a>
-                </p>
-              ) : null}
-            </div>
-            <div className="price-focus__stats">
-              <article>
-                <span>Latest</span>
-                <strong>
-                  {selectedSeries.latestPrice !== null
-                    ? formatCurrency(selectedSeries.latestPrice)
-                    : "n/a"}
-                </strong>
-              </article>
-              <article>
-                <span>Low</span>
-                <strong>
-                  {selectedSeries.minPrice !== null
-                    ? formatCurrency(selectedSeries.minPrice)
-                    : "n/a"}
-                </strong>
-              </article>
-              <article>
-                <span>High</span>
-                <strong>
-                  {selectedSeries.maxPrice !== null
-                    ? formatCurrency(selectedSeries.maxPrice)
-                    : "n/a"}
-                </strong>
-              </article>
-            </div>
-          </div>
-
-          <RouteTrendChart series={selectedSeries} />
-        </section>
-      ) : (
-        <section className="ops-panel">
-          <div className="ops-empty">
-            <p>No routes match the current filter yet.</p>
-          </div>
-        </section>
-      )}
 
       <section className="price-table-panel">
         <div className="ops-panel__header">
@@ -490,6 +454,89 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
           </div>
         )}
       </section>
+
+      {selectedSeries && isModalOpen ? (
+        <div
+          aria-hidden={false}
+          className="price-modal"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsModalOpen(false);
+            }
+          }}
+        >
+          <section
+            aria-labelledby="price-route-dialog-title"
+            aria-modal="true"
+            className="price-focus price-modal__panel"
+            id="price-route-dialog"
+            role="dialog"
+          >
+            <div className="price-modal__chrome">
+              <p className="ops-panel__eyebrow">Selected route</p>
+              <button
+                aria-label="Close route detail"
+                className="price-modal__close"
+                onClick={() => setIsModalOpen(false)}
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="price-focus__header">
+              <div>
+                <h2 id="price-route-dialog-title">{selectedSeries.routeLabel}</h2>
+                <p>
+                  Scans {formatSearchRange(selectedSeries)} ·{" "}
+                  {selectedSeries.latestTripNights !== null
+                    ? `latest cheapest ${formatNightsLabel(selectedSeries.latestTripNights)}`
+                    : "no winner yet"}{" "}
+                  · {formatStops(selectedSeries.maxStops)} · {selectedSeries.points.length} cron snapshots
+                </p>
+                <p>
+                  Latest airline: {selectedSeries.latestAirlineSummary ?? "Awaiting itinerary detail"}
+                </p>
+                {selectedSeries.latestBookingUrl ? (
+                  <p>
+                    <a href={selectedSeries.latestBookingUrl} rel="noreferrer" target="_blank">
+                      Open this search in Skyscanner
+                    </a>
+                  </p>
+                ) : null}
+              </div>
+              <div className="price-focus__stats">
+                <article>
+                  <span>Latest</span>
+                  <strong>
+                    {selectedSeries.latestPrice !== null
+                      ? formatCurrency(selectedSeries.latestPrice)
+                      : "n/a"}
+                  </strong>
+                </article>
+                <article>
+                  <span>Low</span>
+                  <strong>
+                    {selectedSeries.minPrice !== null
+                      ? formatCurrency(selectedSeries.minPrice)
+                      : "n/a"}
+                  </strong>
+                </article>
+                <article>
+                  <span>High</span>
+                  <strong>
+                    {selectedSeries.maxPrice !== null
+                      ? formatCurrency(selectedSeries.maxPrice)
+                      : "n/a"}
+                  </strong>
+                </article>
+              </div>
+            </div>
+
+            <RouteTrendChart series={selectedSeries} />
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }

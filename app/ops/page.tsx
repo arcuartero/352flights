@@ -1,5 +1,6 @@
 import { reviewDealAction } from "@/app/ops/actions";
 import { CampaignLauncher } from "@/components/campaign-launcher";
+import { DigestAutomationPanel } from "@/components/digest-automation-panel";
 import { OpsSubnav } from "@/components/ops-subnav";
 import { getOpsDashboardData } from "@/lib/ops";
 import { formatRouteStayLabel } from "@/lib/route-stay";
@@ -46,6 +47,14 @@ function formatDeliveryMode(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function formatDeliveryModes(values: string[]) {
+  if (values.includes("daily_digest") && values.includes("flash_only") && values.includes("weekly_best_of")) {
+    return "Daily + flash + weekly";
+  }
+
+  return values.map(formatDeliveryMode).join(" + ");
+}
+
 function formatStops(value: string) {
   if (value === "NON_STOP") {
     return "Non-stop only";
@@ -60,6 +69,37 @@ function formatStops(value: string) {
   }
 
   return value.replaceAll("_", " ");
+}
+
+function formatStopsPreferences(values: string[]) {
+  if (values.includes("ANY")) {
+    return "Any routing";
+  }
+
+  if (values.includes("NON_STOP") && values.includes("ONE_STOP_OR_FEWER")) {
+    return "Non-stop + up to 1 stop";
+  }
+
+  return values.map(formatStops).join(" + ");
+}
+
+function formatWeekday(value: string) {
+  if (value === "MON") return "Mon";
+  if (value === "TUE") return "Tue";
+  if (value === "WED") return "Wed";
+  if (value === "THU") return "Thu";
+  if (value === "FRI") return "Fri";
+  if (value === "SAT") return "Sat";
+  if (value === "SUN") return "Sun";
+  return value;
+}
+
+function formatWeekdays(values: string[]) {
+  if (values.length === 7) {
+    return "Any departure day";
+  }
+
+  return values.map(formatWeekday).join(", ");
 }
 
 function formatTripRange(minNights: number | null, maxNights: number | null) {
@@ -89,6 +129,26 @@ function formatCampaignStatus(status: string) {
 
   if (status === "failed") {
     return "Failed";
+  }
+
+  return status;
+}
+
+function formatDealState(status: string) {
+  if (status === "new") {
+    return "New";
+  }
+
+  if (status === "reviewed") {
+    return "Reviewed";
+  }
+
+  if (status === "sent") {
+    return "Sent";
+  }
+
+  if (status === "expired") {
+    return "Expired";
   }
 
   return status;
@@ -136,8 +196,8 @@ export default async function OpsPage() {
           <strong>{dashboard.metrics.activeRoutes}</strong>
         </article>
         <article>
-          <span>Pending deals</span>
-          <strong>{dashboard.metrics.pendingDeals}</strong>
+          <span>New deals</span>
+          <strong>{dashboard.metrics.newDeals}</strong>
         </article>
         <article>
           <span>Snapshots in 24h</span>
@@ -145,14 +205,35 @@ export default async function OpsPage() {
         </article>
       </section>
 
+      <section className="ops-state-strip" aria-label="Deal lifecycle states">
+        <article>
+          <span>New</span>
+          <strong>{dashboard.dealStateCounts.new}</strong>
+        </article>
+        <article>
+          <span>Reviewed</span>
+          <strong>{dashboard.dealStateCounts.reviewed}</strong>
+        </article>
+        <article>
+          <span>Sent</span>
+          <strong>{dashboard.dealStateCounts.sent}</strong>
+        </article>
+        <article>
+          <span>Expired</span>
+          <strong>{dashboard.dealStateCounts.expired}</strong>
+        </article>
+      </section>
+
       <section className="ops-grid">
+        <DigestAutomationPanel settings={dashboard.digestAutomation} />
+
         <section className="ops-panel ops-panel--wide">
           <div className="ops-panel__header">
             <div>
               <p className="ops-panel__eyebrow">Campaigns</p>
               <h2>Send queue</h2>
             </div>
-            <p>Approved deals only. Audience counts are matched against saved subscriber filters.</p>
+            <p>Reviewed deals only. Audience counts are matched against saved subscriber filters.</p>
           </div>
           <CampaignLauncher previews={dashboard.sendQueue} />
         </section>
@@ -161,12 +242,12 @@ export default async function OpsPage() {
           <div className="ops-panel__header">
             <div>
               <p className="ops-panel__eyebrow">Review queue</p>
-              <h2>Pending deals</h2>
+              <h2>New deals</h2>
             </div>
-            <p>{dashboard.pendingDeals.length} visible right now</p>
+            <p>{dashboard.newDeals.length} visible right now</p>
           </div>
 
-          {dashboard.pendingDeals.length === 0 ? (
+          {dashboard.newDeals.length === 0 ? (
             <div className="ops-empty">
               <p>
                 No deals are waiting for review yet. Once the scanner builds enough price history
@@ -175,7 +256,7 @@ export default async function OpsPage() {
             </div>
           ) : (
             <div className="ops-deals">
-              {dashboard.pendingDeals.map((deal) => (
+              {dashboard.newDeals.map((deal) => (
                 <article className="ops-deal" key={deal.id}>
                   <div className="ops-deal__main">
                     <div className="ops-deal__heading">
@@ -213,6 +294,10 @@ export default async function OpsPage() {
                         </dd>
                       </div>
                       <div>
+                        <dt>Status</dt>
+                        <dd>{formatDealState(deal.status)}</dd>
+                      </div>
+                      <div>
                         <dt>Send type</dt>
                         <dd>{formatSendType(deal.sendType)}</dd>
                       </div>
@@ -246,16 +331,16 @@ export default async function OpsPage() {
                     ) : null}
                     <form action={reviewDealAction}>
                       <input name="id" type="hidden" value={deal.id} />
-                      <input name="status" type="hidden" value="approved" />
+                      <input name="status" type="hidden" value="reviewed" />
                       <button className="ops-button ops-button--approve" type="submit">
-                        Approve
+                        Mark reviewed
                       </button>
                     </form>
                     <form action={reviewDealAction}>
                       <input name="id" type="hidden" value={deal.id} />
-                      <input name="status" type="hidden" value="rejected" />
+                      <input name="status" type="hidden" value="expired" />
                       <button className="ops-button ops-button--ghost" type="submit">
-                        Reject
+                        Expire
                       </button>
                     </form>
                   </div>
@@ -285,12 +370,18 @@ export default async function OpsPage() {
                       <h3>{subscriber.email}</h3>
                       <p>
                         {subscriber.source} · {subscriber.status} ·{" "}
+                        {subscriber.emailConfirmed ? "confirmed" : "waiting confirmation"} ·{" "}
                         {subscriber.onboardingCompleted ? "preferences saved" : "preferences pending"}
                       </p>
                     </div>
                     <div className="ops-pill-row">
-                      <span className="ops-pill">{formatDeliveryMode(subscriber.deliveryMode)}</span>
-                      <span className="ops-pill">{formatStops(subscriber.maxStopsPreference)}</span>
+                      <span className="ops-pill">
+                        {formatDeliveryModes(subscriber.deliveryModes)}
+                      </span>
+                      <span className="ops-pill">
+                        {formatStopsPreferences(subscriber.maxStopsPreferences)}
+                      </span>
+                      <span className="ops-pill">{formatWeekdays(subscriber.departureWeekdays)}</span>
                       <span className="ops-pill">
                         {formatTripRange(subscriber.minTripNights, subscriber.maxTripNights)}
                       </span>
@@ -309,6 +400,15 @@ export default async function OpsPage() {
                         ? subscriber.selectedRouteLabels.slice(0, 4).join(", ")
                         : "No explicit route picks yet"}
                     </p>
+                    <p className="ops-subscriber-note">
+                      Custom watches:{" "}
+                      {subscriber.customAlertRules.length > 0
+                        ? subscriber.customAlertRules
+                            .map((rule) => rule.name)
+                            .slice(0, 3)
+                            .join(", ")
+                        : "No custom watches yet"}
+                    </p>
                   </div>
                   <span>{formatDate(subscriber.createdAt)}</span>
                 </article>
@@ -326,7 +426,7 @@ export default async function OpsPage() {
           </div>
           {dashboard.recentCampaigns.length === 0 ? (
             <div className="ops-empty">
-              <p>No campaigns have been sent yet. Approve deals and launch a digest from above.</p>
+              <p>No campaigns have been sent yet. Review deals and launch a digest from above.</p>
             </div>
           ) : (
             <div className="ops-list">
