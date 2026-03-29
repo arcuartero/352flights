@@ -1,0 +1,2 @@
+"""Luxembourg flight scanner."""
+

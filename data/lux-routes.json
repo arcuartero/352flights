@@ -1,0 +1,190 @@
+[
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "LHR",
+    "destination_city": "London",
+    "bucket": "weekend_europe",
+    "trip_nights": 3,
+    "lookahead_start_days": 21,
+    "lookahead_end_days": 90,
+    "max_stops": "NON_STOP",
+    "teaser": "Thursday-to-Sunday city breaks with reliable business and leisure demand."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "LGW",
+    "destination_city": "London",
+    "bucket": "weekend_europe",
+    "trip_nights": 3,
+    "lookahead_start_days": 21,
+    "lookahead_end_days": 90,
+    "max_stops": "NON_STOP",
+    "teaser": "Alternate London inventory to catch low-cost swings before the obvious airport does."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "AMS",
+    "destination_city": "Amsterdam",
+    "bucket": "weekend_europe",
+    "trip_nights": 2,
+    "lookahead_start_days": 14,
+    "lookahead_end_days": 75,
+    "max_stops": "NON_STOP",
+    "teaser": "Short-haul weekend inventory that reacts fast to low-fare releases."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "BCN",
+    "destination_city": "Barcelona",
+    "bucket": "sun_breaks",
+    "trip_nights": 4,
+    "lookahead_start_days": 21,
+    "lookahead_end_days": 120,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Classic shoulder-season beach route with strong open-rate potential."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "MAD",
+    "destination_city": "Madrid",
+    "bucket": "sun_breaks",
+    "trip_nights": 4,
+    "lookahead_start_days": 21,
+    "lookahead_end_days": 120,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "High-volume city break and gateway route with plenty of fare variance."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "LIS",
+    "destination_city": "Lisbon",
+    "bucket": "sun_breaks",
+    "trip_nights": 5,
+    "lookahead_start_days": 30,
+    "lookahead_end_days": 140,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Strong year-round demand and headline-friendly pricing when TAP inventory opens up."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "OPO",
+    "destination_city": "Porto",
+    "bucket": "sun_breaks",
+    "trip_nights": 4,
+    "lookahead_start_days": 30,
+    "lookahead_end_days": 140,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Lower average fare than Lisbon, useful for consistent deal volume."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "FCO",
+    "destination_city": "Rome",
+    "bucket": "weekend_europe",
+    "trip_nights": 3,
+    "lookahead_start_days": 21,
+    "lookahead_end_days": 100,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "A dependable editorial route with good click-through when prices dip."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "MXP",
+    "destination_city": "Milan",
+    "bucket": "weekend_europe",
+    "trip_nights": 3,
+    "lookahead_start_days": 14,
+    "lookahead_end_days": 90,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Fashion-week and shoulder-season demand create clean deal narratives."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "ATH",
+    "destination_city": "Athens",
+    "bucket": "sun_breaks",
+    "trip_nights": 5,
+    "lookahead_start_days": 30,
+    "lookahead_end_days": 150,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Longer Mediterranean trips with wide fare dispersion."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "BUD",
+    "destination_city": "Budapest",
+    "bucket": "weekend_europe",
+    "trip_nights": 3,
+    "lookahead_start_days": 14,
+    "lookahead_end_days": 90,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Price-sensitive weekend traffic makes this route ideal for frequent sends."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "PRG",
+    "destination_city": "Prague",
+    "bucket": "weekend_europe",
+    "trip_nights": 3,
+    "lookahead_start_days": 14,
+    "lookahead_end_days": 90,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Reliable long-weekend route with broad appeal among Luxembourg subscribers."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "VIE",
+    "destination_city": "Vienna",
+    "bucket": "weekend_europe",
+    "trip_nights": 3,
+    "lookahead_start_days": 14,
+    "lookahead_end_days": 90,
+    "max_stops": "NON_STOP",
+    "teaser": "Good for premium weekend inventory and clean nonstop positioning."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "JFK",
+    "destination_city": "New York",
+    "bucket": "long_haul",
+    "trip_nights": 7,
+    "lookahead_start_days": 45,
+    "lookahead_end_days": 220,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Flagship long-haul route that justifies premium tiers later."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "EWR",
+    "destination_city": "New York",
+    "bucket": "long_haul",
+    "trip_nights": 7,
+    "lookahead_start_days": 45,
+    "lookahead_end_days": 220,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Alternative New York inventory to avoid single-airport blind spots."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "DXB",
+    "destination_city": "Dubai",
+    "bucket": "long_haul",
+    "trip_nights": 6,
+    "lookahead_start_days": 40,
+    "lookahead_end_days": 200,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "Sun-seeking winter traffic with strong promotional copy potential."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "NRT",
+    "destination_city": "Tokyo",
+    "bucket": "long_haul",
+    "trip_nights": 8,
+    "lookahead_start_days": 60,
+    "lookahead_end_days": 260,
+    "max_stops": "ONE_STOP_OR_FEWER",
+    "teaser": "The aspirational route that drives shares even when sends are less frequent."
+  }
+]
+
