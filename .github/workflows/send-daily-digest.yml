@@ -1,0 +1,48 @@
+name: Send Daily Lux Digest
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+concurrency:
+  group: send-daily-digest
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger digest endpoint
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "Missing APP_BASE_URL secret."
+            exit 1
+          fi
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CRON_SECRET secret."
+            exit 1
+          fi
+
+          URL="${APP_BASE_URL%/}/api/cron/digest"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            URL="$URL?force=1"
+          fi
+
+          response=$(curl -sS -w '\n%{http_code}' -X POST "$URL" \
+            -H "Authorization: Bearer $CRON_SECRET")
+
+          body=$(printf '%s\n' "$response" | sed '$d')
+          status=$(printf '%s\n' "$response" | tail -n 1)
+
+          echo "$body"
+
+          if [ "$status" -ge 400 ]; then
+            echo "Digest endpoint returned HTTP $status"
+            exit 1
+          fi

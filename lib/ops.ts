@@ -3,7 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import { formatAirlineSummary, normalizeAirlineNames } from "@/lib/airline-summary";
-import { getSiteUrl, hasResendEnv } from "@/lib/env";
+import { getCronSecret, getSiteUrl, hasCronSecret, hasResendEnv } from "@/lib/env";
 import {
   buildCampaignPreviewText,
   buildCampaignSubject,
@@ -12,11 +12,20 @@ import {
 } from "@/lib/email";
 import {
   campaignSendTypes,
+  type CampaignPreviewDeal,
   type CampaignPreview,
   type CampaignSendType,
+  type DealLifecycleState,
+  type DigestAutomationSummary,
   type RecentCampaignSummary,
 } from "@/lib/ops-shared";
-import { defaultPreferenceValues } from "@/lib/preferences-shared";
+import {
+  type BucketValue,
+  type DeliveryModeValue,
+  defaultPreferenceValues,
+  type MaxStopsPreferenceValue,
+  type WeekdayValue,
+} from "@/lib/preferences-shared";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type CountResult = {
@@ -33,16 +42,36 @@ type SubscriberRow = {
   home_airport: string;
   onboarding_completed: boolean;
   preference_token: string;
+  unsubscribe_token: string;
+  email_confirmed: boolean;
 };
 
 type SubscriberPreferenceRow = {
   subscriber_id: string;
   preferred_buckets: string[] | null;
-  max_stops_preference: string | null;
+  max_stops_preference: MaxStopsPreferenceValue | null;
+  max_stops_preferences: MaxStopsPreferenceValue[] | null;
+  departure_weekdays: WeekdayValue[] | null;
   min_trip_nights: number | null;
   max_trip_nights: number | null;
   budget_ceiling_eur: number | null;
-  delivery_mode: string | null;
+  delivery_mode: DeliveryModeValue | null;
+  delivery_modes: DeliveryModeValue[] | null;
+};
+
+type SubscriberCustomAlertRow = {
+  id: string;
+  subscriber_id: string;
+  name: string;
+  destination_city: string | null;
+  bucket: BucketValue | null;
+  max_stops_preferences: MaxStopsPreferenceValue[] | null;
+  budget_ceiling_eur: number | null;
+  departure_weekdays: WeekdayValue[] | null;
+  min_trip_nights: number | null;
+  max_trip_nights: number | null;
+  is_active: boolean;
+  sort_order: number;
 };
 
 type SubscriberRoutePreferenceRow = {
@@ -107,6 +136,15 @@ type EmailCampaignRow = {
   sent_at: string | null;
 };
 
+type AutomationSettingsRow = {
+  id: string;
+  daily_digest_enabled: boolean;
+  daily_digest_hour: number;
+  daily_digest_minute: number;
+  test_email: string | null;
+  last_digest_sent_on: string | null;
+};
+
 type RouteSummary = {
   id: string;
   label: string;
@@ -168,17 +206,32 @@ type SubscriberSummary = {
   createdAt: string;
   homeAirport: string;
   onboardingCompleted: boolean;
-  deliveryMode: string;
-  maxStopsPreference: string;
+  emailConfirmed: boolean;
+  deliveryModes: DeliveryModeValue[];
+  maxStopsPreferences: MaxStopsPreferenceValue[];
+  departureWeekdays: WeekdayValue[];
   minTripNights: number | null;
   maxTripNights: number | null;
   budgetCeilingEur: number | null;
   preferredBuckets: string[];
   selectedRouteLabels: string[];
+  customAlertRules: Array<{
+    id: string;
+    name: string;
+    destinationCity: string | null;
+    bucket: BucketValue | null;
+    maxStopsPreferences: MaxStopsPreferenceValue[];
+    budgetCeilingEur: number | null;
+    departureWeekdays: WeekdayValue[];
+    minTripNights: number | null;
+    maxTripNights: number | null;
+    isActive: boolean;
+  }>;
 };
 
 type AudienceMember = SubscriberSummary & {
   preferenceToken: string;
+  unsubscribeToken: string;
   selectedRouteKeys: Set<string>;
 };
 
@@ -194,12 +247,14 @@ export type OpsDashboardData = {
   metrics: {
     subscribers: number;
     activeRoutes: number;
-    pendingDeals: number;
+    newDeals: number;
     snapshots24h: number;
   };
+  dealStateCounts: Record<DealLifecycleState, number>;
+  digestAutomation: DigestAutomationSummary;
   subscribers: SubscriberSummary[];
   routes: RouteSummary[];
-  pendingDeals: DealSummary[];
+  newDeals: DealSummary[];
   recentSnapshots: SnapshotSummary[];
   sendQueue: CampaignPreview[];
   recentCampaigns: RecentCampaignSummary[];
@@ -286,16 +341,112 @@ function makeRouteKey(destinationAirport: string, bucket: string) {
   return `${destinationAirport}:${bucket}`;
 }
 
-function normalizeDeliveryMode(value: string | null | undefined) {
-  return value ?? defaultPreferenceValues.deliveryMode;
+function normalizeDeliveryModes(
+  values: DeliveryModeValue[] | null | undefined,
+  legacyValue: DeliveryModeValue | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  if (legacyValue) {
+    return [legacyValue];
+  }
+
+  return [...defaultPreferenceValues.deliveryModes];
 }
 
-function normalizeMaxStopsPreference(value: string | null | undefined) {
-  return value ?? defaultPreferenceValues.maxStopsPreference;
+function normalizeMaxStopsPreferences(
+  values: MaxStopsPreferenceValue[] | null | undefined,
+  legacyValue: MaxStopsPreferenceValue | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  if (legacyValue) {
+    return [legacyValue];
+  }
+
+  return [...defaultPreferenceValues.maxStopsPreferences];
+}
+
+function normalizeDepartureWeekdays(
+  values: WeekdayValue[] | null | undefined,
+) {
+  if (values && values.length > 0) {
+    return unique(values);
+  }
+
+  return [...defaultPreferenceValues.departureWeekdays];
 }
 
 function unique<T>(values: T[]) {
   return values.filter((value, index) => values.indexOf(value) === index);
+}
+
+function weekdayForDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const day = new Date(`${value}T00:00:00Z`).getUTCDay();
+  const mapping: WeekdayValue[] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  return mapping[day] ?? null;
+}
+
+function luxembourgParts(value: Date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Luxembourg",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(value);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  const year = get("year");
+  const month = get("month");
+  const day = get("day");
+  const hour = get("hour");
+  const minute = get("minute");
+
+  return {
+    date: `${year}-${month}-${day}`,
+    hour: Number(hour),
+    minute: Number(minute),
+    time: `${hour}:${minute}`,
+  };
+}
+
+function formatTimeParts(hour: number, minute: number) {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function timeToMinutes(value: string) {
+  const [hourString, minuteString] = value.split(":");
+  return Number(hourString) * 60 + Number(minuteString);
+}
+
+function defaultDigestAutomationSummary(): DigestAutomationSummary {
+  const siteUrl = getSiteUrl();
+  return {
+    enabled: false,
+    localTime: "09:05",
+    testEmail: process.env.RESEND_REPLY_TO_EMAIL ?? null,
+    lastDigestSentOn: null,
+    endpointReady: hasCronSecret() && !siteUrl.includes("localhost"),
+    blockedReason: !hasCronSecret()
+      ? "Add CRON_SECRET to the deployed app and GitHub Actions before automatic digests can run."
+      : siteUrl.includes("localhost")
+        ? "NEXT_PUBLIC_SITE_URL still points to localhost, so the GitHub workflow has nowhere public to call."
+        : null,
+  };
 }
 
 function extractAirlineNames(metadata: Record<string, unknown> | null | undefined) {
@@ -353,6 +504,19 @@ function buildSkyscannerUrl(input: {
   ].join("/") + `/?${params.toString()}`;
 }
 
+function toRenderableDeal(deal: DealSummary): CampaignPreviewDeal {
+  return {
+    id: deal.id,
+    routeLabel: deal.routeLabel,
+    title: deal.title,
+    dealPrice: deal.dealPrice,
+    departureDate: deal.departureDate,
+    returnDate: deal.returnDate,
+    airlineSummary: deal.airlineSummary,
+    bookingUrl: deal.bookingUrl,
+  };
+}
+
 async function countTable(
   table:
     | "newsletter_subscribers"
@@ -398,9 +562,11 @@ function buildSubscriberSummaries(
   subscribers: SubscriberRow[],
   preferences: SubscriberPreferenceRow[],
   routePreferences: SubscriberRoutePreferenceRow[],
+  customAlertRules: SubscriberCustomAlertRow[],
 ) {
   const preferenceMap = new Map(preferences.map((item) => [item.subscriber_id, item]));
   const routeMap = new Map<string, SubscriberRoutePreferenceRow[]>();
+  const customRuleMap = new Map<string, SubscriberCustomAlertRow[]>();
 
   for (const routePreference of routePreferences) {
     if (!routePreference.is_enabled) {
@@ -412,11 +578,20 @@ function buildSubscriberSummaries(
     routeMap.set(routePreference.subscriber_id, bucket);
   }
 
+  for (const customRule of customAlertRules) {
+    const bucket = customRuleMap.get(customRule.subscriber_id) ?? [];
+    bucket.push(customRule);
+    customRuleMap.set(customRule.subscriber_id, bucket);
+  }
+
   return subscribers.map((subscriber) => {
     const preference = preferenceMap.get(subscriber.id);
     const selectedRoutes = (routeMap.get(subscriber.id) ?? []).sort((left, right) =>
       left.destination_city.localeCompare(right.destination_city),
     );
+    const activeCustomRules = (customRuleMap.get(subscriber.id) ?? [])
+      .slice()
+      .sort((left, right) => left.sort_order - right.sort_order);
 
     const preferredBuckets =
       preference?.preferred_buckets && preference.preferred_buckets.length > 0
@@ -431,9 +606,18 @@ function buildSubscriberSummaries(
       createdAt: subscriber.created_at,
       homeAirport: subscriber.home_airport,
       onboardingCompleted: subscriber.onboarding_completed,
+      emailConfirmed: subscriber.email_confirmed,
       preferenceToken: subscriber.preference_token,
-      deliveryMode: normalizeDeliveryMode(preference?.delivery_mode),
-      maxStopsPreference: normalizeMaxStopsPreference(preference?.max_stops_preference),
+      unsubscribeToken: subscriber.unsubscribe_token,
+      deliveryModes: normalizeDeliveryModes(
+        preference?.delivery_modes,
+        preference?.delivery_mode,
+      ),
+      maxStopsPreferences: normalizeMaxStopsPreferences(
+        preference?.max_stops_preferences,
+        preference?.max_stops_preference,
+      ),
+      departureWeekdays: normalizeDepartureWeekdays(preference?.departure_weekdays),
       minTripNights: preference?.min_trip_nights ?? defaultPreferenceValues.minTripNights,
       maxTripNights: preference?.max_trip_nights ?? defaultPreferenceValues.maxTripNights,
       budgetCeilingEur: preference?.budget_ceiling_eur ?? defaultPreferenceValues.budgetCeilingEur,
@@ -441,6 +625,18 @@ function buildSubscriberSummaries(
       selectedRouteLabels: selectedRoutes.map(
         (item) => `${item.destination_city} (${item.destination_airport})`,
       ),
+      customAlertRules: activeCustomRules.map((rule) => ({
+        id: rule.id,
+        name: rule.name,
+        destinationCity: rule.destination_city,
+        bucket: rule.bucket,
+        maxStopsPreferences: normalizeMaxStopsPreferences(rule.max_stops_preferences, null),
+        budgetCeilingEur: rule.budget_ceiling_eur,
+        departureWeekdays: normalizeDepartureWeekdays(rule.departure_weekdays),
+        minTripNights: rule.min_trip_nights,
+        maxTripNights: rule.max_trip_nights,
+        isActive: rule.is_active,
+      })),
       selectedRouteKeys: new Set(
         selectedRoutes.map((item) => makeRouteKey(item.destination_airport, item.bucket)),
       ),
@@ -654,31 +850,45 @@ function buildPriceSeries(
     });
 }
 
-function deliveryModeMatches(sendType: CampaignSendType, deliveryMode: string) {
+function deliveryModeMatches(
+  sendType: CampaignSendType,
+  deliveryModes: DeliveryModeValue[],
+) {
   if (sendType === "flash") {
-    return deliveryMode === "daily_digest" || deliveryMode === "flash_only";
+    return deliveryModes.includes("flash_only");
   }
 
-  return deliveryMode === "daily_digest";
+  return deliveryModes.includes("daily_digest");
 }
 
-function stopsMatch(preference: string, routeMaxStops: string) {
-  if (preference === "ANY") {
+function stopsMatch(preferences: MaxStopsPreferenceValue[], routeMaxStops: string) {
+  if (preferences.includes("ANY")) {
     return true;
   }
 
-  if (preference === "NON_STOP") {
-    return routeMaxStops === "NON_STOP";
+  if (routeMaxStops === "NON_STOP") {
+    return (
+      preferences.includes("NON_STOP") || preferences.includes("ONE_STOP_OR_FEWER")
+    );
   }
 
-  return routeMaxStops === "NON_STOP" || routeMaxStops === "ONE_STOP_OR_FEWER";
+  if (routeMaxStops === "ONE_STOP_OR_FEWER") {
+    return preferences.includes("ONE_STOP_OR_FEWER");
+  }
+
+  return false;
 }
 
-function dealMatchesSubscriber(subscriber: AudienceMember, deal: DealSummary, sendType: CampaignSendType) {
-  if (!deliveryModeMatches(sendType, subscriber.deliveryMode)) {
+function departureWeekdayMatches(weekdays: WeekdayValue[], departureDate: string | null) {
+  const weekday = weekdayForDate(departureDate);
+  if (!weekday) {
     return false;
   }
 
+  return weekdays.includes(weekday);
+}
+
+function basePreferenceMatchesDeal(subscriber: AudienceMember, deal: DealSummary) {
   if (!subscriber.preferredBuckets.includes(deal.routeBucket)) {
     return false;
   }
@@ -690,7 +900,11 @@ function dealMatchesSubscriber(subscriber: AudienceMember, deal: DealSummary, se
     return false;
   }
 
-  if (!stopsMatch(subscriber.maxStopsPreference, deal.maxStops)) {
+  if (!stopsMatch(subscriber.maxStopsPreferences, deal.maxStops)) {
+    return false;
+  }
+
+  if (!departureWeekdayMatches(subscriber.departureWeekdays, deal.departureDate)) {
     return false;
   }
 
@@ -707,6 +921,57 @@ function dealMatchesSubscriber(subscriber: AudienceMember, deal: DealSummary, se
   }
 
   return true;
+}
+
+function customRuleMatchesDeal(
+  rule: AudienceMember["customAlertRules"][number],
+  deal: DealSummary,
+) {
+  if (!rule.isActive) {
+    return false;
+  }
+
+  if (rule.destinationCity && rule.destinationCity !== deal.destinationCity) {
+    return false;
+  }
+
+  if (rule.bucket && rule.bucket !== deal.routeBucket) {
+    return false;
+  }
+
+  if (!stopsMatch(rule.maxStopsPreferences, deal.maxStops)) {
+    return false;
+  }
+
+  if (!departureWeekdayMatches(rule.departureWeekdays, deal.departureDate)) {
+    return false;
+  }
+
+  if (rule.minTripNights !== null && deal.tripNights < rule.minTripNights) {
+    return false;
+  }
+
+  if (rule.maxTripNights !== null && deal.tripNights > rule.maxTripNights) {
+    return false;
+  }
+
+  if (rule.budgetCeilingEur !== null && deal.dealPrice > rule.budgetCeilingEur) {
+    return false;
+  }
+
+  return true;
+}
+
+function dealMatchesSubscriber(subscriber: AudienceMember, deal: DealSummary, sendType: CampaignSendType) {
+  if (!deliveryModeMatches(sendType, subscriber.deliveryModes)) {
+    return false;
+  }
+
+  if (basePreferenceMatchesDeal(subscriber, deal)) {
+    return true;
+  }
+
+  return subscriber.customAlertRules.some((rule) => customRuleMatchesDeal(rule, deal));
 }
 
 function matchRecipients(sendType: CampaignSendType, subscribers: AudienceMember[], deals: DealSummary[]) {
@@ -733,13 +998,62 @@ function matchRecipients(sendType: CampaignSendType, subscribers: AudienceMember
   return matched;
 }
 
+function buildPreviewRender(
+  sendType: CampaignSendType,
+  deals: DealSummary[],
+  subscriber: AudienceMember | null,
+) {
+  const siteUrl = getSiteUrl();
+  const previewDeals = deals.slice(0, 3);
+  const subject = buildCampaignSubject(sendType, previewDeals);
+  const previewText = buildCampaignPreviewText(sendType, previewDeals);
+  const rendered = renderCampaignEmail({
+    sendType,
+    subject,
+    previewText,
+    managePreferencesUrl: subscriber
+      ? `${siteUrl}/preferences?token=${subscriber.preferenceToken}`
+      : `${siteUrl}/preferences`,
+    unsubscribeUrl: subscriber
+      ? `${siteUrl}/unsubscribe?token=${subscriber.unsubscribeToken}`
+      : `${siteUrl}/unsubscribe`,
+    deals: previewDeals.map((deal) => ({
+      id: deal.id,
+      title: deal.title,
+      summary: deal.summary,
+      routeLabel: deal.routeLabel,
+      destinationCity: deal.destinationCity,
+      destinationAirport: deal.destinationAirport,
+      dealPrice: deal.dealPrice,
+      baselinePrice: deal.baselinePrice,
+      dropRatio: deal.dropRatio,
+      departureDate: deal.departureDate,
+      returnDate: deal.returnDate,
+      tripNights: deal.tripNights,
+      maxStops: deal.maxStops,
+      airlineSummary: deal.airlineSummary,
+      bookingUrl: deal.bookingUrl,
+    })),
+  });
+
+  return {
+    subject,
+    previewText,
+    previewHtml: rendered.html,
+    previewDeals: previewDeals.map(toRenderableDeal),
+  };
+}
+
 function buildCampaignPreview(
   sendType: CampaignSendType,
   deals: DealSummary[],
   subscribers: AudienceMember[],
+  suggestedTestEmail: string | null,
 ): CampaignPreview {
   const matchedRecipients = matchRecipients(sendType, subscribers, deals);
   const topRoutes = unique(deals.map((deal) => deal.routeLabel)).slice(0, 3);
+  const previewSeed = matchedRecipients[0]?.deals ?? deals;
+  const previewRender = buildPreviewRender(sendType, previewSeed, matchedRecipients[0]?.subscriber ?? null);
 
   let blockedReason: string | null = null;
   if (!hasResendEnv()) {
@@ -747,8 +1061,8 @@ function buildCampaignPreview(
   } else if (deals.length === 0) {
     blockedReason =
       sendType === "flash"
-        ? "Approve at least one flash deal to unlock this send."
-        : "Approve at least one digest deal to unlock this send.";
+        ? "Review at least one flash deal to unlock this send."
+        : "Review at least one digest deal to unlock this send.";
   } else if (matchedRecipients.length === 0) {
     blockedReason = "No active subscribers match the current routes and filters.";
   }
@@ -759,12 +1073,17 @@ function buildCampaignPreview(
     description:
       sendType === "flash"
         ? "Immediate sends for the strongest drops. Weekly-only subscribers stay excluded."
-        : "One operational digest to everyone whose route profile matches approved daily deals.",
-    approvedDeals: deals.length,
+        : "One operational digest to everyone whose route profile matches reviewed daily deals.",
+    reviewedDeals: deals.length,
     matchingSubscribers: matchedRecipients.length,
     topRoutes,
     isReady: blockedReason === null,
     blockedReason,
+    subject: previewRender.subject,
+    previewText: previewRender.previewText,
+    previewHtml: previewRender.previewHtml,
+    previewDeals: previewRender.previewDeals,
+    suggestedTestEmail,
   };
 }
 
@@ -776,24 +1095,70 @@ function buildIdempotencyKey(sendType: CampaignSendType, subscriberId: string, d
   return `lux-${sendType}-${digest}`;
 }
 
-async function loadApprovedCampaignModel(sendType: CampaignSendType) {
+async function loadAutomationSettings() {
   const supabase = getSupabaseAdminClient();
-  const [subscribersQuery, preferencesQuery, routePreferencesQuery, routesQuery, dealsQuery] =
+  const query = await supabase
+    .from("ops_automation_settings")
+    .select("id,daily_digest_enabled,daily_digest_hour,daily_digest_minute,test_email,last_digest_sent_on")
+    .eq("id", "default")
+    .maybeSingle();
+
+  if (query.error) {
+    throw new Error(formatError(query.error));
+  }
+
+  const row = query.data as AutomationSettingsRow | null;
+  if (!row) {
+    return defaultDigestAutomationSummary();
+  }
+
+  const siteUrl = getSiteUrl();
+  const endpointReady = hasCronSecret() && !siteUrl.includes("localhost");
+  let blockedReason: string | null = null;
+
+  if (!hasCronSecret()) {
+    blockedReason = "Add CRON_SECRET to the deployed app and GitHub Actions before automatic digests can run.";
+  } else if (siteUrl.includes("localhost")) {
+    blockedReason = "NEXT_PUBLIC_SITE_URL still points to localhost, so the GitHub workflow has nowhere public to call.";
+  }
+
+  return {
+    enabled: row.daily_digest_enabled,
+    localTime: formatTimeParts(row.daily_digest_hour, row.daily_digest_minute),
+    testEmail: row.test_email ?? process.env.RESEND_REPLY_TO_EMAIL ?? null,
+    lastDigestSentOn: row.last_digest_sent_on,
+    endpointReady,
+    blockedReason,
+  } satisfies DigestAutomationSummary;
+}
+
+async function loadCampaignModel(sendType: CampaignSendType) {
+  const supabase = getSupabaseAdminClient();
+  const [
+    subscribersQuery,
+    preferencesQuery,
+    routePreferencesQuery,
+    customAlertRulesQuery,
+    routesQuery,
+    dealsQuery,
+  ] =
     await Promise.all([
       supabase
         .from("newsletter_subscribers")
         .select(
-          "id,email,source,status,created_at,home_airport,onboarding_completed,preference_token",
+          "id,email,source,status,created_at,home_airport,onboarding_completed,preference_token,unsubscribe_token,email_confirmed",
         )
         .order("created_at", { ascending: false }),
       supabase
         .from("subscriber_preferences")
-        .select(
-          "subscriber_id,preferred_buckets,max_stops_preference,min_trip_nights,max_trip_nights,budget_ceiling_eur,delivery_mode",
-        ),
+        .select("*"),
       supabase
         .from("subscriber_route_preferences")
         .select("subscriber_id,destination_airport,destination_city,bucket,is_enabled"),
+      supabase
+        .from("subscriber_custom_alerts")
+        .select("*")
+        .order("sort_order", { ascending: true }),
       supabase
         .from("scanned_routes")
         .select(
@@ -804,7 +1169,7 @@ async function loadApprovedCampaignModel(sendType: CampaignSendType) {
         .select(
           "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
         )
-        .eq("status", "approved")
+        .eq("status", "reviewed")
         .eq("send_type", sendType)
         .order("score", { ascending: false })
         .order("created_at", { ascending: false }),
@@ -814,6 +1179,7 @@ async function loadApprovedCampaignModel(sendType: CampaignSendType) {
     subscribersQuery.error ? formatError(subscribersQuery.error) : null,
     preferencesQuery.error ? formatError(preferencesQuery.error) : null,
     routePreferencesQuery.error ? formatError(routePreferencesQuery.error) : null,
+    customAlertRulesQuery.error ? formatError(customAlertRulesQuery.error) : null,
     routesQuery.error ? formatError(routesQuery.error) : null,
     dealsQuery.error ? formatError(dealsQuery.error) : null,
   ].filter(Boolean) as string[];
@@ -840,10 +1206,14 @@ async function loadApprovedCampaignModel(sendType: CampaignSendType) {
     (subscribersQuery.data ?? []) as SubscriberRow[],
     (preferencesQuery.data ?? []) as SubscriberPreferenceRow[],
     (routePreferencesQuery.data ?? []) as SubscriberRoutePreferenceRow[],
+    (customAlertRulesQuery.data ?? []) as SubscriberCustomAlertRow[],
   );
 
   const activeAudience = subscribers.filter(
-    (subscriber) => subscriber.status === "active" && subscriber.onboardingCompleted,
+    (subscriber) =>
+      subscriber.status === "active" &&
+      subscriber.onboardingCompleted &&
+      subscriber.emailConfirmed,
   );
   const routeMap = buildRouteMap((routesQuery.data ?? []) as RouteRow[]);
   const snapshotMap = new Map(
@@ -867,12 +1237,19 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       metrics: {
         subscribers: 0,
         activeRoutes: 0,
-        pendingDeals: 0,
+        newDeals: 0,
         snapshots24h: 0,
       },
+      dealStateCounts: {
+        new: 0,
+        reviewed: 0,
+        sent: 0,
+        expired: 0,
+      },
+      digestAutomation: defaultDigestAutomationSummary(),
       subscribers: [],
       routes: [],
-      pendingDeals: [],
+      newDeals: [],
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -885,20 +1262,28 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
   const [
     subscriberCount,
     routeCount,
-    pendingDealCount,
+    newDealCount,
+    reviewedDealCount,
+    sentDealCount,
+    expiredDealCount,
     snapshotCountQuery,
     subscribersQuery,
     preferencesQuery,
     routePreferencesQuery,
+    customAlertRulesQuery,
     routesQuery,
-    pendingDealsQuery,
-    approvedDealsQuery,
+    newDealsQuery,
+    reviewedDealsQuery,
     recentSnapshotsQuery,
     recentCampaignsQuery,
+    automationQuery,
   ] = await Promise.all([
     countTable("newsletter_subscribers"),
     countTable("scanned_routes", { column: "is_active", value: true }),
-    countTable("deal_candidates", { column: "status", value: "pending_review" }),
+    countTable("deal_candidates", { column: "status", value: "new" }),
+    countTable("deal_candidates", { column: "status", value: "reviewed" }),
+    countTable("deal_candidates", { column: "status", value: "sent" }),
+    countTable("deal_candidates", { column: "status", value: "expired" }),
     supabase
       .from("price_snapshots")
       .select("*", { count: "exact", head: true })
@@ -906,17 +1291,19 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     supabase
       .from("newsletter_subscribers")
       .select(
-        "id,email,source,status,created_at,home_airport,onboarding_completed,preference_token",
+        "id,email,source,status,created_at,home_airport,onboarding_completed,preference_token,unsubscribe_token,email_confirmed",
       )
       .order("created_at", { ascending: false }),
     supabase
       .from("subscriber_preferences")
-      .select(
-        "subscriber_id,preferred_buckets,max_stops_preference,min_trip_nights,max_trip_nights,budget_ceiling_eur,delivery_mode",
-      ),
+      .select("*"),
     supabase
       .from("subscriber_route_preferences")
       .select("subscriber_id,destination_airport,destination_city,bucket,is_enabled"),
+    supabase
+      .from("subscriber_custom_alerts")
+      .select("*")
+      .order("sort_order", { ascending: true }),
     supabase
       .from("scanned_routes")
       .select(
@@ -929,7 +1316,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       .select(
         "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
       )
-      .eq("status", "pending_review")
+      .eq("status", "new")
       .order("score", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(12),
@@ -938,7 +1325,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       .select(
         "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
       )
-      .eq("status", "approved")
+      .eq("status", "reviewed")
       .order("score", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase
@@ -953,21 +1340,31 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       )
       .order("created_at", { ascending: false })
       .limit(8),
+    supabase
+      .from("ops_automation_settings")
+      .select("id,daily_digest_enabled,daily_digest_hour,daily_digest_minute,test_email,last_digest_sent_on")
+      .eq("id", "default")
+      .maybeSingle(),
   ]);
 
   const errors = [
     subscriberCount.error,
     routeCount.error,
-    pendingDealCount.error,
+    newDealCount.error,
+    reviewedDealCount.error,
+    sentDealCount.error,
+    expiredDealCount.error,
     snapshotCountQuery.error ? formatError(snapshotCountQuery.error) : null,
     subscribersQuery.error ? formatError(subscribersQuery.error) : null,
     preferencesQuery.error ? formatError(preferencesQuery.error) : null,
     routePreferencesQuery.error ? formatError(routePreferencesQuery.error) : null,
+    customAlertRulesQuery.error ? formatError(customAlertRulesQuery.error) : null,
     routesQuery.error ? formatError(routesQuery.error) : null,
-    pendingDealsQuery.error ? formatError(pendingDealsQuery.error) : null,
-    approvedDealsQuery.error ? formatError(approvedDealsQuery.error) : null,
+    newDealsQuery.error ? formatError(newDealsQuery.error) : null,
+    reviewedDealsQuery.error ? formatError(reviewedDealsQuery.error) : null,
     recentSnapshotsQuery.error ? formatError(recentSnapshotsQuery.error) : null,
     recentCampaignsQuery.error ? formatError(recentCampaignsQuery.error) : null,
+    automationQuery.error ? formatError(automationQuery.error) : null,
   ].filter(Boolean) as string[];
 
   if (errors.length > 0) {
@@ -981,22 +1378,29 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       metrics: {
         subscribers: 0,
         activeRoutes: 0,
-        pendingDeals: 0,
+        newDeals: 0,
         snapshots24h: 0,
       },
+      dealStateCounts: {
+        new: 0,
+        reviewed: 0,
+        sent: 0,
+        expired: 0,
+      },
+      digestAutomation: defaultDigestAutomationSummary(),
       subscribers: [],
       routes: [],
-      pendingDeals: [],
+      newDeals: [],
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
     };
   }
 
-  const pendingDealRows = (pendingDealsQuery.data ?? []) as DealRow[];
-  const approvedDealRows = (approvedDealsQuery.data ?? []) as DealRow[];
+  const newDealRows = (newDealsQuery.data ?? []) as DealRow[];
+  const reviewedDealRows = (reviewedDealsQuery.data ?? []) as DealRow[];
   const snapshotIds = unique(
-    [...pendingDealRows, ...approvedDealRows].map((deal) => deal.snapshot_id),
+    [...newDealRows, ...reviewedDealRows].map((deal) => deal.snapshot_id),
   );
 
   const dealSnapshotsQuery =
@@ -1018,12 +1422,19 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       metrics: {
         subscribers: 0,
         activeRoutes: 0,
-        pendingDeals: 0,
+        newDeals: 0,
         snapshots24h: 0,
       },
+      dealStateCounts: {
+        new: 0,
+        reviewed: 0,
+        sent: 0,
+        expired: 0,
+      },
+      digestAutomation: defaultDigestAutomationSummary(),
       subscribers: [],
       routes: [],
-      pendingDeals: [],
+      newDeals: [],
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -1039,20 +1450,44 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     (subscribersQuery.data ?? []) as SubscriberRow[],
     (preferencesQuery.data ?? []) as SubscriberPreferenceRow[],
     (routePreferencesQuery.data ?? []) as SubscriberRoutePreferenceRow[],
+    (customAlertRulesQuery.data ?? []) as SubscriberCustomAlertRow[],
   );
 
-  const pendingDeals = enrichDeals(pendingDealRows, routeMap, dealSnapshotMap);
-  const approvedDeals = enrichDeals(approvedDealRows, routeMap, dealSnapshotMap);
+  const newDeals = enrichDeals(newDealRows, routeMap, dealSnapshotMap);
+  const reviewedDeals = enrichDeals(reviewedDealRows, routeMap, dealSnapshotMap);
 
   const activeAudience = subscriberSummaries.filter(
-    (subscriber) => subscriber.status === "active" && subscriber.onboardingCompleted,
+    (subscriber) =>
+      subscriber.status === "active" &&
+      subscriber.onboardingCompleted &&
+      subscriber.emailConfirmed,
   );
+  const automationSettings = (automationQuery.data as AutomationSettingsRow | null) ?? null;
+  const siteUrl = getSiteUrl();
+  const digestAutomation: DigestAutomationSummary = automationSettings
+    ? {
+        enabled: automationSettings.daily_digest_enabled,
+        localTime: formatTimeParts(
+          automationSettings.daily_digest_hour,
+          automationSettings.daily_digest_minute,
+        ),
+        testEmail: automationSettings.test_email ?? process.env.RESEND_REPLY_TO_EMAIL ?? null,
+        lastDigestSentOn: automationSettings.last_digest_sent_on,
+        endpointReady: hasCronSecret() && !siteUrl.includes("localhost"),
+        blockedReason: !hasCronSecret()
+          ? "Add CRON_SECRET to the deployed app and GitHub Actions before automatic digests can run."
+          : siteUrl.includes("localhost")
+            ? "NEXT_PUBLIC_SITE_URL still points to localhost, so the GitHub workflow has nowhere public to call."
+            : null,
+      }
+    : defaultDigestAutomationSummary();
 
   const sendQueue = campaignSendTypes.map((sendType) =>
     buildCampaignPreview(
       sendType,
-      approvedDeals.filter((deal) => deal.sendType === sendType),
+      reviewedDeals.filter((deal) => deal.sendType === sendType),
       activeAudience,
+      digestAutomation.testEmail,
     ),
   );
 
@@ -1082,9 +1517,16 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     metrics: {
       subscribers: subscriberCount.count,
       activeRoutes: routeCount.count,
-      pendingDeals: pendingDealCount.count,
+      newDeals: newDealCount.count,
       snapshots24h: snapshotCountQuery.count ?? 0,
     },
+    dealStateCounts: {
+      new: newDealCount.count,
+      reviewed: reviewedDealCount.count,
+      sent: sentDealCount.count,
+      expired: expiredDealCount.count,
+    },
+    digestAutomation,
     subscribers: subscriberSummaries.slice(0, 10).map((subscriber) => ({
       id: subscriber.id,
       email: subscriber.email,
@@ -1093,13 +1535,16 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       createdAt: subscriber.createdAt,
       homeAirport: subscriber.homeAirport,
       onboardingCompleted: subscriber.onboardingCompleted,
-      deliveryMode: subscriber.deliveryMode,
-      maxStopsPreference: subscriber.maxStopsPreference,
+      emailConfirmed: subscriber.emailConfirmed,
+      deliveryModes: subscriber.deliveryModes,
+      maxStopsPreferences: subscriber.maxStopsPreferences,
+      departureWeekdays: subscriber.departureWeekdays,
       minTripNights: subscriber.minTripNights,
       maxTripNights: subscriber.maxTripNights,
       budgetCeilingEur: subscriber.budgetCeilingEur,
       preferredBuckets: subscriber.preferredBuckets,
       selectedRouteLabels: subscriber.selectedRouteLabels,
+      customAlertRules: subscriber.customAlertRules,
     })),
     routes: routes.map((route) => ({
       id: route.id,
@@ -1111,7 +1556,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       maxStops: route.max_stops,
       isActive: route.is_active,
     })),
-    pendingDeals,
+    newDeals,
     recentSnapshots,
     sendQueue,
     recentCampaigns,
@@ -1221,14 +1666,14 @@ export async function getOpsPriceIntelligenceData(): Promise<OpsPriceIntelligenc
 
 export async function updateDealStatus(input: {
   id: string;
-  status: "approved" | "rejected";
+  status: "reviewed" | "expired";
 }) {
   const supabase = getSupabaseAdminClient();
   const { error } = await supabase
     .from("deal_candidates")
     .update({
       status: input.status,
-      reviewed_at: new Date().toISOString(),
+      reviewed_at: input.status === "reviewed" ? new Date().toISOString() : null,
     })
     .eq("id", input.id);
 
@@ -1243,19 +1688,19 @@ export async function sendApprovedDealCampaign(input: { sendType: CampaignSendTy
   }
 
   const supabase = getSupabaseAdminClient();
-  const { subscribers, deals } = await loadApprovedCampaignModel(input.sendType);
+  const { subscribers, deals } = await loadCampaignModel(input.sendType);
 
   if (deals.length === 0) {
     throw new Error(
       input.sendType === "flash"
-        ? "There are no approved flash deals ready to send."
-        : "There are no approved digest deals ready to send.",
+        ? "There are no reviewed flash deals ready to send."
+        : "There are no reviewed digest deals ready to send.",
     );
   }
 
   const matchedRecipients = matchRecipients(input.sendType, subscribers, deals);
   if (matchedRecipients.length === 0) {
-    throw new Error("No active subscribers match the approved deals and saved route filters.");
+    throw new Error("No active subscribers match the reviewed deals and saved route filters.");
   }
 
   const nowIso = new Date().toISOString();
@@ -1313,6 +1758,7 @@ export async function sendApprovedDealCampaign(input: { sendType: CampaignSendTy
             subject,
             previewText: preview,
             managePreferencesUrl: `${siteUrl}/preferences?token=${subscriber.preferenceToken}`,
+            unsubscribeUrl: `${siteUrl}/unsubscribe?token=${subscriber.unsubscribeToken}`,
             deals: matchedDeals.map((deal) => ({
               id: deal.id,
               title: deal.title,
@@ -1338,6 +1784,7 @@ export async function sendApprovedDealCampaign(input: { sendType: CampaignSendTy
               subject,
               html: rendered.html,
               text: rendered.text,
+              emailType: "campaign",
               sendType: input.sendType,
               idempotencyKey: buildIdempotencyKey(
                 input.sendType,
@@ -1447,4 +1894,161 @@ export async function sendApprovedDealCampaign(input: { sendType: CampaignSendTy
     failedCount,
     sendType: input.sendType,
   };
+}
+
+export async function sendCampaignTestEmail(input: {
+  sendType: CampaignSendType;
+  testEmail?: string | null;
+}) {
+  if (!hasResendEnv()) {
+    throw new Error("Add RESEND_API_KEY and RESEND_FROM_EMAIL before sending live emails.");
+  }
+
+  const fallbackEmail = process.env.RESEND_REPLY_TO_EMAIL ?? null;
+  const destination = input.testEmail?.trim() || fallbackEmail;
+  if (!destination) {
+    throw new Error("Add a test email in /ops or set RESEND_REPLY_TO_EMAIL first.");
+  }
+
+  const { subscribers, deals } = await loadCampaignModel(input.sendType);
+  if (deals.length === 0) {
+    throw new Error(
+      input.sendType === "flash"
+        ? "There are no reviewed flash deals to preview right now."
+        : "There are no reviewed digest deals to preview right now.",
+    );
+  }
+
+  const matchedRecipients = matchRecipients(input.sendType, subscribers, deals);
+  const previewRecipient = matchedRecipients[0]?.subscriber ?? subscribers[0] ?? null;
+  const previewDeals = matchedRecipients[0]?.deals ?? deals.slice(0, 3);
+  const preview = buildPreviewRender(input.sendType, previewDeals, previewRecipient);
+
+  await sendResendEmail({
+    to: destination,
+    subject: `[Test] ${preview.subject}`,
+    html: preview.previewHtml,
+    text: `${preview.previewText}\n\nThis is a test email from Lux Flight Deals.`,
+    emailType: "campaign_test",
+    sendType: input.sendType,
+    idempotencyKey: `lux-test-${input.sendType}-${destination}-${Date.now()}`,
+  });
+
+  return {
+    sendType: input.sendType,
+    email: destination,
+  };
+}
+
+export async function updateDigestAutomation(input: {
+  enabled: boolean;
+  localTime: string;
+  testEmail: string | null;
+}) {
+  const [hourString, minuteString] = input.localTime.split(":");
+  const hour = Number(hourString);
+  const minute = Number(minuteString);
+
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    throw new Error("Digest hour must be between 00 and 23.");
+  }
+
+  if (!Number.isInteger(minute) || minute < 0 || minute > 59) {
+    throw new Error("Digest minute must be between 00 and 59.");
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const upsertQuery = await supabase.from("ops_automation_settings").upsert(
+    {
+      id: "default",
+      daily_digest_enabled: input.enabled,
+      daily_digest_hour: hour,
+      daily_digest_minute: minute,
+      test_email: input.testEmail?.trim() ? input.testEmail.trim() : null,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "id",
+      ignoreDuplicates: false,
+    },
+  );
+
+  if (upsertQuery.error) {
+    throw new Error(formatError(upsertQuery.error));
+  }
+
+  return {
+    enabled: input.enabled,
+    localTime: formatTimeParts(hour, minute),
+  };
+}
+
+export async function runScheduledDigest(input: { force?: boolean } = {}) {
+  const automation = await loadAutomationSettings();
+  const now = luxembourgParts(new Date());
+
+  if (!input.force && !automation.enabled) {
+    return {
+      status: "skipped" as const,
+      reason: "Daily digest automation is disabled in /ops.",
+    };
+  }
+
+  if (!input.force && timeToMinutes(now.time) < timeToMinutes(automation.localTime)) {
+    return {
+      status: "skipped" as const,
+      reason: `Current Luxembourg time ${now.time} is still before scheduled digest time ${automation.localTime}.`,
+    };
+  }
+
+  if (!input.force && automation.lastDigestSentOn === now.date) {
+    return {
+      status: "skipped" as const,
+      reason: `Digest already sent on ${automation.lastDigestSentOn}.`,
+    };
+  }
+
+  try {
+    const result = await sendApprovedDealCampaign({ sendType: "digest" });
+    const supabase = getSupabaseAdminClient();
+    const updateQuery = await supabase
+      .from("ops_automation_settings")
+      .update({
+        last_digest_sent_on: now.date,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", "default");
+
+    if (updateQuery.error) {
+      throw new Error(formatError(updateQuery.error));
+    }
+
+    return {
+      status: "sent" as const,
+      ...result,
+      localDate: now.date,
+      localTime: now.time,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Scheduled digest failed.";
+    if (
+      message.includes("There are no reviewed digest deals") ||
+      message.includes("No active subscribers match the reviewed deals")
+    ) {
+      return {
+        status: "skipped" as const,
+        reason: message,
+      };
+    }
+
+    throw error;
+  }
+}
+
+export function validateCronSecret(secret: string | null) {
+  if (!hasCronSecret()) {
+    return false;
+  }
+
+  return secret === getCronSecret().CRON_SECRET;
 }
