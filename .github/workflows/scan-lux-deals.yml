@@ -17,6 +17,12 @@ jobs:
         id: lux_time
         working-directory: .
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "hour=08" >> "$GITHUB_OUTPUT"
+            echo "Manual run detected, bypassing the 08:00 Luxembourg guard."
+            exit 0
+          fi
+
           LUX_HOUR=$(TZ=Europe/Luxembourg date +%H)
           echo "hour=$LUX_HOUR" >> "$GITHUB_OUTPUT"
           if [ "$LUX_HOUR" != "08" ]; then
