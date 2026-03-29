@@ -5,6 +5,7 @@ import {
   sampleDeals,
   workflowSteps,
 } from "@/lib/content";
+import { formatRouteStayLabel } from "@/lib/route-stay";
 
 export default function HomePage() {
   return (
@@ -150,7 +151,7 @@ export default function HomePage() {
             <div className="route-table__row" role="row">
               <span role="columnheader">Destination</span>
               <span role="columnheader">Bucket</span>
-              <span role="columnheader">Typical stay</span>
+              <span role="columnheader">Scanner range</span>
               <span role="columnheader">Why it stays on the list</span>
             </div>
           </div>
@@ -165,7 +166,13 @@ export default function HomePage() {
                   {route.destination_city} <small>{route.destination_airport}</small>
                 </span>
                 <span role="cell">{route.bucket.replace("_", " ")}</span>
-                <span role="cell">{route.trip_nights} nights</span>
+                <span role="cell">
+                  {formatRouteStayLabel({
+                    tripNights: route.trip_nights,
+                    minTripNights: route.min_trip_nights ?? null,
+                    maxTripNights: route.max_trip_nights ?? null,
+                  })}
+                </span>
                 <span role="cell">{route.teaser}</span>
               </div>
             ))}

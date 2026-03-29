@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import routes from "@/data/lux-routes.json";
+import { formatRouteStayLabel } from "@/lib/route-stay";
 
 export const bucketValues = ["weekend_europe", "sun_breaks", "long_haul"] as const;
 export const maxStopsPreferenceValues = ["ANY", "NON_STOP", "ONE_STOP_OR_FEWER"] as const;
@@ -85,6 +86,13 @@ export const routePreferenceOptions = routes.map((route) => ({
   destinationCity: route.destination_city,
   bucket: route.bucket as BucketValue,
   tripNights: route.trip_nights,
+  minTripNights: route.min_trip_nights ?? null,
+  maxTripNights: route.max_trip_nights ?? null,
+  stayLabel: formatRouteStayLabel({
+    tripNights: route.trip_nights,
+    minTripNights: route.min_trip_nights ?? null,
+    maxTripNights: route.max_trip_nights ?? null,
+  }),
   teaser: route.teaser,
 }));
 
@@ -163,4 +171,3 @@ export type PreferencesBundle = {
   onboardingCompleted: boolean;
   form: Omit<PreferencePayload, "token">;
 };
-

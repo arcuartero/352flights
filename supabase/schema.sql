@@ -63,6 +63,8 @@ create table if not exists public.scanned_routes (
     check (bucket in ('weekend_europe', 'sun_breaks', 'long_haul')),
   teaser text not null,
   trip_nights integer not null check (trip_nights > 0),
+  min_trip_nights integer,
+  max_trip_nights integer,
   lookahead_start_days integer not null check (lookahead_start_days > 0),
   lookahead_end_days integer not null check (lookahead_end_days >= lookahead_start_days),
   max_stops text not null,
@@ -70,6 +72,27 @@ create table if not exists public.scanned_routes (
   created_at timestamptz not null default timezone('utc', now()),
   unique (origin_airport, destination_airport, bucket)
 );
+
+alter table public.scanned_routes
+  add column if not exists min_trip_nights integer,
+  add column if not exists max_trip_nights integer;
+
+alter table public.scanned_routes
+  drop constraint if exists scanned_routes_min_trip_nights_check,
+  drop constraint if exists scanned_routes_max_trip_nights_check,
+  drop constraint if exists scanned_routes_trip_night_range_check;
+
+alter table public.scanned_routes
+  add constraint scanned_routes_min_trip_nights_check
+    check (min_trip_nights is null or min_trip_nights > 0),
+  add constraint scanned_routes_max_trip_nights_check
+    check (max_trip_nights is null or max_trip_nights > 0),
+  add constraint scanned_routes_trip_night_range_check
+    check (
+      min_trip_nights is null
+      or max_trip_nights is null
+      or min_trip_nights <= max_trip_nights
+    );
 
 create table if not exists public.price_snapshots (
   id bigint generated always as identity primary key,

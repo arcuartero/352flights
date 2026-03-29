@@ -1,6 +1,8 @@
 import { reviewDealAction } from "@/app/ops/actions";
 import { CampaignLauncher } from "@/components/campaign-launcher";
+import { OpsSubnav } from "@/components/ops-subnav";
 import { getOpsDashboardData } from "@/lib/ops";
+import { formatRouteStayLabel } from "@/lib/route-stay";
 
 export const dynamic = "force-dynamic";
 
@@ -122,6 +124,8 @@ export default async function OpsPage() {
         </section>
       ) : null}
 
+      <OpsSubnav />
+
       <section className="ops-metrics" aria-label="Operational metrics">
         <article>
           <span>Subscribers</span>
@@ -219,6 +223,10 @@ export default async function OpsPage() {
                         </dd>
                       </div>
                       <div>
+                        <dt>Airline</dt>
+                        <dd>{deal.airlineSummary ?? "Awaiting itinerary detail"}</dd>
+                      </div>
+                      <div>
                         <dt>Queued</dt>
                         <dd>{formatDate(deal.createdAt)}</dd>
                       </div>
@@ -226,6 +234,16 @@ export default async function OpsPage() {
                   </div>
 
                   <div className="ops-deal__actions">
+                    {deal.bookingUrl ? (
+                      <a
+                        className="ops-button ops-button--ghost"
+                        href={deal.bookingUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Open in Skyscanner
+                      </a>
+                    ) : null}
                     <form action={reviewDealAction}>
                       <input name="id" type="hidden" value={deal.id} />
                       <input name="status" type="hidden" value="approved" />
@@ -360,6 +378,16 @@ export default async function OpsPage() {
                     <p>
                       {formatDate(snapshot.departureDate)} to {formatDate(snapshot.returnDate)}
                     </p>
+                    <p>
+                      {snapshot.tripNights} nights · {snapshot.airlineSummary ?? "Airline pending"}
+                    </p>
+                    {snapshot.bookingUrl ? (
+                      <p>
+                        <a href={snapshot.bookingUrl} rel="noreferrer" target="_blank">
+                          Open in Skyscanner
+                        </a>
+                      </p>
+                    ) : null}
                   </div>
                   <span>{formatCurrency(snapshot.price, snapshot.currency)}</span>
                 </article>
@@ -386,7 +414,7 @@ export default async function OpsPage() {
               <div className="ops-route-table__row ops-route-table__row--head" role="row">
                 <span role="columnheader">Route</span>
                 <span role="columnheader">Bucket</span>
-                <span role="columnheader">Stay</span>
+                <span role="columnheader">Search range</span>
                 <span role="columnheader">Stops</span>
                 <span role="columnheader">Status</span>
               </div>
@@ -394,7 +422,13 @@ export default async function OpsPage() {
                 <div className="ops-route-table__row" key={route.id} role="row">
                   <span role="cell">{route.label}</span>
                   <span role="cell">{formatRelativeBucket(route.bucket)}</span>
-                  <span role="cell">{route.tripNights} nights</span>
+                  <span role="cell">
+                    {formatRouteStayLabel({
+                      tripNights: route.tripNights,
+                      minTripNights: route.minTripNights,
+                      maxTripNights: route.maxTripNights,
+                    })}
+                  </span>
                   <span role="cell">{formatStops(route.maxStops)}</span>
                   <span role="cell">{route.isActive ? "active" : "paused"}</span>
                 </div>

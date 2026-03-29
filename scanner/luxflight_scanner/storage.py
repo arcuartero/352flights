@@ -98,6 +98,21 @@ class SupabaseStore:
             timeout=30.0,
         )
 
+    def _route_payload(self, route: RouteSeed) -> dict[str, Any]:
+        return {
+            "origin_airport": route.origin_airport,
+            "destination_airport": route.destination_airport,
+            "destination_city": route.destination_city,
+            "bucket": route.bucket,
+            "teaser": route.teaser,
+            "trip_nights": route.trip_nights,
+            "min_trip_nights": route.search_min_trip_nights,
+            "max_trip_nights": route.search_max_trip_nights,
+            "lookahead_start_days": route.lookahead_start_days,
+            "lookahead_end_days": route.lookahead_end_days,
+            "max_stops": route.max_stops,
+        }
+
     def ensure_route(self, route: RouteSeed) -> str:
         response = self.client.get(
             "/rest/v1/scanned_routes",
@@ -112,22 +127,20 @@ class SupabaseStore:
         response.raise_for_status()
         data = response.json()
         if data:
-            return data[0]["id"]
+            route_id = data[0]["id"]
+            update_response = self.client.patch(
+                "/rest/v1/scanned_routes",
+                params={"id": f"eq.{route_id}"},
+                headers={"Prefer": "return=minimal"},
+                json=self._route_payload(route),
+            )
+            update_response.raise_for_status()
+            return route_id
 
         insert_response = self.client.post(
             "/rest/v1/scanned_routes",
             headers={"Prefer": "return=representation"},
-            json={
-                "origin_airport": route.origin_airport,
-                "destination_airport": route.destination_airport,
-                "destination_city": route.destination_city,
-                "bucket": route.bucket,
-                "teaser": route.teaser,
-                "trip_nights": route.trip_nights,
-                "lookahead_start_days": route.lookahead_start_days,
-                "lookahead_end_days": route.lookahead_end_days,
-                "max_stops": route.max_stops,
-            },
+            json=self._route_payload(route),
         )
         insert_response.raise_for_status()
         created = insert_response.json()
@@ -189,4 +202,3 @@ def create_store(config: ScannerConfig) -> LocalStore | SupabaseStore:
     if config.use_supabase:
         return SupabaseStore(config)
     return LocalStore(config.state_path)
-

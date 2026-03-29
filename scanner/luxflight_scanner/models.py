@@ -14,10 +14,30 @@ class RouteSeed:
     lookahead_end_days: int
     max_stops: str
     teaser: str
+    min_trip_nights: int | None = None
+    max_trip_nights: int | None = None
+
+    def __post_init__(self) -> None:
+        min_trip_nights = self.search_min_trip_nights
+        max_trip_nights = self.search_max_trip_nights
+
+        if min_trip_nights <= 0 or max_trip_nights <= 0:
+            raise ValueError("Trip-night ranges must be positive.")
+
+        if min_trip_nights > max_trip_nights:
+            raise ValueError("min_trip_nights cannot be greater than max_trip_nights.")
 
     @property
     def key(self) -> str:
         return f"{self.origin_airport}:{self.destination_airport}:{self.bucket}"
+
+    @property
+    def search_min_trip_nights(self) -> int:
+        return self.min_trip_nights if self.min_trip_nights is not None else self.trip_nights
+
+    @property
+    def search_max_trip_nights(self) -> int:
+        return self.max_trip_nights if self.max_trip_nights is not None else self.trip_nights
 
 
 @dataclass(frozen=True)
@@ -40,4 +60,3 @@ class DealCandidate:
     drop_ratio: float
     score: float
     send_type: str
-

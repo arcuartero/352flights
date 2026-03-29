@@ -169,8 +169,8 @@ Behavior:
 
 The schedule is:
 
-- every day at `05:15 UTC`
-- which is `07:15` in Luxembourg during summer time (`Europe/Luxembourg`)
+- every day at `08:00` Luxembourg time (`Europe/Luxembourg`)
+- implemented via two UTC schedules plus a local-time guard so daylight saving time is handled correctly
 
 Add these repository secrets before enabling it:
 

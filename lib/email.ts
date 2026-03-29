@@ -17,6 +17,8 @@ type RenderableDeal = {
   returnDate: string | null;
   tripNights: number;
   maxStops: string;
+  airlineSummary: string | null;
+  bookingUrl: string | null;
 };
 
 type RenderCampaignEmailInput = {
@@ -165,6 +167,7 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                       <td style="padding: 0 12px 8px 0; color: #6b7780; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">Price</td>
                       <td style="padding: 0 12px 8px 0; color: #6b7780; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">Travel dates</td>
                       <td style="padding: 0 0 8px; color: #6b7780; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">Trip shape</td>
+                      <td style="padding: 0 0 8px 12px; color: #6b7780; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">Airline</td>
                     </tr>
                     <tr>
                       <td style="padding: 0 12px 0 0; color: #0a1a28; font-size: 16px; font-weight: 700;">${escapeHtml(
@@ -176,6 +179,9 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                       <td style="padding: 0; color: #0a1a28; font-size: 15px;">${escapeHtml(
                         `${deal.tripNights} nights · ${formatStops(deal.maxStops)}`,
                       )}</td>
+                      <td style="padding: 0 0 0 12px; color: #0a1a28; font-size: 15px;">${escapeHtml(
+                        deal.airlineSummary ?? "Multiple carriers",
+                      )}</td>
                     </tr>
                   </table>
                   <p style="margin: 14px 0 0; color: #44515b; font-size: 14px; line-height: 1.6;">
@@ -183,6 +189,13 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                       formatDrop(deal.dropRatio),
                     )}.
                   </p>
+                  ${
+                    deal.bookingUrl
+                      ? `<p style="margin: 18px 0 0;"><a href="${escapeHtml(
+                          deal.bookingUrl,
+                        )}" style="display: inline-block; padding: 12px 16px; border-radius: 999px; background: #bb7a21; color: #fffaf0; font-size: 14px; font-weight: 700; text-decoration: none;">Open in Skyscanner</a></p>`
+                      : ""
+                  }
                 </td>
               </tr>
             </table>
@@ -221,7 +234,7 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                   ${escapeHtml(input.previewText)}
                 </p>
                 <p style="margin: 0 0 22px; color: #44515b; font-size: 15px; line-height: 1.7;">
-                  Search these dates in <a href="https://www.google.com/travel/flights" style="color: #bb7a21; font-weight: 700;">Google Flights</a> or your preferred booking flow while the fare is still visible.
+                  Open this search in <a href="https://www.skyscanner.net" style="color: #bb7a21; font-weight: 700;">Skyscanner</a> or your preferred booking flow while the fare is still visible.
                 </p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${htmlDeals}
@@ -264,13 +277,15 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
       `Price: ${formatCurrency(deal.dealPrice)}`,
       `Travel dates: ${formatDate(deal.departureDate)} to ${formatDate(deal.returnDate)}`,
       `Trip shape: ${deal.tripNights} nights · ${formatStops(deal.maxStops)}`,
+      `Airline: ${deal.airlineSummary ?? "Multiple carriers"}`,
+      ...(deal.bookingUrl ? [`Open in Skyscanner: ${deal.bookingUrl}`] : []),
       `Baseline: ${
         deal.baselinePrice === null ? "Baseline still forming" : formatCurrency(deal.baselinePrice)
       }`,
       `Drop: ${formatDrop(deal.dropRatio)}`,
       "",
     ]),
-    "Search in Google Flights: https://www.google.com/travel/flights",
+    "Search in Skyscanner: https://www.skyscanner.net",
     `Manage preferences: ${input.managePreferencesUrl}`,
     `Homepage: ${siteUrl}`,
   ];

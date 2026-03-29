@@ -3,7 +3,8 @@ name: Scan Lux Flight Deals
 on:
   workflow_dispatch:
   schedule:
-    - cron: "15 5 * * *"
+    - cron: "0 6 * * *"
+    - cron: "0 7 * * *"
 
 jobs:
   scan:
@@ -12,21 +13,36 @@ jobs:
       run:
         working-directory: scanner
     steps:
+      - name: Check Luxembourg local time
+        id: lux_time
+        working-directory: .
+        run: |
+          LUX_HOUR=$(TZ=Europe/Luxembourg date +%H)
+          echo "hour=$LUX_HOUR" >> "$GITHUB_OUTPUT"
+          if [ "$LUX_HOUR" != "08" ]; then
+            echo "This schedule fired outside 08:00 Europe/Luxembourg, skipping."
+          fi
+
       - name: Checkout repository
+        if: steps.lux_time.outputs.hour == '08'
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: steps.lux_time.outputs.hour == '08'
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
       - name: Set up uv
+        if: steps.lux_time.outputs.hour == '08'
         uses: astral-sh/setup-uv@v5
 
       - name: Install scanner dependencies
+        if: steps.lux_time.outputs.hour == '08'
         run: uv sync
 
       - name: Run scanner
+        if: steps.lux_time.outputs.hour == '08'
         run: uv run luxflight-scan --json
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

@@ -334,7 +334,7 @@ export function PreferencesManager() {
                           {route.destinationCity} <strong>{route.destinationAirport}</strong>
                         </span>
                         <small>
-                          Typical stay: {route.tripNights} nights. {route.teaser}
+                          Scanner range: {route.stayLabel}. {route.teaser}
                         </small>
                       </label>
                     );
@@ -421,7 +421,7 @@ export function PreferencesManager() {
                     minTripNights: toNumberOrNull(event.target.value),
                   }))
                 }
-                placeholder="2"
+                placeholder="1"
                 type="number"
                 value={form.minTripNights ?? ""}
               />
@@ -436,7 +436,7 @@ export function PreferencesManager() {
                     maxTripNights: toNumberOrNull(event.target.value),
                   }))
                 }
-                placeholder="8"
+                placeholder="7"
                 type="number"
                 value={form.maxTripNights ?? ""}
               />
@@ -471,4 +471,3 @@ export function PreferencesManager() {
     </section>
   );
 }
-

@@ -6,6 +6,10 @@ import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 function getPageLabel(pathname: string) {
+  if (pathname.startsWith("/ops/prices")) {
+    return "Price intelligence";
+  }
+
   if (pathname.startsWith("/ops")) {
     return "Operations board";
   }

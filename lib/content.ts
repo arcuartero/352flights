@@ -51,12 +51,12 @@ export const routeBuckets = [
   {
     key: "weekend_europe",
     label: "Weekend Europe",
-    detail: "2 to 3 nights, quick open-rate wins, mostly nonstop or one stop max.",
+    detail: "Searches 1 to 7 nights, quick open-rate wins, mostly nonstop or one stop max.",
   },
   {
     key: "sun_breaks",
     label: "Sun Breaks",
-    detail: "4 to 5 nights, Mediterranean and Iberian routes where fare swings are worth emailing.",
+    detail: "Searches 1 to 7 nights, Mediterranean and Iberian routes where fare swings are worth emailing.",
   },
   {
     key: "long_haul",
@@ -66,4 +66,3 @@ export const routeBuckets = [
 ];
 
 export const highlightedRoutes = routes;
-
