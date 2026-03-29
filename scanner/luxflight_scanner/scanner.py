@@ -246,6 +246,8 @@ class LuxFlightScanner:
             "airline_codes": airline_codes,
             "primary_airline": airline_names[0],
             "primary_airline_code": airline_codes[0] if airline_codes else None,
+            "shopping_price": float(self._itinerary_price(cheapest_itinerary)),
+            "price_source": "shopping_results",
         }
         airline_summary = self._format_airline_summary(airline_names)
         if airline_summary:
@@ -297,17 +299,38 @@ class LuxFlightScanner:
             best_snapshot.return_date,
         )
         if not airline_metadata:
-            return best_snapshot
+            return SnapshotRecord(
+                departure_date=best_snapshot.departure_date,
+                return_date=best_snapshot.return_date,
+                trip_nights=best_snapshot.trip_nights,
+                max_stops=best_snapshot.max_stops,
+                price=best_snapshot.price,
+                currency=best_snapshot.currency,
+                metadata={
+                    **best_snapshot.metadata,
+                    "calendar_price": best_snapshot.price,
+                    "price_source": "calendar_graph",
+                    "skyscanner_url": fallback_skyscanner_url,
+                },
+            )
+
+        shopping_price = airline_metadata.get("shopping_price")
+        verified_price = (
+            float(shopping_price)
+            if isinstance(shopping_price, (int, float)) and float(shopping_price) > 0
+            else best_snapshot.price
+        )
 
         return SnapshotRecord(
             departure_date=best_snapshot.departure_date,
             return_date=best_snapshot.return_date,
             trip_nights=best_snapshot.trip_nights,
             max_stops=best_snapshot.max_stops,
-            price=best_snapshot.price,
+            price=verified_price,
             currency=best_snapshot.currency,
             metadata={
                 **best_snapshot.metadata,
+                "calendar_price": best_snapshot.price,
                 "skyscanner_url": fallback_skyscanner_url,
                 **airline_metadata,
             },
