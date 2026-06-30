@@ -3,7 +3,12 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { hasResendEnv, getSiteUrl } from "@/lib/env";
-import { renderWelcomeEmail, sendResendEmail } from "@/lib/email";
+import {
+  normalizeEmailLocale,
+  renderWelcomeEmail,
+  sendResendEmail,
+  type EmailLocale,
+} from "@/lib/email";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type SubscriberLookupRow = {
@@ -15,6 +20,7 @@ type SubscriberLookupRow = {
   unsubscribe_token: string;
   email_confirmed: boolean;
   onboarding_completed: boolean;
+  preferred_locale: string | null;
 };
 
 function formatError(error: unknown) {
@@ -38,15 +44,17 @@ function buildSubscriptionUrls(subscriber: Pick<
   };
 }
 
-export async function subscribeEmailAddress(email: string) {
+const subscriberSelect =
+  "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed,preferred_locale";
+
+export async function subscribeEmailAddress(email: string, locale?: EmailLocale) {
   const supabase = getSupabaseAdminClient();
   const nowIso = new Date().toISOString();
+  const preferredLocale = normalizeEmailLocale(locale);
 
   const existingQuery = await supabase
     .from("newsletter_subscribers")
-    .select(
-      "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed",
-    )
+    .select(subscriberSelect)
     .eq("email", email)
     .maybeSingle();
 
@@ -63,6 +71,7 @@ export async function subscribeEmailAddress(email: string) {
       origin_city: "Luxembourg",
       home_airport: "LUX",
       source: "landing_page",
+      preferred_locale: preferredLocale,
       updated_at: nowIso,
     };
 
@@ -79,9 +88,7 @@ export async function subscribeEmailAddress(email: string) {
       .from("newsletter_subscribers")
       .update(updatePayload)
       .eq("id", subscriber.id)
-      .select(
-        "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed",
-      )
+      .select(subscriberSelect)
       .single();
 
     if (updateQuery.error) {
@@ -97,14 +104,13 @@ export async function subscribeEmailAddress(email: string) {
         origin_city: "Luxembourg",
         home_airport: "LUX",
         source: "landing_page",
+        preferred_locale: preferredLocale,
         status: "pending",
         email_confirmed: false,
         onboarding_completed: false,
         updated_at: nowIso,
       })
-      .select(
-        "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed",
-      )
+      .select(subscriberSelect)
       .single();
 
     if (insertQuery.error) {
@@ -123,6 +129,7 @@ export async function subscribeEmailAddress(email: string) {
       unsubscribeUrl: links.unsubscribeUrl,
       alreadyConfirmed: subscriber.email_confirmed,
       onboardingCompleted: subscriber.onboarding_completed,
+      locale: normalizeEmailLocale(subscriber.preferred_locale),
     });
 
     await sendResendEmail({
@@ -162,7 +169,7 @@ export async function confirmSubscriberByToken(token: string) {
   const query = await supabase
     .from("newsletter_subscribers")
     .select(
-      "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed",
+      subscriberSelect,
     )
     .eq("confirmation_token", token)
     .maybeSingle();

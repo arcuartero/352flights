@@ -7,6 +7,7 @@ import {
   type DeliveryModeValue,
   makeRouteSelectionKey,
   type MaxStopsPreferenceValue,
+  normalizeBucketValue,
   routePreferenceMap,
   type PreferencesBundle,
   type PreferencePayload,
@@ -109,6 +110,18 @@ function normalizeCustomRuleWeekdays(
   return [...defaultPreferenceValues.departureWeekdays];
 }
 
+function mapBucketToLegacyStorage(bucket: ReturnType<typeof normalizeBucketValue>) {
+  if (bucket === "long_stay") {
+    return "long_haul" as const;
+  }
+
+  if (bucket === "weekend") {
+    return "weekend_europe" as const;
+  }
+
+  return null;
+}
+
 export type PreferenceLookupResult =
   | {
       ok: true;
@@ -143,6 +156,29 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
       status: 404,
       error: "We could not find that preference link. Subscribe again from the homepage.",
     };
+  }
+
+  if (subscriberQuery.data.status !== "unsubscribed" && !subscriberQuery.data.email_confirmed) {
+    const confirmQuery = await supabase
+      .from("newsletter_subscribers")
+      .update({
+        email_confirmed: true,
+        confirmed_at: new Date().toISOString(),
+        status: "active",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", subscriberQuery.data.id);
+
+    if (confirmQuery.error) {
+      return {
+        ok: false,
+        status: 500,
+        error: formatError(confirmQuery.error),
+      };
+    }
+
+    subscriberQuery.data.email_confirmed = true;
+    subscriberQuery.data.status = "active";
   }
 
   const [preferencesQuery, routePreferencesQuery] = await Promise.all([
@@ -194,7 +230,6 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
           .map((item) =>
             makeRouteSelectionKey({
               destination_airport: item.destination_airport,
-              bucket: item.bucket,
             }),
           )
           .filter((key) => routePreferenceMap.has(key))
@@ -203,6 +238,13 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
   const preferredBuckets =
     preferencesQuery.data?.preferred_buckets && preferencesQuery.data.preferred_buckets.length > 0
       ? preferencesQuery.data.preferred_buckets
+          .map((bucket: string) => normalizeBucketValue(bucket))
+          .filter(
+            (
+              bucket: ReturnType<typeof normalizeBucketValue>,
+            ): bucket is Exclude<ReturnType<typeof normalizeBucketValue>, null> =>
+              bucket !== null,
+          )
       : defaultPreferenceValues.preferredBuckets;
 
   const deliveryModes = normalizeDeliveryModes(
@@ -223,7 +265,7 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
     id: rule.id,
     name: rule.name,
     destinationCity: rule.destination_city,
-    bucket: rule.bucket,
+    bucket: normalizeBucketValue(rule.bucket),
     maxStopsPreferences: normalizeCustomRuleMaxStops(rule.max_stops_preferences),
     budgetCeilingEur: rule.budget_ceiling_eur,
     departureWeekdays: normalizeCustomRuleWeekdays(rule.departure_weekdays),
@@ -253,6 +295,12 @@ export async function getPreferencesByToken(token: string): Promise<PreferenceLo
           preferencesQuery.data?.max_trip_nights ?? defaultPreferenceValues.maxTripNights,
         budgetCeilingEur:
           preferencesQuery.data?.budget_ceiling_eur ?? defaultPreferenceValues.budgetCeilingEur,
+        earliestDepartureHour:
+          preferencesQuery.data?.earliest_departure_hour ?? defaultPreferenceValues.earliestDepartureHour,
+        latestArrivalHour:
+          preferencesQuery.data?.latest_arrival_hour ?? defaultPreferenceValues.latestArrivalHour,
+        minDestinationStayHours:
+          preferencesQuery.data?.min_destination_stay_hours ?? defaultPreferenceValues.minDestinationStayHours,
         deliveryModes,
         customAlertRules,
       },
@@ -296,6 +344,9 @@ export async function savePreferencesByToken(input: PreferencePayload) {
       min_trip_nights: input.minTripNights,
       max_trip_nights: input.maxTripNights,
       budget_ceiling_eur: input.budgetCeilingEur,
+      earliest_departure_hour: input.earliestDepartureHour,
+      latest_arrival_hour: input.latestArrivalHour,
+      min_destination_stay_hours: input.minDestinationStayHours,
       delivery_mode: deriveLegacyDeliveryMode(normalizedDeliveryModes),
       delivery_modes: normalizedDeliveryModes,
       updated_at: new Date().toISOString(),
@@ -338,7 +389,7 @@ export async function savePreferencesByToken(input: PreferencePayload) {
       subscriber_id: subscriberId,
       destination_airport: route.destinationAirport,
       destination_city: route.destinationCity,
-      bucket: route.bucket,
+      bucket: mapBucketToLegacyStorage(route.bucket),
       is_enabled: true,
     };
   });
@@ -359,7 +410,7 @@ export async function savePreferencesByToken(input: PreferencePayload) {
           subscriber_id: subscriberId,
           name: rule.name,
           destination_city: rule.destinationCity,
-          bucket: rule.bucket,
+          bucket: mapBucketToLegacyStorage(rule.bucket),
           max_stops_preferences: unique(rule.maxStopsPreferences),
           budget_ceiling_eur: rule.budgetCeilingEur,
           departure_weekdays: unique(rule.departureWeekdays),

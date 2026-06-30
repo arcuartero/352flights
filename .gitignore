@@ -9,3 +9,7 @@ __pycache__
 .env.*.local
 scanner/.venv
 scanner/state.json
+scanner/state/
+logs/
+.claude/
+.scanner-vps.lock

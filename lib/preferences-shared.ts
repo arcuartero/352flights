@@ -2,32 +2,43 @@ import { z } from "zod";
 
 import routes from "@/data/lux-routes.json";
 import { formatRouteStayLabel } from "@/lib/route-stay";
+import {
+  deriveSupportedStayBuckets,
+  normalizeStayBucket,
+  stayBucketValues,
+  type StayBucketValue,
+} from "@/lib/stay-buckets";
 
-export const bucketValues = ["weekend_europe", "sun_breaks", "long_haul"] as const;
 export const maxStopsPreferenceValues = ["ANY", "NON_STOP", "ONE_STOP_OR_FEWER"] as const;
 export const deliveryModeValues = ["daily_digest", "flash_only", "weekly_best_of"] as const;
 export const weekdayValues = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 
-export type BucketValue = (typeof bucketValues)[number];
+export const bucketValues = stayBucketValues;
+export type BucketValue = StayBucketValue;
 export type MaxStopsPreferenceValue = (typeof maxStopsPreferenceValues)[number];
 export type DeliveryModeValue = (typeof deliveryModeValues)[number];
 export type WeekdayValue = (typeof weekdayValues)[number];
+
+export const clockHourOptions = Array.from({ length: 24 }, (_, hour) => ({
+  value: hour,
+  label: `${String(hour).padStart(2, "0")}:00`,
+}));
+
+export function normalizeBucketValue(bucket: string | null | undefined): BucketValue | null {
+  return normalizeStayBucket(bucket);
+}
 
 export const bucketOptionMap: Record<
   BucketValue,
   { label: string; description: string }
 > = {
-  weekend_europe: {
-    label: "City breaks",
-    description: "Short European escapes and weekend city fares from Luxembourg.",
+  weekend: {
+    label: "Weekend",
+    description: "Trips of 2 to 4 nights that sit around the weekend from Luxembourg.",
   },
-  sun_breaks: {
-    label: "Beach escapes",
-    description: "Sunny Mediterranean and Iberian trips that are worth watching.",
-  },
-  long_haul: {
-    label: "Long Haul",
-    description: "Bigger long-haul swings with stronger headline upside.",
+  long_stay: {
+    label: "Long stay",
+    description: "Trips above 4 nights, usually stretching from one weekend to the next.",
   },
 };
 
@@ -91,32 +102,73 @@ export const weekdayOptions: Array<{
 
 export function makeRouteSelectionKey(route: {
   destination_airport: string;
-  bucket: string;
 }) {
-  return `${route.destination_airport}:${route.bucket}`;
+  return route.destination_airport;
 }
 
-export const routePreferenceOptions = routes.map((route) => ({
-  key: makeRouteSelectionKey(route),
-  destinationAirport: route.destination_airport,
-  destinationCity: route.destination_city,
-  bucket: route.bucket as BucketValue,
-  tripNights: route.trip_nights,
-  minTripNights: route.min_trip_nights ?? null,
-  maxTripNights: route.max_trip_nights ?? null,
-  stayLabel: formatRouteStayLabel({
-    tripNights: route.trip_nights,
-    minTripNights: route.min_trip_nights ?? null,
-    maxTripNights: route.max_trip_nights ?? null,
-  }),
-  teaser: route.teaser,
-}));
+export const routePreferenceOptions = Array.from(
+  routes.reduce((map, route) => {
+    const key = makeRouteSelectionKey(route);
+    const existing = map.get(key);
+    const supportedBuckets = deriveSupportedStayBuckets({
+      tripNights: route.trip_nights,
+      minTripNights: route.min_trip_nights ?? null,
+      maxTripNights: route.max_trip_nights ?? null,
+    });
+
+    if (existing) {
+      existing.supportedBuckets = Array.from(
+        new Set([...existing.supportedBuckets, ...supportedBuckets]),
+      ) as BucketValue[];
+      existing.minTripNights =
+        existing.minTripNights === null
+          ? route.min_trip_nights ?? null
+          : Math.min(existing.minTripNights, route.min_trip_nights ?? existing.minTripNights);
+      existing.maxTripNights =
+        existing.maxTripNights === null
+          ? route.max_trip_nights ?? null
+          : Math.max(existing.maxTripNights, route.max_trip_nights ?? existing.maxTripNights);
+      return map;
+    }
+
+    map.set(key, {
+      key,
+      destinationAirport: route.destination_airport,
+      destinationCity: route.destination_city,
+      bucket: supportedBuckets[0] ?? normalizeBucketValue(route.bucket) ?? "weekend",
+      supportedBuckets,
+      tripNights: route.trip_nights,
+      minTripNights: route.min_trip_nights ?? null,
+      maxTripNights: route.max_trip_nights ?? null,
+      maxStops: route.max_stops,
+      stayLabel: formatRouteStayLabel({
+        tripNights: route.trip_nights,
+        minTripNights: route.min_trip_nights ?? null,
+        maxTripNights: route.max_trip_nights ?? null,
+      }),
+      teaser: route.teaser,
+    });
+    return map;
+  }, new Map<string, {
+    key: string;
+    destinationAirport: string;
+    destinationCity: string;
+    bucket: BucketValue;
+    supportedBuckets: BucketValue[];
+    tripNights: number;
+    minTripNights: number | null;
+    maxTripNights: number | null;
+    maxStops: string;
+    stayLabel: string;
+    teaser: string;
+  }>()).values(),
+);
 
 export const routePreferenceGroups = bucketValues.map((bucket) => ({
   bucket,
   label: bucketOptionMap[bucket].label,
   description: bucketOptionMap[bucket].description,
-  routes: routePreferenceOptions.filter((route) => route.bucket === bucket),
+  routes: routePreferenceOptions.filter((route) => route.supportedBuckets.includes(bucket)),
 }));
 
 export const routePreferenceMap = new Map(
@@ -145,7 +197,7 @@ export const destinationCityOptions = Array.from(
 
 export function deriveSelectedRoutesFromBuckets(preferredBuckets: BucketValue[]) {
   return routePreferenceOptions
-    .filter((route) => preferredBuckets.includes(route.bucket))
+    .filter((route) => route.supportedBuckets.some((bucket) => preferredBuckets.includes(bucket)))
     .map((route) => route.key);
 }
 
@@ -190,6 +242,9 @@ export const defaultPreferenceValues = {
   minTripNights: null as number | null,
   maxTripNights: null as number | null,
   budgetCeilingEur: null as number | null,
+  earliestDepartureHour: null as number | null,
+  latestArrivalHour: null as number | null,
+  minDestinationStayHours: null as number | null,
   deliveryModes: ["daily_digest"] as DeliveryModeValue[],
   customAlertRules: [] as CustomAlertRuleValue[],
 };
@@ -204,6 +259,9 @@ export const preferencePayloadSchema = z
     minTripNights: z.number().int().positive().max(30).nullable(),
     maxTripNights: z.number().int().positive().max(30).nullable(),
     budgetCeilingEur: z.number().int().positive().max(5000).nullable(),
+    earliestDepartureHour: z.number().int().min(0).max(23).nullable(),
+    latestArrivalHour: z.number().int().min(0).max(23).nullable(),
+    minDestinationStayHours: z.number().int().positive().max(336).nullable(),
     deliveryModes: z.array(z.enum(deliveryModeValues)).min(1),
     customAlertRules: z.array(customAlertRuleSchema).max(8),
   })
@@ -231,13 +289,25 @@ export const preferencePayloadSchema = z
         continue;
       }
 
-      if (!value.preferredBuckets.includes(route.bucket)) {
+      if (!route.supportedBuckets.some((bucket) => value.preferredBuckets.includes(bucket))) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Selected routes must belong to an enabled bucket.",
           path: ["selectedRoutes"],
         });
       }
+    }
+
+    if (
+      value.earliestDepartureHour !== null &&
+      value.latestArrivalHour !== null &&
+      value.earliestDepartureHour > value.latestArrivalHour
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Earliest departure should not be later than your latest arrival comfort limit.",
+        path: ["earliestDepartureHour"],
+      });
     }
 
   });

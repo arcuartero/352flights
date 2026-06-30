@@ -12,6 +12,22 @@ const links = [
     href: "/ops/prices",
     label: "Price intelligence",
   },
+  {
+    href: "/ops/scanner-live",
+    label: "Price Scanner",
+  },
+  {
+    href: "/ops/dates-scanner",
+    label: "Dates Scanner",
+  },
+  {
+    href: "/ops/email-campaigns",
+    label: "Email Campaigns",
+  },
+  {
+    href: "/ops/active-routes",
+    label: "Active Routes",
+  },
 ];
 
 export function OpsSubnav() {
@@ -28,6 +44,7 @@ export function OpsSubnav() {
             className={`ops-subnav__link ${isActive ? "is-active" : ""}`}
             href={link.href}
             key={link.href}
+            prefetch={false}
           >
             {link.label}
           </Link>

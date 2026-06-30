@@ -1,20 +1,27 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+
+import { useI18n } from "@/lib/i18n";
 
 type FormStatus =
   | { tone: "idle"; message: string }
   | { tone: "success"; message: string }
   | { tone: "error"; message: string };
 
-const initialStatus: FormStatus = {
-  tone: "idle",
-  message: "No spam, no generic airfare roundups. Only routes we actively scan from Luxembourg.",
-};
-
 export function NewsletterForm() {
-  const [status, setStatus] = useState<FormStatus>(initialStatus);
+  const { locale, t } = useI18n();
+  const [status, setStatus] = useState<FormStatus>(() => ({
+    tone: "idle",
+    message: t("newsletter.idle"),
+  }));
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setStatus((current) =>
+      current.tone === "idle" ? { tone: "idle", message: t("newsletter.idle") } : current,
+    );
+  }, [t]);
 
   return (
     <form
@@ -29,7 +36,7 @@ export function NewsletterForm() {
         startTransition(async () => {
           setStatus({
             tone: "idle",
-            message: "Submitting your seat on the list...",
+            message: t("newsletter.submitting"),
           });
 
           try {
@@ -38,7 +45,7 @@ export function NewsletterForm() {
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ email }),
+              body: JSON.stringify({ email, locale }),
             });
 
             const payload = (await response.json()) as {
@@ -57,8 +64,8 @@ export function NewsletterForm() {
               message:
                 payload.message ??
                 (payload.requiresConfirmation
-                  ? "Check your inbox to confirm your subscription."
-                  : "You're in."),
+                  ? t("newsletter.confirm")
+                  : t("newsletter.success")),
             });
           } catch (error) {
             setStatus({
@@ -66,14 +73,14 @@ export function NewsletterForm() {
               message:
                 error instanceof Error
                   ? error.message
-                  : "We could not save your email right now.",
+                  : t("newsletter.error"),
             });
           }
         });
       }}
     >
       <label className="sr-only" htmlFor="email">
-        Email address
+        {t("common.emailAddress")}
       </label>
       <div className="newsletter-form__controls">
         <input
@@ -81,12 +88,12 @@ export function NewsletterForm() {
           className="newsletter-form__input"
           id="email"
           name="email"
-          placeholder="you@company.com"
+          placeholder="Iwantcheapflights@gmail.com"
           required
           type="email"
         />
         <button className="newsletter-form__button" disabled={isPending} type="submit">
-          {isPending ? "Joining..." : "Join the waitlist"}
+          {isPending ? t("common.joining") : t("common.joinNow")}
         </button>
       </div>
       <p className={`newsletter-form__status newsletter-form__status--${status.tone}`}>

@@ -4,6 +4,18 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class SearchPattern:
+    key: str
+    label: str
+    departure_weekday: str
+    return_weekday: str
+    trip_nights: int
+    valid_from: str | None = None
+    valid_until: str | None = None
+    month_start: str | None = None
+
+
+@dataclass(frozen=True)
 class RouteSeed:
     origin_airport: str
     destination_airport: str
@@ -16,6 +28,7 @@ class RouteSeed:
     teaser: str
     min_trip_nights: int | None = None
     max_trip_nights: int | None = None
+    patterns: tuple[SearchPattern, ...] | None = None
 
     def __post_init__(self) -> None:
         min_trip_nights = self.search_min_trip_nights
@@ -26,6 +39,9 @@ class RouteSeed:
 
         if min_trip_nights > max_trip_nights:
             raise ValueError("min_trip_nights cannot be greater than max_trip_nights.")
+
+        if self.patterns is not None and len(self.patterns) == 0:
+            raise ValueError("Route-specific patterns cannot be empty.")
 
     @property
     def key(self) -> str:
@@ -49,6 +65,14 @@ class SnapshotRecord:
     price: float
     currency: str
     metadata: dict[str, object]
+
+
+@dataclass(frozen=True)
+class PatternSelectionResult:
+    snapshot: SnapshotRecord | None
+    no_result_reason: str | None = None
+    no_result_reason_code: str | None = None
+    no_result_diagnostic: dict[str, object] | None = None
 
 
 @dataclass(frozen=True)

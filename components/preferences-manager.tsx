@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
 import {
   bucketOptionMap,
   bucketValues,
+  clockHourOptions,
   destinationCityOptions,
   defaultPreferenceValues,
   deliveryModeOptions,
@@ -39,7 +41,7 @@ type PreferenceFormState = PreferencesBundle["form"];
 const initialScreenState: ScreenState = {
   phase: "idle",
   message:
-    "Pick the trip styles, routing types, and email cadences you want. You can mix several options in each section.",
+    "Pick the trip styles, routing types, comfort rules, and email cadences you want. You can mix several options in each section.",
 };
 
 function toNumberOrNull(value: string) {
@@ -96,6 +98,9 @@ function buildSimpleFormState(bundle: PreferencesBundle): PreferenceFormState {
     minTripNights: null,
     maxTripNights: null,
     budgetCeilingEur: bundle.form.budgetCeilingEur,
+    earliestDepartureHour: bundle.form.earliestDepartureHour,
+    latestArrivalHour: bundle.form.latestArrivalHour,
+    minDestinationStayHours: bundle.form.minDestinationStayHours,
     deliveryModes: bundle.form.deliveryModes,
     customAlertRules: bundle.form.customAlertRules,
   };
@@ -110,6 +115,12 @@ export function PreferencesManager() {
   const [screen, setScreen] = useState<ScreenState>(initialScreenState);
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [isAccessPending, startAccessTransition] = useTransition();
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessMessage, setAccessMessage] = useState<ScreenState>({
+    phase: "idle",
+    message: "Enter the email you used with +352 Flights and we will resend your personal access link.",
+  });
 
   useEffect(() => {
     let isActive = true;
@@ -182,11 +193,101 @@ export function PreferencesManager() {
   if (!token || !bundle) {
     return (
       <section className="preferences-panel">
-        <div className="preferences-empty">
-          <p className="preferences-status preferences-status--error">{screen.message}</p>
-          <a className="preferences-link" href="/">
-            Go back to the homepage
-          </a>
+        <div className="preferences-empty preferences-empty--access">
+          <div className="preferences-access-card">
+            <p className="preferences-step">My preferences</p>
+            <h1>Open your personal preference link.</h1>
+            <p>
+              +352 Flights does not use a classic password login yet. Instead, every subscriber
+              gets a private preferences link by email.
+            </p>
+            <form
+              className="preferences-access-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+
+                const email = accessEmail.trim();
+                if (!email) {
+                  setAccessMessage({
+                    phase: "error",
+                    message: "Please enter the email you used for +352 Flights.",
+                  });
+                  return;
+                }
+
+                startAccessTransition(async () => {
+                  try {
+                    const locale =
+                      window.localStorage.getItem("luxflightdeals-locale") ??
+                      document.documentElement.lang ??
+                      "en";
+                    const response = await fetch("/api/subscribe", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ email, locale }),
+                    });
+
+                    const payload = (await response.json()) as { message?: string; error?: string };
+
+                    if (!response.ok) {
+                      throw new Error(payload.error ?? "We could not resend your access link.");
+                    }
+
+                    setAccessMessage({
+                      phase: "success",
+                      message:
+                        payload.message ??
+                        "We emailed your access link again. Check your inbox and spam folder.",
+                    });
+                  } catch (error) {
+                    setAccessMessage({
+                      phase: "error",
+                      message:
+                        error instanceof Error
+                          ? error.message
+                          : "We could not resend your access link.",
+                    });
+                  }
+                });
+              }}
+            >
+              <label className="preferences-field" htmlFor="preferences-access-email">
+                <span>Email</span>
+                <input
+                  autoComplete="email"
+                  id="preferences-access-email"
+                  onChange={(event) => setAccessEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  type="email"
+                  value={accessEmail}
+                />
+              </label>
+
+              <button className="preferences-submit" disabled={isAccessPending} type="submit">
+                {isAccessPending ? "Sending..." : "Email me my link"}
+              </button>
+            </form>
+
+            <p
+              className={`preferences-status ${
+                accessMessage.phase === "success"
+                  ? "preferences-status--success"
+                  : accessMessage.phase === "error"
+                    ? "preferences-status--error"
+                    : ""
+              }`}
+            >
+              {accessMessage.message}
+            </p>
+
+            <div className="preferences-link-row">
+              <Link className="preferences-link preferences-link--ghost" href="/">
+                Back to deals
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
     );
@@ -194,6 +295,11 @@ export function PreferencesManager() {
 
   const selectedTripStyles = form.preferredBuckets.length;
   const customRuleCount = form.customAlertRules.length;
+  const comfortFiltersCount = [
+    form.earliestDepartureHour,
+    form.latestArrivalHour,
+    form.minDestinationStayHours,
+  ].filter((value) => value !== null).length;
 
   return (
     <section className="preferences-panel">
@@ -236,6 +342,12 @@ export function PreferencesManager() {
           <small>Each watch can target city, stops, weekdays, nights, and budget.</small>
         </article>
 
+        <article className="preferences-overview-card">
+          <span>Comfort filters</span>
+          <strong>{comfortFiltersCount}</strong>
+          <small>Use hour windows and minimum time on the ground to avoid awkward trips.</small>
+        </article>
+
         <article className="preferences-overview-card preferences-overview-card--wide">
           <span>How this page works</span>
           <strong>General feed first, precise watches second</strong>
@@ -244,6 +356,85 @@ export function PreferencesManager() {
             whenever you want a tighter pattern.
           </small>
         </article>
+      </section>
+
+      <section className="preferences-section preferences-section--quick-actions">
+        <div className="preferences-section__intro">
+          <p className="preferences-label">Quick filters</p>
+          <h2>Apply the most common user choices in one click</h2>
+          <p className="preferences-subcopy">
+            These are shortcuts only. You can still fine-tune every section below.
+          </p>
+        </div>
+        <div className="preferences-quick-grid">
+          <button
+            className="preferences-quick-action"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                preferredBuckets: ["weekend"],
+                selectedRoutes: deriveSelectedRoutesFromBuckets(["weekend"]),
+              }));
+            }}
+            type="button"
+          >
+            <strong>Only weekend</strong>
+            <small>Keep the feed focused on 2 to 4 night breaks around the weekend.</small>
+          </button>
+          <button
+            className="preferences-quick-action"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                preferredBuckets: ["long_stay"],
+                selectedRoutes: deriveSelectedRoutesFromBuckets(["long_stay"]),
+              }));
+            }}
+            type="button"
+          >
+            <strong>Only long stay</strong>
+            <small>Only keep longer breaks above 4 nights.</small>
+          </button>
+          <button
+            className="preferences-quick-action"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                earliestDepartureHour: 8,
+              }));
+            }}
+            type="button"
+          >
+            <strong>No early departures</strong>
+            <small>Start by blocking departures before 08:00.</small>
+          </button>
+          <button
+            className="preferences-quick-action"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                maxStopsPreferences: ["NON_STOP"],
+              }));
+            }}
+            type="button"
+          >
+            <strong>Non-stop only</strong>
+            <small>Only receive the cleanest direct itineraries from Luxembourg.</small>
+          </button>
+          <button
+            className="preferences-quick-action"
+            onClick={() => {
+              setForm((current) => ({
+                ...current,
+                budgetCeilingEur: 150,
+              }));
+            }}
+            type="button"
+          >
+            <strong>Max €150</strong>
+            <small>Useful if you want the feed to stay aggressively price-led.</small>
+          </button>
+        </div>
       </section>
 
       {!bundle.emailConfirmed ? (
@@ -288,6 +479,19 @@ export function PreferencesManager() {
             setScreen({
               phase: "error",
               message: "Pick at least one departure weekday.",
+            });
+            return;
+          }
+
+          if (
+            form.earliestDepartureHour !== null &&
+            form.latestArrivalHour !== null &&
+            form.earliestDepartureHour > form.latestArrivalHour
+          ) {
+            setScreen({
+              phase: "error",
+              message:
+                "Your earliest comfortable departure cannot be later than your latest comfortable arrival.",
             });
             return;
           }
@@ -342,6 +546,9 @@ export function PreferencesManager() {
                   minTripNights: null,
                   maxTripNights: null,
                   budgetCeilingEur: form.budgetCeilingEur,
+                  earliestDepartureHour: form.earliestDepartureHour,
+                  latestArrivalHour: form.latestArrivalHour,
+                  minDestinationStayHours: form.minDestinationStayHours,
                   deliveryModes: form.deliveryModes,
                   customAlertRules: form.customAlertRules,
                 }),
@@ -490,7 +697,7 @@ export function PreferencesManager() {
           <div className="preferences-control-block">
             <div className="preferences-section__intro">
               <p className="preferences-label">Budget</p>
-              <h2>Optional ceiling for fare alerts</h2>
+              <h2>Set a maximum price if you want only sub-€X opportunities</h2>
             </div>
             <div className="preferences-fields preferences-fields--dual">
               <label className="preferences-field">
@@ -506,6 +713,74 @@ export function PreferencesManager() {
                   placeholder="Leave blank for any price"
                   type="text"
                   value={form.budgetCeilingEur ?? ""}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="preferences-control-block">
+            <div className="preferences-section__intro">
+              <p className="preferences-label">Comfort</p>
+              <h2>Avoid awkward timings and too-short stays</h2>
+            </div>
+            <div className="preferences-fields">
+              <label className="preferences-field">
+                <span>Earliest comfortable departure</span>
+                <select
+                  onChange={(event) => {
+                    setForm((current) => ({
+                      ...current,
+                      earliestDepartureHour: event.target.value
+                        ? Number(event.target.value)
+                        : null,
+                    }));
+                  }}
+                  value={form.earliestDepartureHour ?? ""}
+                >
+                  <option value="">Any departure time</option>
+                  {clockHourOptions.map((option) => (
+                    <option key={`earliest-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="preferences-field">
+                <span>Latest comfortable arrival</span>
+                <select
+                  onChange={(event) => {
+                    setForm((current) => ({
+                      ...current,
+                      latestArrivalHour: event.target.value
+                        ? Number(event.target.value)
+                        : null,
+                    }));
+                  }}
+                  value={form.latestArrivalHour ?? ""}
+                >
+                  <option value="">Any arrival time</option>
+                  {clockHourOptions.map((option) => (
+                    <option key={`latest-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="preferences-field">
+                <span>Minimum real time in destination</span>
+                <input
+                  inputMode="numeric"
+                  onChange={(event) => {
+                    setForm((current) => ({
+                      ...current,
+                      minDestinationStayHours: toNumberOrNull(event.target.value),
+                    }));
+                  }}
+                  placeholder="Leave blank for any stay length"
+                  type="text"
+                  value={form.minDestinationStayHours ?? ""}
                 />
               </label>
             </div>

@@ -1,0 +1,78 @@
+/* ============================================================
+   Preferences typeform — re-themed to the new (+352 Flights) design.
+   Same token-remap strategy as the deals explorer: the concept
+   reads the shared design tokens, so re-mapping them to the v2
+   light blue/red palette re-skins the whole flow.
+   ============================================================ */
+
+html:has(.preferences-concept-shell) {
+  color-scheme: light;
+
+  --bg: #fbfbfa;
+  --bg-soft: #f1f1ee;
+  --bg-elevated: #ffffff;
+  --panel: #ffffff;
+  --panel-strong: #ffffff;
+  --panel-muted: rgba(29, 39, 51, 0.04);
+  --line: rgba(29, 39, 51, 0.12);
+  --line-strong: rgba(29, 39, 51, 0.2);
+  --text: #1d2733;
+  --text-strong: #11202e;
+  --muted: rgba(29, 39, 51, 0.64);
+  --accent: #2f5fd6;
+  --accent-strong: #224db8;
+  --accent-soft: rgba(47, 95, 214, 0.12);
+  --accent-wash: rgba(47, 95, 214, 0.07);
+  --success: #2c6e49;
+  --error: #c4231e;
+  --shadow-lg: 0 30px 70px rgba(29, 39, 51, 0.12);
+  --shadow-md: 0 16px 36px rgba(29, 39, 51, 0.1);
+  --glow-primary: transparent;
+  --glow-secondary: transparent;
+  --font-display: var(--font-sans);
+
+  --v2-paper: #fbfbfa;
+  --v2-paper-deep: #f1f1ee;
+  --v2-ink: #1d2733;
+  --v2-ink-soft: rgba(29, 39, 51, 0.64);
+  --v2-hairline: rgba(29, 39, 51, 0.14);
+  --v2-accent: #e04b37;
+  --v2-accent-deep: #c63f2d;
+  --v2-blue: #6fa3c2;
+  --v2-blue-strong: #1f5fd6;
+  --v2-blue-wash: #e9f0f5;
+  --v2-cream: #fdfdfb;
+  --v2-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --v2-pad: clamp(1.25rem, 4vw, 4.5rem);
+}
+
+body:has(.preferences-concept-shell) .site-chrome,
+body:has(.preferences-concept-shell) .scroll-top-button {
+  display: none;
+}
+
+.preferences-redesign__topbar {
+  border-bottom: 1px solid var(--v2-hairline);
+}
+
+/* The old shell padding cleared a fixed header; the new topbar is
+   in normal flow, so neutralize the offset and lighten the field. */
+.preferences-concept-shell {
+  --preferences-concept-top-offset: 1.4rem;
+  background:
+    linear-gradient(180deg, #eef4fd 0%, #f7faff 22%, var(--v2-paper) 42%);
+}
+
+/* Headings adopt the v2 blue + sans look. */
+.preferences-concept h1,
+.preferences-concept h2,
+.preferences-concept .preferences-kicker {
+  font-family: var(--font-sans), sans-serif;
+}
+
+.preferences-concept h1,
+.preferences-concept h2 {
+  color: var(--v2-blue-strong);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}

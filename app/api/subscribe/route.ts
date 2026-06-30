@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { hasSupabaseAdminEnv } from "@/lib/env";
+import { emailLocales } from "@/lib/email";
 import { subscribeEmailAddress } from "@/lib/subscriptions";
 
 const subscribeSchema = z.object({
   email: z.string().trim().email(),
+  locale: z.enum(emailLocales).optional(),
 });
 
 export async function POST(request: Request) {
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
     );
   }
   try {
-    const result = await subscribeEmailAddress(payload.data.email);
+    const result = await subscribeEmailAddress(payload.data.email, payload.data.locale);
     return NextResponse.json({
       message: result.message,
       requiresConfirmation: !result.alreadyConfirmed,

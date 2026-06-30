@@ -1,3 +1,5 @@
+import type { EditorialSection, EditorialSectionKey } from "@/lib/editorial-sections";
+
 export const campaignSendTypes = ["digest", "flash"] as const;
 export const dealLifecycleStates = ["new", "reviewed", "sent", "expired"] as const;
 
@@ -6,12 +8,28 @@ export type DealLifecycleState = (typeof dealLifecycleStates)[number];
 
 export type CampaignPreviewDeal = {
   id: string;
+  score: number;
   routeLabel: string;
   title: string;
+  summary: string;
+  routeBucket: string;
+  editorialSection: EditorialSectionKey;
+  destinationCity: string;
+  destinationAirport: string;
   dealPrice: number;
+  baselinePrice: number | null;
+  dropRatio: number | null;
   departureDate: string | null;
   returnDate: string | null;
+  tripNights: number;
+  maxStops: string;
   airlineSummary: string | null;
+  outboundDepartureAt: string | null;
+  outboundArrivalAt: string | null;
+  returnDepartureAt: string | null;
+  returnArrivalAt: string | null;
+  destinationStayHours: number | null;
+  verifiedAt: string | null;
   bookingUrl: string | null;
 };
 
@@ -28,6 +46,7 @@ export type CampaignPreview = {
   previewText: string;
   previewHtml: string;
   previewDeals: CampaignPreviewDeal[];
+  previewSections: EditorialSection<CampaignPreviewDeal>[];
   suggestedTestEmail: string | null;
 };
 

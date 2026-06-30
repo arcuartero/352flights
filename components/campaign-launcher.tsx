@@ -8,6 +8,62 @@ import {
   type CampaignPreview,
 } from "@/lib/ops-shared";
 
+function formatDateWithWeekday(value: string | null) {
+  if (!value) {
+    return "n/a";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(value));
+}
+
+function formatFlightClock(value: string | null) {
+  if (!value) {
+    return "n/a";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatVerifiedAge(value: string | null, now: Date = new Date()) {
+  if (!value) {
+    return "Verified recently";
+  }
+
+  const diffMs = now.getTime() - new Date(value).getTime();
+  if (!Number.isFinite(diffMs) || diffMs <= 60_000) {
+    return "Verified just now";
+  }
+
+  const diffMinutes = Math.round(diffMs / 60_000);
+  if (diffMinutes < 60) {
+    return `Verified ${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `Verified ${diffHours}h ago`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  return `Verified ${diffDays}d ago`;
+}
+
+function formatStayHours(value: number | null) {
+  if (value === null) {
+    return null;
+  }
+
+  const rounded = Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
+  return `${rounded}h in destination`;
+}
+
 function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
   const [liveState, liveAction, livePending] = useActionState(
     sendCampaignAction,
@@ -69,16 +125,52 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
         </div>
       </div>
 
-      {preview.previewDeals.length > 0 ? (
-        <div className="ops-preview-deals">
-          {preview.previewDeals.map((deal) => (
-            <article className="ops-preview-deal" key={deal.id}>
-              <div>
-                <strong>{deal.routeLabel}</strong>
-                <p>{deal.title}</p>
+      {preview.previewSections.length > 0 ? (
+        <div className="ops-preview-sections">
+          {preview.previewSections.map((section) => (
+            <section className="ops-preview-section" key={section.key}>
+              <div className="ops-preview-section__header">
+                <div>
+                  <strong>{section.label}</strong>
+                  <p>{section.description}</p>
+                </div>
+                <span>{section.items.length}</span>
               </div>
-              <span>{Math.round(deal.dealPrice)} EUR</span>
-            </article>
+              <div className="ops-preview-deals">
+                {section.items.map((deal) => (
+                  <article className="ops-preview-deal" key={deal.id}>
+                    <div>
+                      <strong>{deal.routeLabel}</strong>
+                      <p>{deal.title}</p>
+                      <p>
+                        {formatDateWithWeekday(deal.departureDate)} to{" "}
+                        {formatDateWithWeekday(deal.returnDate)}
+                      </p>
+                      {deal.outboundDepartureAt && deal.outboundArrivalAt ? (
+                        <p>
+                          Out {formatFlightClock(deal.outboundDepartureAt)} {"->"}{" "}
+                          {formatFlightClock(deal.outboundArrivalAt)}
+                          {deal.returnDepartureAt && deal.returnArrivalAt ? (
+                            <>
+                              <br />
+                              Back {formatFlightClock(deal.returnDepartureAt)} {"->"}{" "}
+                              {formatFlightClock(deal.returnArrivalAt)}
+                            </>
+                          ) : null}
+                        </p>
+                      ) : null}
+                      <p>
+                        {formatVerifiedAge(deal.verifiedAt)}
+                        {deal.destinationStayHours !== null
+                          ? ` · ${formatStayHours(deal.destinationStayHours)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <span>{Math.round(deal.dealPrice)} EUR</span>
+                  </article>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       ) : null}

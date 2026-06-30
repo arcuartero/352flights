@@ -30,3 +30,11 @@ export function formatRouteStayLabel(input: RouteStayInput) {
 
   return formatNightsLabel(input.tripNights);
 }
+
+export function formatRoutePatternLabel(routeLabel: string, patternLabel?: string | null) {
+  if (!patternLabel) {
+    return routeLabel;
+  }
+
+  return `${routeLabel} · ${patternLabel}`;
+}

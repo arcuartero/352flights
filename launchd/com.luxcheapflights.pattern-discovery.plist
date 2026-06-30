@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.luxcheapflights.pattern-discovery</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/albertorodriguez/Documents/Luxcheapflights/scripts/run-local-pattern-discovery.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/albertorodriguez/Documents/Luxcheapflights</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Day</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/albertorodriguez/Documents/Luxcheapflights/logs/pattern-discovery.launchd.stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/albertorodriguez/Documents/Luxcheapflights/logs/pattern-discovery.launchd.stderr.log</string>
+</dict>
+</plist>

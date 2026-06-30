@@ -18,7 +18,7 @@ This repo starts the product in three layers:
 ├── lib/                    # Content, env helpers, Supabase admin client
 ├── scanner/                # Python scanner package
 ├── supabase/               # SQL schema + route seeds
-└── .github/workflows/      # Scheduled scanner workflow
+└── .github/workflows/      # Manual scanner + scheduled digest workflows
 ```
 
 ## What Exists Today
@@ -169,10 +169,14 @@ Behavior:
 
 - with `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`, snapshots and deal candidates are written to Supabase
 - without them, the scanner falls back to `scanner/state.json`
+- with `SCANNER_STORAGE_MODE=local`, the scanner always writes to `scanner/state.json`, even if Supabase credentials are present
+- run `uv run luxflight-scan --sync-local-to-supabase --json` to upload pending local snapshots and deals to Supabase
+
+For the cheap online setup, keep the web on Vercel and run the 11-hour scanner on a small VPS with local storage plus sync. See `docs/cheap-online-setup.md`.
 
 ## GitHub Actions
 
-`.github/workflows/scan-lux-deals.yml` runs the scanner daily.
+`.github/workflows/scan-lux-deals.yml` can run the scanner manually.
 
 `.github/workflows/send-daily-digest.yml` can trigger the scheduled digest endpoint every 5 minutes, while `/ops` decides the actual Luxembourg local send time.
 
@@ -191,7 +195,7 @@ Add these repository secrets before enabling it:
 
 ### Activation Checklist
 
-To make the cron actually run in GitHub:
+To make the digest cron actually run in GitHub:
 
 1. Create a GitHub repository and push this project to the default branch.
 2. Open `Settings` -> `Secrets and variables` -> `Actions`.
@@ -202,9 +206,9 @@ To make the cron actually run in GitHub:
    - `APP_BASE_URL`
    - `CRON_SECRET`
 4. Open the `Actions` tab and enable workflows if GitHub asks.
-5. Trigger `Scan Lux Flight Deals` once with `Run workflow` to verify the first run.
+5. Trigger `Scan Lux Flight Deals` manually only if you want to test GitHub Actions.
 6. Trigger `Send Daily Lux Digest` once after deployment to verify the cron endpoint.
-7. After that, the daily schedules will keep running automatically.
+7. After that, the digest schedule will keep running automatically.
 
 ## Next Steps
 
