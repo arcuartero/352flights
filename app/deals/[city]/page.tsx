@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
 import { matchesDestinationSlug } from "@/lib/destination-slugs";
@@ -11,6 +11,29 @@ type DealsCityPageProps = {
   }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+function buildSearchRedirectHref(
+  citySlug: string,
+  searchParams: Record<string, string | string[] | undefined>,
+) {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        params.append(key, item);
+      }
+      continue;
+    }
+
+    if (typeof value === "string") {
+      params.set(key, value);
+    }
+  }
+
+  params.set("destination", citySlug);
+  return `/deals/search?${params.toString()}`;
+}
 
 export default async function DealsCityPage({ params, searchParams }: DealsCityPageProps) {
   const [data, resolvedParams, resolvedSearchParams] = await Promise.all([
@@ -27,10 +50,10 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
       }
 
       return right.score - left.score;
-    });
+  });
 
   if (cityDeals.length === 0) {
-    notFound();
+    redirect(buildSearchRedirectHref(citySlug, resolvedSearchParams));
   }
 
   return (
