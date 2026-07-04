@@ -1,4 +1,4 @@
-# Lux Flight Deals
+# 352flights
 
 Luxembourg-first cheap flight newsletter MVP.
 
@@ -25,7 +25,7 @@ This repo starts the product in three layers:
 
 ### Web
 
-- A launch-ready landing page for `Lux Flight Deals`
+- A launch-ready landing page for `352flights`
 - A `POST /api/subscribe` route with welcome email + double opt-in
 - Public confirmation and unsubscribe flows at `/confirm` and `/unsubscribe`
 - A public preference flow at `/preferences` for trip style, stops, cadence, and budget
