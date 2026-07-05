@@ -1,6 +1,6 @@
-import { LocalScannerStatusWidget } from "@/components/local-scanner-status";
 import { OpsSubnav } from "@/components/ops-subnav";
 import { RecentSnapshotsPanel } from "@/components/recent-snapshots-panel";
+import { VpsScannerControlPanel } from "@/components/vps-scanner-control-panel";
 import { getOpsDashboardData } from "@/lib/ops";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function OpsScannerLivePage() {
   return (
     <main className="ops-shell ops-shell--scanner-live">
       <OpsSubnav />
-      <LocalScannerStatusWidget displayMode="page" />
+      <VpsScannerControlPanel />
       <div className="ops-shell__center-panel">
         <RecentSnapshotsPanel
           collapsible

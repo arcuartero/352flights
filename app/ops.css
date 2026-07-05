@@ -336,6 +336,71 @@
   margin-bottom: 1rem;
 }
 
+.vps-scanner-panel {
+  margin-bottom: 1rem;
+}
+
+.vps-scanner-panel__facts {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 1rem 0 0;
+}
+
+.vps-scanner-panel__facts div {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
+.vps-scanner-panel__facts dt {
+  color: var(--muted-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.vps-scanner-panel__facts dd {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0.35rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.vps-scanner-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.vps-scanner-panel__logs {
+  margin-top: 1rem;
+}
+
+.vps-scanner-panel__logs summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.vps-scanner-panel__logs pre {
+  background: #08111f;
+  border-radius: 8px;
+  color: #dbeafe;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0.75rem 0 0;
+  max-height: 26rem;
+  overflow: auto;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
+
 .ops-panel h2 {
   font-size: 1.8rem;
   line-height: 1.02;
