@@ -125,7 +125,7 @@ Cuando la prueba pequeña funcione:
 
 ```bash
 cd /opt/352flights/app
-sudo ./scripts/install-vps-scanner-systemd.sh
+bash scripts/install-vps-scanner-systemd.sh
 ```
 
 Esto programa el scanner todos los días sobre las `02:15` del servidor.
