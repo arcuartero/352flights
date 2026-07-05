@@ -1,25 +1,30 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 set -u
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCANNER_DIR="$ROOT_DIR/scanner"
 LOG_DIR="$ROOT_DIR/logs"
 LOCK_DIR="$ROOT_DIR/.scanner-vps.lock"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 
 mkdir -p "$LOG_DIR"
+mkdir -p "$SCANNER_DIR/state"
 
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "Another VPS scanner run is already active." >&2
   exit 75
 fi
-trap 'rmdir "$LOCK_DIR"' EXIT
+trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
 
 if [ -f "$ROOT_DIR/.env" ]; then
   set -a
-  source "$ROOT_DIR/.env"
+  # shellcheck disable=SC1090
+  . "$ROOT_DIR/.env"
   set +a
 fi
+
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 
 if ! command -v uv >/dev/null 2>&1; then
   echo "uv is not installed. Install uv on the VPS before running the scanner." >&2
@@ -32,7 +37,7 @@ export SCANNER_STORAGE_MODE=local
 export SCANNER_STATE_FILE="${SCANNER_STATE_FILE:-$SCANNER_DIR/state.json}"
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Starting local scanner."
-uv run luxflight-scan --json > "$LOG_DIR/vps-scanner-$RUN_ID.json"
+uv run luxflight-scan "$@" --json > "$LOG_DIR/vps-scanner-$RUN_ID.json"
 scan_status=$?
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Scanner finished with status $scan_status. Starting sync."
