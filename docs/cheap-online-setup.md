@@ -1,32 +1,81 @@
-# Setup barato: Vercel + Supabase + VPS con sync
+# Setup barato: Vercel + Supabase + Hetzner
 
-Objetivo: mantener la web online gratis o casi gratis, ejecutar el scanner largo fuera de Vercel, guardar primero en local y sincronizar solo los datos útiles con Supabase.
+Objetivo: la web vive en Vercel, los datos viven en Supabase y el scanner largo vive en un VPS barato de Hetzner. El scanner guarda primero en el disco del VPS y luego sincroniza a Supabase.
 
-## Arquitectura
+## Antes de empezar
 
-- Vercel: web, formularios, preferencias, confirmación, bajas y panel ops.
-- Supabase: suscriptores, preferencias, deals y snapshots ya filtrados.
-- VPS barato: scanner de 11 horas.
-- Disco local del VPS: resultados pendientes y logs.
+Necesitas tener a mano:
 
-## Variables
+- La URL de Supabase.
+- La clave `SUPABASE_SERVICE_ROLE_KEY`.
+- El repo de GitHub: `https://github.com/arcuartero/352flights.git`.
 
-En Vercel:
+La clave de Supabase no se pega en GitHub ni en Vercel como texto visible. Solo va en el archivo `.env` privado del VPS.
 
-```text
-NEXT_PUBLIC_SITE_URL=https://tu-dominio.com
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-OPS_BASIC_AUTH_USER=...
-OPS_BASIC_AUTH_PASSWORD=...
-RESEND_API_KEY=...
-RESEND_FROM_EMAIL=...
-RESEND_REPLY_TO_EMAIL=...
-CRON_SECRET=...
-UNSPLASH_ACCESS_KEY=...
+## 1. Crear el servidor en Hetzner
+
+En Hetzner Console:
+
+1. Entra en el proyecto `352flights`.
+2. Pulsa `Servers`.
+3. Pulsa `Create Server`.
+4. Elige ubicación europea, por ejemplo `Falkenstein`.
+5. En imagen, elige Ubuntu. Si aparece una versión LTS, elige la LTS.
+6. En tipo, elige el más barato disponible que tenga al menos 2 GB de RAM. El `CX23` va sobrado para empezar.
+7. En `SSH keys`, añade tu clave SSH de tu Mac. Si no tienes una, créala antes desde tu Mac.
+8. No añadas volumen extra.
+9. No actives backups por ahora si quieres mantener el coste mínimo.
+10. Ponle nombre: `352flights-scanner`.
+11. Pulsa `Create & Buy now`.
+
+## 2. Entrar al VPS desde tu Mac
+
+Cuando Hetzner termine de crear el servidor, copia la IP pública.
+
+En tu Mac, abre Terminal y entra así:
+
+```bash
+ssh root@IP_DEL_SERVIDOR
 ```
 
-En el VPS, en el archivo `.env` del proyecto:
+La primera vez puede preguntar si confías en el servidor. Escribe `yes` y pulsa Enter.
+
+## 3. Preparar el VPS
+
+Dentro del VPS, ejecuta:
+
+```bash
+apt update
+apt install -y git curl ca-certificates bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Comprueba que `uv` existe:
+
+```bash
+uv --version
+```
+
+## 4. Descargar el proyecto
+
+Dentro del VPS:
+
+```bash
+mkdir -p /opt/352flights
+git clone https://github.com/arcuartero/352flights.git /opt/352flights/app
+cd /opt/352flights/app
+```
+
+## 5. Crear el archivo privado `.env`
+
+Dentro del VPS, estando en `/opt/352flights/app`, abre el archivo:
+
+```bash
+nano .env
+```
+
+Pega esto, cambiando los valores reales:
 
 ```text
 SUPABASE_URL=...
@@ -38,57 +87,96 @@ SCANNER_FLASH_RATIO=0.6
 SCANNER_HISTORY_WINDOW=180
 ```
 
-`SCANNER_STORAGE_MODE=local` es importante: obliga al scanner a guardar primero en `scanner/state.json`, aunque existan claves de Supabase.
+Para guardar en `nano`:
 
-## Comandos del VPS
+1. Pulsa `Ctrl + O`.
+2. Pulsa Enter.
+3. Pulsa `Ctrl + X`.
 
-Instalar dependencias del scanner:
+## 6. Instalar el scanner
+
+Dentro del VPS:
 
 ```bash
+cd /opt/352flights/app/scanner
+uv sync
+```
+
+## 7. Probar con una ruta
+
+Primero hacemos una prueba pequeña:
+
+```bash
+cd /opt/352flights/app
+./scripts/run-vps-scanner-with-sync.sh --limit 1
+```
+
+Si termina bien, se crean archivos en:
+
+```text
+/opt/352flights/app/logs/
+```
+
+Y Supabase debería recibir algunos `price_snapshots`.
+
+## 8. Instalar el scanner automático
+
+Cuando la prueba pequeña funcione:
+
+```bash
+cd /opt/352flights/app
+sudo ./scripts/install-vps-scanner-systemd.sh
+```
+
+Esto programa el scanner todos los días sobre las `02:15` del servidor.
+
+## 9. Comprobar que quedó activo
+
+Mira si el temporizador está activo:
+
+```bash
+systemctl status 352flights-scanner.timer
+```
+
+Lanzar una ejecución manual:
+
+```bash
+sudo systemctl start 352flights-scanner.service
+```
+
+Ver si está corriendo:
+
+```bash
+systemctl status 352flights-scanner.service
+```
+
+Ver logs:
+
+```bash
+journalctl -u 352flights-scanner.service -n 100 --no-pager
+```
+
+## 10. Actualizar código en el VPS
+
+Cuando subas cambios nuevos a GitHub:
+
+```bash
+cd /opt/352flights/app
+git pull
 cd scanner
 uv sync
 ```
 
-Ejecutar scanner local y sincronizar después:
+## Qué pasa si falla la sincronización
 
-```bash
-../scripts/run-vps-scanner-with-sync.sh
+No se pierden los precios. Quedan guardados en:
+
+```text
+/opt/352flights/app/scanner/state.json
 ```
 
-Solo sincronizar datos pendientes:
+El siguiente sync vuelve a intentarlo.
 
-```bash
-cd scanner
-uv run luxflight-scan --sync-local-to-supabase --json
-```
+## Coste esperado
 
-Probar con pocos datos:
-
-```bash
-cd scanner
-uv run luxflight-scan --limit 1 --json
-uv run luxflight-scan --sync-local-to-supabase --sync-limit 1 --json
-```
-
-## Programarlo en el VPS
-
-Ejemplo con cron diario a las 02:15 del servidor:
-
-```cron
-15 2 * * * cd /ruta/a/Luxcheapflights && ./scripts/run-vps-scanner-with-sync.sh >> logs/vps-cron.log 2>&1
-```
-
-Si el sync falla, no se pierden datos: quedan en `scanner/state.json` y el siguiente sync reintenta.
-
-## Qué se sincroniza
-
-El sync sube:
-
-- snapshots locales pendientes
-- deals locales pendientes cuando su snapshot ya está en Supabase
-
-Cada item queda marcado con `sync.supabase_id` y `sync.synced_at` en `scanner/state.json`, para evitar duplicados en siguientes ejecuciones.
-
-## GitHub Actions
-
-El workflow del scanner queda solo manual. La ejecución programada debe vivir en el VPS para evitar límites y costes de GitHub Actions con un scanner de 11 horas.
+Con el VPS pequeño, el coste principal será el servidor de Hetzner. Vercel puede seguir en gratis y Supabase debería aguantar al principio si no subimos millones de filas.
