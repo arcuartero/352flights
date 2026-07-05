@@ -2574,6 +2574,18 @@ export function PublicDealsExplorer({
     mode === "results" || mode === "city"
       ? coerceFiltersForMode(draftFilters)
       : appliedFilters;
+  const buildDealsHrefForMode = useCallback(
+    (filters: DealSearchFilters) => {
+      const coercedFilters = coerceFiltersForMode(filters);
+      const hrefFilters =
+        mode === "city" && lockedDestinationFilter
+          ? { ...coercedFilters, destinationFilter: "any" }
+          : coercedFilters;
+
+      return buildDealsSearchHref(hrefFilters, searchPathname, sortOrder);
+    },
+    [coerceFiltersForMode, lockedDestinationFilter, mode, searchPathname, sortOrder],
+  );
 
   useEffect(() => {
     setDraftFilters({ ...appliedFilters });
@@ -2588,17 +2600,13 @@ export function PublicDealsExplorer({
       return;
     }
 
-    const nextHref = buildDealsSearchHref(
-      coerceFiltersForMode(draftFilters),
-      searchPathname,
-      sortOrder,
-    );
+    const nextHref = buildDealsHrefForMode(draftFilters);
     const currentHref = `${window.location.pathname}${window.location.search}`;
 
     if (currentHref !== nextHref) {
       window.history.replaceState(null, "", nextHref);
     }
-  }, [coerceFiltersForMode, draftFilters, mode, searchPathname, sortOrder]);
+  }, [buildDealsHrefForMode, draftFilters, mode]);
 
   useEffect(() => {
     const computeVisibleCount = () => {
@@ -2892,11 +2900,7 @@ export function PublicDealsExplorer({
     [data.deals, draftFilters, now],
   );
 
-  const searchHref = buildDealsSearchHref(
-    coerceFiltersForMode(draftFilters),
-    searchPathname,
-    sortOrder,
-  );
+  const searchHref = buildDealsHrefForMode(draftFilters);
 
   const maxDiscount = useMemo(() => {
     const values = filteredDeals

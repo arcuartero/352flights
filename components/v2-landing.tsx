@@ -673,7 +673,7 @@ export function V2Landing({ boardDestinations = [], deals = [] }: V2LandingProps
               <Link
                 className="v2-bento__cell"
                 data-reveal
-                href={`/deals/${toDestinationSlug(dest.city)}?destination=${toDestinationSlug(dest.city)}`}
+                href={`/deals/${toDestinationSlug(dest.city)}`}
                 key={dest.city}
                 style={{ "--d": `${i * 90}ms` } as React.CSSProperties}
               >

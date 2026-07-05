@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
 import { matchesDestinationSlug } from "@/lib/destination-slugs";
 import { getPublicDealsPageData } from "@/lib/ops";
@@ -12,27 +10,12 @@ type DealsCityPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-function buildSearchRedirectHref(
-  citySlug: string,
-  searchParams: Record<string, string | string[] | undefined>,
-) {
-  const params = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(searchParams)) {
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        params.append(key, item);
-      }
-      continue;
-    }
-
-    if (typeof value === "string") {
-      params.set(key, value);
-    }
-  }
-
-  params.set("destination", citySlug);
-  return `/deals/search?${params.toString()}`;
+function formatCitySlug(citySlug: string) {
+  return citySlug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export default async function DealsCityPage({ params, searchParams }: DealsCityPageProps) {
@@ -52,9 +35,7 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
       return right.score - left.score;
   });
 
-  if (cityDeals.length === 0) {
-    redirect(buildSearchRedirectHref(citySlug, resolvedSearchParams));
-  }
+  const cityName = cityDeals[0]?.destinationCity ?? formatCitySlug(citySlug);
 
   return (
     <main className="page-shell page-shell--deals-city">
@@ -62,7 +43,7 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
         data={data}
         initialFilters={parseDealSearchFilters(resolvedSearchParams)}
         initialSort={parseDealSearchSort(resolvedSearchParams)}
-        lockedDestinationCity={cityDeals[0]?.destinationCity ?? "Destination"}
+        lockedDestinationCity={cityName}
         mode="city"
         searchPathname={`/deals/${encodeURIComponent(citySlug)}`}
       />
