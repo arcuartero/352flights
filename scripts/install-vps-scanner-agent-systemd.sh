@@ -61,7 +61,6 @@ EnvironmentFile=$ENV_FILE
 ExecStart=/usr/bin/python3 $ROOT_DIR/scripts/vps-scanner-agent.py
 Restart=on-failure
 RestartSec=5
-NoNewPrivileges=true
 PrivateTmp=true
 
 [Install]
