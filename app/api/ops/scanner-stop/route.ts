@@ -5,6 +5,11 @@ import { spawn } from "node:child_process";
 import { NextResponse } from "next/server";
 
 import { getLocalScannerStatus, resolveScannerRoot } from "@/lib/local-scanner-status";
+import {
+  callVpsScannerAgent,
+  hasVpsScannerAgentConfig,
+  type VpsScannerActionResponse,
+} from "@/lib/vps-scanner-agent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -144,6 +149,24 @@ export async function POST(request: Request) {
   const unauthorized = await ensureAuthorized(request);
   if (unauthorized) {
     return unauthorized;
+  }
+
+  if (hasVpsScannerAgentConfig()) {
+    try {
+      const result = await callVpsScannerAgent<VpsScannerActionResponse>("stop", {
+        method: "POST",
+      });
+      return NextResponse.json(result);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: "vps_stop_failed",
+          detail: error instanceof Error ? error.message : "Unknown VPS scanner error.",
+        },
+        { status: 502 },
+      );
+    }
   }
 
   const status = await getLocalScannerStatus();

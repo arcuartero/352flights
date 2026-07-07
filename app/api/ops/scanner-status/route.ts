@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { getLocalScannerStatus } from "@/lib/local-scanner-status";
+import {
+  callVpsScannerAgent,
+  hasVpsScannerAgentConfig,
+  type VpsScannerAgentStatus,
+} from "@/lib/vps-scanner-agent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -56,6 +61,21 @@ export async function GET(request: Request) {
   }
 
   try {
+    if (hasVpsScannerAgentConfig()) {
+      const status = await callVpsScannerAgent<VpsScannerAgentStatus>("status");
+      return NextResponse.json(
+        {
+          ...status,
+          source: "vps",
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        },
+      );
+    }
+
     const status = await getLocalScannerStatus();
 
     return NextResponse.json(status, {
