@@ -5,16 +5,44 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCANNER_DIR="$ROOT_DIR/scanner"
 LOG_DIR="$ROOT_DIR/logs"
 LOCK_DIR="$ROOT_DIR/.scanner-vps.lock"
+LOCK_PID_FILE="$LOCK_DIR/pid"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 
 mkdir -p "$LOG_DIR"
 mkdir -p "$SCANNER_DIR/state"
 
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+acquire_lock() {
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    printf '%s\n' "$$" > "$LOCK_PID_FILE"
+    return 0
+  fi
+
+  if [ -f "$LOCK_PID_FILE" ]; then
+    lock_pid="$(cat "$LOCK_PID_FILE" 2>/dev/null || true)"
+    if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+      echo "Another VPS scanner run is already active (pid $lock_pid)." >&2
+      exit 75
+    fi
+  fi
+
+  echo "Removing stale VPS scanner lock." >&2
+  rm -rf "$LOCK_DIR"
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    printf '%s\n' "$$" > "$LOCK_PID_FILE"
+    return 0
+  fi
+
   echo "Another VPS scanner run is already active." >&2
   exit 75
-fi
-trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
+}
+
+cleanup_lock() {
+  rm -f "$LOCK_PID_FILE" 2>/dev/null || true
+  rmdir "$LOCK_DIR" 2>/dev/null || true
+}
+
+acquire_lock
+trap cleanup_lock EXIT HUP INT TERM
 
 if [ -f "$ROOT_DIR/.env" ]; then
   set -a

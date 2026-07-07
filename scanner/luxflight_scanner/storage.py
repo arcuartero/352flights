@@ -349,7 +349,7 @@ class SupabaseStore:
             params={
                 "origin_airport": f"eq.{route.origin_airport}",
                 "destination_airport": f"eq.{route.destination_airport}",
-                "max_stops": f"eq.{route.max_stops}",
+                "bucket": f"eq.{route.bucket}",
                 "select": "id",
                 "limit": "1",
             },
