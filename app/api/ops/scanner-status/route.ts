@@ -94,9 +94,28 @@ function asNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function asBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : null;
+}
+
 function parseNoResultReason(detail: string) {
   const match = detail.match(/\(([^()]*)\)\s*$/);
   return match?.[1] ?? "No matching result for this route and pattern.";
+}
+
+function parseNoResultDetail(detail: string) {
+  const withReason = detail.match(/^(.+?) \((.+)\)$/);
+  if (!withReason) {
+    return {
+      routeDetail: detail,
+      reason: null as string | null,
+    };
+  }
+
+  return {
+    routeDetail: withReason[1],
+    reason: withReason[2],
+  };
 }
 
 function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
@@ -134,23 +153,24 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
   }
 
   if (message.startsWith("Pattern no results: ")) {
-    const detail = message.replace("Pattern no results: ", "");
+    const parsed = parseNoResultDetail(message.replace("Pattern no results: ", ""));
     const reasonCode = asText(meta?.reason_code) ?? "no_results";
     const reasonLabel = asText(meta?.reason_label) ?? "No results";
+    const reason = asText(meta?.reason) ?? parsed.reason ?? parseNoResultReason(parsed.routeDetail);
 
     return {
       id,
       timestamp: event.timestampIso,
       label: "No results",
-      detail,
-      secondaryDetail: asText(meta?.reason) ?? parseNoResultReason(detail),
+      detail: parsed.routeDetail,
+      secondaryDetail: reason,
       categoryCode: reasonCode,
       categoryLabel: reasonLabel,
       diagnostic: {
         reasonCode,
         reasonLabel,
-        reason: asText(meta?.reason) ?? parseNoResultReason(detail),
-        routeLabel: asText(meta?.route_label) ?? detail,
+        reason,
+        routeLabel: asText(meta?.route_label) ?? parsed.routeDetail,
         destinationCity: asText(meta?.destination_city),
         bucket: asText(meta?.bucket),
         routing: asText(meta?.routing),
@@ -169,8 +189,78 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
         returnDepartureAt: asText(meta?.return_departure_at),
         returnArrivalAt: asText(meta?.return_arrival_at),
         destinationStayHours: asNumber(meta?.destination_stay_hours),
+        outboundStopCount: asNumber(meta?.outbound_stop_count),
+        returnStopCount: asNumber(meta?.return_stop_count),
+        totalStopCount: asNumber(meta?.total_stop_count),
+        configuredRouting: asText(meta?.configured_routing),
+        historyPoints: asNumber(meta?.history_points),
+        minimumHistoryPoints: asNumber(meta?.minimum_history_points),
+        baselinePrice: asNumber(meta?.baseline_price),
+        requiredPrice: asNumber(meta?.required_price),
+        dropRatio: asNumber(meta?.drop_ratio),
+        discountPercent: asNumber(meta?.discount_percent),
+        reviewRatio: asNumber(meta?.review_ratio),
+        routingRelaxed: asBoolean(meta?.routing_relaxed),
+        routingRelaxedReason: asText(meta?.routing_relaxed_reason),
       },
       tone: "muted",
+    };
+  }
+
+  if (message.startsWith("Deal skipped: ")) {
+    const parsed = parseNoResultDetail(message.replace("Deal skipped: ", ""));
+    const reasonCode = asText(meta?.reason_code) ?? "not_an_offer";
+    const reasonLabel = asText(meta?.reason_label) ?? "Not an offer";
+    const reason = asText(meta?.reason) ?? parsed.reason ?? "Price was tracked, but not promoted as an offer.";
+
+    return {
+      id,
+      timestamp: event.timestampIso,
+      label: "No offer",
+      detail: parsed.routeDetail,
+      secondaryDetail: reason,
+      categoryCode: reasonCode,
+      categoryLabel: reasonLabel,
+      diagnostic: {
+        reasonCode,
+        reasonLabel,
+        reason,
+        routeLabel: asText(meta?.route_label) ?? parsed.routeDetail,
+        destinationCity: asText(meta?.destination_city),
+        bucket: asText(meta?.bucket),
+        routing: asText(meta?.routing),
+        configuredRouting: asText(meta?.configured_routing),
+        patternLabel: asText(meta?.pattern_label) ?? "Unknown pattern",
+        tripNights: asNumber(meta?.trip_nights),
+        searchWindowStart: asText(meta?.search_window_start),
+        searchWindowEnd: asText(meta?.search_window_end),
+        departureDate: asText(meta?.departure_date),
+        returnDate: asText(meta?.return_date),
+        airlineSummary: asText(meta?.airline_summary),
+        price: asNumber(meta?.price),
+        currency: asText(meta?.currency),
+        skyscannerUrl: asText(meta?.skyscanner_url),
+        historyPoints: asNumber(meta?.history_points),
+        minimumHistoryPoints: asNumber(meta?.minimum_history_points),
+        baselinePrice: asNumber(meta?.baseline_price),
+        requiredPrice: asNumber(meta?.required_price),
+        dropRatio: asNumber(meta?.drop_ratio),
+        discountPercent: asNumber(meta?.discount_percent),
+        reviewRatio: asNumber(meta?.review_ratio),
+        routingRelaxed: asBoolean(meta?.routing_relaxed),
+        routingRelaxedReason: asText(meta?.routing_relaxed_reason),
+      },
+      tone: "muted",
+    };
+  }
+
+  if (message.startsWith("Deal candidate: ")) {
+    return {
+      id,
+      timestamp: event.timestampIso,
+      label: "Offer",
+      detail: message.replace("Deal candidate: ", ""),
+      tone: "success",
     };
   }
 

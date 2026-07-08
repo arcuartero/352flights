@@ -17,7 +17,7 @@ ROOT_DIR = Path(os.getenv("SCANNER_ROOT", "/opt/352flights/app"))
 HOST = os.getenv("VPS_SCANNER_AGENT_HOST", "0.0.0.0")
 PORT = int(os.getenv("VPS_SCANNER_AGENT_PORT", "8787"))
 TOKEN = os.getenv("VPS_SCANNER_AGENT_TOKEN", "")
-LOG_LINES = int(os.getenv("VPS_SCANNER_AGENT_LOG_LINES", "160"))
+LOG_LINES = int(os.getenv("VPS_SCANNER_AGENT_LOG_LINES", "2500"))
 
 
 def run_command(args: list[str], timeout: int = 15) -> tuple[int, str, str]:
@@ -133,11 +133,11 @@ def start_service() -> dict[str, Any]:
 
 def stop_service() -> dict[str, Any]:
     code, stdout, stderr = run_command(
-        ["sudo", "-n", "systemctl", "stop", f"{SERVICE_NAME}.service"],
+        ["sudo", "-n", "systemctl", "stop", "--no-block", f"{SERVICE_NAME}.service"],
     )
     return {
         "ok": code == 0,
-        "reason": "stopped" if code == 0 else "stop_failed",
+        "reason": "stop_requested" if code == 0 else "stop_failed",
         "stdout": stdout.strip(),
         "stderr": stderr.strip(),
         "status": build_status(),

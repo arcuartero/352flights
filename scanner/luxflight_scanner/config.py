@@ -16,7 +16,8 @@ class ScannerConfig:
     state_path: Path = Path(os.getenv("SCANNER_STATE_FILE", ROOT_DIR / "scanner" / "state.json"))
     currency_code: str = os.getenv("SCANNER_CURRENCY", "EUR")
     history_window: int = int(os.getenv("SCANNER_HISTORY_WINDOW", "45"))
-    review_ratio: float = float(os.getenv("SCANNER_REVIEW_RATIO", "0.72"))
+    min_history_for_deal: int = int(os.getenv("SCANNER_MIN_HISTORY_FOR_DEAL", "3"))
+    review_ratio: float = float(os.getenv("SCANNER_REVIEW_RATIO", "0.85"))
     flash_ratio: float = float(os.getenv("SCANNER_FLASH_RATIO", "0.60"))
     search_request_timeout_seconds: float = float(
         os.getenv("SCANNER_SEARCH_REQUEST_TIMEOUT_SECONDS", "15")

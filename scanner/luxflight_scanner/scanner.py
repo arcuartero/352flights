@@ -565,6 +565,33 @@ class LuxFlightScanner:
             metadata=metadata,
         )
 
+    def _build_cheapest_valid_snapshot_from_itineraries(
+        self,
+        route: RouteSeed,
+        pattern: SearchPattern,
+        itineraries: list[object],
+        departure_date: str,
+        return_date: str,
+    ) -> SnapshotRecord | None:
+        for itinerary in sorted(itineraries, key=self._itinerary_price):
+            snapshot = self._build_candidate_snapshot_from_itinerary(
+                route,
+                pattern,
+                itinerary,
+                departure_date,
+                return_date,
+            )
+            if snapshot is None:
+                continue
+
+            stay_hours = snapshot.metadata.get("destination_stay_hours")
+            if isinstance(stay_hours, (int, float)) and float(stay_hours) < MIN_DESTINATION_STAY_HOURS:
+                continue
+
+            return snapshot
+
+        return None
+
     def _build_no_result_diagnostic(
         self,
         route: RouteSeed,
@@ -625,6 +652,12 @@ class LuxFlightScanner:
             diagnostic["return_arrival_at"] = merged_metadata["return_arrival_at"]
         if merged_metadata.get("destination_stay_hours") is not None:
             diagnostic["destination_stay_hours"] = merged_metadata["destination_stay_hours"]
+        if merged_metadata.get("outbound_stop_count") is not None:
+            diagnostic["outbound_stop_count"] = merged_metadata["outbound_stop_count"]
+        if merged_metadata.get("return_stop_count") is not None:
+            diagnostic["return_stop_count"] = merged_metadata["return_stop_count"]
+        if merged_metadata.get("total_stop_count") is not None:
+            diagnostic["total_stop_count"] = merged_metadata["total_stop_count"]
         if merged_metadata.get("shopping_price") is not None and diagnostic.get("price") is None:
             diagnostic["price"] = merged_metadata["shopping_price"]
             diagnostic["currency"] = self.config.currency_code
@@ -632,6 +665,39 @@ class LuxFlightScanner:
             diagnostic["skyscanner_url"] = merged_metadata["skyscanner_url"]
 
         return diagnostic
+
+    def _with_relaxed_routing_metadata(
+        self,
+        route: RouteSeed,
+        snapshot: SnapshotRecord,
+        metadata: dict[str, object] | None = None,
+    ) -> SnapshotRecord:
+        relaxed_route = replace(route, max_stops=snapshot.max_stops)
+        return SnapshotRecord(
+            departure_date=snapshot.departure_date,
+            return_date=snapshot.return_date,
+            trip_nights=snapshot.trip_nights,
+            max_stops=snapshot.max_stops,
+            price=snapshot.price,
+            currency=snapshot.currency,
+            metadata={
+                **snapshot.metadata,
+                "configured_max_stops": route.max_stops,
+                "relaxed_from_max_stops": route.max_stops,
+                "relaxed_to_max_stops": snapshot.max_stops,
+                "routing_relaxed": True,
+                "routing_relaxed_reason": (
+                    f"No result with {self._routing_label(route.max_stops)}; "
+                    f"saved the best {self._routing_label(snapshot.max_stops)} result."
+                ),
+                "skyscanner_url": self._build_skyscanner_url(
+                    relaxed_route,
+                    snapshot.departure_date,
+                    snapshot.return_date,
+                ),
+                **(metadata or {}),
+            },
+        )
 
     def _exact_date_pairs_for_pattern(
         self,
@@ -1030,6 +1096,8 @@ class LuxFlightScanner:
             (return_departure - outbound_arrival).total_seconds() / 3600,
             2,
         )
+        outbound_stop_count = max(len(outbound.legs) - 1, 0)
+        return_stop_count = max(len(inbound.legs) - 1, 0)
 
         return {
             "outbound_departure_at": cls._serialize_datetime(outbound_departure),
@@ -1037,6 +1105,9 @@ class LuxFlightScanner:
             "return_departure_at": cls._serialize_datetime(return_departure),
             "return_arrival_at": cls._serialize_datetime(return_arrival),
             "destination_stay_hours": destination_stay_hours,
+            "outbound_stop_count": outbound_stop_count,
+            "return_stop_count": return_stop_count,
+            "total_stop_count": outbound_stop_count + return_stop_count,
         }
 
     def _fetch_airline_metadata(
@@ -1597,10 +1668,10 @@ class LuxFlightScanner:
                             top_n=3,
                         )
                         if relaxed_itineraries and relaxed_snapshot is None:
-                            relaxed_snapshot = self._build_candidate_snapshot_from_itinerary(
+                            relaxed_snapshot = self._build_cheapest_valid_snapshot_from_itineraries(
                                 relaxed_route,
                                 pattern,
-                                min(relaxed_itineraries, key=self._itinerary_price),
+                                relaxed_itineraries,
                                 departure_date,
                                 return_date,
                             )
@@ -1637,22 +1708,13 @@ class LuxFlightScanner:
                     )
 
             if relaxed_snapshot is not None:
-                reason = (
-                    "Flights exist for this exact pattern, but only with more stops than "
-                    f"allowed ({self._routing_label(route.max_stops)})."
+                self._log_progress(
+                    f"Pattern fallback: {route.origin_airport} -> {route.destination_airport} "
+                    f"{pattern.label} saved with {self._routing_label(relaxed_snapshot.max_stops)} "
+                    f"after no {self._routing_label(route.max_stops)} result"
                 )
                 return PatternSelectionResult(
-                    snapshot=None,
-                    no_result_reason=reason,
-                    no_result_reason_code="more_stops_required",
-                    no_result_diagnostic=self._build_no_result_diagnostic(
-                        route,
-                        pattern,
-                        "more_stops_required",
-                        reason,
-                        snapshot=relaxed_snapshot,
-                        max_stops_override=relaxed_snapshot.max_stops,
-                    ),
+                    snapshot=self._with_relaxed_routing_metadata(route, relaxed_snapshot),
                 )
 
             if rejected_short_stays:
@@ -1742,6 +1804,8 @@ class LuxFlightScanner:
                                 relaxed_max_stops,
                                 self.config.currency_code,
                             )
+                            if relaxed_snapshot is None:
+                                continue
                             relaxed_route = replace(route, max_stops=relaxed_max_stops)
                             relaxed_metadata = (
                                 self._fetch_airline_metadata(
@@ -1752,22 +1816,13 @@ class LuxFlightScanner:
                                 if relaxed_snapshot is not None
                                 else {}
                             )
-                            reason = (
-                                "Flights exist for this pattern, but only with more stops than "
-                                f"allowed ({self._routing_label(route.max_stops)})."
-                            )
+                            if relaxed_metadata.get("itinerary_rejected") == "destination_stay_under_24h":
+                                continue
                             return PatternSelectionResult(
-                                snapshot=None,
-                                no_result_reason=reason,
-                                no_result_reason_code="more_stops_required",
-                                no_result_diagnostic=self._build_no_result_diagnostic(
+                                snapshot=self._with_relaxed_routing_metadata(
                                     route,
-                                    pattern,
-                                    "more_stops_required",
-                                    reason,
-                                    snapshot=relaxed_snapshot,
-                                    metadata=relaxed_metadata,
-                                    max_stops_override=relaxed_max_stops,
+                                    relaxed_snapshot,
+                                    relaxed_metadata,
                                 ),
                             )
 
@@ -1841,6 +1896,8 @@ class LuxFlightScanner:
                             relaxed_max_stops,
                             self.config.currency_code,
                         )
+                        if relaxed_snapshot is None:
+                            continue
                         relaxed_route = replace(route, max_stops=relaxed_max_stops)
                         relaxed_metadata = (
                             self._fetch_airline_metadata(
@@ -1851,22 +1908,13 @@ class LuxFlightScanner:
                             if relaxed_snapshot is not None
                             else {}
                         )
-                        reason = (
-                            "Flights exist for this exact pattern, but only with more stops than "
-                            f"allowed ({self._routing_label(route.max_stops)})."
-                        )
+                        if relaxed_metadata.get("itinerary_rejected") == "destination_stay_under_24h":
+                            continue
                         return PatternSelectionResult(
-                            snapshot=None,
-                            no_result_reason=reason,
-                            no_result_reason_code="more_stops_required",
-                            no_result_diagnostic=self._build_no_result_diagnostic(
+                            snapshot=self._with_relaxed_routing_metadata(
                                 route,
-                                pattern,
-                                "more_stops_required",
-                                reason,
-                                snapshot=relaxed_snapshot,
-                                metadata=relaxed_metadata,
-                                max_stops_override=relaxed_max_stops,
+                                relaxed_snapshot,
+                                relaxed_metadata,
                             ),
                         )
 
@@ -2028,18 +2076,45 @@ class LuxFlightScanner:
         route: RouteSeed,
         snapshot: SnapshotRecord,
         history: Iterable[float],
-    ) -> DealCandidate | None:
+    ) -> tuple[DealCandidate | None, dict[str, object] | None]:
         if snapshot.price <= 0:
-            return None
+            return None, self._build_deal_skip_diagnostic(
+                route,
+                snapshot,
+                [],
+                reason_code="invalid_price",
+                reason="The scanner found a non-positive price, so it was not eligible as an offer.",
+            )
 
         history_values = [float(value) for value in history if value is not None]
-        if len(history_values) < 5:
-            return None
+        if len(history_values) < self.config.min_history_for_deal:
+            return None, self._build_deal_skip_diagnostic(
+                route,
+                snapshot,
+                history_values,
+                reason_code="insufficient_history",
+                reason=(
+                    "Not enough previous prices for this exact route and date pattern "
+                    f"({len(history_values)}/{self.config.min_history_for_deal})."
+                ),
+            )
 
         baseline = float(median(history_values))
         drop_ratio = snapshot.price / baseline if baseline else 1.0
         if drop_ratio > self.config.review_ratio:
-            return None
+            required_price = baseline * self.config.review_ratio
+            return None, self._build_deal_skip_diagnostic(
+                route,
+                snapshot,
+                history_values,
+                reason_code="not_cheap_enough",
+                reason=(
+                    f"Price is not low enough versus history. It must be at or below "
+                    f"{format_money(required_price, snapshot.currency)} to become an offer."
+                ),
+                baseline=baseline,
+                drop_ratio=drop_ratio,
+            )
 
         drop_percent = int(round((1 - drop_ratio) * 100))
         score = round(max(drop_percent * 2.2, 50), 2)
@@ -2060,15 +2135,87 @@ class LuxFlightScanner:
             f"That is about {drop_percent}% below the recent pattern median."
         )
 
-        return DealCandidate(
-            title=title,
-            summary=summary,
-            deal_price=snapshot.price,
-            baseline_price=baseline,
-            drop_ratio=round(drop_ratio, 4),
-            score=score,
-            send_type=send_type,
+        return (
+            DealCandidate(
+                title=title,
+                summary=summary,
+                deal_price=snapshot.price,
+                baseline_price=baseline,
+                drop_ratio=round(drop_ratio, 4),
+                score=score,
+                send_type=send_type,
+            ),
+            None,
         )
+
+    def _build_deal_skip_diagnostic(
+        self,
+        route: RouteSeed,
+        snapshot: SnapshotRecord,
+        history_values: list[float],
+        *,
+        reason_code: str,
+        reason: str,
+        baseline: float | None = None,
+        drop_ratio: float | None = None,
+    ) -> dict[str, object]:
+        reason_labels = {
+            "invalid_price": "Invalid price",
+            "insufficient_history": "Needs more history",
+            "not_cheap_enough": "Not cheap enough",
+        }
+        pattern_label = snapshot.metadata.get("pattern_label")
+        skyscanner_url = snapshot.metadata.get("skyscanner_url")
+        airline_summary = snapshot.metadata.get("airline_summary")
+        required_price = (
+            baseline * self.config.review_ratio
+            if baseline is not None
+            else None
+        )
+        discount_percent = (
+            round((1 - drop_ratio) * 100, 1)
+            if drop_ratio is not None
+            else None
+        )
+
+        diagnostic: dict[str, object] = {
+            "reason_code": reason_code,
+            "reason_label": reason_labels.get(reason_code, "Not an offer"),
+            "reason": reason,
+            "route_label": f"{route.origin_airport} -> {route.destination_airport}",
+            "destination_city": route.destination_city,
+            "bucket": route.bucket,
+            "routing": self._routing_label(snapshot.max_stops),
+            "configured_routing": self._routing_label(route.max_stops),
+            "pattern_label": pattern_label if isinstance(pattern_label, str) else "Unknown pattern",
+            "trip_nights": snapshot.trip_nights,
+            "departure_date": snapshot.departure_date,
+            "return_date": snapshot.return_date,
+            "price": snapshot.price,
+            "currency": snapshot.currency,
+            "history_points": len(history_values),
+            "minimum_history_points": self.config.min_history_for_deal,
+            "review_ratio": self.config.review_ratio,
+        }
+        if baseline is not None:
+            diagnostic["baseline_price"] = baseline
+        if required_price is not None:
+            diagnostic["required_price"] = required_price
+        if drop_ratio is not None:
+            diagnostic["drop_ratio"] = round(drop_ratio, 4)
+        if discount_percent is not None:
+            diagnostic["discount_percent"] = discount_percent
+        if isinstance(skyscanner_url, str):
+            diagnostic["skyscanner_url"] = skyscanner_url
+        if isinstance(airline_summary, str):
+            diagnostic["airline_summary"] = airline_summary
+        if snapshot.metadata.get("routing_relaxed"):
+            diagnostic["routing_relaxed"] = True
+            relaxed_reason = snapshot.metadata.get("routing_relaxed_reason")
+            if isinstance(relaxed_reason, str):
+                diagnostic["routing_relaxed_reason"] = relaxed_reason
+
+        return diagnostic
 
     def scan(self, limit: int | None = None) -> dict[str, Any]:
         report: list[dict[str, Any]] = []
@@ -2193,7 +2340,7 @@ class LuxFlightScanner:
                         continue
 
                     snapshot = selection.snapshot
-                    candidate = self._score_deal(route, snapshot, history)
+                    candidate, deal_skip_diagnostic = self._score_deal(route, snapshot, history)
                     try:
                         snapshot_id = self.store.save_snapshot(route_id, snapshot)
                         if candidate is not None:
@@ -2231,6 +2378,21 @@ class LuxFlightScanner:
                         f"{route.origin_airport} -> {route.destination_airport} "
                         f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f}"
                     )
+                    if candidate is None and deal_skip_diagnostic is not None:
+                        self._log_progress(
+                            f"Deal skipped: {pattern_progress_label} · "
+                            f"{route.origin_airport} -> {route.destination_airport} "
+                            f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f} "
+                            f"({deal_skip_diagnostic['reason']})"
+                            f"{self._log_meta_suffix(deal_skip_diagnostic)}"
+                        )
+                    elif candidate is not None:
+                        self._log_progress(
+                            f"Deal candidate: {pattern_progress_label} · "
+                            f"{route.origin_airport} -> {route.destination_airport} "
+                            f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f} "
+                            f"({candidate.send_type})"
+                        )
                     report.append(
                         {
                             "route": asdict(route),
@@ -2238,6 +2400,7 @@ class LuxFlightScanner:
                             "status": "deal" if candidate else "tracked",
                             "snapshot": asdict(snapshot),
                             "history_points": len(history),
+                            "deal_skip_diagnostic": deal_skip_diagnostic,
                             "candidate": asdict(candidate) if candidate else None,
                         }
                     )

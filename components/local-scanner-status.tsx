@@ -189,6 +189,266 @@ function buildNoResultRouteLabel(diagnostic: LocalScannerNoResultDiagnostic | nu
     : diagnostic.routeLabel;
 }
 
+function formatDiagnosticPrice(diagnostic: LocalScannerNoResultDiagnostic) {
+  if (typeof diagnostic.price !== "number" || !Number.isFinite(diagnostic.price)) {
+    return null;
+  }
+
+  const currency = diagnostic.currency ?? "EUR";
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(diagnostic.price);
+  } catch {
+    return `${currency} ${Math.round(diagnostic.price)}`;
+  }
+}
+
+function formatShortDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  }).format(parsed);
+}
+
+function extractLogProgress(detail: string) {
+  return detail.match(/^(\d+\/\d+)\s*·/)?.[1] ?? null;
+}
+
+function extractAllowedRouting(reason: string | null | undefined) {
+  if (!reason) {
+    return null;
+  }
+
+  return reason.match(/allowed \(([^()]*)\)/i)?.[1] ?? null;
+}
+
+function formatStopCount(count: number, legLabel: string) {
+  return `${legLabel} ${count} ${count === 1 ? "stop" : "stops"}`;
+}
+
+function formatDiagnosticStops(diagnostic: LocalScannerNoResultDiagnostic) {
+  if (
+    typeof diagnostic.outboundStopCount !== "number" ||
+    typeof diagnostic.returnStopCount !== "number"
+  ) {
+    return null;
+  }
+
+  const total =
+    typeof diagnostic.totalStopCount === "number"
+      ? diagnostic.totalStopCount
+      : diagnostic.outboundStopCount + diagnostic.returnStopCount;
+
+  return `Stops found: ${formatStopCount(
+    diagnostic.outboundStopCount,
+    "outbound",
+  )}, ${formatStopCount(diagnostic.returnStopCount, "return")} (${total} total).`;
+}
+
+function buildNoResultDetail(logLine: LocalScannerLogLine) {
+  const diagnostic = logLine.diagnostic;
+  if (!diagnostic) {
+    return logLine.detail;
+  }
+
+  const parts = [
+    extractLogProgress(logLine.detail),
+    buildNoResultRouteLabel(diagnostic),
+    diagnostic.patternLabel,
+  ].filter(Boolean);
+
+  return parts.join(" · ");
+}
+
+function buildNoResultSecondaryDetail(logLine: LocalScannerLogLine) {
+  const diagnostic = logLine.diagnostic;
+  if (!diagnostic) {
+    return logLine.secondaryDetail;
+  }
+
+  const price = formatDiagnosticPrice(diagnostic);
+  const airline = diagnostic.airlineSummary ? `Airlines: ${diagnostic.airlineSummary}.` : null;
+  const stops = formatDiagnosticStops(diagnostic);
+  const dates =
+    diagnostic.departureDate && diagnostic.returnDate
+      ? `Candidate dates: ${formatShortDate(diagnostic.departureDate)}-${formatShortDate(
+          diagnostic.returnDate,
+        )}.`
+      : null;
+
+  if (diagnostic.reasonCode === "more_stops_required") {
+    const foundRouting = diagnostic.routing ?? "more stops";
+    const allowedRouting = extractAllowedRouting(diagnostic.reason);
+    return [
+      `Only found with ${foundRouting}${
+        allowedRouting ? `; this route is configured for ${allowedRouting}` : ""
+      }.`,
+      stops,
+      price ? `Cheapest relaxed result: ${price}.` : null,
+      airline,
+      dates,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (diagnostic.reasonCode === "pattern_not_available") {
+    return [
+      `Flights were found for this trip length, but not for the exact ${diagnostic.patternLabel} pattern.`,
+      price ? `Closest result: ${price}.` : null,
+      airline,
+      dates,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (diagnostic.reasonCode === "outside_current_window") {
+    const start = formatShortDate(diagnostic.searchWindowStart);
+    const end = formatShortDate(diagnostic.searchWindowEnd);
+    return `No ${diagnostic.patternLabel} dates matched inside the active scan window${
+      start && end ? ` (${start}-${end})` : ""
+    }.`;
+  }
+
+  if (diagnostic.reasonCode === "destination_stay_under_24h") {
+    const stayHours =
+      typeof diagnostic.destinationStayHours === "number"
+        ? `${Math.round(diagnostic.destinationStayHours)}h in destination`
+        : "under 24h in destination";
+    return [
+      `A fare was found, but it was rejected because it leaves only ${stayHours}.`,
+      price ? `Rejected price: ${price}.` : null,
+      dates,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (diagnostic.reasonCode === "no_flights_found") {
+    return `No flights were returned for ${diagnostic.patternLabel} with ${diagnostic.routing ?? "the configured routing"}.`;
+  }
+
+  if (diagnostic.reasonCode === "validation_rejected") {
+    return [
+      "Candidate flights were returned, but none passed the validation rules cleanly.",
+      price ? `Closest rejected result: ${price}.` : null,
+      dates,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return diagnostic.reason || logLine.secondaryDetail;
+}
+
+function buildNoOfferDetail(logLine: LocalScannerLogLine) {
+  const diagnostic = logLine.diagnostic;
+  if (!diagnostic) {
+    return logLine.detail;
+  }
+
+  const parts = [
+    extractLogProgress(logLine.detail),
+    buildNoResultRouteLabel(diagnostic),
+    diagnostic.patternLabel,
+  ].filter(Boolean);
+
+  return parts.join(" · ");
+}
+
+function buildNoOfferSecondaryDetail(logLine: LocalScannerLogLine) {
+  const diagnostic = logLine.diagnostic;
+  if (!diagnostic) {
+    return logLine.secondaryDetail;
+  }
+
+  const price = formatMoney(diagnostic.price, diagnostic.currency);
+  const baseline = formatMoney(diagnostic.baselinePrice, diagnostic.currency);
+  const required = formatMoney(diagnostic.requiredPrice, diagnostic.currency);
+  const history =
+    typeof diagnostic.historyPoints === "number" &&
+    typeof diagnostic.minimumHistoryPoints === "number"
+      ? `History: ${diagnostic.historyPoints}/${diagnostic.minimumHistoryPoints} previous prices.`
+      : null;
+  const discount =
+    typeof diagnostic.discountPercent === "number"
+      ? `Discount versus median: ${diagnostic.discountPercent}%.`
+      : null;
+  const routing =
+    diagnostic.routingRelaxed && diagnostic.routingRelaxedReason
+      ? diagnostic.routingRelaxedReason
+      : diagnostic.configuredRouting && diagnostic.routing && diagnostic.configuredRouting !== diagnostic.routing
+        ? `Saved with ${diagnostic.routing} after ${diagnostic.configuredRouting} returned no usable result.`
+        : null;
+
+  if (diagnostic.reasonCode === "insufficient_history") {
+    return [
+      "Tracked, but not promoted yet.",
+      history,
+      price ? `Price: ${price}.` : null,
+      routing,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (diagnostic.reasonCode === "not_cheap_enough") {
+    return [
+      "Tracked, but not cheap enough to become an offer.",
+      price ? `Price: ${price}.` : null,
+      baseline ? `Median: ${baseline}.` : null,
+      required ? `Needs to be ${required} or lower.` : null,
+      discount,
+      routing,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return [
+    diagnostic.reason,
+    price ? `Price: ${price}.` : null,
+    history,
+    routing,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function buildLogLineDisplay(logLine: LocalScannerLogLine) {
+  if (logLine.label === "No offer") {
+    return {
+      detail: buildNoOfferDetail(logLine),
+      secondaryDetail: buildNoOfferSecondaryDetail(logLine),
+    };
+  }
+
+  if (logLine.label !== "No results") {
+    return {
+      detail: logLine.detail,
+      secondaryDetail: logLine.secondaryDetail,
+    };
+  }
+
+  return {
+    detail: buildNoResultDetail(logLine),
+    secondaryDetail: buildNoResultSecondaryDetail(logLine),
+  };
+}
+
 type LocalScannerStatusWidgetProps = {
   displayMode?: "floating" | "page";
 };
@@ -507,19 +767,22 @@ export function LocalScannerStatusWidget({
               {status.recentLogLines.length === 0 ? (
                 <p className="ops-scanner-status__empty-feed">Waiting for the first live event...</p>
               ) : (
-                status.recentLogLines.map((logLine) => (
-                  <article
-                    className={`ops-scanner-status__log-line ${logToneClassName(logLine)}`}
-                    key={logLine.id}
-                  >
-                    <span>{formatLogTime(logLine.timestamp)}</span>
-                    <strong>{logLine.label}</strong>
-                    <p>{logLine.detail}</p>
-                    {logLine.secondaryDetail ? (
-                      <p className="ops-scanner-status__log-subdetail">{logLine.secondaryDetail}</p>
-                    ) : null}
-                  </article>
-                ))
+                status.recentLogLines.map((logLine) => {
+                  const display = buildLogLineDisplay(logLine);
+                  return (
+                    <article
+                      className={`ops-scanner-status__log-line ${logToneClassName(logLine)}`}
+                      key={logLine.id}
+                    >
+                      <span>{formatLogTime(logLine.timestamp)}</span>
+                      <strong>{logLine.label}</strong>
+                      <p>{display.detail}</p>
+                      {display.secondaryDetail ? (
+                        <p className="ops-scanner-status__log-subdetail">{display.secondaryDetail}</p>
+                      ) : null}
+                    </article>
+                  );
+                })
               )}
             </div>
           </section>
@@ -589,19 +852,22 @@ export function LocalScannerStatusWidget({
               {status.recentLogLines.length === 0 ? (
                 <p className="ops-scanner-status__empty-feed">No recent scanner events yet.</p>
               ) : (
-                status.recentLogLines.map((logLine) => (
-                  <article
-                    className={`ops-scanner-status__log-line ${logToneClassName(logLine)}`}
-                    key={logLine.id}
-                  >
-                    <span>{formatLogTime(logLine.timestamp)}</span>
-                    <strong>{logLine.label}</strong>
-                    <p>{logLine.detail}</p>
-                    {logLine.secondaryDetail ? (
-                      <p className="ops-scanner-status__log-subdetail">{logLine.secondaryDetail}</p>
-                    ) : null}
-                  </article>
-                ))
+                status.recentLogLines.map((logLine) => {
+                  const display = buildLogLineDisplay(logLine);
+                  return (
+                    <article
+                      className={`ops-scanner-status__log-line ${logToneClassName(logLine)}`}
+                      key={logLine.id}
+                    >
+                      <span>{formatLogTime(logLine.timestamp)}</span>
+                      <strong>{logLine.label}</strong>
+                      <p>{display.detail}</p>
+                      {display.secondaryDetail ? (
+                        <p className="ops-scanner-status__log-subdetail">{display.secondaryDetail}</p>
+                      ) : null}
+                    </article>
+                  );
+                })
               )}
             </div>
           </section>

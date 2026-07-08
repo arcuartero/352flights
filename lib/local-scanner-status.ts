@@ -209,6 +209,10 @@ function toNullableNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function toNullableBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : null;
+}
+
 function parseLogMeta(message: string) {
   const markerIndex = message.indexOf(LOG_META_MARKER);
   if (markerIndex === -1) {
@@ -243,6 +247,19 @@ function parseLogMeta(message: string) {
       returnDepartureAt: toNullableString(payload.return_departure_at),
       returnArrivalAt: toNullableString(payload.return_arrival_at),
       destinationStayHours: toNullableNumber(payload.destination_stay_hours),
+      outboundStopCount: toNullableNumber(payload.outbound_stop_count),
+      returnStopCount: toNullableNumber(payload.return_stop_count),
+      totalStopCount: toNullableNumber(payload.total_stop_count),
+      configuredRouting: toNullableString(payload.configured_routing),
+      historyPoints: toNullableNumber(payload.history_points),
+      minimumHistoryPoints: toNullableNumber(payload.minimum_history_points),
+      baselinePrice: toNullableNumber(payload.baseline_price),
+      requiredPrice: toNullableNumber(payload.required_price),
+      dropRatio: toNullableNumber(payload.drop_ratio),
+      discountPercent: toNullableNumber(payload.discount_percent),
+      reviewRatio: toNullableNumber(payload.review_ratio),
+      routingRelaxed: toNullableBoolean(payload.routing_relaxed),
+      routingRelaxedReason: toNullableString(payload.routing_relaxed_reason),
     };
 
     return {
@@ -472,6 +489,31 @@ function toLogLine(event: LogEvent): LocalScannerLogLine | null {
       categoryLabel: diagnostic?.reasonLabel ?? parsed.label,
       diagnostic,
       tone: "muted",
+    };
+  }
+
+  if (message.startsWith("Deal skipped: ")) {
+    const parsed = parseNoResultDetail(message.replace("Deal skipped: ", ""));
+    return {
+      id: `${event.timestampIso}:${message}`,
+      timestamp: event.timestampIso,
+      label: "No offer",
+      detail: parsed.routeDetail,
+      secondaryDetail: diagnostic?.reason ?? parsed.reason,
+      categoryCode: diagnostic?.reasonCode ?? "not_an_offer",
+      categoryLabel: diagnostic?.reasonLabel ?? "Not an offer",
+      diagnostic,
+      tone: "muted",
+    };
+  }
+
+  if (message.startsWith("Deal candidate: ")) {
+    return {
+      id: `${event.timestampIso}:${message}`,
+      timestamp: event.timestampIso,
+      label: "Offer",
+      detail: message.replace("Deal candidate: ", ""),
+      tone: "success",
     };
   }
 

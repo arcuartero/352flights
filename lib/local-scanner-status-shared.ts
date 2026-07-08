@@ -21,6 +21,19 @@ export type LocalScannerNoResultDiagnostic = {
   returnDepartureAt?: string | null;
   returnArrivalAt?: string | null;
   destinationStayHours?: number | null;
+  outboundStopCount?: number | null;
+  returnStopCount?: number | null;
+  totalStopCount?: number | null;
+  configuredRouting?: string | null;
+  historyPoints?: number | null;
+  minimumHistoryPoints?: number | null;
+  baselinePrice?: number | null;
+  requiredPrice?: number | null;
+  dropRatio?: number | null;
+  discountPercent?: number | null;
+  reviewRatio?: number | null;
+  routingRelaxed?: boolean | null;
+  routingRelaxedReason?: string | null;
 };
 
 export type LocalScannerLogLine = {
