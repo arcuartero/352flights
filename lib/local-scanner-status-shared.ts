@@ -32,6 +32,11 @@ export type LocalScannerNoResultDiagnostic = {
   dropRatio?: number | null;
   discountPercent?: number | null;
   reviewRatio?: number | null;
+  effectiveReviewRatio?: number | null;
+  bootstrapReviewRatio?: number | null;
+  bootstrapVisibleDealTarget?: number | null;
+  visibleDealsForDestination?: number | null;
+  dealMode?: string | null;
   routingRelaxed?: boolean | null;
   routingRelaxedReason?: string | null;
 };

@@ -387,6 +387,16 @@ function buildNoOfferSecondaryDetail(logLine: LocalScannerLogLine) {
     typeof diagnostic.discountPercent === "number"
       ? `Discount versus median: ${diagnostic.discountPercent}%.`
       : null;
+  const inventory =
+    typeof diagnostic.visibleDealsForDestination === "number" &&
+    typeof diagnostic.bootstrapVisibleDealTarget === "number" &&
+    diagnostic.bootstrapVisibleDealTarget > 0
+      ? `Visible for ${diagnostic.destinationCity ?? "destination"}: ${diagnostic.visibleDealsForDestination}/${diagnostic.bootstrapVisibleDealTarget}.`
+      : null;
+  const bootstrapMode =
+    diagnostic.dealMode === "bootstrap_inventory"
+      ? "Starter rule active: median-or-better prices can become offers until this destination has enough visible options."
+      : null;
   const routing =
     diagnostic.routingRelaxed && diagnostic.routingRelaxedReason
       ? diagnostic.routingRelaxedReason
@@ -398,6 +408,8 @@ function buildNoOfferSecondaryDetail(logLine: LocalScannerLogLine) {
     return [
       "Tracked, but not promoted yet.",
       history,
+      inventory,
+      bootstrapMode,
       price ? `Price: ${price}.` : null,
       routing,
     ]
@@ -408,6 +420,8 @@ function buildNoOfferSecondaryDetail(logLine: LocalScannerLogLine) {
   if (diagnostic.reasonCode === "not_cheap_enough") {
     return [
       "Tracked, but not cheap enough to become an offer.",
+      inventory,
+      bootstrapMode,
       price ? `Price: ${price}.` : null,
       baseline ? `Median: ${baseline}.` : null,
       required ? `Needs to be ${required} or lower.` : null,

@@ -2076,7 +2076,17 @@ class LuxFlightScanner:
         route: RouteSeed,
         snapshot: SnapshotRecord,
         history: Iterable[float],
+        visible_deals_for_destination: int,
     ) -> tuple[DealCandidate | None, dict[str, object] | None]:
+        bootstrap_target = max(self.config.bootstrap_visible_deals_per_destination, 0)
+        bootstrap_active = visible_deals_for_destination < bootstrap_target
+        effective_review_ratio = (
+            self.config.bootstrap_review_ratio
+            if bootstrap_active
+            else self.config.review_ratio
+        )
+        deal_mode = "bootstrap_inventory" if bootstrap_active else "historical_discount"
+
         if snapshot.price <= 0:
             return None, self._build_deal_skip_diagnostic(
                 route,
@@ -2084,6 +2094,9 @@ class LuxFlightScanner:
                 [],
                 reason_code="invalid_price",
                 reason="The scanner found a non-positive price, so it was not eligible as an offer.",
+                visible_deals_for_destination=visible_deals_for_destination,
+                effective_review_ratio=effective_review_ratio,
+                deal_mode=deal_mode,
             )
 
         history_values = [float(value) for value in history if value is not None]
@@ -2097,23 +2110,35 @@ class LuxFlightScanner:
                     "Not enough previous prices for this exact route and date pattern "
                     f"({len(history_values)}/{self.config.min_history_for_deal})."
                 ),
+                visible_deals_for_destination=visible_deals_for_destination,
+                effective_review_ratio=effective_review_ratio,
+                deal_mode=deal_mode,
             )
 
         baseline = float(median(history_values))
         drop_ratio = snapshot.price / baseline if baseline else 1.0
-        if drop_ratio > self.config.review_ratio:
-            required_price = baseline * self.config.review_ratio
+        if drop_ratio > effective_review_ratio:
+            required_price = baseline * effective_review_ratio
+            reason = (
+                "Destination bootstrap is active, but this price is still above the recent "
+                "pattern median. It needs to be at the median or lower to fill the public page."
+                if bootstrap_active
+                else (
+                    "Price is not low enough versus history. It must be at or below "
+                    f"{format_money(required_price, snapshot.currency)} to become an offer."
+                )
+            )
             return None, self._build_deal_skip_diagnostic(
                 route,
                 snapshot,
                 history_values,
                 reason_code="not_cheap_enough",
-                reason=(
-                    f"Price is not low enough versus history. It must be at or below "
-                    f"{format_money(required_price, snapshot.currency)} to become an offer."
-                ),
+                reason=reason,
                 baseline=baseline,
                 drop_ratio=drop_ratio,
+                visible_deals_for_destination=visible_deals_for_destination,
+                effective_review_ratio=effective_review_ratio,
+                deal_mode=deal_mode,
             )
 
         drop_percent = int(round((1 - drop_ratio) * 100))
@@ -2128,12 +2153,23 @@ class LuxFlightScanner:
         airline_summary = snapshot.metadata.get("airline_summary")
         airline_line = f" on {airline_summary}" if isinstance(airline_summary, str) else ""
         pattern_line = f" for the {pattern_label} pattern" if isinstance(pattern_label, str) else ""
+        if drop_percent > 0:
+            median_line = f"That is about {drop_percent}% below the recent pattern median."
+        elif drop_percent < 0:
+            median_line = f"That is about {abs(drop_percent)}% above the recent pattern median."
+        else:
+            median_line = "That is at the recent pattern median."
         summary = (
             f"{snapshot.trip_nights}-night roundtrip from {route.origin_airport} to "
             f"{route.destination_airport} at {format_money(snapshot.price, snapshot.currency)}"
             f"{airline_line}{pattern_line}. "
-            f"That is about {drop_percent}% below the recent pattern median."
+            f"{median_line}"
         )
+        if bootstrap_active:
+            summary += (
+                " Promoted because this destination still has fewer than "
+                f"{bootstrap_target} visible offers."
+            )
 
         return (
             DealCandidate(
@@ -2158,6 +2194,9 @@ class LuxFlightScanner:
         reason: str,
         baseline: float | None = None,
         drop_ratio: float | None = None,
+        visible_deals_for_destination: int | None = None,
+        effective_review_ratio: float | None = None,
+        deal_mode: str | None = None,
     ) -> dict[str, object]:
         reason_labels = {
             "invalid_price": "Invalid price",
@@ -2168,7 +2207,7 @@ class LuxFlightScanner:
         skyscanner_url = snapshot.metadata.get("skyscanner_url")
         airline_summary = snapshot.metadata.get("airline_summary")
         required_price = (
-            baseline * self.config.review_ratio
+            baseline * (effective_review_ratio if effective_review_ratio is not None else self.config.review_ratio)
             if baseline is not None
             else None
         )
@@ -2196,7 +2235,16 @@ class LuxFlightScanner:
             "history_points": len(history_values),
             "minimum_history_points": self.config.min_history_for_deal,
             "review_ratio": self.config.review_ratio,
+            "effective_review_ratio": effective_review_ratio
+            if effective_review_ratio is not None
+            else self.config.review_ratio,
+            "bootstrap_review_ratio": self.config.bootstrap_review_ratio,
+            "bootstrap_visible_deal_target": self.config.bootstrap_visible_deals_per_destination,
         }
+        if visible_deals_for_destination is not None:
+            diagnostic["visible_deals_for_destination"] = visible_deals_for_destination
+        if deal_mode is not None:
+            diagnostic["deal_mode"] = deal_mode
         if baseline is not None:
             diagnostic["baseline_price"] = baseline
         if required_price is not None:
@@ -2225,6 +2273,7 @@ class LuxFlightScanner:
         consecutive_network_outage_failures = 0
         stopped_reason: str | None = None
         stopped_reason_code: str | None = None
+        visible_deals_by_destination: dict[str, int] = {}
 
         try:
             for route_index, route in enumerate(routes, start=1):
@@ -2264,6 +2313,11 @@ class LuxFlightScanner:
                 date_results_cache: dict[tuple[int, str, str | None, str | None], list[object]] = {}
                 service_month_rows = self.store.route_service_months(route_id, route.max_stops)
                 total_patterns = len(patterns)
+                destination_key = f"{route.origin_airport}:{route.destination_airport}"
+                if destination_key not in visible_deals_by_destination:
+                    visible_deals_by_destination[destination_key] = (
+                        self.store.visible_deal_count_for_destination(route)
+                    )
 
                 for pattern_index, pattern in enumerate(patterns, start=1):
                     patterns_scanned += 1
@@ -2340,11 +2394,17 @@ class LuxFlightScanner:
                         continue
 
                     snapshot = selection.snapshot
-                    candidate, deal_skip_diagnostic = self._score_deal(route, snapshot, history)
+                    candidate, deal_skip_diagnostic = self._score_deal(
+                        route,
+                        snapshot,
+                        history,
+                        visible_deals_by_destination[destination_key],
+                    )
                     try:
                         snapshot_id = self.store.save_snapshot(route_id, snapshot)
                         if candidate is not None:
                             self.store.save_deal(route_id, snapshot_id, candidate)
+                            visible_deals_by_destination[destination_key] += 1
                     except Exception as error:  # pragma: no cover - depends on live network behavior
                         error_type = self._classify_error_type(error)
                         consecutive_network_outage_failures = (

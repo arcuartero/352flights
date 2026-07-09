@@ -43,6 +43,44 @@ def has_non_positive_price(value: object) -> bool:
     return not isinstance(value, (int, float)) or float(value) <= 0
 
 
+def _has_valid_public_datetime(value: object) -> bool:
+    if not isinstance(value, str) or not value:
+        return False
+
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+
+    return True
+
+
+def _snapshot_is_public_renderable(snapshot: dict[str, Any] | None) -> bool:
+    if not isinstance(snapshot, dict):
+        return False
+
+    metadata = snapshot.get("metadata")
+    if not isinstance(metadata, dict):
+        return False
+
+    if has_non_positive_price(snapshot.get("price")):
+        return False
+
+    required_dates = (
+        snapshot.get("departure_date"),
+        snapshot.get("return_date"),
+        metadata.get("outbound_departure_at"),
+        metadata.get("outbound_arrival_at"),
+        metadata.get("return_departure_at"),
+        metadata.get("return_arrival_at"),
+    )
+    if not all(_has_valid_public_datetime(value) for value in required_dates):
+        return False
+
+    booking_url = metadata.get("skyscanner_url")
+    return isinstance(booking_url, str) and len(booking_url) > 0
+
+
 class LocalStore:
     def __init__(self, state_path: Path):
         self.state_path = state_path
@@ -93,6 +131,27 @@ class LocalStore:
             )
         ]
         return list(reversed(snapshots[-limit:]))
+
+    def visible_deal_count_for_destination(self, route: RouteSeed) -> int:
+        route_prefix = f"{route.origin_airport}:{route.destination_airport}:"
+        snapshots_by_id = {
+            str(snapshot.get("id")): snapshot
+            for snapshot in self._state["snapshots"]
+        }
+        visible_statuses = {"new", "reviewed"}
+        count = 0
+
+        for deal in self._state["deals"]:
+            route_id = str(deal.get("route_id", ""))
+            if not route_id.startswith(route_prefix):
+                continue
+            if deal.get("status", "new") not in visible_statuses:
+                continue
+            snapshot = snapshots_by_id.get(str(deal.get("snapshot_id")))
+            if _snapshot_is_public_renderable(snapshot):
+                count += 1
+
+        return count
 
     def save_snapshot(self, route_id: str, snapshot: SnapshotRecord) -> str:
         if has_non_positive_price(snapshot.price):
@@ -397,6 +456,33 @@ class SupabaseStore:
             if not has_short_destination_stay(item.get("metadata"))
         ]
         return prices[:limit]
+
+    def visible_deal_count_for_destination(self, route: RouteSeed) -> int:
+        routes_response = self.client.get(
+            "/rest/v1/scanned_routes",
+            params={
+                "origin_airport": f"eq.{route.origin_airport}",
+                "destination_airport": f"eq.{route.destination_airport}",
+                "is_active": "eq.true",
+                "select": "id",
+            },
+        )
+        routes_response.raise_for_status()
+        route_ids = [str(item["id"]) for item in routes_response.json()]
+        if not route_ids:
+            return 0
+
+        deals_response = self.client.get(
+            "/rest/v1/deal_candidates",
+            params={
+                "route_id": f"in.({','.join(route_ids)})",
+                "status": "in.(new,reviewed)",
+                "select": "id",
+                "limit": "1000",
+            },
+        )
+        deals_response.raise_for_status()
+        return len(deals_response.json())
 
     def find_synced_snapshot(self, route_id: str, local_snapshot_id: str) -> str | None:
         response = self.client.get(

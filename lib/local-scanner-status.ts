@@ -258,6 +258,11 @@ function parseLogMeta(message: string) {
       dropRatio: toNullableNumber(payload.drop_ratio),
       discountPercent: toNullableNumber(payload.discount_percent),
       reviewRatio: toNullableNumber(payload.review_ratio),
+      effectiveReviewRatio: toNullableNumber(payload.effective_review_ratio),
+      bootstrapReviewRatio: toNullableNumber(payload.bootstrap_review_ratio),
+      bootstrapVisibleDealTarget: toNullableNumber(payload.bootstrap_visible_deal_target),
+      visibleDealsForDestination: toNullableNumber(payload.visible_deals_for_destination),
+      dealMode: toNullableString(payload.deal_mode),
       routingRelaxed: toNullableBoolean(payload.routing_relaxed),
       routingRelaxedReason: toNullableString(payload.routing_relaxed_reason),
     };
