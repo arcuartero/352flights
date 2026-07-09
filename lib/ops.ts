@@ -3145,7 +3145,7 @@ export const getPublicDealsPageData = unstable_cache(
   getPublicDealsPageDataUncached,
   ["public-deals-page-data"],
   {
-    revalidate: 60,
+    revalidate: 10,
     tags: ["public-deals"],
   },
 );

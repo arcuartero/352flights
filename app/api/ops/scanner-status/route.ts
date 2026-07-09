@@ -284,6 +284,28 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
     };
   }
 
+  if (message.startsWith("Deal live sync: ")) {
+    return {
+      id,
+      timestamp: event.timestampIso,
+      label: "Sync",
+      detail: message.replace("Deal live sync: ", ""),
+      secondaryDetail: "Offer sent to Supabase for the public page",
+      tone: "success",
+    };
+  }
+
+  if (message.startsWith("Deal live sync failed: ")) {
+    return {
+      id,
+      timestamp: event.timestampIso,
+      label: "Sync",
+      detail: message.replace("Deal live sync failed: ", ""),
+      secondaryDetail: "Saved locally; final sync will retry later",
+      tone: "error",
+    };
+  }
+
   if (message.startsWith("Pattern retry: ")) {
     return {
       id,

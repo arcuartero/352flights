@@ -19,7 +19,7 @@ from luxflight_scanner.models import (
     SearchPattern,
     SnapshotRecord,
 )
-from luxflight_scanner.storage import create_store
+from luxflight_scanner.storage import LocalStore, SupabaseStore, create_store
 
 try:
     from fli.models import (
@@ -232,6 +232,12 @@ class LuxFlightScanner:
         self.config = config
         self.routes = load_routes(config)
         self.store = create_store(config)
+        self.live_sync_store = (
+            SupabaseStore(config)
+            if config.sync_deals_live and config.has_supabase_credentials and not config.use_supabase
+            else None
+        )
+        self.live_sync_remote_route_ids: dict[str, str] = {}
         self._random = random.Random()
         self.date_search = SearchDates()
         self.flight_search = SearchFlights()
@@ -243,6 +249,98 @@ class LuxFlightScanner:
     def _log_progress(message: str) -> None:
         timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}Z] {message}", file=sys.stderr, flush=True)
+
+    def _live_sync_remote_route_id(self, route: RouteSeed) -> str | None:
+        if self.live_sync_store is None:
+            return None
+
+        if route.key not in self.live_sync_remote_route_ids:
+            self.live_sync_remote_route_ids[route.key] = self.live_sync_store.ensure_route(route)
+
+        return self.live_sync_remote_route_ids[route.key]
+
+    @staticmethod
+    def _snapshot_for_live_sync(
+        local_route_id: str,
+        local_snapshot_id: str,
+        local_snapshot: dict[str, Any],
+        snapshot: SnapshotRecord,
+    ) -> SnapshotRecord:
+        metadata = {
+            **snapshot.metadata,
+            "sync_source": "local_state_live",
+            "local_route_id": local_route_id,
+            "local_snapshot_id": str(local_snapshot_id),
+            "local_scanned_at": local_snapshot.get("scanned_at"),
+        }
+
+        return SnapshotRecord(
+            departure_date=snapshot.departure_date,
+            return_date=snapshot.return_date,
+            trip_nights=snapshot.trip_nights,
+            max_stops=snapshot.max_stops,
+            price=snapshot.price,
+            currency=snapshot.currency,
+            metadata=metadata,
+        )
+
+    def _sync_deal_live(
+        self,
+        route: RouteSeed,
+        local_route_id: str,
+        local_snapshot_id: str,
+        snapshot: SnapshotRecord,
+        candidate: DealCandidate,
+    ) -> None:
+        if self.live_sync_store is None or not isinstance(self.store, LocalStore):
+            return
+
+        try:
+            local_snapshot = self.store.snapshot_by_id(local_snapshot_id)
+            if local_snapshot is None:
+                raise RuntimeError(f"Missing local snapshot {local_snapshot_id!r}.")
+
+            remote_route_id = self._live_sync_remote_route_id(route)
+            if remote_route_id is None:
+                return
+
+            remote_snapshot_id = self.live_sync_store.find_synced_snapshot(
+                remote_route_id,
+                local_snapshot_id,
+            )
+            if remote_snapshot_id is None:
+                remote_snapshot_id = self.live_sync_store.save_snapshot(
+                    remote_route_id,
+                    self._snapshot_for_live_sync(
+                        local_route_id,
+                        local_snapshot_id,
+                        local_snapshot,
+                        snapshot,
+                    ),
+                    scanned_at=local_snapshot.get("scanned_at"),
+                )
+
+            self.store.mark_snapshot_synced(local_snapshot_id, remote_snapshot_id)
+
+            remote_deal_id = self.live_sync_store.find_deal_by_snapshot_id(remote_snapshot_id)
+            if remote_deal_id is None:
+                self.live_sync_store.save_deal(remote_route_id, remote_snapshot_id, candidate)
+                remote_deal_id = self.live_sync_store.find_deal_by_snapshot_id(remote_snapshot_id) or "created"
+
+            self.store.mark_deal_synced(
+                local_snapshot_id,
+                remote_deal_id,
+                remote_snapshot_id,
+            )
+            self._log_progress(
+                f"Deal live sync: {route.origin_airport} -> {route.destination_airport} "
+                f"at {snapshot.currency} {snapshot.price:.0f}"
+            )
+        except Exception as error:  # pragma: no cover - depends on live Supabase
+            self._log_progress(
+                f"Deal live sync failed: {route.origin_airport} -> {route.destination_airport} "
+                f"at {snapshot.currency} {snapshot.price:.0f} ({error})"
+            )
 
     @staticmethod
     def _log_meta_suffix(payload: dict[str, object] | None) -> str:
@@ -2405,6 +2503,13 @@ class LuxFlightScanner:
                         if candidate is not None:
                             self.store.save_deal(route_id, snapshot_id, candidate)
                             visible_deals_by_destination[destination_key] += 1
+                            self._sync_deal_live(
+                                route,
+                                route_id,
+                                snapshot_id,
+                                snapshot,
+                                candidate,
+                            )
                     except Exception as error:  # pragma: no cover - depends on live network behavior
                         error_type = self._classify_error_type(error)
                         consecutive_network_outage_failures = (

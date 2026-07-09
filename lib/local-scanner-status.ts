@@ -522,6 +522,28 @@ function toLogLine(event: LogEvent): LocalScannerLogLine | null {
     };
   }
 
+  if (message.startsWith("Deal live sync: ")) {
+    return {
+      id: `${event.timestampIso}:${message}`,
+      timestamp: event.timestampIso,
+      label: "Sync",
+      detail: message.replace("Deal live sync: ", ""),
+      secondaryDetail: "Offer sent to Supabase for the public page",
+      tone: "success",
+    };
+  }
+
+  if (message.startsWith("Deal live sync failed: ")) {
+    return {
+      id: `${event.timestampIso}:${message}`,
+      timestamp: event.timestampIso,
+      label: "Sync",
+      detail: message.replace("Deal live sync failed: ", ""),
+      secondaryDetail: "Saved locally; final sync will retry later",
+      tone: "error",
+    };
+  }
+
   if (message.startsWith("Pattern retry: ")) {
     return {
       id: `${event.timestampIso}:${message}`,

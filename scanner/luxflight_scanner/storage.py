@@ -157,12 +157,13 @@ class LocalStore:
         if has_non_positive_price(snapshot.price):
             raise ValueError(f"Refusing to save non-positive snapshot price for route_id={route_id}.")
 
+        scanned_at = utcnow_iso()
         snapshot_id = str(len(self._state["snapshots"]) + 1)
         self._state["snapshots"].append(
             {
                 "id": snapshot_id,
                 "route_id": route_id,
-                "scanned_at": utcnow_iso(),
+                "scanned_at": scanned_at,
                 "departure_date": snapshot.departure_date,
                 "return_date": snapshot.return_date,
                 "trip_nights": snapshot.trip_nights,
@@ -174,6 +175,23 @@ class LocalStore:
         )
         self._persist()
         return snapshot_id
+
+    def snapshot_by_id(self, snapshot_id: str) -> dict[str, Any] | None:
+        for snapshot in self._state["snapshots"]:
+            if str(snapshot.get("id")) == str(snapshot_id):
+                return snapshot
+        return None
+
+    def mark_snapshot_synced(self, snapshot_id: str, remote_snapshot_id: str) -> None:
+        snapshot = self.snapshot_by_id(snapshot_id)
+        if snapshot is None:
+            return
+
+        snapshot["sync"] = {
+            "supabase_id": remote_snapshot_id,
+            "synced_at": utcnow_iso(),
+        }
+        self._persist()
 
     def save_deal(self, route_id: str, snapshot_id: str, deal: DealCandidate) -> None:
         if has_non_positive_price(deal.deal_price):
@@ -200,6 +218,24 @@ class LocalStore:
             }
         )
         self._persist()
+
+    def mark_deal_synced(
+        self,
+        snapshot_id: str,
+        remote_deal_id: str,
+        remote_snapshot_id: str,
+    ) -> None:
+        for deal in self._state["deals"]:
+            if str(deal.get("snapshot_id")) != str(snapshot_id):
+                continue
+
+            deal["sync"] = {
+                "supabase_id": remote_deal_id,
+                "supabase_snapshot_id": remote_snapshot_id,
+                "synced_at": utcnow_iso(),
+            }
+            self._persist()
+            return
 
     def route_pattern_overrides(self, route_id: str) -> list[dict[str, Any]]:
         today = datetime.now(timezone.utc).date().isoformat()

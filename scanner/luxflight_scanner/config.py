@@ -10,6 +10,13 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT_DIR / ".env")
 
 
+def env_flag(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off"}
+
+
 @dataclass(frozen=True)
 class ScannerConfig:
     routes_path: Path = ROOT_DIR / "data" / "lux-routes.json"
@@ -25,6 +32,7 @@ class ScannerConfig:
         os.getenv("SCANNER_BOOTSTRAP_REVIEW_RATIO", "1.0")
     )
     flash_ratio: float = float(os.getenv("SCANNER_FLASH_RATIO", "0.60"))
+    sync_deals_live: bool = env_flag("SCANNER_SYNC_DEALS_LIVE", True)
     search_request_timeout_seconds: float = float(
         os.getenv("SCANNER_SEARCH_REQUEST_TIMEOUT_SECONDS", "15")
     )
