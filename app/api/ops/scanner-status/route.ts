@@ -122,6 +122,16 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
   const { message, meta } = splitLogMeta(event.message);
   const id = `${event.timestampIso}:${message}`;
 
+  if (message === "Starting local scanner." || message === "Starting local Lux flight scan.") {
+    return {
+      id,
+      timestamp: event.timestampIso,
+      label: "Scanner",
+      detail: "Run started",
+      tone: "progress",
+    };
+  }
+
   if (message.startsWith("Route start: ")) {
     return {
       id,
@@ -337,6 +347,58 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
   return null;
 }
 
+function isVpsScannerStartMessage(message: string) {
+  return message === "Starting local scanner." || message === "Starting local Lux flight scan.";
+}
+
+function isVpsScannerTerminalMessage(message: string) {
+  return (
+    message.startsWith("Scanner finished with status ") ||
+    message === "Scanner and sync finished." ||
+    message === "Local Lux flight scan finished successfully." ||
+    message === "Local Lux flight scan stopped from ops UI." ||
+    message === "Local Lux flight scan failed."
+  );
+}
+
+function findLatestVpsRunStartIndex(events: VpsJournalEvent[], running: boolean, startTimestamp: string | null) {
+  const startMs = startTimestamp ? new Date(startTimestamp).getTime() : Number.NaN;
+
+  if (running && Number.isFinite(startMs)) {
+    const firstEventAfterServiceStart = events.findIndex((event) => event.timestampMs >= startMs);
+    if (firstEventAfterServiceStart >= 0) {
+      const runStartAfterServiceStart = events.findIndex(
+        (event, index) => index >= firstEventAfterServiceStart && isVpsScannerStartMessage(event.message),
+      );
+      return runStartAfterServiceStart >= 0 ? runStartAfterServiceStart : firstEventAfterServiceStart;
+    }
+  }
+
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (isVpsScannerStartMessage(events[index].message)) {
+      return index;
+    }
+  }
+
+  return events.length > 0 ? 0 : -1;
+}
+
+function sliceLatestVpsRunEvents(events: VpsJournalEvent[], running: boolean, startTimestamp: string | null) {
+  const startIndex = findLatestVpsRunStartIndex(events, running, startTimestamp);
+  if (startIndex === -1) {
+    return [];
+  }
+
+  if (running) {
+    return events.slice(startIndex);
+  }
+
+  const terminalIndex = events.findIndex(
+    (event, index) => index >= startIndex && isVpsScannerTerminalMessage(event.message),
+  );
+  return events.slice(startIndex, terminalIndex >= 0 ? terminalIndex + 1 : undefined);
+}
+
 function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTotals {
   return logLines.reduce<LocalScannerRunTotals>(
     (totals, line) => {
@@ -389,9 +451,12 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
     .map((line) => parseVpsJournalEvent(line))
     .filter(Boolean)
     .sort((left, right) => left!.timestampMs - right!.timestampMs) as VpsJournalEvent[];
-  const logLines = events.map((event) => toVpsLogLine(event)).filter(Boolean) as LocalScannerLogLine[];
-  const latestRouteStart = [...events].reverse().find((event) => event.message.startsWith("Route start: ")) ?? null;
-  const latestPatternStart = [...events].reverse().find((event) => event.message.startsWith("Pattern start: ")) ?? null;
+  const startTimestamp = parseSystemdTimestamp(status.service.ExecMainStartTimestamp);
+  const exitTimestamp = parseSystemdTimestamp(status.service.ExecMainExitTimestamp);
+  const runEvents = sliceLatestVpsRunEvents(events, status.running, startTimestamp);
+  const logLines = runEvents.map((event) => toVpsLogLine(event)).filter(Boolean) as LocalScannerLogLine[];
+  const latestRouteStart = [...runEvents].reverse().find((event) => event.message.startsWith("Route start: ")) ?? null;
+  const latestPatternStart = [...runEvents].reverse().find((event) => event.message.startsWith("Pattern start: ")) ?? null;
   const routeProgress = routeProgressFromMessage(latestRouteStart?.message ?? null);
   const remainingRoutes =
     routeProgress.totalRoutes !== null && routeProgress.startedRoutes !== null
@@ -400,8 +465,8 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
   const lastScannerLine = logLines.at(-1) ?? null;
   const liveTotals = summarizeLogLines(logLines);
   const noResultBreakdown = summarizeNoResults(logLines);
-  const startTimestamp = parseSystemdTimestamp(status.service.ExecMainStartTimestamp);
-  const exitTimestamp = parseSystemdTimestamp(status.service.ExecMainExitTimestamp);
+  const runStartTimestamp = logLines[0]?.timestamp ?? startTimestamp;
+  const runExitTimestamp = status.running ? null : (logLines.at(-1)?.timestamp ?? exitTimestamp);
 
   return {
     available: true,
@@ -409,9 +474,9 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
     totalRoutes: routeProgress.totalRoutes,
     startedRoutes: routeProgress.startedRoutes,
     remainingRoutes,
-    startedAt: startTimestamp,
-    latestCompletedAt: exitTimestamp,
-    latestFinishedAt: status.running ? null : exitTimestamp,
+    startedAt: runStartTimestamp,
+    latestCompletedAt: runExitTimestamp,
+    latestFinishedAt: status.running ? null : runExitTimestamp,
     currentRouteLabel: routeProgress.currentRouteLabel,
     currentPatternLabel: currentPatternFromMessage(latestPatternStart?.message ?? null),
     currentPatternWindowLabel: null,
