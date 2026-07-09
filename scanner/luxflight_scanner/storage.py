@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 import time
 from datetime import datetime, timezone
@@ -15,6 +16,20 @@ from luxflight_scanner.models import DealCandidate, RouteSeed, SnapshotRecord
 
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def write_json_atomic(target_path: Path, payload: dict[str, Any]) -> None:
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = target_path.with_name(f".{target_path.name}.{os.getpid()}.tmp")
+    try:
+        with temp_path.open("w", encoding="utf-8") as file:
+            json.dump(payload, file, indent=2)
+            file.write("\n")
+            file.flush()
+            os.fsync(file.fileno())
+        temp_path.replace(target_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 def destination_stay_hours(metadata: dict[str, Any] | None) -> float | None:
@@ -110,8 +125,7 @@ class LocalStore:
         return payload
 
     def _persist(self) -> None:
-        with self.state_path.open("w", encoding="utf-8") as file:
-            json.dump(self._state, file, indent=2)
+        write_json_atomic(self.state_path, self._state)
 
     def ensure_route(self, route: RouteSeed) -> str:
         return route.key

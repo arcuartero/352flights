@@ -7,7 +7,7 @@ from typing import Any
 from luxflight_scanner.config import ScannerConfig
 from luxflight_scanner.models import DealCandidate, RouteSeed, SnapshotRecord
 from luxflight_scanner.scanner import load_routes
-from luxflight_scanner.storage import SupabaseStore, utcnow_iso
+from luxflight_scanner.storage import SupabaseStore, utcnow_iso, write_json_atomic
 
 
 def _load_state(state_path: Path) -> dict[str, Any]:
@@ -34,9 +34,7 @@ def _load_state(state_path: Path) -> dict[str, Any]:
 
 
 def _persist_state(state_path: Path, state: dict[str, Any]) -> None:
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    with state_path.open("w", encoding="utf-8") as file:
-        json.dump(state, file, indent=2)
+    write_json_atomic(state_path, state)
 
 
 def _is_synced(item: dict[str, Any]) -> bool:
