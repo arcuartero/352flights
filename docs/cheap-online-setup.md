@@ -1,6 +1,6 @@
 # Setup barato: Vercel + Supabase + Hetzner
 
-Objetivo: la web vive en Vercel, los datos viven en Supabase y el scanner largo vive en un VPS barato de Hetzner. El scanner guarda primero en el disco del VPS y luego sincroniza a Supabase.
+Objetivo: la web vive en Vercel, los datos viven en Supabase y el scanner largo vive en un VPS. El scanner guarda primero en el disco del VPS y sincroniza cada tarifa a Supabase mientras avanza. Al terminar hace una sincronización completa de seguridad.
 
 ## Antes de empezar
 
@@ -85,7 +85,15 @@ SCANNER_CURRENCY=EUR
 SCANNER_REVIEW_RATIO=0.72
 SCANNER_FLASH_RATIO=0.6
 SCANNER_HISTORY_WINDOW=180
+SCANNER_SYNC_SNAPSHOTS_LIVE=true
+SCANNER_SYNC_DEALS_LIVE=true
 ```
+
+`SCANNER_SYNC_SNAPSHOTS_LIVE=true` publica cada precio válido en la web aunque no sea
+una oferta excepcional. `SCANNER_SYNC_DEALS_LIVE=true` añade además a la cola editorial
+solamente los precios que cumplen el umbral histórico de `SCANNER_REVIEW_RATIO`. La web
+puede mostrar precios habituales o algo altos; las campañas de email y redes siguen usando
+únicamente la cola editorial.
 
 Para guardar en `nano`:
 

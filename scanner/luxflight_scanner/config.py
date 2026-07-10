@@ -25,13 +25,8 @@ class ScannerConfig:
     history_window: int = int(os.getenv("SCANNER_HISTORY_WINDOW", "45"))
     min_history_for_deal: int = int(os.getenv("SCANNER_MIN_HISTORY_FOR_DEAL", "3"))
     review_ratio: float = float(os.getenv("SCANNER_REVIEW_RATIO", "0.85"))
-    bootstrap_visible_deals_per_destination: int = int(
-        os.getenv("SCANNER_BOOTSTRAP_VISIBLE_DEALS_PER_DESTINATION", "3")
-    )
-    bootstrap_review_ratio: float = float(
-        os.getenv("SCANNER_BOOTSTRAP_REVIEW_RATIO", "1.0")
-    )
     flash_ratio: float = float(os.getenv("SCANNER_FLASH_RATIO", "0.60"))
+    sync_snapshots_live: bool = env_flag("SCANNER_SYNC_SNAPSHOTS_LIVE", True)
     sync_deals_live: bool = env_flag("SCANNER_SYNC_DEALS_LIVE", True)
     search_request_timeout_seconds: float = float(
         os.getenv("SCANNER_SEARCH_REQUEST_TIMEOUT_SECONDS", "15")

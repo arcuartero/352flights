@@ -522,23 +522,34 @@ function toLogLine(event: LogEvent): LocalScannerLogLine | null {
     };
   }
 
-  if (message.startsWith("Deal live sync: ")) {
+  if (message.startsWith("Deal live sync: ") || message.startsWith("Fare live sync: ")) {
+    const prefix = message.startsWith("Deal live sync: ")
+      ? "Deal live sync: "
+      : "Fare live sync: ";
     return {
       id: `${event.timestampIso}:${message}`,
       timestamp: event.timestampIso,
       label: "Sync",
-      detail: message.replace("Deal live sync: ", ""),
-      secondaryDetail: "Offer sent to Supabase for the public page",
+      detail: message.replace(prefix, ""),
+      secondaryDetail: message.startsWith("Deal live sync: ")
+        ? "Fare sent to the public page and added to the editorial queue"
+        : "Fare sent to Supabase for the public page",
       tone: "success",
     };
   }
 
-  if (message.startsWith("Deal live sync failed: ")) {
+  if (
+    message.startsWith("Deal live sync failed: ") ||
+    message.startsWith("Fare live sync failed: ")
+  ) {
+    const prefix = message.startsWith("Deal live sync failed: ")
+      ? "Deal live sync failed: "
+      : "Fare live sync failed: ";
     return {
       id: `${event.timestampIso}:${message}`,
       timestamp: event.timestampIso,
       label: "Sync",
-      detail: message.replace("Deal live sync failed: ", ""),
+      detail: message.replace(prefix, ""),
       secondaryDetail: "Saved locally; final sync will retry later",
       tone: "error",
     };

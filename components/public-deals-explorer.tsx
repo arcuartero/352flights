@@ -655,95 +655,32 @@ function formatDepartureMonth(value: string | null) {
   }).format(new Date(value));
 }
 
-function getWeekdayAbbreviation(value: string | null, locale: Locale = "en") {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat(getIntlLocale(locale), {
-    timeZone: "Europe/Luxembourg",
-    weekday: "short",
-  })
-    .format(date)
-    .slice(0, 3)
-    .toUpperCase();
-}
-
-function getStartOfLuxembourgWeek(value: Date) {
-  const localDate = new Date(
-    value.toLocaleString("en-US", {
-      timeZone: "Europe/Luxembourg",
-    }),
-  );
-  const weekday = localDate.getDay();
-  const diffToMonday = (weekday + 6) % 7;
-  localDate.setHours(0, 0, 0, 0);
-  localDate.setDate(localDate.getDate() - diffToMonday);
-  return localDate;
-}
-
-function isReturnInFollowingWeek(
-  departureValue: string | null,
-  returnValue: string | null,
-) {
-  if (!departureValue || !returnValue) {
-    return false;
-  }
-
-  const departure = new Date(
-    new Date(departureValue).toLocaleString("en-US", {
-      timeZone: "Europe/Luxembourg",
-    }),
-  );
-  const returnDate = new Date(
-    new Date(returnValue).toLocaleString("en-US", {
-      timeZone: "Europe/Luxembourg",
-    }),
-  );
-
-  if (Number.isNaN(departure.getTime()) || Number.isNaN(returnDate.getTime())) {
-    return false;
-  }
-
-  departure.setHours(0, 0, 0, 0);
-  returnDate.setHours(0, 0, 0, 0);
-
-  const departureWeekStart = getStartOfLuxembourgWeek(departure);
-  const returnWeekStart = getStartOfLuxembourgWeek(returnDate);
-
-  return returnWeekStart.getTime() > departureWeekStart.getTime();
-}
-
 function formatSearchSavingsLabel(
   deal: CampaignPreviewDeal,
   t?: Translate,
-  locale: Locale = "en",
 ) {
-  if (deal.baselinePrice === null || deal.dropRatio === null) {
-    return t ? t("deals.freshLiveFare") : "Fresh live fare";
+  const belowPct = Math.max(0, Math.round((1 - (deal.dropRatio ?? 1)) * 100));
+  const abovePct = Math.max(0, Math.round(((deal.dropRatio ?? 1) - 1) * 100));
+
+  switch (deal.pricePosition) {
+    case "exceptional":
+      return t
+        ? t("deals.priceExceptional", { pct: belowPct })
+        : `Exceptional price · ${belowPct}% below usual`;
+    case "below_usual":
+      return t
+        ? t("deals.priceBelowUsual", { pct: belowPct })
+        : `Good price · ${belowPct}% below usual`;
+    case "typical":
+      return t ? t("deals.priceTypical") : "Around the usual price";
+    case "above_usual":
+      return t
+        ? t("deals.priceAboveUsual", { pct: abovePct })
+        : `${abovePct}% above the usual price`;
+    case "new_price":
+    default:
+      return t ? t("deals.priceNew") : "Fresh fare · building price history";
   }
-
-  const pct = Math.max(0, Math.round((1 - deal.dropRatio) * 100));
-  const outboundWeekday = getWeekdayAbbreviation(deal.departureDate, locale);
-  const returnWeekday = getWeekdayAbbreviation(deal.returnDate, locale);
-
-  if (!outboundWeekday || !returnWeekday) {
-    return t ? t("deals.belowUsual", { pct }) : `${pct}% below usual`;
-  }
-
-  return t
-    ? t(
-        isReturnInFollowingWeek(deal.departureDate, deal.returnDate)
-          ? "deals.belowUsualRouteNextWeek"
-          : "deals.belowUsualRoute",
-        { pct, outbound: outboundWeekday, return: returnWeekday },
-      )
-    : `${pct}% below usual for ${outboundWeekday} to ${returnWeekday}${isReturnInFollowingWeek(deal.departureDate, deal.returnDate) ? " next week" : ""}`;
 }
 
 function getDepartureWeekdayFilterValue(value: string | null): DepartureWeekdayFilter {
@@ -777,14 +714,39 @@ function getDepartureWeekdayFilterValue(value: string | null): DepartureWeekdayF
   }
 }
 
-function formatDropLine(price: number, baseline: number | null, dropRatio: number | null) {
-  if (baseline === null || dropRatio === null) {
+function formatDropLine(deal: CampaignPreviewDeal) {
+  if (deal.baselinePrice === null || deal.dropRatio === null) {
     return "Fresh Luxembourg fare, checked against the live market.";
   }
 
-  const saved = Math.max(0, baseline - price);
-  const pct = Math.max(0, Math.round((1 - dropRatio) * 100));
-  return `Usually around ${formatCurrency(baseline)} · save ${formatCurrency(saved)} (${pct}% off).`;
+  if (deal.pricePosition === "above_usual") {
+    const pct = Math.max(0, Math.round((deal.dropRatio - 1) * 100));
+    return `Usually around ${formatCurrency(deal.baselinePrice)} · currently ${pct}% above that level.`;
+  }
+
+  if (deal.pricePosition === "typical") {
+    return `This fare is close to its recent usual price of ${formatCurrency(deal.baselinePrice)}.`;
+  }
+
+  const saved = Math.max(0, deal.baselinePrice - deal.dealPrice);
+  const pct = Math.max(0, Math.round((1 - deal.dropRatio) * 100));
+  return `Usually around ${formatCurrency(deal.baselinePrice)} · save ${formatCurrency(saved)} (${pct}% off).`;
+}
+
+function getFareBadgeLabel(deal: CampaignPreviewDeal) {
+  if (deal.pricePosition === "new_price") {
+    return "New fare";
+  }
+
+  if (deal.pricePosition === "typical") {
+    return "Typical";
+  }
+
+  if (deal.pricePosition === "above_usual") {
+    return `+${Math.max(0, Math.round(((deal.dropRatio ?? 1) - 1) * 100))}%`;
+  }
+
+  return `${Math.max(0, Math.round((1 - (deal.dropRatio ?? 1)) * 100))}% ↓`;
 }
 
 function getTravelStyleVisual(key: string) {
@@ -1763,9 +1725,9 @@ function PublicDealCard({
   combinationsCount: number;
   compact?: boolean;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const holidayMatch = getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate);
-  const savingsLabel = formatSearchSavingsLabel(deal, t, locale);
+  const savingsLabel = formatSearchSavingsLabel(deal, t);
   const travelMeta = [
     deal.maxStops === "NON_STOP" ? t("deals.direct") : t("deals.upToOneStop"),
     `${deal.tripNights} ${deal.tripNights === 1 ? t("deals.night") : t("deals.nights")}`,
@@ -1850,12 +1812,9 @@ function FeaturedOpportunityCard({
   onOpen: () => void;
   variant?: "default" | "hero";
 }) {
-  const { t, locale } = useI18n();
-  const savingsLabel = formatSearchSavingsLabel(deal, t, locale);
-  const savingsBadgeLabel =
-    deal.baselinePrice !== null && deal.dropRatio !== null
-      ? `${Math.max(0, Math.round((1 - deal.dropRatio) * 100))}%`
-      : null;
+  const { t } = useI18n();
+  const savingsLabel = formatSearchSavingsLabel(deal, t);
+  const savingsBadgeLabel = getFareBadgeLabel(deal);
   const travelMeta = [
     deal.maxStops === "NON_STOP" ? t("deals.direct") : t("deals.upToOneStop"),
     `${deal.tripNights} ${deal.tripNights === 1 ? t("deals.night") : t("deals.nights")}`,
@@ -1864,8 +1823,8 @@ function FeaturedOpportunityCard({
   const moreDealsCount = Math.max(0, combinationsCount - 1);
   const ctaLabel =
     moreDealsCount > 0
-      ? `See ${moreDealsCount} more ${moreDealsCount === 1 ? "deal" : "deals"}`
-      : "See deal";
+      ? `See ${moreDealsCount} more ${moreDealsCount === 1 ? "fare" : "fares"}`
+      : "See fare";
   const tripSnapshot = `${formatDateWithWeekday(deal.departureDate)} · ${formatStayHours(deal.destinationStayHours, deal.tripNights)} ${t("deals.stay")}`;
   const verifiedLabel = formatVerifiedAge(deal.verifiedAt, t);
 
@@ -1979,7 +1938,7 @@ function SearchCityGroupCard({
   group: SearchCityGroup;
   onToggle: () => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const heroDeal = group.deals[0];
 
   return (
@@ -2001,7 +1960,7 @@ function SearchCityGroupCard({
           <div className="deals-search-group__header-copy">
             <strong>{group.city}</strong>
             <span>
-              {group.deals.length} {group.deals.length === 1 ? t("deals.deal") : t("deals.deals")} · {t("common.from").toLowerCase()}{" "}
+              {group.deals.length} {group.deals.length === 1 ? t("deals.fare") : t("deals.fares")} · {t("common.from").toLowerCase()}{" "}
               {formatCurrency(group.lowestPrice)}
             </span>
           </div>
@@ -2135,8 +2094,8 @@ function DealFlightCard({
   shiftDurationLeft?: boolean;
   showAirlineLogo?: boolean;
 }) {
-  const { t, locale } = useI18n();
-  const savingsLabel = formatSearchSavingsLabel(deal, t, locale);
+  const { t } = useI18n();
+  const savingsLabel = formatSearchSavingsLabel(deal, t);
   const outboundDuration = formatFlightDuration(
     deal.outboundDepartureAt,
     deal.outboundArrivalAt,
@@ -2344,12 +2303,12 @@ function FeaturedOpportunityModal({
 
   const otherOffersCount = Math.max(0, combinationsCount - 1);
   const destinationHref = buildDestinationDealsHref(deal.destinationCity);
-  const otherOffersNoun = otherOffersCount === 1 ? "offer" : "offers";
+  const otherOffersNoun = otherOffersCount === 1 ? "fare" : "fares";
   const modalCtaLabel =
     otherOffersCount > 0
       ? `Explore ${otherOffersCount} more ${deal.destinationCity} ${otherOffersNoun}`
-      : "View deal on Skyscanner";
-  const savingsLabel = formatDropLine(deal.dealPrice, deal.baselinePrice, deal.dropRatio);
+      : "View fare on Skyscanner";
+  const savingsLabel = formatDropLine(deal);
 
   return createPortal(
     <div

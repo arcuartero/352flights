@@ -29,6 +29,7 @@ import {
   type CampaignSendType,
   type DealLifecycleState,
   type DigestAutomationSummary,
+  type FarePricePosition,
   type RecentCampaignSummary,
 } from "@/lib/ops-shared";
 import {
@@ -47,6 +48,14 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 
 const DEAL_AUTO_EXPIRE_DAYS = 4;
+const PUBLIC_FARE_LOOKBACK_DAYS = 14;
+const PUBLIC_FARES_PER_DESTINATION = 3;
+const PUBLIC_FARE_MIN_HISTORY_POINTS = 3;
+const PUBLIC_FARE_HISTORY_LIMIT = 45;
+const EDITORIAL_DEAL_MAX_DROP_RATIO = 0.85;
+const PUBLIC_EXCEPTIONAL_PRICE_RATIO = 0.85;
+const PUBLIC_BELOW_USUAL_PRICE_RATIO = 0.95;
+const PUBLIC_TYPICAL_PRICE_RATIO = 1.05;
 
 type CountResult = {
   count: number;
@@ -757,6 +766,58 @@ function hasShortDestinationStay(metadata: Record<string, unknown> | null | unde
   return stayHours !== null && stayHours < 24;
 }
 
+function extractMetadataNumber(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string,
+) {
+  const value = metadata?.[key];
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function medianPrice(values: number[]) {
+  if (values.length === 0) {
+    return null;
+  }
+
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+function classifyFarePrice(
+  dropRatio: number | null,
+  historyPoints: number,
+): FarePricePosition {
+  if (historyPoints < PUBLIC_FARE_MIN_HISTORY_POINTS || dropRatio === null) {
+    return "new_price";
+  }
+
+  if (dropRatio <= PUBLIC_EXCEPTIONAL_PRICE_RATIO) {
+    return "exceptional";
+  }
+
+  if (dropRatio <= PUBLIC_BELOW_USUAL_PRICE_RATIO) {
+    return "below_usual";
+  }
+
+  if (dropRatio <= PUBLIC_TYPICAL_PRICE_RATIO) {
+    return "typical";
+  }
+
+  return "above_usual";
+}
+
 function buildSeriesKey(routeId: string, patternKey: string | null) {
   return `${routeId}:${patternKey ?? "legacy"}`;
 }
@@ -1332,6 +1393,7 @@ function buildScannerHealthSummary(
 }
 
 function toRenderableDeal(deal: DealSummary): CampaignPreviewDeal {
+  const historyPoints = deal.baselinePrice === null ? 0 : PUBLIC_FARE_MIN_HISTORY_POINTS;
   return {
     id: deal.id,
     score: deal.score,
@@ -1350,6 +1412,9 @@ function toRenderableDeal(deal: DealSummary): CampaignPreviewDeal {
     dealPrice: deal.dealPrice,
     baselinePrice: deal.baselinePrice,
     dropRatio: deal.dropRatio,
+    pricePosition: classifyFarePrice(deal.dropRatio, historyPoints),
+    historyPoints,
+    isEditorialDeal: true,
     departureDate: deal.departureDate,
     returnDate: deal.returnDate,
     tripNights: deal.tripNights,
@@ -1381,6 +1446,158 @@ function isRenderablePublicDeal(deal: CampaignPreviewDeal) {
     typeof deal.bookingUrl === "string" &&
     deal.bookingUrl.length > 0
   );
+}
+
+function buildPublicFaresFromSnapshots(
+  snapshots: SnapshotRow[],
+  routeMap: ReturnType<typeof buildRouteMap>,
+) {
+  const snapshotsBySeries = new Map<string, SnapshotRow[]>();
+
+  for (const snapshot of snapshots) {
+    if (Number(snapshot.price) <= 0 || hasShortDestinationStay(snapshot.metadata)) {
+      continue;
+    }
+
+    const route = routeMap.get(snapshot.route_id);
+    if (!route) {
+      continue;
+    }
+
+    const patternKey = extractPatternKey(snapshot.metadata);
+    const seriesKey = buildSeriesKey(
+      snapshot.route_id,
+      patternKey ?? `${snapshot.max_stops}:${snapshot.trip_nights}`,
+    );
+    const series = snapshotsBySeries.get(seriesKey) ?? [];
+    series.push(snapshot);
+    snapshotsBySeries.set(seriesKey, series);
+  }
+
+  const fares: CampaignPreviewDeal[] = [];
+
+  for (const series of snapshotsBySeries.values()) {
+    series.sort(
+      (left, right) =>
+        new Date(right.scanned_at).getTime() - new Date(left.scanned_at).getTime(),
+    );
+    const snapshot = series[0];
+    const route = routeMap.get(snapshot.route_id);
+    if (!route) {
+      continue;
+    }
+
+    const historyPrices = series
+      .slice(1, PUBLIC_FARE_HISTORY_LIMIT + 1)
+      .map((item) => Number(item.price))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    const metadataHistoryPoints = extractMetadataNumber(
+      snapshot.metadata,
+      "historical_history_points",
+    );
+    const historyPoints = Math.max(
+      0,
+      Math.trunc(metadataHistoryPoints ?? historyPrices.length),
+    );
+    const metadataBaseline = extractMetadataNumber(
+      snapshot.metadata,
+      "historical_baseline_price",
+    );
+    const baselinePrice =
+      metadataBaseline ??
+      (historyPrices.length >= PUBLIC_FARE_MIN_HISTORY_POINTS
+        ? medianPrice(historyPrices)
+        : null);
+    const metadataDropRatio = extractMetadataNumber(
+      snapshot.metadata,
+      "historical_drop_ratio",
+    );
+    const dropRatio =
+      metadataDropRatio ??
+      (baselinePrice && baselinePrice > 0 ? Number(snapshot.price) / baselinePrice : null);
+    const pricePosition = classifyFarePrice(dropRatio, historyPoints);
+    const patternLabel = extractPatternLabel(snapshot.metadata);
+    const airlineNames = extractAirlineNames(snapshot.metadata);
+    const airlineSummary = formatAirlineSummary(airlineNames);
+    const bookingUrl = buildSkyscannerUrl({
+      originAirport: route.originAirport,
+      destinationAirport: route.destinationAirport,
+      departureDate: snapshot.departure_date,
+      returnDate: snapshot.return_date,
+      maxStops: snapshot.max_stops || route.maxStops,
+    });
+    const price = Number(snapshot.price);
+    const positionScore: Record<FarePricePosition, number> = {
+      exceptional: 100,
+      below_usual: 80,
+      typical: 60,
+      above_usual: 40,
+      new_price: 50,
+    };
+
+    fares.push({
+      id: `fare-${snapshot.id}`,
+      score: positionScore[pricePosition],
+      routeLabel: formatDisplayRouteLabel(route.label, patternLabel),
+      title: `Luxembourg to ${route.destinationCity} from ${price.toFixed(0)} ${snapshot.currency}`,
+      summary: `Live ${snapshot.trip_nights}-night return fare, last verified ${snapshot.scanned_at}.`,
+      routeBucket: deriveStayBucketFromNights(snapshot.trip_nights),
+      editorialSection: getPrimaryEditorialSection({
+        routeBucket: deriveStayBucketFromNights(snapshot.trip_nights),
+        tripNights: snapshot.trip_nights,
+        dropRatio,
+        departureDate: snapshot.departure_date,
+      }),
+      destinationCity: route.destinationCity,
+      destinationAirport: route.destinationAirport,
+      dealPrice: price,
+      baselinePrice,
+      dropRatio,
+      pricePosition,
+      historyPoints,
+      isEditorialDeal: snapshot.metadata?.["editorial_deal_candidate"] === true,
+      departureDate: snapshot.departure_date,
+      returnDate: snapshot.return_date,
+      tripNights: snapshot.trip_nights,
+      maxStops: snapshot.max_stops || route.maxStops,
+      airlineSummary,
+      outboundDepartureAt: extractMetadataDateTime(
+        snapshot.metadata,
+        "outbound_departure_at",
+      ),
+      outboundArrivalAt: extractMetadataDateTime(
+        snapshot.metadata,
+        "outbound_arrival_at",
+      ),
+      returnDepartureAt: extractMetadataDateTime(
+        snapshot.metadata,
+        "return_departure_at",
+      ),
+      returnArrivalAt: extractMetadataDateTime(
+        snapshot.metadata,
+        "return_arrival_at",
+      ),
+      destinationStayHours: extractDestinationStayHours(snapshot.metadata),
+      verifiedAt: snapshot.scanned_at,
+      bookingUrl,
+    });
+  }
+
+  const grouped = new Map<string, CampaignPreviewDeal[]>();
+  for (const fare of dedupePublicDealsByItinerary(fares.filter(isRenderablePublicDeal))) {
+    const destinationKey = fare.destinationCity.trim().toLowerCase();
+    const destinationFares = grouped.get(destinationKey) ?? [];
+    destinationFares.push(fare);
+    grouped.set(destinationKey, destinationFares);
+  }
+
+  return [...grouped.values()]
+    .flatMap((destinationFares) =>
+      destinationFares
+        .sort(comparePublicDealsByPrice)
+        .slice(0, PUBLIC_FARES_PER_DESTINATION),
+    )
+    .sort(comparePublicDealsByPrice);
 }
 
 function getLuxDateKey(value: string | Date, timeZone = "Europe/Luxembourg") {
@@ -1545,6 +1762,20 @@ async function countTable(
   }
 
   const { count, error } = await query;
+  return {
+    count: count ?? 0,
+    error: error ? formatError(error) : null,
+  };
+}
+
+async function countEditorialDeals(status: "new" | "reviewed"): Promise<CountResult> {
+  const supabase = getSupabaseAdminClient();
+  const { count, error } = await supabase
+    .from("deal_candidates")
+    .select("*", { count: "exact", head: true })
+    .eq("status", status)
+    .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO);
+
   return {
     count: count ?? 0,
     error: error ? formatError(error) : null,
@@ -2368,6 +2599,7 @@ async function loadCampaignModel(sendType: CampaignSendType) {
           "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
         )
         .eq("status", "reviewed")
+        .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO)
         .eq("send_type", sendType)
         .order("score", { ascending: false })
         .order("created_at", { ascending: false }),
@@ -2496,8 +2728,8 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
   ] = await Promise.all([
     countTable("newsletter_subscribers"),
     countTable("scanned_routes", { column: "is_active", value: true }),
-    countTable("deal_candidates", { column: "status", value: "new" }),
-    countTable("deal_candidates", { column: "status", value: "reviewed" }),
+    countEditorialDeals("new"),
+    countEditorialDeals("reviewed"),
     countTable("deal_candidates", { column: "status", value: "sent" }),
     countTable("deal_candidates", { column: "status", value: "expired" }),
     supabase
@@ -2533,6 +2765,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
         "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
       )
       .eq("status", "new")
+      .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO)
       .order("score", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase
@@ -2541,6 +2774,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
         "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
       )
       .eq("status", "reviewed")
+      .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO)
       .order("score", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase
@@ -3020,31 +3254,34 @@ async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
     };
   }
 
-  await autoExpireStaleDeals();
-
   const supabase = getSupabaseAdminClient();
-  const [routesQuery, publicDealsQuery] = await Promise.all([
+  const cutoffIso = new Date(
+    Date.now() - PUBLIC_FARE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const todayKey = getLuxDateKey(new Date()) ?? new Date().toISOString().slice(0, 10);
+  const [routesQuery, publicSnapshotsQuery] = await Promise.all([
     supabase
       .from("scanned_routes")
       .select(
         "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
-      ),
-    fetchPagedSnapshots<DealRow>((from, to) =>
+      )
+      .eq("is_active", true),
+    fetchPagedSnapshots<SnapshotRow>((from, to) =>
       supabase
-        .from("deal_candidates")
+        .from("price_snapshots")
         .select(
-          "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
+          "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
         )
-        .in("status", ["new", "reviewed"])
-        .order("score", { ascending: false })
-        .order("created_at", { ascending: false })
+        .gte("scanned_at", cutoffIso)
+        .gte("departure_date", todayKey)
+        .order("scanned_at", { ascending: false })
         .range(from, to),
     ),
   ]);
 
   const errors = [
     routesQuery.error ? formatError(routesQuery.error) : null,
-    publicDealsQuery.error ? formatError(publicDealsQuery.error) : null,
+    publicSnapshotsQuery.error ? formatError(publicSnapshotsQuery.error) : null,
   ].filter(Boolean) as string[];
 
   if (errors.length > 0) {
@@ -3061,60 +3298,11 @@ async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
     };
   }
 
-  const reviewedDealRows = (publicDealsQuery.data ?? []) as DealRow[];
-  const snapshotIds = unique(reviewedDealRows.map((deal) => deal.snapshot_id));
-  const dealSnapshotsQuery =
-    snapshotIds.length === 0
-      ? { data: [] as SnapshotRow[], error: null }
-      : await supabase
-          .from("price_snapshots")
-          .select(
-            "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
-          )
-          .in("id", snapshotIds);
-
-  if (dealSnapshotsQuery.error) {
-    const message = formatError(dealSnapshotsQuery.error);
-    return {
-      configured: true,
-      schemaReady: false,
-      onboardingMessage: isMissingTableError(message)
-        ? "Supabase is reachable, but the latest tables are not created yet. Re-run supabase/schema.sql and then supabase/seed.sql in the SQL Editor."
-        : `Supabase responded with an error: ${message}`,
-      deals: [],
-      sections: [],
-      updatedAt: null,
-    };
-  }
-
   const routes = (routesQuery.data ?? []) as RouteRow[];
   const routeMap = buildRouteMap(routes);
-  const dealSnapshotMap = new Map(
-    ((dealSnapshotsQuery.data ?? []) as SnapshotRow[]).map((snapshot) => [snapshot.id, snapshot]),
-  );
-  const baselineSeriesStartMap = new Map<string, string>();
-  for (const snapshot of (dealSnapshotsQuery.data ?? []) as SnapshotRow[]) {
-    const patternKey = extractPatternKey(snapshot.metadata);
-    if (!patternKey) {
-      continue;
-    }
-
-    const seriesKey = buildSeriesKey(snapshot.route_id, patternKey);
-    const currentEarliest = baselineSeriesStartMap.get(seriesKey);
-    if (!currentEarliest || new Date(snapshot.scanned_at).getTime() < new Date(currentEarliest).getTime()) {
-      baselineSeriesStartMap.set(seriesKey, snapshot.scanned_at);
-    }
-  }
-  const reviewedDeals = enrichDeals(
-    reviewedDealRows,
+  const deals = buildPublicFaresFromSnapshots(
+    (publicSnapshotsQuery.data ?? []) as SnapshotRow[],
     routeMap,
-    dealSnapshotMap,
-    baselineSeriesStartMap,
-  );
-  const deals = dedupePublicDealsByItinerary(
-    reviewedDeals
-      .map(toRenderableDeal)
-      .filter(isRenderablePublicDeal),
   );
   const sections = buildPublicDealsSections(deals);
   const updatedAt = deals.reduce<string | null>((latest, deal) => {

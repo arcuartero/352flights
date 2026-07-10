@@ -5,6 +5,12 @@ export const dealLifecycleStates = ["new", "reviewed", "sent", "expired"] as con
 
 export type CampaignSendType = (typeof campaignSendTypes)[number];
 export type DealLifecycleState = (typeof dealLifecycleStates)[number];
+export type FarePricePosition =
+  | "exceptional"
+  | "below_usual"
+  | "typical"
+  | "above_usual"
+  | "new_price";
 
 export type CampaignPreviewDeal = {
   id: string;
@@ -19,6 +25,9 @@ export type CampaignPreviewDeal = {
   dealPrice: number;
   baselinePrice: number | null;
   dropRatio: number | null;
+  pricePosition: FarePricePosition;
+  historyPoints: number;
+  isEditorialDeal: boolean;
   departureDate: string | null;
   returnDate: string | null;
   tripNights: number;
