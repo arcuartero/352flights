@@ -52,6 +52,7 @@ const PUBLIC_FARE_LOOKBACK_DAYS = 14;
 const PUBLIC_FARES_PER_DESTINATION = 3;
 const PUBLIC_FARE_MIN_HISTORY_POINTS = 3;
 const PUBLIC_FARE_HISTORY_LIMIT = 45;
+const SUPABASE_READ_RETRY_DELAYS_MS = [200, 700] as const;
 const EDITORIAL_DEAL_MAX_DROP_RATIO = 0.85;
 const PUBLIC_EXCEPTIONAL_PRICE_RATIO = 0.85;
 const PUBLIC_BELOW_USUAL_PRICE_RATIO = 0.95;
@@ -251,7 +252,9 @@ async function fetchPagedSnapshots<T extends Record<string, unknown>>(
   let from = 0;
 
   while (true) {
-    const query = await buildPage(from, from + pageSize - 1);
+    const query = await readSupabaseWithRetry(() =>
+      buildPage(from, from + pageSize - 1),
+    );
     if (query.error) {
       return {
         data: [] as T[],
@@ -272,6 +275,62 @@ async function fetchPagedSnapshots<T extends Record<string, unknown>>(
   return {
     data: rows,
     error: null as string | null,
+  };
+}
+
+type SupabaseReadResult<T> = {
+  data: T | null;
+  error: unknown;
+};
+
+function isTransientSupabaseReadError(error: unknown) {
+  const message = formatError(error).toLowerCase();
+  return [
+    "fetch failed",
+    "failed to fetch",
+    "network",
+    "timeout",
+    "timed out",
+    "econnreset",
+    "socket",
+    "connection",
+    "terminated",
+    "und_err",
+  ].some((fragment) => message.includes(fragment));
+}
+
+function waitForRetry(delayMs: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+async function readSupabaseWithRetry<T>(
+  buildQuery: () => PromiseLike<SupabaseReadResult<T>>,
+): Promise<SupabaseReadResult<T>> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= SUPABASE_READ_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      const result = await buildQuery();
+      if (!result.error) {
+        return result;
+      }
+      lastError = result.error;
+    } catch (error) {
+      lastError = error;
+    }
+
+    const retryDelay = SUPABASE_READ_RETRY_DELAYS_MS[attempt];
+    if (retryDelay === undefined || !isTransientSupabaseReadError(lastError)) {
+      break;
+    }
+    await waitForRetry(retryDelay);
+  }
+
+  return {
+    data: null,
+    error: lastError,
   };
 }
 
@@ -3241,6 +3300,8 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
   };
 }
 
+let lastSuccessfulPublicDealsPageData: PublicDealsPageData | null = null;
+
 async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return {
@@ -3260,12 +3321,14 @@ async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
   ).toISOString();
   const todayKey = getLuxDateKey(new Date()) ?? new Date().toISOString().slice(0, 10);
   const [routesQuery, publicSnapshotsQuery] = await Promise.all([
-    supabase
-      .from("scanned_routes")
-      .select(
-        "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
-      )
-      .eq("is_active", true),
+    readSupabaseWithRetry<RouteRow[]>(() =>
+      supabase
+        .from("scanned_routes")
+        .select(
+          "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
+        )
+        .eq("is_active", true),
+    ),
     fetchPagedSnapshots<SnapshotRow>((from, to) =>
       supabase
         .from("price_snapshots")
@@ -3286,12 +3349,14 @@ async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
 
   if (errors.length > 0) {
     const message = errors[0];
+    if (!isMissingTableError(message)) {
+      throw new Error(`Public fare data could not be loaded: ${message}`);
+    }
     return {
       configured: true,
       schemaReady: false,
-      onboardingMessage: isMissingTableError(message)
-        ? "Supabase is reachable, but the latest tables are not created yet. Re-run supabase/schema.sql and then supabase/seed.sql in the SQL Editor."
-        : `Supabase responded with an error: ${message}`,
+      onboardingMessage:
+        "Supabase is reachable, but the latest tables are not created yet. Re-run supabase/schema.sql and then supabase/seed.sql in the SQL Editor.",
       deals: [],
       sections: [],
       updatedAt: null,
@@ -3329,14 +3394,38 @@ async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
   };
 }
 
-export const getPublicDealsPageData = unstable_cache(
+const getCachedPublicDealsPageData = unstable_cache(
   getPublicDealsPageDataUncached,
   ["public-deals-page-data"],
   {
-    revalidate: 10,
+    revalidate: 60,
     tags: ["public-deals"],
   },
 );
+
+export async function getPublicDealsPageData(): Promise<PublicDealsPageData> {
+  try {
+    const data = await getCachedPublicDealsPageData();
+    if (data.configured && data.schemaReady) {
+      lastSuccessfulPublicDealsPageData = data;
+    }
+    return data;
+  } catch (error) {
+    console.error("[public-fares] Supabase read failed after retries.", error);
+    if (lastSuccessfulPublicDealsPageData) {
+      return lastSuccessfulPublicDealsPageData;
+    }
+
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: null,
+      deals: [],
+      sections: [],
+      updatedAt: null,
+    };
+  }
+}
 
 export async function getOpsPriceIntelligenceData(): Promise<OpsPriceIntelligenceData> {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {

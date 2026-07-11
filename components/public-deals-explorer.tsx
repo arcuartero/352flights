@@ -3024,7 +3024,7 @@ export function PublicDealsExplorer({
     return (
       <section className="section">
         <div className="ops-banner">
-          <p>{data.onboardingMessage ?? "Public deals are not available yet."}</p>
+          <p>{t("deals.temporarilyUnavailable")}</p>
         </div>
       </section>
     );
