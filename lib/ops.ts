@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -380,6 +380,24 @@ type ScannerHealthSummary = {
   alerts: ScannerHealthAlert[];
 };
 
+type OpsAutomatedAlert = {
+  id: string;
+  kind: "scanner_not_running" | "route_without_price" | "sync_failure";
+  severity: "warning" | "critical";
+  title: string;
+  summary: string;
+  detail: string;
+  detectedAt: string | null;
+};
+
+type OpsAutomatedAlertsSummary = {
+  generatedAt: string;
+  total: number;
+  critical: number;
+  warning: number;
+  items: OpsAutomatedAlert[];
+};
+
 type ScannerHealthServiceMonthRow = {
   route_id: string;
   month_start: string;
@@ -406,6 +424,12 @@ type ScannerHealthLoggedIssue = {
   label: string;
   detail: string;
   at: string;
+};
+
+type ScannerSyncFailure = {
+  at: string;
+  detail: string;
+  source: "live_sync_log" | "final_sync_report";
 };
 
 const SCANNER_HEALTH_LOG_META_MARKER = " ||meta|| ";
@@ -495,6 +519,7 @@ export type OpsDashboardData = {
   dealStateCounts: Record<DealLifecycleState, number>;
   digestAutomation: DigestAutomationSummary;
   scannerHealth: ScannerHealthSummary;
+  automatedAlerts: OpsAutomatedAlertsSummary;
   subscribers: SubscriberSummary[];
   routes: RouteSummary[];
   newDeals: DealSummary[];
@@ -784,6 +809,16 @@ function defaultScannerHealthSummary(): ScannerHealthSummary {
   };
 }
 
+function defaultOpsAutomatedAlertsSummary(): OpsAutomatedAlertsSummary {
+  return {
+    generatedAt: new Date().toISOString(),
+    total: 0,
+    critical: 0,
+    warning: 0,
+    items: [],
+  };
+}
+
 function extractAirlineNames(metadata: Record<string, unknown> | null | undefined) {
   return normalizeAirlineNames(metadata?.["airline_names"]);
 }
@@ -938,6 +973,10 @@ function buildSkyscannerUrl(input: {
 
 const SCANNER_HEALTH_LOOKAHEAD_START_DAYS = 14;
 const SCANNER_HEALTH_LOOKAHEAD_END_DAYS = 180;
+const OPS_SCANNER_STALE_WARNING_HOURS = 30;
+const OPS_SCANNER_STALE_CRITICAL_HOURS = 48;
+const OPS_SYNC_FAILURE_LOOKBACK_HOURS = 24;
+const OPS_ALERT_RECIPIENT_EMAIL = "arcuartero@gmail.com";
 const HEALTH_WEEKDAY_CODES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
 
 function parseIsoDateUtc(value: string) {
@@ -1103,8 +1142,88 @@ function buildScannerHealthIssueKey(routeLabel: string, routing: string) {
   return `${routeLabel.replace(/\s+/g, " ").trim()}::${routing}`;
 }
 
+function hoursSince(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) {
+    return null;
+  }
+
+  return Math.max(0, (Date.now() - timestamp) / (60 * 60 * 1000));
+}
+
+function formatAlertAge(hours: number) {
+  if (hours < 1) {
+    return "less than 1h ago";
+  }
+
+  if (hours < 48) {
+    return `${Math.round(hours)}h ago`;
+  }
+
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
+function isWithinHours(value: string, hours: number) {
+  const ageHours = hoursSince(value);
+  return ageHours !== null && ageHours <= hours;
+}
+
+async function readRecentSyncReportFailures(logsDir: string): Promise<ScannerSyncFailure[]> {
+  let entries: string[] = [];
+  try {
+    entries = await readdir(logsDir);
+  } catch {
+    return [];
+  }
+
+  const syncReports = entries
+    .filter((entry) => /^(mac|vps)-sync-\d{8}T\d{6}Z\.json$/.test(entry))
+    .sort()
+    .slice(-8);
+  const failures: ScannerSyncFailure[] = [];
+
+  for (const reportFile of syncReports) {
+    try {
+      const raw = await readFile(path.join(logsDir, reportFile), "utf-8");
+      const payload = JSON.parse(raw) as {
+        generated_at?: unknown;
+        errors?: unknown;
+      };
+      const generatedAt =
+        typeof payload.generated_at === "string" && payload.generated_at.length > 0
+          ? payload.generated_at
+          : null;
+      const errors = Array.isArray(payload.errors) ? payload.errors : [];
+      if (!generatedAt || errors.length === 0 || !isWithinHours(generatedAt, OPS_SYNC_FAILURE_LOOKBACK_HOURS)) {
+        continue;
+      }
+
+      const firstError = errors[0] as Record<string, unknown>;
+      const errorDetail =
+        typeof firstError.error === "string" && firstError.error.length > 0
+          ? firstError.error
+          : "Sync report contains errors.";
+      failures.push({
+        at: generatedAt,
+        detail: `${reportFile}: ${errorDetail}`,
+        source: "final_sync_report",
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  return failures;
+}
+
 async function readLatestScannerIssuesByRoute() {
   const candidates = [
+    process.cwd(),
     process.env.LOCAL_SCANNER_ROOT,
     path.join(os.homedir(), "Projects", "Luxcheapflights"),
     path.join(os.homedir(), "Documents", "Luxcheapflights"),
@@ -1112,7 +1231,7 @@ async function readLatestScannerIssuesByRoute() {
 
   let scannerRoot: string | null = null;
   for (const candidate of candidates) {
-    if (await pathExists(path.join(candidate, "logs", "local-scanner.stderr.log"))) {
+    if (await pathExists(path.join(candidate, "logs"))) {
       scannerRoot = candidate;
       break;
     }
@@ -1122,12 +1241,14 @@ async function readLatestScannerIssuesByRoute() {
     return {
       exact: new Map<string, ScannerHealthLoggedIssue>(),
       loose: new Map<string, ScannerHealthLoggedIssue>(),
+      syncFailures: [],
     };
   }
 
+  const logsDir = path.join(scannerRoot, "logs");
   const [stdoutContents, stderrContents] = await Promise.all([
-    readTextIfExists(path.join(scannerRoot, "logs", "local-scanner.stdout.log")),
-    readTextIfExists(path.join(scannerRoot, "logs", "local-scanner.stderr.log")),
+    readTextIfExists(path.join(logsDir, "local-scanner.stdout.log")),
+    readTextIfExists(path.join(logsDir, "local-scanner.stderr.log")),
   ]);
   const events = [...parseScannerHealthLogEvents(stdoutContents), ...parseScannerHealthLogEvents(stderrContents)].sort(
     (left, right) => left.timestampMs - right.timestampMs,
@@ -1135,9 +1256,24 @@ async function readLatestScannerIssuesByRoute() {
 
   const exact = new Map<string, ScannerHealthLoggedIssue>();
   const loose = new Map<string, ScannerHealthLoggedIssue>();
+  const syncFailures: ScannerSyncFailure[] = [];
 
   for (const event of events) {
     const parsed = parseScannerHealthLogMeta(event.message);
+    if (
+      (parsed.message.startsWith("Deal live sync failed: ") ||
+        parsed.message.startsWith("Fare live sync failed: ")) &&
+      isWithinHours(event.timestampIso, OPS_SYNC_FAILURE_LOOKBACK_HOURS)
+    ) {
+      syncFailures.push({
+        at: event.timestampIso,
+        detail: parsed.message
+          .replace("Deal live sync failed: ", "")
+          .replace("Fare live sync failed: ", ""),
+        source: "live_sync_log",
+      });
+    }
+
     if (parsed.message.startsWith("Pattern no results: ")) {
       const routeLabel =
         parsed.diagnostic?.routeLabel ??
@@ -1185,7 +1321,11 @@ async function readLatestScannerIssuesByRoute() {
     }
   }
 
-  return { exact, loose };
+  const reportSyncFailures = await readRecentSyncReportFailures(logsDir);
+  syncFailures.push(...reportSyncFailures);
+  syncFailures.sort((left, right) => new Date(right.at).getTime() - new Date(left.at).getTime());
+
+  return { exact, loose, syncFailures };
 }
 
 function summarizeDetectedDepartureMonths(rows: ScannerHealthServiceMonthRow[]) {
@@ -1449,6 +1589,210 @@ function buildScannerHealthSummary(
     healthyRoutes: Math.max(0, activeRoutes.length - alerts.length),
     alerts,
   };
+}
+
+function buildOpsAutomatedAlertsSummary(
+  scannerHealth: ScannerHealthSummary,
+  syncFailures: ScannerSyncFailure[],
+): OpsAutomatedAlertsSummary {
+  const items: OpsAutomatedAlert[] = [];
+  const latestRunAgeHours = hoursSince(scannerHealth.latestRunAt);
+
+  if (scannerHealth.activeRoutes > 0 && !scannerHealth.latestRunAt) {
+    items.push({
+      id: "scanner:no-runs",
+      kind: "scanner_not_running",
+      severity: "critical",
+      title: "Scanner has no completed price run",
+      summary: "No snapshot-writing run is visible yet.",
+      detail:
+        "The ops dashboard cannot see any completed scanner run in Supabase. Check the scheduler, service status, and scanner logs before relying on route health.",
+      detectedAt: null,
+    });
+  } else if (
+    latestRunAgeHours !== null &&
+    latestRunAgeHours >= OPS_SCANNER_STALE_WARNING_HOURS
+  ) {
+    const severity =
+      latestRunAgeHours >= OPS_SCANNER_STALE_CRITICAL_HOURS ? "critical" : "warning";
+    items.push({
+      id: "scanner:stale-run",
+      kind: "scanner_not_running",
+      severity,
+      title: severity === "critical" ? "Scanner is overdue" : "Scanner may be late",
+      summary: `Latest snapshot run was ${formatAlertAge(latestRunAgeHours)}.`,
+      detail: `The scanner should be writing fresh price snapshots regularly. The latest visible run was at ${scannerHealth.latestRunAt}.`,
+      detectedAt: scannerHealth.latestRunAt,
+    });
+  }
+
+  if (scannerHealth.routesMissingData > 0) {
+    const severity = scannerHealth.criticalRoutes > 0 ? "critical" : "warning";
+    const routeCount = scannerHealth.routesMissingData;
+    const criticalDetail =
+      scannerHealth.criticalRoutes > 0
+        ? `${scannerHealth.criticalRoutes} route${scannerHealth.criticalRoutes === 1 ? "" : "s"} already crossed the critical threshold.`
+        : "No route has crossed the critical threshold yet.";
+    items.push({
+      id: "routes:stale-prices",
+      kind: "route_without_price",
+      severity,
+      title: "Routes without fresh prices",
+      summary: `${routeCount} active route${routeCount === 1 ? "" : "s"} missed 3+ recent runs.`,
+      detail: `${criticalDetail} Open scanner health details for the exact route, latest scanner reason, rules, detected departures, and a manual Skyscanner check.`,
+      detectedAt: scannerHealth.latestRunAt,
+    });
+  }
+
+  const latestSyncFailure = syncFailures[0] ?? null;
+  if (latestSyncFailure) {
+    const failureCount = syncFailures.length;
+    items.push({
+      id: "sync:recent-failures",
+      kind: "sync_failure",
+      severity: failureCount >= 3 ? "critical" : "warning",
+      title: "Supabase sync is failing",
+      summary: `${failureCount} sync failure${failureCount === 1 ? "" : "s"} in the last ${OPS_SYNC_FAILURE_LOOKBACK_HOURS}h.`,
+      detail: latestSyncFailure.detail,
+      detectedAt: latestSyncFailure.at,
+    });
+  }
+
+  items.sort((left, right) => {
+    if (left.severity !== right.severity) {
+      return left.severity === "critical" ? -1 : 1;
+    }
+
+    const leftTime = left.detectedAt ? new Date(left.detectedAt).getTime() : 0;
+    const rightTime = right.detectedAt ? new Date(right.detectedAt).getTime() : 0;
+    return rightTime - leftTime;
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    total: items.length,
+    critical: items.filter((item) => item.severity === "critical").length,
+    warning: items.filter((item) => item.severity === "warning").length,
+    items,
+  };
+}
+
+function escapeOpsAlertHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatOpsAlertEmailTimestamp(value: string | null) {
+  if (!value) {
+    return "No timestamp yet";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Luxembourg",
+    timeZoneName: "short",
+  }).format(new Date(value));
+}
+
+function formatOpsAlertKind(value: OpsAutomatedAlert["kind"]) {
+  if (value === "scanner_not_running") {
+    return "Scanner";
+  }
+  if (value === "route_without_price") {
+    return "Routes";
+  }
+  return "Sync";
+}
+
+function buildOpsAlertEmail(alerts: OpsAutomatedAlertsSummary) {
+  const siteUrl = getSiteUrl();
+  const opsUrl = `${siteUrl}/ops`;
+  const subject =
+    alerts.critical > 0
+      ? `+352 Flights ops alert: ${alerts.critical} critical`
+      : `+352 Flights ops warning: ${alerts.warning} warning`;
+  const intro = `${alerts.total} active operational alert${alerts.total === 1 ? "" : "s"}: ${alerts.critical} critical, ${alerts.warning} warning.`;
+  const rows = alerts.items
+    .map(
+      (alert) => `
+        <tr>
+          <td style="padding: 16px 0; border-top: 1px solid #dbe4f0;">
+            <p style="margin: 0 0 6px; color: #64748b; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;">${escapeOpsAlertHtml(formatOpsAlertKind(alert.kind))} · ${escapeOpsAlertHtml(alert.severity.toUpperCase())}</p>
+            <h2 style="margin: 0; color: #0f172a; font-size: 18px; line-height: 1.3;">${escapeOpsAlertHtml(alert.title)}</h2>
+            <p style="margin: 8px 0 0; color: #0f172a; font-size: 14px; line-height: 1.6; font-weight: 700;">${escapeOpsAlertHtml(alert.summary)}</p>
+            <p style="margin: 8px 0 0; color: #475569; font-size: 14px; line-height: 1.6;">${escapeOpsAlertHtml(alert.detail)}</p>
+            <p style="margin: 10px 0 0; color: #64748b; font-size: 13px;">Signal: ${escapeOpsAlertHtml(formatOpsAlertEmailTimestamp(alert.detectedAt))}</p>
+          </td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin: 0; padding: 0; background: #f8fafc; font-family: Inter, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f8fafc; padding: 28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 640px; background: #ffffff; border: 1px solid #dbe4f0; border-radius: 16px; padding: 28px;">
+            <tr>
+              <td>
+                <p style="margin: 0 0 8px; color: #2563eb; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;">+352 Flights Ops</p>
+                <h1 style="margin: 0; color: #0f172a; font-size: 26px; line-height: 1.2;">Automatic scanner alerts</h1>
+                <p style="margin: 12px 0 0; color: #475569; font-size: 15px; line-height: 1.6;">${escapeOpsAlertHtml(intro)}</p>
+              </td>
+            </tr>
+            ${rows}
+            <tr>
+              <td style="padding-top: 20px;">
+                <a href="${escapeOpsAlertHtml(opsUrl)}" style="display: inline-block; padding: 12px 16px; border-radius: 999px; background: #2563eb; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none;">Open ops dashboard</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  const text = [
+    "+352 Flights Ops",
+    "",
+    "Automatic scanner alerts",
+    intro,
+    "",
+    ...alerts.items.flatMap((alert) => [
+      `${formatOpsAlertKind(alert.kind)} · ${alert.severity.toUpperCase()}: ${alert.title}`,
+      alert.summary,
+      alert.detail,
+      `Signal: ${formatOpsAlertEmailTimestamp(alert.detectedAt)}`,
+      "",
+    ]),
+    `Open ops dashboard: ${opsUrl}`,
+  ].join("\n");
+
+  return { subject, html, text };
+}
+
+function buildOpsAlertStateKey(alerts: OpsAutomatedAlertsSummary, dateKey: string) {
+  const payload = alerts.items.map((alert) => ({
+    id: alert.id,
+    severity: alert.severity,
+    summary: alert.summary,
+    detectedAt: alert.detectedAt,
+  }));
+  const digest = createHash("sha1")
+    .update(JSON.stringify({ dateKey, payload }))
+    .digest("hex");
+
+  return `lux-ops-alert-${digest}`;
 }
 
 function toRenderableDeal(deal: DealSummary): CampaignPreviewDeal {
@@ -2754,6 +3098,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       newDeals: [],
       newDealSeries: [],
       scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -2907,6 +3252,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       newDeals: [],
       newDealSeries: [],
       scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -2979,6 +3325,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       newDeals: [],
       newDealSeries: [],
       scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -3011,6 +3358,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       newDeals: [],
       newDealSeries: [],
       scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -3043,6 +3391,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       newDeals: [],
       newDealSeries: [],
       scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -3129,6 +3478,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       newDeals: [],
       newDealSeries: [],
       scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
       recentSnapshots: [],
       sendQueue: [],
       recentCampaigns: [],
@@ -3224,6 +3574,10 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     (scannerHealthRulesQuery.data ?? []) as ScannerHealthRuleRow[],
     latestScannerIssuesByRoute,
   );
+  const automatedAlerts = buildOpsAutomatedAlertsSummary(
+    scannerHealth,
+    latestScannerIssuesByRoute.syncFailures,
+  );
 
   const recentCampaigns = ((recentCampaignsQuery.data ?? []) as EmailCampaignRow[]).map(
     (campaign) => ({
@@ -3294,6 +3648,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     newDeals,
     newDealSeries,
     scannerHealth,
+    automatedAlerts,
     recentSnapshots,
     sendQueue,
     recentCampaigns,
@@ -3857,6 +4212,50 @@ export async function sendCampaignTestEmail(input: {
   };
 }
 
+export async function sendOpsAutomatedAlertsEmail(input: { force?: boolean } = {}) {
+  if (!hasResendEnv()) {
+    return {
+      status: "skipped" as const,
+      reason: "Add RESEND_API_KEY and RESEND_FROM_EMAIL before sending ops alert emails.",
+      email: OPS_ALERT_RECIPIENT_EMAIL,
+    };
+  }
+
+  const dashboard = await getOpsDashboardData();
+  const alerts = dashboard.automatedAlerts;
+
+  if (alerts.items.length === 0) {
+    return {
+      status: "skipped" as const,
+      reason: "No active ops alerts.",
+      email: OPS_ALERT_RECIPIENT_EMAIL,
+    };
+  }
+
+  const now = luxembourgParts(new Date());
+  const rendered = buildOpsAlertEmail(alerts);
+  const idempotencyKey = input.force
+    ? `lux-ops-alert-force-${Date.now()}`
+    : buildOpsAlertStateKey(alerts, now.date);
+  const providerMessageId = await sendResendEmail({
+    to: OPS_ALERT_RECIPIENT_EMAIL,
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    emailType: "ops_alert",
+    idempotencyKey,
+  });
+
+  return {
+    status: "sent" as const,
+    email: OPS_ALERT_RECIPIENT_EMAIL,
+    providerMessageId,
+    alertCount: alerts.total,
+    criticalCount: alerts.critical,
+    warningCount: alerts.warning,
+  };
+}
+
 export async function updateDigestAutomation(input: {
   enabled: boolean;
   localTime: string;
@@ -3901,6 +4300,11 @@ export async function updateDigestAutomation(input: {
 }
 
 export async function runScheduledDigest(input: { force?: boolean } = {}) {
+  const opsAlerts = await sendOpsAutomatedAlertsEmail({ force: input.force }).catch((error) => ({
+    status: "failed" as const,
+    email: OPS_ALERT_RECIPIENT_EMAIL,
+    reason: error instanceof Error ? error.message : "Ops alert email failed.",
+  }));
   const automation = await loadAutomationSettings();
   const now = luxembourgParts(new Date());
 
@@ -3908,6 +4312,7 @@ export async function runScheduledDigest(input: { force?: boolean } = {}) {
     return {
       status: "skipped" as const,
       reason: "Daily digest automation is disabled in /ops.",
+      opsAlerts,
     };
   }
 
@@ -3915,6 +4320,7 @@ export async function runScheduledDigest(input: { force?: boolean } = {}) {
     return {
       status: "skipped" as const,
       reason: `Current Luxembourg time ${now.time} is still before scheduled digest time ${automation.localTime}.`,
+      opsAlerts,
     };
   }
 
@@ -3922,6 +4328,7 @@ export async function runScheduledDigest(input: { force?: boolean } = {}) {
     return {
       status: "skipped" as const,
       reason: `Digest already sent on ${automation.lastDigestSentOn}.`,
+      opsAlerts,
     };
   }
 
@@ -3945,6 +4352,7 @@ export async function runScheduledDigest(input: { force?: boolean } = {}) {
       ...result,
       localDate: now.date,
       localTime: now.time,
+      opsAlerts,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Scheduled digest failed.";
@@ -3955,6 +4363,7 @@ export async function runScheduledDigest(input: { force?: boolean } = {}) {
       return {
         status: "skipped" as const,
         reason: message,
+        opsAlerts,
       };
     }
 

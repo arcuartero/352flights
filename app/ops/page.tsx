@@ -90,6 +90,24 @@ function formatSubscriberStatusLabel(value: string) {
   return value;
 }
 
+function formatAlertDetectedAt(value: string | null) {
+  if (!value) {
+    return "No timestamp yet";
+  }
+
+  return formatDateTime(value);
+}
+
+function formatAutomatedAlertKind(value: "scanner_not_running" | "route_without_price" | "sync_failure") {
+  if (value === "scanner_not_running") {
+    return "Scanner";
+  }
+  if (value === "route_without_price") {
+    return "Routes";
+  }
+  return "Sync";
+}
+
 function describeScannerHealthSeverity(severity: "warning" | "critical") {
   if (severity === "critical") {
     return {
@@ -376,6 +394,61 @@ export default async function OpsPage() {
       ) : null}
 
       <OpsSubnav />
+
+      <section
+        className={`ops-panel ops-automated-alerts ${
+          dashboard.automatedAlerts.critical > 0
+            ? "is-critical"
+            : dashboard.automatedAlerts.warning > 0
+              ? "is-warning"
+              : "is-healthy"
+        }`}
+        aria-label="Automatic operational alerts"
+      >
+        <div className="ops-panel__header">
+          <div>
+            <p className="ops-panel__eyebrow">Automatic alerts</p>
+            <h2>Scanner watch</h2>
+          </div>
+          <p>
+            {dashboard.automatedAlerts.total === 0
+              ? "No active operational alerts."
+              : `${dashboard.automatedAlerts.critical} critical · ${dashboard.automatedAlerts.warning} warning`}
+          </p>
+        </div>
+
+        {dashboard.automatedAlerts.items.length === 0 ? (
+          <div className="ops-alert-empty">
+            <span className="ops-send-badge is-live">Healthy</span>
+            <p>Scanner runs, route freshness, and recent Supabase sync signals look normal.</p>
+          </div>
+        ) : (
+          <div className="ops-automated-alerts__list">
+            {dashboard.automatedAlerts.items.map((alert) => (
+              <article className="ops-automated-alert" key={alert.id}>
+                <div className="ops-automated-alert__header">
+                  <div>
+                    <span className="ops-panel__eyebrow">
+                      {formatAutomatedAlertKind(alert.kind)}
+                    </span>
+                    <h3>{alert.title}</h3>
+                  </div>
+                  <span
+                    className={`ops-send-badge ${
+                      alert.severity === "critical" ? "is-critical" : "is-warning"
+                    }`}
+                  >
+                    {alert.severity === "critical" ? "Critical" : "Warning"}
+                  </span>
+                </div>
+                <p className="ops-automated-alert__summary">{alert.summary}</p>
+                <p className="ops-automated-alert__detail">{alert.detail}</p>
+                <span className="ops-pill">Signal: {formatAlertDetectedAt(alert.detectedAt)}</span>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="ops-metrics" aria-label="Operational metrics">
         <article>

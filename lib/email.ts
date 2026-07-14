@@ -69,7 +69,7 @@ type SendResendEmailInput = {
   subject: string;
   html: string;
   text: string;
-  emailType: "campaign" | "campaign_test" | "welcome";
+  emailType: "campaign" | "campaign_test" | "welcome" | "ops_alert";
   sendType?: CampaignSendType;
   idempotencyKey: string;
 };
