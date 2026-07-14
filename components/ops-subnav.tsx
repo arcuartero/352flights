@@ -28,6 +28,10 @@ const links = [
     href: "/ops/active-routes",
     label: "Active Routes",
   },
+  {
+    href: "/ops/destinations",
+    label: "Destination photos",
+  },
 ];
 
 export function OpsSubnav() {
