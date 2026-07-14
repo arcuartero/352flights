@@ -4,9 +4,9 @@ import Link from "next/link";
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
 import routes from "@/data/lux-routes.json";
 import { getDestinationContent, getDestinationTheme } from "@/lib/destination-content";
-import { toDestinationSlug } from "@/lib/destination-slugs";
+import { matchesDestinationSlug, toDestinationSlug } from "@/lib/destination-slugs";
 import { getSiteUrl } from "@/lib/env";
-import { getPublicCityDealsPageData } from "@/lib/ops";
+import { getPublicDealsPageData, type PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
   parseDealSearchFilters,
@@ -236,6 +236,29 @@ function buildInternalLinkGroups(cityName: string, citySlug: string): InternalLi
   ].filter((group) => group.links.length > 0);
 }
 
+function filterCityDealsPageData(data: PublicDealsPageData, citySlug: string): PublicDealsPageData {
+  const cityDeals = data.deals
+    .filter((deal) => matchesDestinationSlug(deal.destinationCity, citySlug))
+    .sort((left, right) => {
+      if (left.dealPrice !== right.dealPrice) {
+        return left.dealPrice - right.dealPrice;
+      }
+
+      return right.score - left.score;
+    });
+
+  return {
+    ...data,
+    deals: cityDeals,
+    sections: data.sections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((deal) => matchesDestinationSlug(deal.destinationCity, citySlug)),
+      }))
+      .filter((section) => section.items.length > 0),
+  };
+}
+
 function CityInternalLinks({
   cityName,
   citySlug,
@@ -274,7 +297,7 @@ function CityInternalLinks({
 export default async function DealsCityPage({ params, searchParams }: DealsCityPageProps) {
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
-  const data = await getPublicCityDealsPageData(citySlug);
+  const data = filterCityDealsPageData(await getPublicDealsPageData(), citySlug);
   const cityName = data.deals[0]?.destinationCity ?? getCityNameFromSlug(citySlug);
   const jsonLd = buildCityJsonLd(cityName, citySlug, data.deals);
 
