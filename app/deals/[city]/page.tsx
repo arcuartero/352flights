@@ -13,6 +13,8 @@ import {
   parseDealSearchSort,
 } from "@/lib/public-deals-search";
 
+export const dynamic = "force-dynamic";
+
 type DealsCityPageProps = {
   params: Promise<{
     city: string;

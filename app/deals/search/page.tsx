@@ -4,6 +4,8 @@ import { PublicDealsExplorer } from "@/components/public-deals-explorer";
 import { getPublicDealsPageData } from "@/lib/ops";
 import { parseDealSearchFilters, parseDealSearchSort } from "@/lib/public-deals-search";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Buscar vuelos baratos desde Luxemburgo",
   description:

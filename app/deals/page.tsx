@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
 import { getPublicDealsPageData } from "@/lib/ops";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Ofertas de vuelos baratos desde Luxemburgo",
   description:

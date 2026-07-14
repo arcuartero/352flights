@@ -6,6 +6,8 @@ import { getPublicDealsPageData } from "@/lib/ops";
 
 import "./home.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Vuelos baratos desde Luxemburgo",
   description:
