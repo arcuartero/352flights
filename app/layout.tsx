@@ -3,14 +3,25 @@ import type { Metadata } from "next";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { SiteChrome } from "@/components/site-chrome";
 import { WebActivityLog } from "@/components/web-activity-log";
+import { getSiteUrl } from "@/lib/env";
 import { LanguageProvider } from "@/lib/i18n";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "+352 Flights",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "+352 Flights | Vuelos baratos desde Luxemburgo",
+    template: "%s | +352 Flights",
+  },
   description:
-    "A Luxembourg-first cheap flight newsletter powered by route scanning, historical pricing, and editorial deal selection.",
+    "Compara vuelos baratos desde Luxemburgo con tarifas verificadas, historico de precios y alertas para escapadas, playas y vacaciones escolares.",
+  alternates: {
+    canonical: "/",
+    languages: {
+      "es-LU": "/",
+    },
+  },
 };
 
 const themeBootScript = `
@@ -35,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html data-theme="dark" lang="en" suppressHydrationWarning>
+    <html data-theme="dark" lang="es" suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <LanguageProvider>

@@ -7,9 +7,15 @@ import { getPublicDealsPageData } from "@/lib/ops";
 import "./home.css";
 
 export const metadata: Metadata = {
-  title: "+352 Flights — Never miss a cheap flight from Luxembourg",
+  title: "Vuelos baratos desde Luxemburgo",
   description:
-    "We watch every fare out of Luxembourg and write to you only when it's genuinely cheap. No noise — just the right deals, at the right time.",
+    "Encuentra vuelos baratos desde Luxemburgo con precios verificados, alertas de bajadas y rutas para escapadas, playa y vacaciones escolares.",
+  alternates: {
+    canonical: "/",
+    languages: {
+      "es-LU": "/",
+    },
+  },
 };
 
 export default async function HomePage() {

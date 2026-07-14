@@ -2,11 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
-import { LandmarkPhoto } from "@/components/landmark-photo";
+import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { NewsletterForm } from "@/components/newsletter-form";
+import {
+  PublicDealsSelect as DealsSelect,
+  type PublicDealsSelectOption as SelectOption,
+} from "@/components/public-deals-select";
+import {
+  getDestinationHeroDescription as getSeoDestinationHeroDescription,
+  getDestinationTheme,
+} from "@/lib/destination-content";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import { useI18n, type Locale } from "@/lib/i18n";
 import type { PublicDealsPageData } from "@/lib/ops";
@@ -77,12 +85,6 @@ type FooterLink = {
 type FooterSocial = {
   label: string;
   icon: string;
-};
-
-type SelectOption = {
-  value: string;
-  label: string;
-  disabled?: boolean;
 };
 
 type Translate = (key: string, values?: Record<string, string | number>) => string;
@@ -1341,35 +1343,11 @@ function getLandmarkTitle(deal: CampaignPreviewDeal) {
 }
 
 function getThemeForDestinationCity(city: string): Exclude<ThemeFilter, "any"> {
-  const cityKey = normalizeDestinationKey(city);
-  return (THEME_BY_DESTINATION[cityKey] ?? "city") as Exclude<ThemeFilter, "any">;
+  return getDestinationTheme(city);
 }
 
-function getDestinationHeroDescription(city: string, t?: Translate) {
-  const theme = getThemeForDestinationCity(city);
-  const escapeLabelKey =
-    theme === "beach"
-      ? "deals.escape.beach"
-      : theme === "nature"
-        ? "deals.escape.nature"
-        : "deals.escape.city";
-
-  if (t) {
-    return t("deals.cityHeroDesc", {
-      city,
-      escapeLabel: t(escapeLabelKey),
-    });
-  }
-
-  const cityKey = normalizeDestinationKey(city);
-  const escapeLabelByTheme: Record<Exclude<ThemeFilter, "any">, string> = {
-    beach: "seaside escape",
-    city: "city break",
-    nature: "outdoor escape",
-  };
-  const escapeLabel = DESTINATION_ESCAPE_LABEL_BY_DESTINATION[cityKey] ?? escapeLabelByTheme[theme];
-
-  return `Find the cheapest flights from Luxembourg to ${city}. Compare real-time fares, tailor your search, and grab the best deal for your next ${escapeLabel}.`;
+function getDestinationHeroDescription(city: string, _t?: Translate) {
+  return getSeoDestinationHeroDescription(city);
 }
 
 function isWeekendDeal(deal: CampaignPreviewDeal) {
@@ -1974,95 +1952,6 @@ function SearchCityGroupCard({
   );
 }
 
-function DealsSelect({
-  label,
-  value,
-  options,
-  onChange,
-  className,
-}: {
-  label: string;
-  value: string;
-  options: SelectOption[];
-  onChange: (value: string) => void;
-  className?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const listboxId = useId();
-  const selectedOption = options.find((option) => option.value === value) ?? options[0];
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    window.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  return (
-    <div className={`deals-control deals-select${className ? ` ${className}` : ""}`} ref={rootRef}>
-      <span>{label}</span>
-      <button
-        aria-controls={listboxId}
-        aria-expanded={isOpen}
-        className={`deals-select__trigger${isOpen ? " is-open" : ""}`}
-        onClick={() => setIsOpen((current) => !current)}
-        type="button"
-      >
-        <strong>{selectedOption.label}</strong>
-        <i aria-hidden="true">⌄</i>
-      </button>
-
-      {isOpen ? (
-        <div className="deals-select__menu" id={listboxId} role="listbox">
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <button
-                aria-selected={isSelected}
-                className={`deals-select__option${isSelected ? " is-selected" : ""}${option.disabled ? " is-disabled" : ""}`}
-                disabled={option.disabled}
-                key={option.value}
-                onClick={() => {
-                  if (option.disabled) {
-                    return;
-                  }
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                role="option"
-                type="button"
-              >
-                <span>{option.label}</span>
-                {isSelected ? <i aria-hidden="true">✓</i> : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function DealFlightCard({
   deal,
   combinationsCount,
@@ -2275,7 +2164,9 @@ function FeaturedOpportunityModal({
   canGoPrevious: boolean;
   canGoNext: boolean;
 }) {
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -2289,15 +2180,35 @@ function FeaturedOpportunityModal({
 
       if (event.key === "ArrowRight" && canGoNext) {
         onNext();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const panel = closeButtonRef.current?.closest<HTMLElement>("[role='dialog']");
+        const focusable = panel
+          ? Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])"))
+          : [];
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
       }
     };
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
+    closeButtonRef.current?.focus();
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus();
     };
   }, [canGoNext, canGoPrevious, onClose, onNext, onPrevious]);
 
@@ -2340,6 +2251,7 @@ function FeaturedOpportunityModal({
           aria-label="Close opportunity detail"
           className="deals-opportunity-modal__close"
           onClick={onClose}
+          ref={closeButtonRef}
           type="button"
         >
           <span aria-hidden="true">×</span>
@@ -2701,6 +2613,10 @@ export function PublicDealsExplorer({
 
   useEffect(() => {
     if (mode !== "landing" || featuredNow.length <= featuredWindowSize) {
+      return;
+    }
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
 
@@ -3193,7 +3109,7 @@ export function PublicDealsExplorer({
               <SignalIcon kind="checked" />
             </span>
             <div className="deals-explorer__signal-copy">
-              <strong>{data.updatedAt ? "Checked every day" : "Fresh live board"}</strong>
+              <strong>{data.updatedAt ? "Latest recorded scan" : "Fare board"}</strong>
               <span>
                 {data.updatedAt ? formatVerifiedAge(data.updatedAt, t) : t("deals.updatedAsDealsLand")}
               </span>
@@ -3204,8 +3120,8 @@ export function PublicDealsExplorer({
               <SignalIcon kind="discount" />
             </span>
             <div className="deals-explorer__signal-copy">
-              <strong>{maxDiscount !== null ? `Prices up to -${maxDiscount}%` : "Fresh live prices"}</strong>
-              <span>by booking at the right time</span>
+              <strong>{maxDiscount !== null ? `Largest measured drop: ${maxDiscount}%` : "Historical price context"}</strong>
+              <span>based on recorded scanner history</span>
             </div>
           </div>
         </section>
@@ -3240,8 +3156,8 @@ export function PublicDealsExplorer({
                       </svg>
                     </span>
                     <span className="deals-city-page__hero-trust-copy">
-                      <strong>{t("deals.hero.realTimeDeals")}</strong>
-                      <small>{t("deals.hero.updatedConstantly")}</small>
+                      <strong>Recently checked fares</strong>
+                      <small>{data.updatedAt ? formatVerifiedAge(data.updatedAt, t) : "No completed scan yet"}</small>
                     </span>
                   </li>
                   <li>
@@ -3265,8 +3181,8 @@ export function PublicDealsExplorer({
                       </svg>
                     </span>
                     <span className="deals-city-page__hero-trust-copy">
-                      <strong>{t("deals.hero.trustedFares")}</strong>
-                      <small>{t("deals.hero.noHiddenFees")}</small>
+                      <strong>Recorded fare details</strong>
+                      <small>Dates, routing and verification time</small>
                     </span>
                   </li>
                 </ul>
@@ -3279,6 +3195,7 @@ export function PublicDealsExplorer({
                       alt={`${lockedDestinationCity ?? cityHeroDeal.destinationCity} landmark`}
                       destinationCity={lockedDestinationCity ?? cityHeroDeal.destinationCity}
                       landmarkTitle={getLandmarkTitle(cityHeroDeal)}
+                      priority
                     />
                   </figure>
                 ) : null}
@@ -3819,6 +3736,7 @@ export function PublicDealsExplorer({
               {styleCurrentPage}/{stylePageCount}
             </span>
             <button
+              aria-label="Show previous travel styles"
               className="deals-explorer__carousel-button"
               disabled={!canMoveStylePrev}
               onClick={() =>
@@ -3829,6 +3747,7 @@ export function PublicDealsExplorer({
               <CarouselChevronIcon direction="previous" />
             </button>
             <button
+              aria-label="Show next travel styles"
               className="deals-explorer__carousel-button"
               disabled={!canMoveStyleNext}
               onClick={() =>
@@ -3894,23 +3813,23 @@ export function PublicDealsExplorer({
 
         <section className="deals-explorer__newsletter" id="deal-alerts">
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--top-left">
-            <strong>↓ 59%</strong>
-            <span>London</span>
+            <strong>Price context</strong>
+            <span>Compared with history</span>
           </div>
 
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--top-right">
-            <strong>↓ 47%</strong>
-            <span>Milan</span>
+            <strong>Route alerts</strong>
+            <span>From Luxembourg</span>
           </div>
 
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--bottom-left">
-            <strong>↓ 41%</strong>
-            <span>Barcelona</span>
+            <strong>Flexible dates</strong>
+            <span>Useful trip patterns</span>
           </div>
 
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--bottom-right">
-            <strong>↓ 36%</strong>
-            <span>Porto</span>
+            <strong>Clear choices</strong>
+            <span>Dates and routing shown</span>
           </div>
 
         <div className="deals-explorer__newsletter-content">

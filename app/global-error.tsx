@@ -13,7 +13,7 @@ export default function GlobalErrorPage({ error, reset }: GlobalErrorPageProps) 
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang="es">
       <body>
         <main className="page-shell page-shell--deals">
           <section className="deals-explorer__section" style={{ maxWidth: "56rem", margin: "0 auto" }}>
