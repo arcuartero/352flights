@@ -36,12 +36,15 @@ import { formatStayBucketLabel } from "@/lib/stay-buckets";
 
 type PublicDealsExplorerProps = {
   data: PublicDealsPageData;
+  destinationPhotoUrls?: Record<string, string>;
   initialFilters?: DealSearchFilters;
   initialSort?: DealSearchSort;
   mode?: "landing" | "results" | "city";
   lockedDestinationCity?: string;
   searchPathname?: string;
 };
+
+type DestinationPhotoUrlMap = Record<string, string>;
 
 type QuickChip =
   | "weekend"
@@ -54,6 +57,13 @@ type QuickChip =
   | "beach"
   | "city"
   | "nature";
+
+function getDestinationPhotoSrc(
+  destinationPhotoUrls: DestinationPhotoUrlMap | undefined,
+  city: string,
+) {
+  return destinationPhotoUrls?.[toDestinationSlug(city)] ?? undefined;
+}
 
 type TravelStyleCard = {
   key: string;
@@ -1704,10 +1714,12 @@ function PublicDealCard({
   deal,
   combinationsCount,
   compact = false,
+  destinationPhotoUrls,
 }: {
   deal: CampaignPreviewDeal;
   combinationsCount: number;
   compact?: boolean;
+  destinationPhotoUrls?: DestinationPhotoUrlMap;
 }) {
   const { t } = useI18n();
   const holidayMatch = getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate);
@@ -1730,6 +1742,7 @@ function PublicDealCard({
           alt={`${deal.destinationCity} landmark`}
           destinationCity={deal.destinationCity}
           landmarkTitle={getLandmarkTitle(deal)}
+          photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
         />
         <div className="deals-card__media-overlay" />
       </figure>
@@ -1788,11 +1801,13 @@ function PublicDealCard({
 function FeaturedOpportunityCard({
   deal,
   combinationsCount,
+  destinationPhotoUrls,
   onOpen,
   variant = "default",
 }: {
   deal: CampaignPreviewDeal;
   combinationsCount: number;
+  destinationPhotoUrls?: DestinationPhotoUrlMap;
   onOpen: () => void;
   variant?: "default" | "hero";
 }) {
@@ -1826,6 +1841,7 @@ function FeaturedOpportunityCard({
             alt={`${deal.destinationCity} landmark`}
             destinationCity={deal.destinationCity}
             landmarkTitle={getLandmarkTitle(deal)}
+            photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
           />
           <div className="deals-opportunity-card__hero-overlay" />
         </figure>
@@ -1890,6 +1906,7 @@ function FeaturedOpportunityCard({
           alt={`${deal.destinationCity} landmark`}
           destinationCity={deal.destinationCity}
           landmarkTitle={getLandmarkTitle(deal)}
+          photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
         />
         <div className="deals-card__media-overlay" />
         {savingsBadgeLabel ? (
@@ -1917,9 +1934,11 @@ function FeaturedOpportunityCard({
 
 function SearchCityGroupCard({
   group,
+  destinationPhotoUrls,
   onToggle,
 }: {
   group: SearchCityGroup;
+  destinationPhotoUrls?: DestinationPhotoUrlMap;
   onToggle: () => void;
 }) {
   const { t } = useI18n();
@@ -1937,6 +1956,7 @@ function SearchCityGroupCard({
             alt={`${group.city} landmark`}
             destinationCity={group.city}
             landmarkTitle={getLandmarkTitle(heroDeal)}
+            photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, group.city)}
           />
           <div className="deals-search-group__media-overlay" />
         </figure>
@@ -2206,6 +2226,7 @@ function ResultsPagination({
 function FeaturedOpportunityModal({
   deal,
   combinationsCount,
+  destinationPhotoUrls,
   onClose,
   onPrevious,
   onNext,
@@ -2214,6 +2235,7 @@ function FeaturedOpportunityModal({
 }: {
   deal: CampaignPreviewDeal;
   combinationsCount: number;
+  destinationPhotoUrls?: DestinationPhotoUrlMap;
   onClose: () => void;
   onPrevious: () => void;
   onNext: () => void;
@@ -2318,6 +2340,7 @@ function FeaturedOpportunityModal({
             alt={`${deal.destinationCity} landmark`}
             destinationCity={deal.destinationCity}
             landmarkTitle={getLandmarkTitle(deal)}
+            photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
           />
           <div className="deals-card__media-overlay" />
         </figure>
@@ -2396,10 +2419,12 @@ function FeaturedOpportunityModal({
 export function PublicDealsDestinationPage({
   cityName,
   deals,
+  destinationPhotoUrls,
   updatedAt,
 }: {
   cityName: string;
   deals: CampaignPreviewDeal[];
+  destinationPhotoUrls?: DestinationPhotoUrlMap;
   updatedAt: string | null;
 }) {
   const destinationCounts = useMemo(() => countDealsPerDestination(deals), [deals]);
@@ -2434,6 +2459,7 @@ export function PublicDealsDestinationPage({
             alt={`${cityName} landmark`}
             destinationCity={cityName}
             landmarkTitle={getLandmarkTitle(heroDeal)}
+            photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, cityName)}
           />
           <div className="deals-card__media-overlay" />
         </figure>
@@ -2454,6 +2480,7 @@ export function PublicDealsDestinationPage({
 
 export function PublicDealsExplorer({
   data,
+  destinationPhotoUrls,
   initialFilters = DEFAULT_DEAL_SEARCH_FILTERS,
   initialSort = DEFAULT_DEAL_SEARCH_SORT,
   mode = "landing",
@@ -3271,6 +3298,10 @@ export function PublicDealsExplorer({
                       alt={`${lockedDestinationCity ?? cityHeroDeal.destinationCity} landmark`}
                       destinationCity={lockedDestinationCity ?? cityHeroDeal.destinationCity}
                       landmarkTitle={getLandmarkTitle(cityHeroDeal)}
+                      photoSrc={getDestinationPhotoSrc(
+                        destinationPhotoUrls,
+                        lockedDestinationCity ?? cityHeroDeal.destinationCity,
+                      )}
                       priority
                     />
                   </figure>
@@ -3787,6 +3818,7 @@ export function PublicDealsExplorer({
                   {featuredNow.map((deal) => (
                     <FeaturedOpportunityCard
                       combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
+                      destinationPhotoUrls={destinationPhotoUrls}
                       key={`featured-${deal.id}`}
                       deal={deal}
                       onOpen={() => openOpportunityModal(featuredNow, deal.id)}
@@ -3884,6 +3916,7 @@ export function PublicDealsExplorer({
                     alt={`${style.label} background`}
                     destinationCity={style.imageCity}
                     landmarkTitle={style.imageLandmarkTitle}
+                    photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, style.imageCity)}
                   />
                   <div className="deals-style-card__overlay" />
                 </div>
@@ -4005,6 +4038,7 @@ export function PublicDealsExplorer({
           }
           canGoPrevious={selectedOpportunityDealIndex > 0}
           combinationsCount={destinationCounts.get(getDestinationCountKey(selectedOpportunityDeal)) ?? 1}
+          destinationPhotoUrls={destinationPhotoUrls}
           deal={selectedOpportunityDeal}
           onClose={closeOpportunityModal}
           onNext={() => {

@@ -107,6 +107,11 @@ export async function listDestinationPhotos(): Promise<DestinationPhotoEntry[]> 
     });
 }
 
+export async function getDestinationPhotoUrlMap(): Promise<Record<string, string>> {
+  const photos = await listDestinationPhotos();
+  return Object.fromEntries(photos.map((photo) => [photo.slug, photo.url]));
+}
+
 export async function uploadDestinationPhoto(input: {
   slug: string;
   bytes: Buffer;

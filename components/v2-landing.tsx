@@ -284,6 +284,7 @@ function useParallax(ref: React.RefObject<HTMLElement | null>, strength = 0.12) 
 type V2LandingProps = {
   boardDestinations?: HomeBoardDestination[];
   deals?: CampaignPreviewDeal[];
+  destinationPhotoUrls?: Record<string, string>;
 };
 
 function normalizeDestinationKey(value: string) {
@@ -376,7 +377,11 @@ function matchesHomeSearchFilters(
   return true;
 }
 
-export function V2Landing({ boardDestinations = [], deals = [] }: V2LandingProps) {
+export function V2Landing({
+  boardDestinations = [],
+  deals = [],
+  destinationPhotoUrls = {},
+}: V2LandingProps) {
   const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const heroMediaRef = useRef<HTMLDivElement | null>(null);
@@ -677,7 +682,11 @@ export function V2Landing({ boardDestinations = [], deals = [] }: V2LandingProps
                 key={dest.city}
                 style={{ "--d": `${i * 90}ms` } as React.CSSProperties}
               >
-                <img alt={`${dest.city} — ${dest.landmark}`} loading="lazy" src={landmarkSrc(dest.city, dest.landmark)} />
+                <img
+                  alt={`${dest.city} — ${dest.landmark}`}
+                  loading="lazy"
+                  src={destinationPhotoUrls[toDestinationSlug(dest.city)] ?? landmarkSrc(dest.city, dest.landmark)}
+                />
                 <span className="v2-bento__shade" aria-hidden="true" />
                 <span className="v2-bento__meta">
                   <strong>{dest.city}</strong>
@@ -701,7 +710,11 @@ export function V2Landing({ boardDestinations = [], deals = [] }: V2LandingProps
         <div className="v2-rhythms__slices" data-reveal>
           {RHYTHMS.map((rhythm) => (
             <Link className="v2-rhythms__slice" href={buildRhythmSearchHref(rhythm.key)} key={rhythm.key}>
-              <img alt={rhythm.label} loading="lazy" src={landmarkSrc(rhythm.city, rhythm.landmark)} />
+              <img
+                alt={rhythm.label}
+                loading="lazy"
+                src={destinationPhotoUrls[toDestinationSlug(rhythm.city)] ?? landmarkSrc(rhythm.city, rhythm.landmark)}
+              />
               <span className="v2-rhythms__shade" aria-hidden="true" />
               <span className="v2-rhythms__copy">
                 <strong>{t(`home.rhythm.${rhythm.key === "week" ? "week" : rhythm.key}`)}</strong>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
 import routes from "@/data/lux-routes.json";
 import { getDestinationContent, getDestinationTheme } from "@/lib/destination-content";
+import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { matchesDestinationSlug, toDestinationSlug } from "@/lib/destination-slugs";
 import { getSiteUrl } from "@/lib/env";
 import { getPublicCityDealsPageData, type PublicDealsPageData } from "@/lib/ops";
@@ -297,7 +298,11 @@ function CityInternalLinks({
 }
 
 export default async function DealsCityPage({ params, searchParams }: DealsCityPageProps) {
-  const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const [resolvedParams, destinationPhotoUrls, resolvedSearchParams] = await Promise.all([
+    params,
+    getDestinationPhotoUrlMap(),
+    searchParams,
+  ]);
   const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
   const data = filterCityDealsPageData(await getPublicCityDealsPageData(citySlug), citySlug);
   const cityName = data.deals[0]?.destinationCity ?? getCityNameFromSlug(citySlug);
@@ -311,6 +316,7 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
       />
       <PublicDealsExplorer
         data={data}
+        destinationPhotoUrls={destinationPhotoUrls}
         initialFilters={parseDealSearchFilters(resolvedSearchParams)}
         initialSort={parseDealSearchSort(resolvedSearchParams)}
         lockedDestinationCity={cityName}

@@ -11,6 +11,7 @@ type DestinationVisualProps = {
   sizes?: string;
   alt?: string;
   landmarkTitle?: string;
+  photoSrc?: string | null;
 };
 
 const COASTAL_DESTINATIONS = new Set([
@@ -74,13 +75,21 @@ export function DestinationVisual({
   destinationCity,
   className,
   priority = false,
+  sizes,
   alt,
   landmarkTitle,
+  photoSrc,
 }: DestinationVisualProps) {
   const fallbackSrc = getDestinationVisual(destinationCity);
-  const [src, setSrc] = useState(fallbackSrc);
+  const resolvedPhotoSrc = photoSrc?.trim() || null;
+  const [src, setSrc] = useState(resolvedPhotoSrc ?? fallbackSrc);
 
   useEffect(() => {
+    if (resolvedPhotoSrc) {
+      setSrc(resolvedPhotoSrc);
+      return;
+    }
+
     let isMounted = true;
     const slug = toDestinationSlug(destinationCity);
     setSrc(fallbackSrc);
@@ -95,7 +104,7 @@ export function DestinationVisual({
     return () => {
       isMounted = false;
     };
-  }, [destinationCity, fallbackSrc]);
+  }, [destinationCity, fallbackSrc, resolvedPhotoSrc]);
 
   return (
     <img
@@ -108,6 +117,7 @@ export function DestinationVisual({
       className={className}
       fetchPriority={priority ? "high" : "auto"}
       loading={priority ? "eager" : "lazy"}
+      sizes={sizes}
       src={src}
       style={{ objectFit: "cover" }}
     />

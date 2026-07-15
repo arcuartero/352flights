@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { V2Landing } from "@/components/v2-landing";
+import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { buildHomeBoardDestinations } from "@/lib/home-board";
 import { getPublicDealsPageData } from "@/lib/ops";
 
@@ -21,8 +22,17 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const data = await getPublicDealsPageData();
+  const [data, destinationPhotoUrls] = await Promise.all([
+    getPublicDealsPageData(),
+    getDestinationPhotoUrlMap(),
+  ]);
   const boardDestinations = buildHomeBoardDestinations(data.deals);
 
-  return <V2Landing boardDestinations={boardDestinations} deals={data.deals} />;
+  return (
+    <V2Landing
+      boardDestinations={boardDestinations}
+      deals={data.deals}
+      destinationPhotoUrls={destinationPhotoUrls}
+    />
+  );
 }

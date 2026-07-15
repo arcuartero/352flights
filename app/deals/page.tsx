@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
+import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { getPublicDealsPageData } from "@/lib/ops";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +19,14 @@ export const metadata: Metadata = {
 };
 
 export default async function DealsPage() {
-  const data = await getPublicDealsPageData();
+  const [data, destinationPhotoUrls] = await Promise.all([
+    getPublicDealsPageData(),
+    getDestinationPhotoUrlMap(),
+  ]);
 
   return (
     <main className="page-shell page-shell--deals">
-      <PublicDealsExplorer data={data} />
+      <PublicDealsExplorer data={data} destinationPhotoUrls={destinationPhotoUrls} />
     </main>
   );
 }
