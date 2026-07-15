@@ -986,15 +986,26 @@ body:has(.page-shell--deals-city)::before {
 
 .page-shell--deals-search .deals-search-card--strong-price,
 .page-shell--deals-city .deals-search-card--strong-price {
-  border-width: 2px;
-  border-color: rgba(35, 151, 91, 0.72);
-  box-shadow: 0 16px 34px rgba(35, 151, 91, 0.12);
+  border-color: rgba(29, 39, 51, 0.12);
+  box-shadow: var(--shadow-sm);
+}
+
+.page-shell--deals-search .deals-search-card--strong-price .deals-search-card__booking,
+.page-shell--deals-city .deals-search-card--strong-price .deals-search-card__booking {
+  border-left-color: rgba(35, 151, 91, 0.26);
+  background:
+    linear-gradient(180deg, rgba(221, 247, 232, 0.96), rgba(194, 235, 211, 0.92));
+}
+
+.page-shell--deals-search .deals-search-card--strong-price .deals-search-card__price,
+.page-shell--deals-city .deals-search-card--strong-price .deals-search-card__price {
+  color: #0f5132;
 }
 
 .page-shell--deals-search .deals-search-card__saving.is-positive,
 .page-shell--deals-city .deals-search-card__saving.is-positive {
-  color: #198754;
-  font-weight: 750;
+  color: #17623d;
+  font-weight: 400;
 }
 
 .page-shell--deals-search .deals-search-card__saving.is-neutral,
