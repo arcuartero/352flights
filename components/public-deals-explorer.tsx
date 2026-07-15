@@ -295,6 +295,8 @@ const SEARCH_QUICK_CHIPS: QuickChip[] = [
   "nature",
 ];
 
+const RESULTS_PAGE_SIZE = 12;
+
 const THEME_BY_DESTINATION: Record<string, ThemeFilter> = {
   agadir: "beach",
   ajaccio: "beach",
@@ -683,6 +685,10 @@ function formatSearchSavingsLabel(
     default:
       return t ? t("deals.priceNew") : "Fresh fare · building price history";
   }
+}
+
+function isStrongPriceDeal(deal: CampaignPreviewDeal) {
+  return deal.pricePosition === "exceptional" || deal.pricePosition === "below_usual";
 }
 
 function getDepartureWeekdayFilterValue(value: string | null): DepartureWeekdayFilter {
@@ -2002,9 +2008,11 @@ function DealFlightCard({
   const stopsLabel = deal.maxStops === "NON_STOP" ? t("deals.direct") : t("deals.upToOneStop");
   const resolvedCtaLabel = ctaLabel ?? t("deals.bookOnSkyscanner");
   const resolvedPendingLabel = pendingLabel === "Skyscanner link pending" ? t("deals.skyscannerPending") : pendingLabel;
+  const strongPrice = isStrongPriceDeal(deal);
+  const cardClassName = `${className ?? "deals-search-card"}${strongPrice ? " deals-search-card--strong-price" : ""}`;
 
   return (
-    <article className={className ?? "deals-search-card"}>
+    <article className={cardClassName}>
       <div className="deals-search-card__content">
         {showCityLabel ? (
           <div className="deals-search-card__meta-bar">
@@ -2107,7 +2115,7 @@ function DealFlightCard({
       {showBooking ? (
         <aside className="deals-search-card__booking">
           <strong className="deals-search-card__price">{formatCurrency(deal.dealPrice)}</strong>
-          <p className="deals-search-card__saving">{savingsLabel}</p>
+          <p className={`deals-search-card__saving${strongPrice ? " is-positive" : " is-neutral"}`}>{savingsLabel}</p>
           {ctaHref ? (
             ctaExternal ? (
               <a className="deals-search-card__cta" href={ctaHref} rel="noreferrer" target="_blank">
@@ -2130,20 +2138,68 @@ function DealFlightCard({
 function SearchResultCard({
   deal,
   combinationsCount,
+  showCityLabel = false,
 }: {
   deal: CampaignPreviewDeal;
   combinationsCount: number;
+  showCityLabel?: boolean;
 }) {
   return (
     <DealFlightCard
       combinationsCount={combinationsCount}
       deal={deal}
       shiftDurationLeft
-      showCityLabel={false}
+      showCityLabel={showCityLabel}
       showAirlineLogo
       showArrivalDate
       showWeekdayInDate={false}
     />
+  );
+}
+
+function ResultsPagination({
+  page,
+  pageCount,
+  total,
+  onPageChange,
+}: {
+  page: number;
+  pageCount: number;
+  total: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (pageCount <= 1) {
+    return null;
+  }
+
+  const start = (page - 1) * RESULTS_PAGE_SIZE + 1;
+  const end = Math.min(total, page * RESULTS_PAGE_SIZE);
+
+  return (
+    <nav className="deals-results-pagination" aria-label="Fare results pagination">
+      <p>
+        Showing {start}-{end} of {total}
+      </p>
+      <div className="deals-results-pagination__controls">
+        <button
+          disabled={page <= 1}
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          type="button"
+        >
+          Previous
+        </button>
+        <span>
+          Page {page} of {pageCount}
+        </span>
+        <button
+          disabled={page >= pageCount}
+          onClick={() => onPageChange(Math.min(pageCount, page + 1))}
+          type="button"
+        >
+          Next
+        </button>
+      </div>
+    </nav>
   );
 }
 
@@ -2440,6 +2496,7 @@ export function PublicDealsExplorer({
   const [selectedOpportunityDeals, setSelectedOpportunityDeals] = useState<CampaignPreviewDeal[]>([]);
   const [styleStartIndex, setStyleStartIndex] = useState(0);
   const [styleVisibleCount, setStyleVisibleCount] = useState(5);
+  const [resultsPage, setResultsPage] = useState(1);
   const now = useMemo(() => new Date(), []);
   const effectiveFilters =
     mode === "results" || mode === "city"
@@ -2532,6 +2589,13 @@ export function PublicDealsExplorer({
       : mode === "results"
         ? groupedOpportunityDeals.find((group) => openSearchCityGroups.has(group.key)) ?? null
         : null;
+  const resultsSourceDeals = selectedSearchGroup?.deals ?? opportunityDeals;
+  const resultsPageCount = Math.max(1, Math.ceil(resultsSourceDeals.length / RESULTS_PAGE_SIZE));
+  const clampedResultsPage = Math.min(resultsPage, resultsPageCount);
+  const paginatedResultDeals = resultsSourceDeals.slice(
+    (clampedResultsPage - 1) * RESULTS_PAGE_SIZE,
+    clampedResultsPage * RESULTS_PAGE_SIZE,
+  );
   const selectedOpportunityDeal =
     selectedOpportunityDeals.find((deal) => deal.id === selectedOpportunityDealId) ?? null;
   const selectedOpportunityDealIndex = selectedOpportunityDealId
@@ -2581,6 +2645,18 @@ export function PublicDealsExplorer({
       return next;
     });
   }, [groupedOpportunityDeals, mode]);
+
+  useEffect(() => {
+    if (mode !== "results" && mode !== "city") {
+      return;
+    }
+
+    setResultsPage(1);
+  }, [effectiveFilters, mode, selectedSearchGroup?.key, sortOrder]);
+
+  useEffect(() => {
+    setResultsPage((current) => Math.min(current, resultsPageCount));
+  }, [resultsPageCount]);
 
   useEffect(() => {
     if (mode !== "results") {
@@ -3387,7 +3463,7 @@ export function PublicDealsExplorer({
                 ) : selectedSearchGroup ? (
                     <div className="deals-search-expanded">
                       <div className="deals-search-expanded__results">
-                        {selectedSearchGroup.deals.map((deal) => (
+                        {paginatedResultDeals.map((deal) => (
                           <SearchResultCard
                             combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
                             key={`results-${selectedSearchGroup.key}-${deal.id}`}
@@ -3395,6 +3471,12 @@ export function PublicDealsExplorer({
                           />
                         ))}
                       </div>
+                      <ResultsPagination
+                        onPageChange={setResultsPage}
+                        page={clampedResultsPage}
+                        pageCount={resultsPageCount}
+                        total={resultsSourceDeals.length}
+                      />
                     </div>
                   ) : null}
                 </section>
@@ -3594,7 +3676,7 @@ export function PublicDealsExplorer({
                   </div>
 
                   <div className="deals-search-expanded__results">
-                    {selectedSearchGroup.deals.map((deal) => (
+                    {paginatedResultDeals.map((deal) => (
                       <SearchResultCard
                         combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
                         key={`results-${selectedSearchGroup.key}-${deal.id}`}
@@ -3602,20 +3684,31 @@ export function PublicDealsExplorer({
                       />
                     ))}
                   </div>
+                  <ResultsPagination
+                    onPageChange={setResultsPage}
+                    page={clampedResultsPage}
+                    pageCount={resultsPageCount}
+                    total={resultsSourceDeals.length}
+                  />
                 </div>
               ) : (
-                <div className="deals-search-results">
-                  {groupedOpportunityDeals.map((group) => (
-                    <SearchCityGroupCard
-                      group={group}
-                      key={group.key}
-                      onToggle={() =>
-                        setOpenSearchCityGroups((current) =>
-                          current.has(group.key) ? new Set() : new Set([group.key]),
-                        )
-                      }
-                    />
-                  ))}
+                <div className="deals-search-expanded">
+                  <div className="deals-search-expanded__results">
+                    {paginatedResultDeals.map((deal) => (
+                      <SearchResultCard
+                        combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
+                        key={`results-all-${deal.id}`}
+                        deal={deal}
+                        showCityLabel
+                      />
+                    ))}
+                  </div>
+                  <ResultsPagination
+                    onPageChange={setResultsPage}
+                    page={clampedResultsPage}
+                    pageCount={resultsPageCount}
+                    total={resultsSourceDeals.length}
+                  />
                 </div>
               )}
               </section>

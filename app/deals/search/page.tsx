@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
-import { getPublicDealsPageData } from "@/lib/ops";
+import { getPublicSearchDealsPageData } from "@/lib/ops";
 import { parseDealSearchFilters, parseDealSearchSort } from "@/lib/public-deals-search";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ type DealsSearchPageProps = {
 
 export default async function DealsSearchPage({ searchParams }: DealsSearchPageProps) {
   const [data, resolvedSearchParams] = await Promise.all([
-    getPublicDealsPageData(),
+    getPublicSearchDealsPageData(),
     searchParams,
   ]);
 

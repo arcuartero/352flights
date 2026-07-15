@@ -9,6 +9,7 @@ import path from "node:path";
 import { unstable_cache } from "next/cache";
 
 import { formatAirlineSummary, normalizeAirlineNames } from "@/lib/airline-summary";
+import { matchesDestinationSlug } from "@/lib/destination-slugs";
 import {
   buildEditorialSections,
   getPrimaryEditorialSection,
@@ -50,6 +51,7 @@ import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 const DEAL_AUTO_EXPIRE_DAYS = 4;
 const PUBLIC_FARE_LOOKBACK_DAYS = 14;
 const PUBLIC_FARES_PER_DESTINATION = 3;
+const PUBLIC_ALL_FARES_PER_DESTINATION = null;
 const PUBLIC_FARE_MIN_HISTORY_POINTS = 3;
 const PUBLIC_FARE_HISTORY_LIMIT = 45;
 const SUPABASE_READ_RETRY_DELAYS_MS = [200, 700] as const;
@@ -1854,6 +1856,9 @@ function isRenderablePublicDeal(deal: CampaignPreviewDeal) {
 function buildPublicFaresFromSnapshots(
   snapshots: SnapshotRow[],
   routeMap: ReturnType<typeof buildRouteMap>,
+  options?: {
+    maxFaresPerDestination?: number | null;
+  },
 ) {
   const snapshotsBySeries = new Map<string, SnapshotRow[]>();
 
@@ -1994,12 +1999,18 @@ function buildPublicFaresFromSnapshots(
     grouped.set(destinationKey, destinationFares);
   }
 
+  const maxFaresPerDestination =
+    options?.maxFaresPerDestination === undefined
+      ? PUBLIC_FARES_PER_DESTINATION
+      : options.maxFaresPerDestination;
+
   return [...grouped.values()]
-    .flatMap((destinationFares) =>
-      destinationFares
-        .sort(comparePublicDealsByPrice)
-        .slice(0, PUBLIC_FARES_PER_DESTINATION),
-    )
+    .flatMap((destinationFares) => {
+      const sortedDestinationFares = destinationFares.sort(comparePublicDealsByPrice);
+      return maxFaresPerDestination === null
+        ? sortedDestinationFares
+        : sortedDestinationFares.slice(0, maxFaresPerDestination);
+    })
     .sort(comparePublicDealsByPrice);
 }
 
@@ -3656,8 +3667,66 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
 }
 
 let lastSuccessfulPublicDealsPageData: PublicDealsPageData | null = null;
+const lastSuccessfulPublicCityDealsPageData = new Map<string, PublicDealsPageData>();
+
+function emptyPublicDealsPageData(input?: {
+  configured?: boolean;
+  schemaReady?: boolean;
+  onboardingMessage?: string | null;
+}): PublicDealsPageData {
+  return {
+    configured: input?.configured ?? true,
+    schemaReady: input?.schemaReady ?? false,
+    onboardingMessage: input?.onboardingMessage ?? null,
+    deals: [],
+    sections: [],
+    updatedAt: null,
+  };
+}
+
+function buildPublicDealsPageData(
+  routes: RouteRow[],
+  snapshots: SnapshotRow[],
+  options?: {
+    maxFaresPerDestination?: number | null;
+  },
+): PublicDealsPageData {
+  const deals = buildPublicFaresFromSnapshots(snapshots, buildRouteMap(routes), {
+    maxFaresPerDestination: options?.maxFaresPerDestination,
+  });
+  const updatedAt = deals.reduce<string | null>((latest, deal) => {
+    if (!deal.verifiedAt) return latest;
+    if (!latest) return deal.verifiedAt;
+    return new Date(deal.verifiedAt).getTime() > new Date(latest).getTime()
+      ? deal.verifiedAt
+      : latest;
+  }, null);
+
+  return {
+    configured: true,
+    schemaReady: true,
+    onboardingMessage: null,
+    deals,
+    sections: buildPublicDealsSections(deals),
+    updatedAt,
+  };
+}
 
 async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
+  return getPublicDealsBoardDataUncached({
+    maxFaresPerDestination: PUBLIC_FARES_PER_DESTINATION,
+  });
+}
+
+async function getPublicSearchDealsPageDataUncached(): Promise<PublicDealsPageData> {
+  return getPublicDealsBoardDataUncached({
+    maxFaresPerDestination: PUBLIC_ALL_FARES_PER_DESTINATION,
+  });
+}
+
+async function getPublicDealsBoardDataUncached(options: {
+  maxFaresPerDestination: number | null;
+}): Promise<PublicDealsPageData> {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return {
       configured: false,
@@ -3718,40 +3787,92 @@ async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
     };
   }
 
-  const routes = (routesQuery.data ?? []) as RouteRow[];
-  const routeMap = buildRouteMap(routes);
-  const deals = buildPublicFaresFromSnapshots(
+  return buildPublicDealsPageData(
+    (routesQuery.data ?? []) as RouteRow[],
     (publicSnapshotsQuery.data ?? []) as SnapshotRow[],
-    routeMap,
+    { maxFaresPerDestination: options.maxFaresPerDestination },
   );
-  const sections = buildPublicDealsSections(deals);
-  const updatedAt = deals.reduce<string | null>((latest, deal) => {
-    if (!deal.verifiedAt) {
-      return latest;
+}
+
+async function getPublicCityDealsPageDataUncached(citySlug: string): Promise<PublicDealsPageData> {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return emptyPublicDealsPageData({
+      configured: false,
+      onboardingMessage:
+        "Supabase is not configured yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env first.",
+    });
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const routesQuery = await readSupabaseWithRetry<RouteRow[]>(() =>
+    supabase
+      .from("scanned_routes")
+      .select(
+        "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
+      )
+      .eq("is_active", true),
+  );
+
+  if (routesQuery.error) {
+    const message = formatError(routesQuery.error);
+    if (!isMissingTableError(message)) {
+      throw new Error(`City fare routes could not be loaded: ${message}`);
     }
+    return emptyPublicDealsPageData({
+      schemaReady: false,
+      onboardingMessage:
+        "Supabase is reachable, but the latest tables are not created yet. Re-run supabase/schema.sql and then supabase/seed.sql in the SQL Editor.",
+    });
+  }
 
-    if (!latest) {
-      return deal.verifiedAt;
-    }
+  const routes = ((routesQuery.data ?? []) as RouteRow[]).filter((route) =>
+    matchesDestinationSlug(route.destination_city, citySlug),
+  );
+  if (routes.length === 0) {
+    return buildPublicDealsPageData([], [], {
+      maxFaresPerDestination: PUBLIC_ALL_FARES_PER_DESTINATION,
+    });
+  }
 
-    return new Date(deal.verifiedAt).getTime() > new Date(latest).getTime()
-      ? deal.verifiedAt
-      : latest;
-  }, null);
+  const cutoffIso = new Date(
+    Date.now() - PUBLIC_FARE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const todayKey = getLuxDateKey(new Date()) ?? new Date().toISOString().slice(0, 10);
+  const routeIds = routes.map((route) => route.id);
+  const snapshotsQuery = await fetchPagedSnapshots<SnapshotRow>((from, to) =>
+    supabase
+      .from("price_snapshots")
+      .select(
+        "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
+      )
+      .in("route_id", routeIds)
+      .gte("scanned_at", cutoffIso)
+      .gte("departure_date", todayKey)
+      .order("scanned_at", { ascending: false })
+      .range(from, to),
+  );
 
-  return {
-    configured: true,
-    schemaReady: true,
-    onboardingMessage: null,
-    deals,
-    sections,
-    updatedAt,
-  };
+  if (snapshotsQuery.error) {
+    throw new Error(`City fare snapshots could not be loaded: ${formatError(snapshotsQuery.error)}`);
+  }
+
+  return buildPublicDealsPageData(routes, (snapshotsQuery.data ?? []) as SnapshotRow[], {
+    maxFaresPerDestination: PUBLIC_ALL_FARES_PER_DESTINATION,
+  });
 }
 
 const getCachedPublicDealsPageData = unstable_cache(
   getPublicDealsPageDataUncached,
-  ["public-deals-page-data"],
+  ["public-deals-page-data-v2"],
+  {
+    revalidate: 60,
+    tags: ["public-deals"],
+  },
+);
+
+const getCachedPublicSearchDealsPageData = unstable_cache(
+  getPublicSearchDealsPageDataUncached,
+  ["public-search-deals-page-data-v1"],
   {
     revalidate: 60,
     tags: ["public-deals"],
@@ -3779,6 +3900,53 @@ export async function getPublicDealsPageData(): Promise<PublicDealsPageData> {
       sections: [],
       updatedAt: null,
     };
+  }
+}
+
+export async function getPublicSearchDealsPageData(): Promise<PublicDealsPageData> {
+  try {
+    const data = await getCachedPublicSearchDealsPageData();
+    if (data.configured && data.schemaReady) {
+      lastSuccessfulPublicDealsPageData = data;
+    }
+    return data;
+  } catch (error) {
+    console.error("[public-search-fares] Supabase read failed after retries.", error);
+    if (lastSuccessfulPublicDealsPageData) {
+      return lastSuccessfulPublicDealsPageData;
+    }
+
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: null,
+      deals: [],
+      sections: [],
+      updatedAt: null,
+    };
+  }
+}
+
+export async function getPublicCityDealsPageData(citySlug: string): Promise<PublicDealsPageData> {
+  const normalizedSlug = citySlug.trim().toLowerCase();
+  const getCachedCityData = unstable_cache(
+    () => getPublicCityDealsPageDataUncached(normalizedSlug),
+    ["public-city-deals-page-data-v2", normalizedSlug],
+    { revalidate: 60, tags: ["public-deals", `public-city-deals-${normalizedSlug}`] },
+  );
+
+  try {
+    const data = await getCachedCityData();
+    if (data.configured && data.schemaReady) {
+      lastSuccessfulPublicCityDealsPageData.set(normalizedSlug, data);
+    }
+    return data;
+  } catch (error) {
+    console.error(`[public-city-fares:${normalizedSlug}] Supabase read failed after retries.`, error);
+    return (
+      lastSuccessfulPublicCityDealsPageData.get(normalizedSlug) ??
+      emptyPublicDealsPageData()
+    );
   }
 }
 

@@ -6,7 +6,7 @@ import routes from "@/data/lux-routes.json";
 import { getDestinationContent, getDestinationTheme } from "@/lib/destination-content";
 import { matchesDestinationSlug, toDestinationSlug } from "@/lib/destination-slugs";
 import { getSiteUrl } from "@/lib/env";
-import { getPublicDealsPageData, type PublicDealsPageData } from "@/lib/ops";
+import { getPublicCityDealsPageData, type PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
   parseDealSearchFilters,
@@ -299,7 +299,7 @@ function CityInternalLinks({
 export default async function DealsCityPage({ params, searchParams }: DealsCityPageProps) {
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
-  const data = filterCityDealsPageData(await getPublicDealsPageData(), citySlug);
+  const data = filterCityDealsPageData(await getPublicCityDealsPageData(citySlug), citySlug);
   const cityName = data.deals[0]?.destinationCity ?? getCityNameFromSlug(citySlug);
   const jsonLd = buildCityJsonLd(cityName, citySlug, data.deals);
 
