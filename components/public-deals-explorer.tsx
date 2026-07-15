@@ -2841,18 +2841,9 @@ export function PublicDealsExplorer({
         });
       }
 
-      for (const chip of appliedQuickChips) {
-        chips.push({
-          key: `quick-${chip}`,
-          label: getChipTitle(chip, t),
-          onRemove: () => setDraftFilters((current) => resetQuickChip(chip, current)),
-        });
-      }
-
       return chips;
     },
     [
-      appliedQuickChips,
       coerceFiltersForMode,
       departureWeekdayOptions,
       destinationOptions,
