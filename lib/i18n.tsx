@@ -1059,7 +1059,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "deals.updatedAsDealsLand": "Actualizado cuando aparecen ofertas",
     "deals.selectedDestination": "Destino seleccionado",
     "deals.backToDestinations": "Volver a destinos",
-    "deals.liveFaresTitle": "Todas las tarifas en directo para {destination}.",
+    "deals.liveFaresTitle": "Tarifas en directo para {destination}.",
     "deals.liveFaresDesc": "Usa los mismos filtros para acotar por día, momento, presupuesto y tipo de viaje.",
     "deals.noFaresTitle": "Todavía no hay tarifas en directo para estos filtros.",
     "deals.noFaresDesc": "Prueba a ampliar presupuesto, fechas o el filtro de vuelos directos.",

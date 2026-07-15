@@ -906,6 +906,12 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-explorer__section-head h2 {
     max-width: 28ch;
   }
+
+  .page-shell--deals-city .deals-explorer__section-head h2,
+  .page-shell--deals-city .deals-explorer__featured h2 {
+    max-width: 24ch;
+    font-size: clamp(1.8rem, 2.6vw, 2.55rem);
+  }
 }
 
 .page-shell--deals-search .deals-explorer__section-head p,
