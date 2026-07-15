@@ -902,6 +902,12 @@ body:has(.page-shell--deals-city)::before {
   letter-spacing: -0.035em;
 }
 
+@media (min-width: 981px) {
+  .page-shell--deals-search .deals-explorer__section-head h2 {
+    max-width: 28ch;
+  }
+}
+
 .page-shell--deals-search .deals-explorer__section-head p,
 .page-shell--deals-city .deals-explorer__section-head p {
   max-width: 45rem;
