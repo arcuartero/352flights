@@ -2075,6 +2075,19 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   font-size: 1.1rem;
 }
 
+.deals-search-card__city-link {
+  color: var(--text-strong);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.deals-search-card__city-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
 .deals-search-card__meta-bar span,
 .deals-search-card__airline small,
 .deals-search-card__facts span,

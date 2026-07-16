@@ -2030,13 +2030,16 @@ function DealFlightCard({
   const resolvedPendingLabel = pendingLabel === "Skyscanner link pending" ? t("deals.skyscannerPending") : pendingLabel;
   const strongPrice = isStrongPriceDeal(deal);
   const cardClassName = `${className ?? "deals-search-card"}${strongPrice ? " deals-search-card--strong-price" : ""}`;
+  const destinationHref = buildDestinationDealsHref(deal.destinationCity);
 
   return (
     <article className={cardClassName}>
       <div className="deals-search-card__content">
         {showCityLabel ? (
           <div className="deals-search-card__meta-bar">
-            <strong>{deal.destinationCity}</strong>
+            <Link className="deals-search-card__city-link" href={destinationHref}>
+              {deal.destinationCity}
+            </Link>
           </div>
         ) : null}
 
