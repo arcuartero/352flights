@@ -306,6 +306,7 @@ const SEARCH_QUICK_CHIPS: QuickChip[] = [
 ];
 
 const RESULTS_PAGE_SIZE = 12;
+const STRONG_PRICE_VISUAL_RATIO = 0.8;
 
 const THEME_BY_DESTINATION: Record<string, ThemeFilter> = {
   agadir: "beach",
@@ -678,9 +679,15 @@ function formatSearchSavingsLabel(
 
   switch (deal.pricePosition) {
     case "exceptional":
+      if (isStrongPriceDeal(deal)) {
+        return t
+          ? t("deals.priceExceptional", { pct: belowPct })
+          : `Exceptional price · ${belowPct}% below usual`;
+      }
+
       return t
-        ? t("deals.priceExceptional", { pct: belowPct })
-        : `Exceptional price · ${belowPct}% below usual`;
+        ? t("deals.priceBelowUsual", { pct: belowPct })
+        : `Good price · ${belowPct}% below usual`;
     case "below_usual":
       return t
         ? t("deals.priceBelowUsual", { pct: belowPct })
@@ -698,7 +705,7 @@ function formatSearchSavingsLabel(
 }
 
 function isStrongPriceDeal(deal: CampaignPreviewDeal) {
-  return deal.pricePosition === "exceptional" || deal.pricePosition === "below_usual";
+  return deal.dropRatio !== null && deal.dropRatio <= STRONG_PRICE_VISUAL_RATIO;
 }
 
 function getDepartureWeekdayFilterValue(value: string | null): DepartureWeekdayFilter {
