@@ -1429,14 +1429,14 @@ body:has(.page-shell--deals-city)::before {
 
 .deals-city-internal-links__group:nth-child(2) h3::before {
   content: "☂";
-  background: #f1f8f4;
-  color: #2c6e49;
+  background: #eef4ff;
+  color: #1f5fd6;
 }
 
 .deals-city-internal-links__group:nth-child(3) h3::before {
   content: "☰";
-  background: #f8f0fb;
-  color: #7c3a8d;
+  background: #fff0ef;
+  color: #e1322c;
 }
 
 .deals-city-internal-links__group ul {
@@ -1473,17 +1473,17 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .deals-city-internal-links__group:nth-child(2) a {
-  border-color: rgba(44, 110, 73, 0.14);
-  background: #f5fbf7;
-  color: #2c6e49;
-  box-shadow: 0 8px 18px rgba(44, 110, 73, 0.05);
+  border-color: rgba(31, 95, 214, 0.14);
+  background: #f7faff;
+  color: #1f5fd6;
+  box-shadow: 0 8px 18px rgba(31, 95, 214, 0.05);
 }
 
 .deals-city-internal-links__group:nth-child(3) a {
-  border-color: rgba(124, 58, 141, 0.14);
-  background: #fcf7ff;
-  color: #7c3a8d;
-  box-shadow: 0 8px 18px rgba(124, 58, 141, 0.05);
+  border-color: rgba(225, 50, 44, 0.16);
+  background: #fff7f6;
+  color: #e1322c;
+  box-shadow: 0 8px 18px rgba(225, 50, 44, 0.05);
 }
 
 .deals-city-internal-links__group a:hover {
