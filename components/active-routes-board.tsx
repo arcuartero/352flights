@@ -53,26 +53,6 @@ type RuleDraft = {
   spansNextWeek: boolean;
 };
 
-const AUTO_RULE_DRAFTS: RuleDraft[] = [
-  { departureWeekday: "THU", returnWeekday: "SUN", spansNextWeek: false },
-  { departureWeekday: "THU", returnWeekday: "MON", spansNextWeek: true },
-  { departureWeekday: "THU", returnWeekday: "FRI", spansNextWeek: true },
-  { departureWeekday: "THU", returnWeekday: "SAT", spansNextWeek: true },
-  { departureWeekday: "THU", returnWeekday: "SUN", spansNextWeek: true },
-  { departureWeekday: "FRI", returnWeekday: "SUN", spansNextWeek: false },
-  { departureWeekday: "FRI", returnWeekday: "MON", spansNextWeek: true },
-  { departureWeekday: "FRI", returnWeekday: "FRI", spansNextWeek: true },
-  { departureWeekday: "FRI", returnWeekday: "SAT", spansNextWeek: true },
-  { departureWeekday: "FRI", returnWeekday: "SUN", spansNextWeek: true },
-  { departureWeekday: "SAT", returnWeekday: "MON", spansNextWeek: true },
-  { departureWeekday: "SAT", returnWeekday: "FRI", spansNextWeek: true },
-  { departureWeekday: "SAT", returnWeekday: "SAT", spansNextWeek: true },
-  { departureWeekday: "SAT", returnWeekday: "SUN", spansNextWeek: true },
-  { departureWeekday: "SUN", returnWeekday: "FRI", spansNextWeek: true },
-  { departureWeekday: "SUN", returnWeekday: "SAT", spansNextWeek: true },
-  { departureWeekday: "SUN", returnWeekday: "SUN", spansNextWeek: true },
-];
-
 const ACTIVE_ROUTE_COLUMN_DEFS = [
   { key: "route", width: 320, minWidth: 220 },
   { key: "bucket", width: 170, minWidth: 140 },
@@ -233,70 +213,6 @@ function parseRuleKey(patternKey: string, maxStops: string): ActiveRouteRule | n
     },
     maxStops,
   );
-}
-
-function buildAutomaticPatternKeysForMonth(
-  month: ActiveRouteMonthSummary,
-  nextMonth: ActiveRouteMonthSummary | null,
-  maxStops: string,
-  existingPatternKeys: string[],
-) {
-  const nextSelection = new Set(existingPatternKeys);
-  let addedCount = 0;
-  const monthWeekdays = new Set(month.departureWeekdays);
-  const nextMonthWeekdays = new Set(nextMonth?.departureWeekdays ?? []);
-
-  for (const draft of AUTO_RULE_DRAFTS) {
-    const rule = buildRuleFromDraft(draft, maxStops);
-    if (!rule || nextSelection.has(rule.key)) {
-      continue;
-    }
-
-    const hasDepartureWeekday = monthWeekdays.has(draft.departureWeekday);
-    const hasReturnWeekday = draft.spansNextWeek
-      ? monthWeekdays.has(draft.returnWeekday) || nextMonthWeekdays.has(draft.returnWeekday)
-      : monthWeekdays.has(draft.returnWeekday);
-
-    if (!hasDepartureWeekday || !hasReturnWeekday) {
-      continue;
-    }
-
-    nextSelection.add(rule.key);
-    addedCount += 1;
-  }
-
-  return {
-    patternKeys: Array.from(nextSelection),
-    addedCount,
-  };
-}
-
-function buildAutomaticSelectionsForRoute(
-  route: ActiveRouteSummary,
-  currentSelection?: PlannerSelectionState,
-) {
-  let monthsUpdated = 0;
-  let rulesAdded = 0;
-  const months = route.months.map((month, index) => {
-    const existingPatternKeys = currentSelection?.[month.monthStart] ?? month.activePatternKeys;
-    const generated = buildAutomaticPatternKeysForMonth(
-      month,
-      route.months[index + 1] ?? null,
-      route.maxStops,
-      existingPatternKeys,
-    );
-    if (generated.addedCount > 0) {
-      monthsUpdated += 1;
-      rulesAdded += generated.addedCount;
-    }
-
-    return {
-      monthStart: month.monthStart,
-      patternKeys: generated.patternKeys,
-    };
-  });
-
-  return { months, monthsUpdated, rulesAdded };
 }
 
 function nextSortDirection(
@@ -1227,10 +1143,9 @@ function RoutePlannerModal({
 
     startTransition(async () => {
       try {
-        await createAutomaticRoutePlannerRulesAction({
+        const generated = await createAutomaticRoutePlannerRulesAction({
           routeId: route.id,
         });
-        const generated = buildAutomaticSelectionsForRoute(route);
         const nextSelection: PlannerSelectionState = Object.fromEntries(
           generated.months.map((month) => [month.monthStart, month.patternKeys]),
         );
@@ -1245,6 +1160,7 @@ function RoutePlannerModal({
             title: "Create rules found nothing new",
             detail: `${route.label} · ${message}`,
           });
+          router.refresh();
           return;
         }
 
@@ -1782,17 +1698,8 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
     setBulkError(null);
     startBulkTransition(async () => {
       try {
-        await createAutomaticRoutePlannerRulesForRoutesAction({
+        const generatedPayload = await createAutomaticRoutePlannerRulesForRoutesAction({
           routeIds: sortedRoutes.map((route) => route.id),
-        });
-        const generatedPayload = sortedRoutes.map((route) => {
-          const generated = buildAutomaticSelectionsForRoute(route);
-          return {
-            routeId: route.id,
-            months: generated.months,
-            monthsUpdated: generated.monthsUpdated,
-            rulesAdded: generated.rulesAdded,
-          };
         });
         const routesUpdated = generatedPayload.filter((route) => route.rulesAdded > 0).length;
         const rulesAdded = generatedPayload.reduce((total, route) => total + route.rulesAdded, 0);
@@ -1809,6 +1716,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
             title: "Global create rules found nothing",
             detail: message,
           });
+          router.refresh();
           return;
         }
 
