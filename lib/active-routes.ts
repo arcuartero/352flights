@@ -91,6 +91,22 @@ type LatestPatternDiscoveryRouteState = {
 };
 
 const WEEKDAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+const DEFAULT_ROUTE_PLANNER_MONTH_COUNT = 9;
+const WEEKEND_FALLBACK_PATTERN_KEYS = [
+  "thu-sun",
+  "thu-next-mon",
+  "fri-sun",
+  "fri-next-mon",
+  "sat-next-mon",
+] as const;
+const LONG_STAY_FALLBACK_PATTERN_KEYS = [
+  "thu-next-sun",
+  "fri-next-fri",
+  "fri-next-sun",
+  "sat-next-sat",
+  "sat-next-sun",
+  "sun-next-sun",
+] as const;
 
 function parsePatternKey(patternKey: string) {
   const match = patternKey
@@ -226,6 +242,52 @@ function buildAutomaticPatternKeysForMonth(
     }
 
     nextSelection.add(rule.key);
+    addedCount += 1;
+  }
+
+  return {
+    patternKeys: Array.from(nextSelection).sort(),
+    addedCount,
+  };
+}
+
+function normalizeWeekdayCodes(values: string[]) {
+  return values
+    .map((value) => value.trim().toUpperCase())
+    .filter((value): value is (typeof WEEKDAY_ORDER)[number] =>
+      WEEKDAY_ORDER.includes(value as (typeof WEEKDAY_ORDER)[number]),
+    );
+}
+
+function fallbackPatternKeysForBuckets(buckets: Array<string | null | undefined>, maxStops: string) {
+  const normalizedBuckets = new Set(
+    buckets.map((bucket) => normalizeStayBucket(bucket)).filter(Boolean),
+  );
+  const keys = [
+    ...(normalizedBuckets.has("weekend") || normalizedBuckets.size === 0
+      ? WEEKEND_FALLBACK_PATTERN_KEYS
+      : []),
+    ...(normalizedBuckets.has("long_stay") ? LONG_STAY_FALLBACK_PATTERN_KEYS : []),
+  ];
+
+  return Array.from(
+    new Set(
+      keys
+        .filter((key) => buildManualRuleRecordFromKey(key, maxStops) !== null),
+    ),
+  ).sort();
+}
+
+function mergePatternKeys(existingPatternKeys: string[], addedPatternKeys: string[]) {
+  const nextSelection = new Set(existingPatternKeys);
+  let addedCount = 0;
+
+  for (const patternKey of addedPatternKeys) {
+    if (nextSelection.has(patternKey)) {
+      continue;
+    }
+
+    nextSelection.add(patternKey);
     addedCount += 1;
   }
 
@@ -548,7 +610,7 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
   }
 
   const supabase = getSupabaseAdminClient();
-  const defaultMonths = monthStartList(9);
+  const defaultMonths = monthStartList(DEFAULT_ROUTE_PLANNER_MONTH_COUNT);
 
   const [currentCatalogKeys, latestDiscoveryStates, routesQuery, serviceMonthsQuery, changeEventsQuery] = await Promise.all([
     readCurrentCatalogRouteKeys(),
@@ -1081,7 +1143,7 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
 
   const routeQuery = await supabase
     .from("scanned_routes")
-    .select("id,origin_airport,destination_airport,max_stops")
+    .select("id,origin_airport,destination_airport,max_stops,bucket")
     .eq("id", routeId)
     .maybeSingle();
 
@@ -1095,7 +1157,7 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
   const route = routeQuery.data;
   const groupedRoutesQuery = await supabase
     .from("scanned_routes")
-    .select("id,max_stops")
+    .select("id,max_stops,bucket")
     .eq("origin_airport", route.origin_airport)
     .eq("destination_airport", route.destination_airport)
     .eq("max_stops", route.max_stops);
@@ -1106,7 +1168,7 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
 
   const targetRoutes = (groupedRoutesQuery.data ?? []).length > 0
     ? groupedRoutesQuery.data
-    : [{ id: route.id, max_stops: route.max_stops }];
+    : [{ id: route.id, max_stops: route.max_stops, bucket: route.bucket }];
   const targetRouteIds = targetRoutes.map((targetRoute) => targetRoute.id);
 
   const [serviceMonthsQuery, searchRulesQuery] = await Promise.all([
@@ -1133,9 +1195,16 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
 
   const serviceMonths = serviceMonthsQuery.data ?? [];
   const searchRules = searchRulesQuery.data ?? [];
+  const fallbackPatternKeys = fallbackPatternKeysForBuckets(
+    targetRoutes.map((targetRoute) => targetRoute.bucket),
+    route.max_stops,
+  );
   const monthStarts = sortMonthStarts([
     ...serviceMonths.map((month) => month.month_start),
     ...searchRules.map((rule) => rule.month_start),
+    ...(serviceMonths.length === 0 && searchRules.length === 0
+      ? monthStartList(DEFAULT_ROUTE_PLANNER_MONTH_COUNT)
+      : []),
   ]);
 
   if (monthStarts.length === 0) {
@@ -1151,20 +1220,20 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
   let rulesAdded = 0;
   const months = monthStarts.map((monthStart) => {
     const nextMonthStart = nextMonthStartValue(monthStart);
-    const monthWeekdays = Array.from(
+    const monthWeekdays = normalizeWeekdayCodes(Array.from(
       new Set(
         serviceMonths
           .filter((month) => month.month_start === monthStart)
           .flatMap((month) => month.departure_weekdays ?? []),
       ),
-    ).sort();
-    const nextMonthWeekdays = Array.from(
+    )).sort();
+    const nextMonthWeekdays = normalizeWeekdayCodes(Array.from(
       new Set(
         serviceMonths
           .filter((month) => month.month_start === nextMonthStart)
           .flatMap((month) => month.departure_weekdays ?? []),
       ),
-    ).sort();
+    )).sort();
     const existingPatternKeys = Array.from(
       new Set(
         searchRules
@@ -1173,12 +1242,15 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
       ),
     ).sort();
 
-    const generated = buildAutomaticPatternKeysForMonth(
-      monthWeekdays,
-      nextMonthWeekdays,
-      route.max_stops,
-      existingPatternKeys,
-    );
+    const generated =
+      monthWeekdays.length === 0
+        ? mergePatternKeys(existingPatternKeys, fallbackPatternKeys)
+        : buildAutomaticPatternKeysForMonth(
+            monthWeekdays,
+            nextMonthWeekdays,
+            route.max_stops,
+            existingPatternKeys,
+          );
 
     if (generated.addedCount > 0) {
       monthsUpdated += 1;
