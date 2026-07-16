@@ -2177,49 +2177,37 @@ function SearchResultCard({
   );
 }
 
-function ResultsPagination({
-  page,
-  pageCount,
+function ResultsLoadMore({
   total,
-  onPageChange,
+  visibleCount,
+  onLoadMore,
 }: {
-  page: number;
-  pageCount: number;
   total: number;
-  onPageChange: (page: number) => void;
+  visibleCount: number;
+  onLoadMore: () => void;
 }) {
-  if (pageCount <= 1) {
+  if (total <= RESULTS_PAGE_SIZE) {
     return null;
   }
 
-  const start = (page - 1) * RESULTS_PAGE_SIZE + 1;
-  const end = Math.min(total, page * RESULTS_PAGE_SIZE);
+  const end = Math.min(total, visibleCount);
+  const hasMore = end < total;
 
   return (
-    <nav className="deals-results-pagination" aria-label="Fare results pagination">
+    <div className="deals-results-pagination" aria-label="Fare results">
       <p>
-        Showing {start}-{end} of {total}
+        Mostrando {end} de {total}
       </p>
-      <div className="deals-results-pagination__controls">
+      {hasMore ? (
         <button
-          disabled={page <= 1}
-          onClick={() => onPageChange(Math.max(1, page - 1))}
+          className="deals-results-pagination__load-more"
+          onClick={onLoadMore}
           type="button"
         >
-          Previous
+          Mostrar más
         </button>
-        <span>
-          Page {page} of {pageCount}
-        </span>
-        <button
-          disabled={page >= pageCount}
-          onClick={() => onPageChange(Math.min(pageCount, page + 1))}
-          type="button"
-        >
-          Next
-        </button>
-      </div>
-    </nav>
+      ) : null}
+    </div>
   );
 }
 
@@ -2619,9 +2607,10 @@ export function PublicDealsExplorer({
   const resultsSourceDeals = selectedSearchGroup?.deals ?? opportunityDeals;
   const resultsPageCount = Math.max(1, Math.ceil(resultsSourceDeals.length / RESULTS_PAGE_SIZE));
   const clampedResultsPage = Math.min(resultsPage, resultsPageCount);
+  const visibleResultsCount = Math.min(resultsSourceDeals.length, clampedResultsPage * RESULTS_PAGE_SIZE);
   const paginatedResultDeals = resultsSourceDeals.slice(
-    (clampedResultsPage - 1) * RESULTS_PAGE_SIZE,
-    clampedResultsPage * RESULTS_PAGE_SIZE,
+    0,
+    visibleResultsCount,
   );
   const selectedOpportunityDeal =
     selectedOpportunityDeals.find((deal) => deal.id === selectedOpportunityDealId) ?? null;
@@ -3493,11 +3482,12 @@ export function PublicDealsExplorer({
                           />
                         ))}
                       </div>
-                      <ResultsPagination
-                        onPageChange={setResultsPage}
-                        page={clampedResultsPage}
-                        pageCount={resultsPageCount}
+                      <ResultsLoadMore
+                        onLoadMore={() =>
+                          setResultsPage((current) => Math.min(resultsPageCount, current + 1))
+                        }
                         total={resultsSourceDeals.length}
+                        visibleCount={visibleResultsCount}
                       />
                     </div>
                   ) : null}
@@ -3706,11 +3696,12 @@ export function PublicDealsExplorer({
                       />
                     ))}
                   </div>
-                  <ResultsPagination
-                    onPageChange={setResultsPage}
-                    page={clampedResultsPage}
-                    pageCount={resultsPageCount}
+                  <ResultsLoadMore
+                    onLoadMore={() =>
+                      setResultsPage((current) => Math.min(resultsPageCount, current + 1))
+                    }
                     total={resultsSourceDeals.length}
+                    visibleCount={visibleResultsCount}
                   />
                 </div>
               ) : (
@@ -3725,11 +3716,12 @@ export function PublicDealsExplorer({
                       />
                     ))}
                   </div>
-                  <ResultsPagination
-                    onPageChange={setResultsPage}
-                    page={clampedResultsPage}
-                    pageCount={resultsPageCount}
+                  <ResultsLoadMore
+                    onLoadMore={() =>
+                      setResultsPage((current) => Math.min(resultsPageCount, current + 1))
+                    }
                     total={resultsSourceDeals.length}
+                    visibleCount={visibleResultsCount}
                   />
                 </div>
               )}

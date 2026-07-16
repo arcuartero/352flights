@@ -1032,11 +1032,17 @@ body:has(.page-shell--deals-city)::before {
   background: #ffffff;
 }
 
-.page-shell--deals-search .deals-results-pagination__controls button,
-.page-shell--deals-city .deals-results-pagination__controls button {
-  border-color: rgba(29, 39, 51, 0.16);
-  background: #f7fbff;
-  color: var(--v2-ink);
+.page-shell--deals-search .deals-results-pagination__load-more,
+.page-shell--deals-city .deals-results-pagination__load-more {
+  border-color: rgba(225, 50, 44, 0.18);
+  background: var(--v2-accent);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(225, 50, 44, 0.18);
+}
+
+.page-shell--deals-search .deals-results-pagination__load-more:hover,
+.page-shell--deals-city .deals-results-pagination__load-more:hover {
+  background: var(--v2-accent-deep);
 }
 
 .page-shell--deals-search .deals-search-card__cta,

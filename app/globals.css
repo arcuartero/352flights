@@ -2315,6 +2315,17 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   font-weight: 700;
 }
 
+.deals-results-pagination__load-more {
+  min-height: 2.75rem;
+  padding: 0 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 84%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--text-strong);
+  font-weight: 750;
+  cursor: pointer;
+}
+
 .deals-search-card__cta,
 .deals-search-card__pending {
   display: inline-flex;
