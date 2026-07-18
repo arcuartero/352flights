@@ -668,6 +668,8 @@ function applyFailureReasons(
 
 function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTotals {
   const totals: LocalScannerRunTotals = {
+    routesStarted: 0,
+    patternsStarted: 0,
     found: 0,
     noResults: 0,
     timedOut: 0,
@@ -678,6 +680,12 @@ function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTota
 
   for (const logLine of logLines) {
     switch (logLine.label) {
+      case "Route":
+        totals.routesStarted += 1;
+        break;
+      case "Pattern":
+        totals.patternsStarted += 1;
+        break;
       case "Found":
         totals.found += 1;
         break;

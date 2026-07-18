@@ -170,7 +170,9 @@ function logToneClassName(logLine: LocalScannerLogLine) {
 
 function buildLiveTotals(totals: LocalScannerRunTotals) {
   return [
-    { label: "Found", value: totals.found, tone: "is-success" },
+    { label: "Routes", value: totals.routesStarted, tone: "is-progress" },
+    { label: "Patterns", value: totals.patternsStarted, tone: "is-progress" },
+    { label: "Found prices", value: totals.found, tone: "is-success" },
     { label: "No results", value: totals.noResults, tone: "is-muted" },
     { label: "Timed out", value: totals.timedOut, tone: "is-error" },
     { label: "Net / DNS", value: totals.networkOutages, tone: "is-error" },

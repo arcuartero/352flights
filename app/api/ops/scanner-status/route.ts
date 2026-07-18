@@ -435,6 +435,8 @@ function sliceLatestVpsRunEvents(events: VpsJournalEvent[], running: boolean, st
 function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTotals {
   return logLines.reduce<LocalScannerRunTotals>(
     (totals, line) => {
+      if (line.label === "Route") totals.routesStarted += 1;
+      if (line.label === "Pattern") totals.patternsStarted += 1;
       if (line.label === "Found") totals.found += 1;
       if (line.label === "No results") totals.noResults += 1;
       if (line.label === "Timed out") totals.timedOut += 1;
@@ -443,7 +445,16 @@ function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTota
       if (line.label === "Retry") totals.retries += 1;
       return totals;
     },
-    { found: 0, noResults: 0, timedOut: 0, networkOutages: 0, hardErrors: 0, retries: 0 },
+    {
+      routesStarted: 0,
+      patternsStarted: 0,
+      found: 0,
+      noResults: 0,
+      timedOut: 0,
+      networkOutages: 0,
+      hardErrors: 0,
+      retries: 0,
+    },
   );
 }
 

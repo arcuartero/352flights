@@ -54,6 +54,8 @@ export type LocalScannerLogLine = {
 };
 
 export type LocalScannerRunTotals = {
+  routesStarted: number;
+  patternsStarted: number;
   found: number;
   noResults: number;
   timedOut: number;
