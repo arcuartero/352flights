@@ -160,7 +160,13 @@ function isAbortLikeError(error: unknown) {
 }
 
 function shouldIgnoreFetchUrl(url: string) {
-  return url.startsWith("https://en.wikipedia.org/api/rest_v1/page/summary/");
+  const path = normalizePath(url);
+
+  return (
+    url.startsWith("https://en.wikipedia.org/api/rest_v1/page/summary/") ||
+    path === "/api/ops/scanner-status" ||
+    path === "/api/ops/pattern-discovery-status"
+  );
 }
 
 function stripHtmlTags(value: string) {
