@@ -2270,6 +2270,14 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   line-height: 1.2;
 }
 
+.deals-search-card__usual-note {
+  max-width: 16rem;
+  margin: -0.25rem 0 0;
+  color: color-mix(in srgb, var(--muted) 90%, var(--text-strong) 10%);
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
 .deals-search-card__saving.is-positive {
   color: color-mix(in srgb, #35b96f 88%, #0f5132 12%);
   font-weight: 750;

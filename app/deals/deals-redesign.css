@@ -996,6 +996,16 @@ body:has(.page-shell--deals-city)::before {
   line-height: 1;
 }
 
+.page-shell--deals-search .deals-search-card__timeline,
+.page-shell--deals-city .deals-search-card__timeline {
+  grid-template-columns: minmax(0, 1fr) minmax(5rem, 6.5rem) minmax(0, 1fr);
+}
+
+.page-shell--deals-search .deals-search-card__timepoint,
+.page-shell--deals-city .deals-search-card__timepoint {
+  min-width: 0;
+}
+
 .page-shell--deals-search .deals-search-card--strong-price,
 .page-shell--deals-city .deals-search-card--strong-price {
   border-color: rgba(29, 39, 51, 0.12);
@@ -1309,6 +1319,14 @@ body:has(.page-shell--deals-city)::before {
     line-clamp: 2;
     font-size: 0.78rem;
     overflow-wrap: anywhere;
+  }
+
+  .page-shell--deals-search .deals-search-card__usual-note,
+  .page-shell--deals-city .deals-search-card__usual-note {
+    grid-column: 1 / -1;
+    max-width: none;
+    margin: -0.25rem 0 0;
+    font-size: 0.7rem;
   }
 
   .page-shell--deals-search .deals-search-card__cta,

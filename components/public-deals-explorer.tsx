@@ -27,6 +27,7 @@ import {
   type BudgetFilter,
   type DealSearchSort,
   type DepartureWeekdayFilter,
+  type DurationFilter,
   type DealSearchFilters,
   type ThemeFilter,
   type TripFilter,
@@ -271,6 +272,8 @@ const DEPARTURE_WEEKDAY_OPTIONS: SelectOption[] = [
   { value: "saturday", label: "Saturday" },
   { value: "sunday", label: "Sunday" },
 ];
+
+const DURATION_FILTER_VALUES: Exclude<DurationFilter, "any">[] = ["1", "2", "3", "4_plus"];
 
 const DEAL_SORT_OPTIONS: SelectOption[] = [
   { value: "price_asc", label: "Price: lowest first" },
@@ -676,36 +679,66 @@ function formatSearchSavingsLabel(
 ) {
   const belowPct = Math.max(0, Math.round((1 - (deal.dropRatio ?? 1)) * 100));
   const abovePct = Math.max(0, Math.round(((deal.dropRatio ?? 1) - 1) * 100));
+  const usualPrice = deal.baselinePrice !== null ? formatCurrency(deal.baselinePrice) : "";
+  const usualSuffix = usualPrice ? ` (${usualPrice})` : "";
 
   switch (deal.pricePosition) {
     case "exceptional":
       if (isStrongPriceDeal(deal)) {
         return t
-          ? t("deals.priceExceptional", { pct: belowPct })
-          : `Exceptional price · ${belowPct}% below usual`;
+          ? t("deals.priceExceptional", { pct: belowPct, usualSuffix })
+          : `Exceptional price · ${belowPct}% below usual${usualSuffix}`;
       }
 
       return t
-        ? t("deals.priceBelowUsual", { pct: belowPct })
-        : `Good price · ${belowPct}% below usual`;
+        ? t("deals.priceBelowUsual", { pct: belowPct, usualSuffix })
+        : `Good price · ${belowPct}% below usual${usualSuffix}`;
     case "below_usual":
       return t
-        ? t("deals.priceBelowUsual", { pct: belowPct })
-        : `Good price · ${belowPct}% below usual`;
+        ? t("deals.priceBelowUsual", { pct: belowPct, usualSuffix })
+        : `Good price · ${belowPct}% below usual${usualSuffix}`;
     case "typical":
-      return t ? t("deals.priceTypical") : "Around the usual price";
+      return t
+        ? t("deals.priceTypical", { usualSuffix })
+        : `Around the usual price${usualSuffix}`;
     case "above_usual":
       return t
-        ? t("deals.priceAboveUsual", { pct: abovePct })
-        : `${abovePct}% above the usual price`;
+        ? t("deals.priceAboveUsual", { pct: abovePct, usualSuffix })
+        : `${abovePct}% above the usual price${usualSuffix}`;
     case "new_price":
     default:
       return t ? t("deals.priceNew") : "Fresh fare · building price history";
   }
 }
 
+function formatUsualPriceExplanation(deal: CampaignPreviewDeal, t?: Translate) {
+  if (deal.baselinePrice === null) {
+    return null;
+  }
+
+  return t
+    ? t("deals.usualPriceExplanation", {
+        count: deal.historyPoints,
+        destination: deal.destinationCity,
+      })
+    : `Usual means the median of ${deal.historyPoints} recent fares to ${deal.destinationCity} with the same weekdays and trip length.`;
+}
+
 function isStrongPriceDeal(deal: CampaignPreviewDeal) {
   return deal.dropRatio !== null && deal.dropRatio <= STRONG_PRICE_VISUAL_RATIO;
+}
+
+function getStayDurationDays(deal: CampaignPreviewDeal) {
+  if (deal.destinationStayHours !== null) {
+    return Math.max(1, Math.floor(deal.destinationStayHours / 24));
+  }
+
+  return Math.max(1, deal.tripNights);
+}
+
+function getDurationFilterValue(deal: CampaignPreviewDeal): Exclude<DurationFilter, "any"> {
+  const days = getStayDurationDays(deal);
+  return days >= 4 ? "4_plus" : String(days) as Exclude<DurationFilter, "any">;
 }
 
 function getDepartureWeekdayFilterValue(value: string | null): DepartureWeekdayFilter {
@@ -1428,6 +1461,14 @@ function matchesBudgetFilter(deal: CampaignPreviewDeal, budgetFilter: BudgetFilt
   return deal.dealPrice <= Number(budgetFilter);
 }
 
+function matchesDurationFilter(deal: CampaignPreviewDeal, durationFilter: DurationFilter) {
+  if (durationFilter === "any") {
+    return true;
+  }
+
+  return getDurationFilterValue(deal) === durationFilter;
+}
+
 function matchesDealSearchFilters(
   deal: CampaignPreviewDeal,
   filters: DealSearchFilters,
@@ -1446,6 +1487,10 @@ function matchesDealSearchFilters(
   }
 
   if (!matchesBudgetFilter(deal, filters.budgetFilter)) {
+    return false;
+  }
+
+  if (!matchesDurationFilter(deal, filters.durationFilter)) {
     return false;
   }
 
@@ -1490,7 +1535,8 @@ function areDealSearchFiltersEqual(left: DealSearchFilters, right: DealSearchFil
     left.directOnly === right.directOnly &&
     left.themeFilter === right.themeFilter &&
     left.destinationFilter === right.destinationFilter &&
-    left.departureWeekdayFilter === right.departureWeekdayFilter
+    left.departureWeekdayFilter === right.departureWeekdayFilter &&
+    left.durationFilter === right.durationFilter
   );
 }
 
@@ -1616,6 +1662,33 @@ function buildDestinationOptions(
       ),
     },
     ...cityOptions,
+  ];
+}
+
+function buildDurationOptions(
+  deals: CampaignPreviewDeal[],
+  filters: DealSearchFilters,
+  now: Date,
+  t: Translate,
+) {
+  const filtersWithoutDuration = { ...filters, durationFilter: "any" as DurationFilter };
+  const availableValues = new Set(
+    deals
+      .filter((deal) => matchesDealSearchFilters(deal, filtersWithoutDuration, now))
+      .map((deal) => getDurationFilterValue(deal)),
+  );
+
+  return [
+    {
+      value: "any",
+      label: t("deals.duration.any"),
+    },
+    ...DURATION_FILTER_VALUES
+      .filter((value) => availableValues.has(value))
+      .map((value) => ({
+        value,
+        label: t(`deals.duration.${value}`),
+      })),
   ];
 }
 
@@ -2018,6 +2091,7 @@ function DealFlightCard({
 }) {
   const { t } = useI18n();
   const savingsLabel = formatSearchSavingsLabel(deal, t);
+  const usualPriceExplanation = formatUsualPriceExplanation(deal, t);
   const outboundDuration = formatFlightDuration(
     deal.outboundDepartureAt,
     deal.outboundArrivalAt,
@@ -2146,6 +2220,9 @@ function DealFlightCard({
         <aside className="deals-search-card__booking">
           <strong className="deals-search-card__price">{formatCurrency(deal.dealPrice)}</strong>
           <p className={`deals-search-card__saving${strongPrice ? " is-positive" : " is-neutral"}`}>{savingsLabel}</p>
+          {usualPriceExplanation ? (
+            <p className="deals-search-card__usual-note">{usualPriceExplanation}</p>
+          ) : null}
           {ctaHref ? (
             ctaExternal ? (
               <a className="deals-search-card__cta" href={ctaHref} rel="noreferrer" target="_blank">
@@ -2773,6 +2850,10 @@ export function PublicDealsExplorer({
       })).map((option) => ({ ...option, label: t(`deals.trip.${option.value}`) })),
     [data.deals, draftFilters, now, t],
   );
+  const resultsDurationOptions = useMemo<SelectOption[]>(
+    () => buildDurationOptions(data.deals, draftFilters, now, t),
+    [data.deals, draftFilters, now, t],
+  );
   const resultsBudgetOptions = useMemo<SelectOption[]>(
     () =>
       buildAvailabilityOptions(BUDGET_OPTIONS, data.deals, draftFilters, now, (value) => ({
@@ -2824,6 +2905,14 @@ export function PublicDealsExplorer({
         });
       }
 
+      if (effectiveFilters.durationFilter !== "any") {
+        chips.push({
+          key: "duration",
+          label: findOptionLabel(resultsDurationOptions, effectiveFilters.durationFilter),
+          onRemove: () => setDraftFilters((current) => ({ ...current, durationFilter: "any" })),
+        });
+      }
+
       if (effectiveFilters.budgetFilter !== "any") {
         chips.push({
           key: "budget",
@@ -2849,6 +2938,7 @@ export function PublicDealsExplorer({
       effectiveFilters,
       lockedDestinationFilter,
       resultsBudgetOptions,
+      resultsDurationOptions,
       resultsTripOptions,
       resultsWhenOptions,
       t,
@@ -2867,6 +2957,17 @@ export function PublicDealsExplorer({
       ),
     [data.deals, draftFilters, now],
   );
+
+  useEffect(() => {
+    if (
+      draftFilters.durationFilter === "any" ||
+      resultsDurationOptions.some((option) => option.value === draftFilters.durationFilter)
+    ) {
+      return;
+    }
+
+    setDraftFilters((current) => ({ ...current, durationFilter: "any" }));
+  }, [draftFilters.durationFilter, resultsDurationOptions]);
 
   const searchHref = buildDealsHrefForMode(draftFilters);
 
@@ -3378,6 +3479,18 @@ export function PublicDealsExplorer({
                     />
 
                     <DealsSelect
+                      label={t("deals.tripDuration")}
+                      onChange={(nextValue) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          durationFilter: nextValue as DurationFilter,
+                        }))
+                      }
+                      options={resultsDurationOptions}
+                      value={draftFilters.durationFilter}
+                    />
+
+                    <DealsSelect
                       label={t("common.budgetMax")}
                       onChange={(nextValue) =>
                         setDraftFilters((current) => ({
@@ -3565,6 +3678,18 @@ export function PublicDealsExplorer({
                   }
                   options={resultsTripOptions}
                   value={draftFilters.tripFilter}
+                />
+
+                <DealsSelect
+                  label={t("deals.tripDuration")}
+                  onChange={(nextValue) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      durationFilter: nextValue as DurationFilter,
+                    }))
+                  }
+                  options={resultsDurationOptions}
+                  value={draftFilters.durationFilter}
                 />
 
                 <DealsSelect
