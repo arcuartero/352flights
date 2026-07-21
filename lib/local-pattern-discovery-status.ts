@@ -9,13 +9,246 @@ import type {
   LocalPatternDiscoveryRunTotals,
   LocalPatternDiscoveryStatus,
 } from "@/lib/local-pattern-discovery-status-shared";
+import { hasSupabaseAdminEnv } from "@/lib/env";
 import { resolveScannerRoot } from "@/lib/local-scanner-status";
+import { getSupabaseAdminClient } from "@/lib/supabase";
 
 type LogEvent = {
   timestampMs: number;
   timestampIso: string;
   message: string;
 };
+
+type RemoteRouteRow = {
+  id: string;
+  origin_airport: string;
+  destination_airport: string;
+  destination_city: string;
+};
+
+type RemoteServiceMonthRow = {
+  route_id: string;
+  month_start: string;
+  routing: string;
+  departure_dates: string[] | null;
+  departure_weekdays: string[] | null;
+  sample_size: number | null;
+  last_checked_at: string;
+};
+
+type RemoteServiceChangeRow = {
+  id: string;
+  route_id: string;
+  summary: string;
+  detected_at: string;
+};
+
+type RemoteRouteSummary = {
+  key: string;
+  routeId: string;
+  routing: string;
+  latestCheckedAt: string;
+  latestCheckedMs: number;
+  monthStarts: Set<string>;
+  departureWeekdays: Set<string>;
+  departureCount: number;
+};
+
+function unavailableStatus(): LocalPatternDiscoveryStatus {
+  return {
+    source: "unavailable",
+    available: false,
+    running: false,
+    totalRoutes: null,
+    startedRoutes: null,
+    remainingRoutes: null,
+    startedAt: null,
+    latestFinishedAt: null,
+    latestFailedAt: null,
+    currentRouteLabel: null,
+    latestActivity: null,
+    recentLogLines: [],
+    liveTotals: null,
+  };
+}
+
+function timestampMs(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function remoteRouteLabel(route: RemoteRouteRow | undefined) {
+  if (!route) {
+    return "Unknown route";
+  }
+
+  return `${route.origin_airport} -> ${route.destination_airport} (${route.destination_city})`;
+}
+
+async function getSupabasePatternDiscoveryStatus() {
+  if (!hasSupabaseAdminEnv()) {
+    return null;
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const [routesResult, serviceMonthsResult, changeEventsResult] = await Promise.all([
+    supabase
+      .from("scanned_routes")
+      .select("id, origin_airport, destination_airport, destination_city")
+      .eq("is_active", true)
+      .order("destination_airport", { ascending: true })
+      .limit(1000),
+    supabase
+      .from("route_service_months")
+      .select(
+        "route_id, month_start, routing, departure_dates, departure_weekdays, sample_size, last_checked_at",
+      )
+      .order("last_checked_at", { ascending: false })
+      .limit(1000),
+    supabase
+      .from("route_service_change_events")
+      .select("id, route_id, summary, detected_at")
+      .order("detected_at", { ascending: false })
+      .limit(80),
+  ]);
+
+  if (routesResult.error) {
+    throw routesResult.error;
+  }
+  if (serviceMonthsResult.error) {
+    throw serviceMonthsResult.error;
+  }
+  if (changeEventsResult.error) {
+    throw changeEventsResult.error;
+  }
+
+  const routes = (routesResult.data ?? []) as RemoteRouteRow[];
+  const serviceMonths = (serviceMonthsResult.data ?? []) as RemoteServiceMonthRow[];
+  const changeEvents = (changeEventsResult.data ?? []) as RemoteServiceChangeRow[];
+  const routesById = new Map(routes.map((route) => [route.id, route]));
+  const summariesByKey = new Map<string, RemoteRouteSummary>();
+
+  for (const month of serviceMonths) {
+    const checkedMs = timestampMs(month.last_checked_at);
+    if (checkedMs === null) {
+      continue;
+    }
+
+    const key = `${month.route_id}:${month.routing}`;
+    const existing = summariesByKey.get(key);
+    const summary = existing ?? {
+      key,
+      routeId: month.route_id,
+      routing: month.routing,
+      latestCheckedAt: month.last_checked_at,
+      latestCheckedMs: checkedMs,
+      monthStarts: new Set<string>(),
+      departureWeekdays: new Set<string>(),
+      departureCount: 0,
+    };
+
+    if (checkedMs > summary.latestCheckedMs) {
+      summary.latestCheckedAt = month.last_checked_at;
+      summary.latestCheckedMs = checkedMs;
+    }
+    summary.monthStarts.add(month.month_start);
+    for (const weekday of month.departure_weekdays ?? []) {
+      summary.departureWeekdays.add(weekday);
+    }
+    summary.departureCount += month.departure_dates?.length ?? Math.max(0, month.sample_size ?? 0);
+    summariesByKey.set(key, summary);
+  }
+
+  const summaries = [...summariesByKey.values()].sort(
+    (left, right) => left.latestCheckedMs - right.latestCheckedMs,
+  );
+  const serviceLogLines = summaries.map((summary): LocalPatternDiscoveryLogLine => {
+    const weekdays = [...summary.departureWeekdays].sort().join(", ");
+    const route = routesById.get(summary.routeId);
+    const routingLabel = summary.routing.replaceAll("_", " ").toLowerCase();
+
+    return {
+      id: `supabase:service:${summary.key}:${summary.latestCheckedAt}`,
+      timestamp: summary.latestCheckedAt,
+      label: summary.departureCount > 0 ? "Dates found" : "No dates found",
+      detail: `${remoteRouteLabel(route)} · ${summary.monthStarts.size} months · ${routingLabel}`,
+      secondaryDetail:
+        summary.departureCount > 0
+          ? `${summary.departureCount} departures · ${weekdays || "weekdays not recorded"}`
+          : "No departures were detected in the saved discovery window.",
+      tone: summary.departureCount > 0 ? "success" : "muted",
+    };
+  });
+  const changeLogLines = changeEvents
+    .map((event): LocalPatternDiscoveryLogLine | null => {
+      if (timestampMs(event.detected_at) === null) {
+        return null;
+      }
+
+      return {
+        id: `supabase:change:${event.id}`,
+        timestamp: event.detected_at,
+        label: "Cadence change",
+        detail: remoteRouteLabel(routesById.get(event.route_id)),
+        secondaryDetail: event.summary,
+        tone: "success",
+      };
+    })
+    .filter(Boolean) as LocalPatternDiscoveryLogLine[];
+  const recentLogLines = [...serviceLogLines, ...changeLogLines]
+    .sort(
+      (left, right) =>
+        (timestampMs(left.timestamp) ?? 0) - (timestampMs(right.timestamp) ?? 0),
+    )
+    .slice(-120);
+  const latestSummary = summaries.at(-1) ?? null;
+  const latestChange = changeEvents
+    .map((event) => ({ event, timestampMs: timestampMs(event.detected_at) }))
+    .filter((item): item is { event: RemoteServiceChangeRow; timestampMs: number } =>
+      item.timestampMs !== null,
+    )
+    .sort((left, right) => left.timestampMs - right.timestampMs)
+    .at(-1);
+  const latestActivityMs = Math.max(
+    latestSummary?.latestCheckedMs ?? Number.NEGATIVE_INFINITY,
+    latestChange?.timestampMs ?? Number.NEGATIVE_INFINITY,
+  );
+  const hasLatestActivity = Number.isFinite(latestActivityMs);
+  const checkedRouteIds = new Set(summaries.map((summary) => summary.routeId));
+  const totalRoutes = routes.length;
+  const latestLine = recentLogLines.at(-1) ?? null;
+
+  return {
+    source: "supabase",
+    available: totalRoutes > 0 || recentLogLines.length > 0,
+    running: false,
+    totalRoutes,
+    startedRoutes: checkedRouteIds.size,
+    remainingRoutes: Math.max(totalRoutes - checkedRouteIds.size, 0),
+    startedAt: null,
+    latestFinishedAt: hasLatestActivity ? new Date(latestActivityMs).toISOString() : null,
+    latestFailedAt: null,
+    currentRouteLabel: latestSummary
+      ? remoteRouteLabel(routesById.get(latestSummary.routeId))
+      : null,
+    latestActivity: latestLine?.detail ?? null,
+    recentLogLines,
+    liveTotals: null,
+  } satisfies LocalPatternDiscoveryStatus;
+}
+
+function statusFreshnessMs(status: LocalPatternDiscoveryStatus) {
+  return Math.max(
+    timestampMs(status.latestFinishedAt) ?? Number.NEGATIVE_INFINITY,
+    timestampMs(status.latestFailedAt) ?? Number.NEGATIVE_INFINITY,
+    timestampMs(status.startedAt) ?? Number.NEGATIVE_INFINITY,
+    timestampMs(status.recentLogLines.at(-1)?.timestamp) ?? Number.NEGATIVE_INFINITY,
+  );
+}
 
 async function pathExists(targetPath: string) {
   try {
@@ -342,20 +575,11 @@ function summarizeLogLines(logLines: LocalPatternDiscoveryLogLine[]): LocalPatte
 export async function getLocalPatternDiscoveryStatus(): Promise<LocalPatternDiscoveryStatus> {
   const scannerRoot = await resolveScannerRoot();
   if (!scannerRoot) {
-    return {
-      available: false,
-      running: false,
-      totalRoutes: null,
-      startedRoutes: null,
-      remainingRoutes: null,
-      startedAt: null,
-      latestFinishedAt: null,
-      latestFailedAt: null,
-      currentRouteLabel: null,
-      latestActivity: null,
-      recentLogLines: [],
-      liveTotals: null,
-    };
+    try {
+      return (await getSupabasePatternDiscoveryStatus()) ?? unavailableStatus();
+    } catch {
+      return unavailableStatus();
+    }
   }
 
   const stdoutEvents = parseEvents(
@@ -395,9 +619,19 @@ export async function getLocalPatternDiscoveryStatus(): Promise<LocalPatternDisc
     const mergedEvents = [...stdoutEvents, ...stderrEvents].sort(
       (left, right) => left.timestampMs - right.timestampMs,
     );
+    const available = stdoutEvents.length > 0 || stderrEvents.length > 0;
 
-    return {
-      available: stdoutEvents.length > 0 || stderrEvents.length > 0,
+    if (!available) {
+      try {
+        return (await getSupabasePatternDiscoveryStatus()) ?? unavailableStatus();
+      } catch {
+        return unavailableStatus();
+      }
+    }
+
+    const localStatus = {
+      source: "local",
+      available,
       running: false,
       totalRoutes,
       startedRoutes: null,
@@ -409,7 +643,21 @@ export async function getLocalPatternDiscoveryStatus(): Promise<LocalPatternDisc
       latestActivity: finishEvent?.message ?? failedEvent?.message ?? startEvent?.message ?? null,
       recentLogLines: collectRecentLogLines(mergedEvents, 120),
       liveTotals: null,
-    };
+    } satisfies LocalPatternDiscoveryStatus;
+
+    try {
+      const remoteStatus = await getSupabasePatternDiscoveryStatus();
+      if (
+        remoteStatus?.available &&
+        statusFreshnessMs(remoteStatus) > statusFreshnessMs(localStatus)
+      ) {
+        return remoteStatus;
+      }
+    } catch {
+      // Keep the local feed when Supabase is temporarily unavailable.
+    }
+
+    return localStatus;
   }
 
   const startMs = startEvent?.timestampMs ?? Number.NEGATIVE_INFINITY;
@@ -433,6 +681,7 @@ export async function getLocalPatternDiscoveryStatus(): Promise<LocalPatternDisc
   const activeLogLines = collectRecentLogLines(activeEvents);
 
   return {
+    source: "local",
     available: true,
     running: true,
     totalRoutes: effectiveTotalRoutes,

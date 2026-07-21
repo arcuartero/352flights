@@ -17,6 +17,7 @@ export type LocalPatternDiscoveryRunTotals = {
 };
 
 export type LocalPatternDiscoveryStatus = {
+  source: "local" | "supabase" | "unavailable";
   available: boolean;
   running: boolean;
   totalRoutes: number | null;

@@ -5703,13 +5703,33 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
     padding-inline: 0.65rem;
   }
 
+  .site-chrome--ops {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 0.55rem;
+    border-radius: 1.15rem;
+  }
+
   .site-chrome__center {
     justify-items: end;
     gap: 0;
   }
 
+  .site-chrome--ops .site-chrome__center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    justify-content: stretch;
+  }
+
   .site-chrome__status-row {
+    width: 100%;
+    justify-content: space-between;
     gap: 0.4rem;
+  }
+
+  .site-chrome__actions {
+    justify-self: end;
   }
 
   .scroll-top-button {
@@ -5780,6 +5800,14 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
   .site-chrome__countdown {
     font-size: 0.68rem;
     letter-spacing: 0.05em;
+  }
+
+  .site-chrome__countdown > span {
+    display: none;
+  }
+
+  .site-chrome__countdown--secondary {
+    display: none;
   }
 
   .site-chrome__countdown strong {

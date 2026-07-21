@@ -81,6 +81,16 @@ function formatCollapsedSummary(status: LocalPatternDiscoveryStatus) {
     return "Checking route cadence";
   }
 
+  if (status.source === "supabase") {
+    if (status.startedRoutes !== null && status.totalRoutes !== null) {
+      return `${status.startedRoutes}/${status.totalRoutes} routes synced`;
+    }
+
+    return status.latestFinishedAt
+      ? `Last synced ${formatRelativeTime(status.latestFinishedAt)}`
+      : "Waiting for the first synced result";
+  }
+
   return status.latestFinishedAt
     ? `Last finished ${formatRelativeTime(status.latestFinishedAt)}`
     : "No completed discovery yet";
@@ -194,8 +204,8 @@ export function LocalPatternDiscoveryStatusWidget({
           <span className="ops-send-badge is-warning">Unavailable</span>
         </div>
         <p className="ops-scanner-status__meta">
-          This page can only show cadence discovery progress when the app can read the local logs on
-          this machine.
+          No local discovery log is available and no Dates Scanner history could be loaded from
+          Supabase.
         </p>
       </section>
     );
@@ -223,11 +233,21 @@ export function LocalPatternDiscoveryStatusWidget({
       <div className="ops-scanner-status__header">
         <div>
           <p className="ops-panel__eyebrow">Dates Scanner</p>
-          <h2>{status.running ? "Discovering flight cadence" : "Dates scanner idle"}</h2>
+          <h2>
+            {status.running
+              ? "Discovering flight cadence"
+              : status.source === "supabase"
+                ? "Latest dates scanner results"
+                : "Dates scanner idle"}
+          </h2>
         </div>
         <div className="ops-scanner-status__actions">
-          <span className={`ops-send-badge ${status.running ? "is-live" : "is-warning"}`}>
-            {status.running ? "Running" : "Idle"}
+          <span
+            className={`ops-send-badge ${
+              status.running || status.source === "supabase" ? "is-live" : "is-warning"
+            }`}
+          >
+            {status.running ? "Running" : status.source === "supabase" ? "Synced" : "Idle"}
           </span>
           {canCollapse ? (
             <button
@@ -282,7 +302,11 @@ export function LocalPatternDiscoveryStatusWidget({
             </div>
             <div>
               <dt>Mode</dt>
-              <dd>Monthly cadence discovery</dd>
+              <dd>
+                {status.source === "supabase"
+                  ? "Monthly cadence discovery · synced"
+                  : "Monthly cadence discovery"}
+              </dd>
             </div>
           </dl>
           <section className="ops-scanner-status__logs">
@@ -314,13 +338,18 @@ export function LocalPatternDiscoveryStatusWidget({
       ) : (
         <>
           <p className="ops-scanner-status__meta">
-            {status.latestFinishedAt
-              ? `Last finished ${formatRelativeTime(status.latestFinishedAt)}`
-              : "No completed discovery run recorded yet"}
+            {status.source === "supabase"
+              ? status.latestFinishedAt
+                ? `Last Supabase update ${formatRelativeTime(status.latestFinishedAt)}`
+                : "Waiting for the first Dates Scanner result in Supabase"
+              : status.latestFinishedAt
+                ? `Last finished ${formatRelativeTime(status.latestFinishedAt)}`
+                : "No completed discovery run recorded yet"}
           </p>
           {status.latestFinishedAt ? (
             <p className="ops-scanner-status__footnote">
-              Last clean finish: {formatDateTime(status.latestFinishedAt)}
+              {status.source === "supabase" ? "Latest saved result" : "Last clean finish"}:{" "}
+              {formatDateTime(status.latestFinishedAt)}
             </p>
           ) : null}
           {status.latestFailedAt ? (
@@ -328,14 +357,37 @@ export function LocalPatternDiscoveryStatusWidget({
               Last failure: {formatDateTime(status.latestFailedAt)}
             </p>
           ) : null}
+          {status.source === "supabase" ? (
+            <dl className="ops-scanner-status__details">
+              <div>
+                <dt>Saved coverage</dt>
+                <dd>
+                  {status.startedRoutes ?? 0}
+                  {status.totalRoutes !== null ? `/${status.totalRoutes}` : ""} routes
+                </dd>
+              </div>
+              <div>
+                <dt>Latest route</dt>
+                <dd>{status.currentRouteLabel ?? "Waiting for the first route"}</dd>
+              </div>
+            </dl>
+          ) : null}
           <section className="ops-scanner-status__logs">
             <div className="ops-scanner-status__logs-header">
-              <strong>Recent feed</strong>
-              <span>last discovery events</span>
+              <strong>{status.source === "supabase" ? "Synced results" : "Recent feed"}</strong>
+              <span>
+                {status.source === "supabase"
+                  ? "latest saved cadence checks"
+                  : "last discovery events"}
+              </span>
             </div>
             <div className="ops-scanner-status__log-feed" onScroll={handleLogFeedScroll} ref={logFeedRef}>
               {status.recentLogLines.length === 0 ? (
-                <p className="ops-scanner-status__empty-feed">No recent discovery events yet.</p>
+                <p className="ops-scanner-status__empty-feed">
+                  {status.source === "supabase"
+                    ? "No Dates Scanner results have been synced yet."
+                    : "No recent discovery events yet."}
+                </p>
               ) : (
                 status.recentLogLines.map((logLine) => (
                   <article

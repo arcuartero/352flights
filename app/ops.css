@@ -158,9 +158,11 @@
 
 @media (max-width: 820px) {
   .web-activity-log {
-    right: 0.75rem;
-    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
-    width: min(calc(100vw - 1.5rem), 22rem);
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: min(calc(100% - 1.5rem), 22rem);
+    margin: 1rem auto calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   .web-activity-log__panel {

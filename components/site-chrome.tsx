@@ -324,7 +324,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
 function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
   const [isBusy, setIsBusy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [latestStartedAt, setLatestStartedAt] = useState<string | null>(null);
+  const [latestResultAt, setLatestResultAt] = useState<string | null>(null);
   const [buttonLabel, setButtonLabel] = useState("Run monthly discovery");
 
   useEffect(() => {
@@ -345,7 +345,8 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
 
         const payload = (await response.json()) as {
           running?: boolean;
-          latestStartedAt?: string | null;
+          startedAt?: string | null;
+          latestFinishedAt?: string | null;
         };
         if (!isMounted) {
           return;
@@ -353,7 +354,7 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
 
         const running = Boolean(payload.running);
         setIsRunning(running);
-        setLatestStartedAt(payload.latestStartedAt ?? null);
+        setLatestResultAt(payload.latestFinishedAt ?? payload.startedAt ?? null);
         if (!isBusy) {
           setButtonLabel(running ? "Stop discovery" : "Run monthly discovery");
         }
@@ -408,7 +409,7 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
       }
 
       const nowIso = new Date().toISOString();
-      setLatestStartedAt(nowIso);
+      setLatestResultAt(nowIso);
       setIsRunning(true);
       setButtonLabel("Discovery started");
       window.setTimeout(() => {
@@ -427,7 +428,7 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
     <>
       <p className="site-chrome__countdown site-chrome__countdown--secondary" aria-live="polite">
         <span>Last monthly discovery</span>
-        <strong>{isRunning ? "Running now" : formatHeaderTimestamp(latestStartedAt)}</strong>
+        <strong>{isRunning ? "Running now" : formatHeaderTimestamp(latestResultAt)}</strong>
       </p>
       <button
         className={`site-chrome__scan-trigger site-chrome__scan-trigger--secondary ${
@@ -647,7 +648,7 @@ export function SiteChrome() {
   return (
     <>
       <div
-        className={`site-chrome${isScrolled ? " is-scrolled" : ""}${isDealsLanding ? " site-chrome--deals-landing" : ""}`}
+        className={`site-chrome${isScrolled ? " is-scrolled" : ""}${isDealsLanding ? " site-chrome--deals-landing" : ""}${isOpsRoute ? " site-chrome--ops" : ""}`}
       >
         <Link className="site-chrome__brand" href="/">
           <span className="site-chrome__mark">LFD</span>
