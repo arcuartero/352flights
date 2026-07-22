@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getLocalPatternDiscoveryStatus } from "@/lib/local-pattern-discovery-status";
+import { getPatternDiscoveryStatus } from "@/lib/pattern-discovery-status";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const status = await getLocalPatternDiscoveryStatus();
+    const status = await getPatternDiscoveryStatus();
     return NextResponse.json(status, {
       headers: {
         "Cache-Control": "no-store, max-age=0",

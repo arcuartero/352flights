@@ -395,7 +395,16 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
       }
 
       if (!response.ok) {
-        setButtonLabel(isRunning ? "Stop failed" : "Start failed");
+        const payload = (await response.json().catch(() => null)) as
+          | { reason?: string }
+          | null;
+        const remoteFailure = payload?.reason?.startsWith("vps_pattern_discovery_");
+        setButtonLabel(
+          remoteFailure ? "VPS unavailable" : isRunning ? "Stop failed" : "Start failed",
+        );
+        window.setTimeout(() => {
+          setButtonLabel(isRunning ? "Stop discovery" : "Run monthly discovery");
+        }, 2600);
         return;
       }
 

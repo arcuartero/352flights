@@ -1641,13 +1641,27 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
       }
 
       if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { reason?: string; detail?: string }
+          | null;
+        emitClientActivityLog({
+          kind: "action",
+          level: "error",
+          title: `Dates Scanner could not start for ${route.label}`,
+          detail: payload?.detail ?? payload?.reason ?? `HTTP ${response.status}`,
+        });
         return;
       }
 
       setDiscoveryRouteId(route.id);
       setIsDiscoveryRunning(true);
-    } catch {
-      // Ignore transient trigger errors in the inline button.
+    } catch (error) {
+      emitClientActivityLog({
+        kind: "action",
+        level: "error",
+        title: `Dates Scanner request failed for ${route.label}`,
+        detail: error instanceof Error ? error.message : "Unknown request error.",
+      });
     } finally {
       setIsDiscoveryBusy(false);
     }

@@ -235,6 +235,36 @@ arrancar el servicio y pararlo. No acepta comandos arbitrarios. La app rechazar�
 `VPS_SCANNER_AGENT_URL` por HTTP salvo que fuerces `VPS_SCANNER_ALLOW_INSECURE_HTTP=1`,
 que no deberías usar en producción.
 
+## 9.2. Activar Dates Scanner desde `/ops`
+
+Dates Scanner usa un servicio separado para que no compita con Price Scanner. Después de
+actualizar el repositorio en el VPS, instala el servicio mensual y vuelve a instalar el agente:
+
+```bash
+cd /opt/352flights/app
+git pull
+sudo bash scripts/install-vps-pattern-discovery-systemd.sh
+sudo bash scripts/install-vps-scanner-agent-systemd.sh
+```
+
+El segundo comando conserva el token existente, añade los permisos cerrados para el nuevo
+servicio y reinicia el agente. Comprueba ambos componentes:
+
+```bash
+systemctl status 352flights-pattern-discovery.timer --no-pager
+systemctl status 352flights-scanner-agent --no-pager
+```
+
+El agente admite estas acciones adicionales autenticadas:
+
+- `GET /pattern-discovery/status`
+- `POST /pattern-discovery/start`
+- `POST /pattern-discovery/stop`
+
+La acción de inicio acepta únicamente un filtro validado de ruta o una ejecución completa. No
+acepta comandos arbitrarios. El temporizador ejecuta el descubrimiento completo el primer día de
+cada mes; el botón `Run monthly discovery` permite iniciarlo manualmente desde Vercel.
+
 ## 10. Actualizar código en el VPS
 
 Cuando subas cambios nuevos a GitHub:

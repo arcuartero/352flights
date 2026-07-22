@@ -28,6 +28,7 @@ VPS_SCANNER_AGENT_HOST=127.0.0.1
 VPS_SCANNER_AGENT_PORT=8787
 SCANNER_ROOT=$ROOT_DIR
 SCANNER_SERVICE_NAME=352flights-scanner
+PATTERN_DISCOVERY_SERVICE_NAME=352flights-pattern-discovery
 VPS_SCANNER_AGENT_LOG_LINES=2500
 ENV
   chmod 600 "$ENV_FILE"
@@ -42,6 +43,8 @@ chmod +x "$ROOT_DIR/scripts/vps-scanner-agent.py"
 cat > "$SUDOERS_FILE" <<SUDOERS
 $RUN_USER ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block 352flights-scanner.service
 $RUN_USER ALL=(root) NOPASSWD: /usr/bin/systemctl stop 352flights-scanner.service
+$RUN_USER ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block 352flights-pattern-discovery.service
+$RUN_USER ALL=(root) NOPASSWD: /usr/bin/systemctl stop 352flights-pattern-discovery.service
 SUDOERS
 chmod 440 "$SUDOERS_FILE"
 visudo -cf "$SUDOERS_FILE" >/dev/null
@@ -68,7 +71,8 @@ WantedBy=multi-user.target
 SERVICE
 
 systemctl daemon-reload
-systemctl enable --now "$SERVICE_NAME.service"
+systemctl enable "$SERVICE_NAME.service"
+systemctl restart "$SERVICE_NAME.service"
 
 echo "Installed $SERVICE_NAME.service."
 echo "Token file: $ENV_FILE"

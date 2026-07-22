@@ -6,6 +6,11 @@ import { NextResponse } from "next/server";
 
 import { getLocalPatternDiscoveryStatus } from "@/lib/local-pattern-discovery-status";
 import { resolveScannerRoot } from "@/lib/local-scanner-status";
+import {
+  callVpsScannerAgent,
+  hasVpsScannerAgentConfig,
+  type VpsScannerActionResponse,
+} from "@/lib/vps-scanner-agent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -145,6 +150,27 @@ export async function POST(request: Request) {
   const unauthorized = await ensureAuthorized(request);
   if (unauthorized) {
     return unauthorized;
+  }
+
+  if (hasVpsScannerAgentConfig()) {
+    try {
+      const result = await callVpsScannerAgent<VpsScannerActionResponse>(
+        "pattern-discovery/stop",
+        { method: "POST" },
+      );
+      return NextResponse.json(result, {
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: "vps_pattern_discovery_stop_failed",
+          detail: error instanceof Error ? error.message : "Unknown VPS Dates Scanner error.",
+        },
+        { status: 502 },
+      );
+    }
   }
 
   const status = await getLocalPatternDiscoveryStatus();
