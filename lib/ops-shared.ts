@@ -34,6 +34,8 @@ export type CampaignPreviewDeal = {
   maxStops: string;
   airlineSummary: string | null;
   primaryAirlineCode: string | null;
+  outboundStopCount: number | null;
+  returnStopCount: number | null;
   outboundDepartureAt: string | null;
   outboundArrivalAt: string | null;
   returnDepartureAt: string | null;

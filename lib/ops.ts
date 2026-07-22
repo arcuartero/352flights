@@ -215,6 +215,8 @@ type DealSummary = {
   airlineNames: string[];
   airlineSummary: string | null;
   primaryAirlineCode: string | null;
+  outboundStopCount: number | null;
+  returnStopCount: number | null;
   bookingUrl: string | null;
   departureDate: string | null;
   returnDate: string | null;
@@ -892,6 +894,14 @@ function extractMetadataNumber(
   }
 
   return null;
+}
+
+function extractStopCount(
+  metadata: Record<string, unknown> | null | undefined,
+  key: "outbound_stop_count" | "return_stop_count",
+) {
+  const value = extractMetadataNumber(metadata, key);
+  return value !== null && value >= 0 ? Math.trunc(value) : null;
 }
 
 function medianPrice(values: number[]) {
@@ -1841,6 +1851,8 @@ function toRenderableDeal(deal: DealSummary): CampaignPreviewDeal {
     maxStops: deal.maxStops,
     airlineSummary: deal.airlineSummary,
     primaryAirlineCode: deal.primaryAirlineCode,
+    outboundStopCount: deal.outboundStopCount,
+    returnStopCount: deal.returnStopCount,
     outboundDepartureAt: deal.outboundDepartureAt,
     outboundArrivalAt: deal.outboundArrivalAt,
     returnDepartureAt: deal.returnDepartureAt,
@@ -1986,6 +1998,8 @@ function buildPublicFaresFromSnapshots(
       maxStops: snapshot.max_stops || route.maxStops,
       airlineSummary,
       primaryAirlineCode: extractPrimaryAirlineCode(snapshot.metadata),
+      outboundStopCount: extractStopCount(snapshot.metadata, "outbound_stop_count"),
+      returnStopCount: extractStopCount(snapshot.metadata, "return_stop_count"),
       outboundDepartureAt: extractMetadataDateTime(
         snapshot.metadata,
         "outbound_departure_at",
@@ -2397,6 +2411,8 @@ function enrichDeals(
       airlineNames,
       airlineSummary: formatAirlineSummary(airlineNames),
       primaryAirlineCode: extractPrimaryAirlineCode(snapshot?.metadata),
+      outboundStopCount: extractStopCount(snapshot?.metadata, "outbound_stop_count"),
+      returnStopCount: extractStopCount(snapshot?.metadata, "return_stop_count"),
       bookingUrl,
       departureDate: snapshot?.departure_date ?? null,
       returnDate: snapshot?.return_date ?? null,

@@ -894,6 +894,33 @@ function getPublicAirlineLine(deal: CampaignPreviewDeal) {
   return `From Luxembourg · ${deal.airlineSummary}`;
 }
 
+function formatLegStops(
+  stopCount: number | null,
+  maxStops: string,
+  t: Translate,
+) {
+  if (stopCount !== null && Number.isInteger(stopCount) && stopCount >= 0) {
+    if (stopCount === 0) {
+      return t("deals.direct");
+    }
+
+    return stopCount === 1
+      ? t("deals.oneStop")
+      : t("deals.stopCount", { count: stopCount });
+  }
+
+  return maxStops === "NON_STOP" ? t("deals.direct") : t("deals.stopsUnavailable");
+}
+
+function formatItineraryStops(deal: CampaignPreviewDeal, t: Translate) {
+  const outbound = formatLegStops(deal.outboundStopCount, deal.maxStops, t);
+  const returnLeg = formatLegStops(deal.returnStopCount, deal.maxStops, t);
+
+  return outbound === returnLeg
+    ? outbound
+    : `${t("deals.outbound")}: ${outbound} · ${t("deals.return")}: ${returnLeg}`;
+}
+
 function getDisplayAirlineSummary(deal: CampaignPreviewDeal) {
   if (!deal.airlineSummary) {
     return "Airline pending";
@@ -1826,7 +1853,7 @@ function PublicDealCard({
   const holidayMatch = getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate);
   const savingsLabel = formatSearchSavingsLabel(deal, t);
   const travelMeta = [
-    deal.maxStops === "NON_STOP" ? t("deals.direct") : t("deals.upToOneStop"),
+    formatItineraryStops(deal, t),
     `${deal.tripNights} ${deal.tripNights === 1 ? t("deals.night") : t("deals.nights")}`,
     formatDepartureMonth(deal.departureDate).toLowerCase(),
   ].join(" · ");
@@ -1867,7 +1894,7 @@ function PublicDealCard({
 
         <div className="deals-card__meta-line">
           <span>{getPublicAirlineLine(deal)}</span>
-          <span>{deal.maxStops === "NON_STOP" ? t("deals.direct") : t("deals.upToOneStop")}</span>
+          <span>{formatItineraryStops(deal, t)}</span>
         </div>
 
         <div className="deals-card__reason">
@@ -1916,7 +1943,7 @@ function FeaturedOpportunityCard({
   const savingsLabel = formatSearchSavingsLabel(deal, t);
   const savingsBadgeLabel = getFareBadgeLabel(deal);
   const travelMeta = [
-    deal.maxStops === "NON_STOP" ? t("deals.direct") : t("deals.upToOneStop"),
+    formatItineraryStops(deal, t),
     `${deal.tripNights} ${deal.tripNights === 1 ? t("deals.night") : t("deals.nights")}`,
     formatDepartureMonth(deal.departureDate).toLowerCase(),
   ].join(" · ");
@@ -2127,7 +2154,8 @@ function DealFlightCard({
   );
   const holidayMatch = getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate);
   const airlineName = getPrimaryAirlineName(deal);
-  const stopsLabel = deal.maxStops === "NON_STOP" ? t("deals.direct") : t("deals.upToOneStop");
+  const outboundStopsLabel = formatLegStops(deal.outboundStopCount, deal.maxStops, t);
+  const returnStopsLabel = formatLegStops(deal.returnStopCount, deal.maxStops, t);
   const resolvedCtaLabel = ctaLabel ?? t("deals.bookOnSkyscanner");
   const resolvedPendingLabel = pendingLabel === "Skyscanner link pending" ? t("deals.skyscannerPending") : pendingLabel;
   const strongPrice = isStrongPriceDeal(deal);
@@ -2173,7 +2201,7 @@ function DealFlightCard({
                 className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
               >
                 <span>{outboundDuration ?? `${deal.tripNights} ${t("deals.nights")}`}</span>
-                <strong>{stopsLabel}</strong>
+                <strong>{outboundStopsLabel}</strong>
               </div>
               <div className="deals-search-card__timepoint deals-search-card__timepoint--arrival">
                 {showArrivalDate ? (
@@ -2216,7 +2244,7 @@ function DealFlightCard({
                 className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
               >
                 <span>{returnDuration ?? formatStayHours(deal.destinationStayHours, deal.tripNights)}</span>
-                <strong>{stopsLabel}</strong>
+                <strong>{returnStopsLabel}</strong>
               </div>
               <div className="deals-search-card__timepoint deals-search-card__timepoint--arrival">
                 {showArrivalDate ? (
@@ -2344,6 +2372,7 @@ function FeaturedOpportunityModal({
   canGoPrevious: boolean;
   canGoNext: boolean;
 }) {
+  const { t } = useI18n();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -2477,7 +2506,7 @@ function FeaturedOpportunityModal({
             </div>
             <div>
               <dt>Routing</dt>
-              <dd>{deal.maxStops === "NON_STOP" ? "Direct only" : "Up to 1 stop"}</dd>
+              <dd>{formatItineraryStops(deal, t)}</dd>
             </div>
             <div>
               <dt>Airline</dt>
