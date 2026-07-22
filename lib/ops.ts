@@ -214,6 +214,7 @@ type DealSummary = {
   maxStops: string;
   airlineNames: string[];
   airlineSummary: string | null;
+  primaryAirlineCode: string | null;
   bookingUrl: string | null;
   departureDate: string | null;
   returnDate: string | null;
@@ -823,6 +824,20 @@ function defaultOpsAutomatedAlertsSummary(): OpsAutomatedAlertsSummary {
 
 function extractAirlineNames(metadata: Record<string, unknown> | null | undefined) {
   return normalizeAirlineNames(metadata?.["airline_names"]);
+}
+
+function extractPrimaryAirlineCode(metadata: Record<string, unknown> | null | undefined) {
+  const directCode = metadata?.["primary_airline_code"];
+  const airlineCodes = metadata?.["airline_codes"];
+  const candidate =
+    typeof directCode === "string"
+      ? directCode
+      : Array.isArray(airlineCodes)
+        ? airlineCodes.find((value): value is string => typeof value === "string")
+        : null;
+  const normalized = candidate?.trim().toUpperCase() ?? "";
+
+  return /^[A-Z0-9]{2,3}$/.test(normalized) ? normalized : null;
 }
 
 function extractPatternKey(metadata: Record<string, unknown> | null | undefined) {
@@ -1825,6 +1840,7 @@ function toRenderableDeal(deal: DealSummary): CampaignPreviewDeal {
     tripNights: deal.tripNights,
     maxStops: deal.maxStops,
     airlineSummary: deal.airlineSummary,
+    primaryAirlineCode: deal.primaryAirlineCode,
     outboundDepartureAt: deal.outboundDepartureAt,
     outboundArrivalAt: deal.outboundArrivalAt,
     returnDepartureAt: deal.returnDepartureAt,
@@ -1969,6 +1985,7 @@ function buildPublicFaresFromSnapshots(
       tripNights: snapshot.trip_nights,
       maxStops: snapshot.max_stops || route.maxStops,
       airlineSummary,
+      primaryAirlineCode: extractPrimaryAirlineCode(snapshot.metadata),
       outboundDepartureAt: extractMetadataDateTime(
         snapshot.metadata,
         "outbound_departure_at",
@@ -2379,6 +2396,7 @@ function enrichDeals(
       maxStops: snapshot?.max_stops ?? route?.maxStops ?? "ANY",
       airlineNames,
       airlineSummary: formatAirlineSummary(airlineNames),
+      primaryAirlineCode: extractPrimaryAirlineCode(snapshot?.metadata),
       bookingUrl,
       departureDate: snapshot?.departure_date ?? null,
       returnDate: snapshot?.return_date ?? null,

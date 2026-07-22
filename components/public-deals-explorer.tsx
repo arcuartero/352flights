@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { Plane } from "lucide-react";
 
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { NewsletterForm } from "@/components/newsletter-form";
@@ -438,31 +439,51 @@ const AIRLINE_LOGO_CODE_BY_NAME: Record<string, string> = {
   "air france": "AF",
   "air malta": "KM",
   "air serbia": "JU",
+  "air corsica": "XK",
+  "air dolomiti": "EN",
+  airbaltic: "BT",
+  "american airlines": "AA",
+  austrian: "OS",
   "austrian airlines": "OS",
   "british airways": "BA",
   "brussels airlines": "SN",
+  "croatia airlines": "OU",
   condor: "DE",
+  "delta air lines": "DL",
   easyjet: "U2",
   emirates: "EK",
   etihad: "EY",
+  "etihad airways": "EY",
   eurowings: "EW",
+  finnair: "AY",
   iberia: "IB",
+  "ita airways": "AZ",
   klm: "KL",
   lot: "LO",
   "lot polish airlines": "LO",
   lufthansa: "LH",
+  "lufthansa cargo": "LH",
   luxair: "LG",
   norwegian: "DY",
+  "norwegian air shuttle": "DY",
+  pegasus: "PC",
   "pegasus airlines": "PC",
+  "qatar airways": "QR",
+  "royal air maroc": "AT",
   ryanair: "FR",
   sas: "SK",
   "scandinavian airlines": "SK",
   swiss: "LX",
   "swiss international air lines": "LX",
+  tap: "TP",
   "tap air portugal": "TP",
+  "tap portugal": "TP",
   transavia: "HV",
+  "transavia airlines": "HV",
   "tui fly": "TB",
+  "tui fly belgium": "TB",
   "turkish airlines": "TK",
+  "united airlines": "UA",
   volotea: "V7",
   vueling: "VY",
   "wizz air": "W6",
@@ -910,38 +931,38 @@ function getPrimaryAirlineName(deal: CampaignPreviewDeal) {
   return primaryAirline ?? displaySummary;
 }
 
-function getAirlineLogoCode(airlineName: string) {
-  return AIRLINE_LOGO_CODE_BY_NAME[normalizeAirlineName(airlineName)] ?? null;
-}
+function getAirlineLogoCode(airlineName: string, primaryAirlineCode: string | null) {
+  const normalizedCode = primaryAirlineCode?.trim().toUpperCase() ?? "";
+  if (/^[A-Z0-9]{2,3}$/.test(normalizedCode)) {
+    return normalizedCode;
+  }
 
-function getAirlineInitials(airlineName: string) {
-  return airlineName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return AIRLINE_LOGO_CODE_BY_NAME[normalizeAirlineName(airlineName)] ?? null;
 }
 
 function AirlineLogo({
   airlineName,
+  primaryAirlineCode,
 }: {
   airlineName: string;
+  primaryAirlineCode: string | null;
 }) {
-  const logoCode = getAirlineLogoCode(airlineName);
+  const logoCode = getAirlineLogoCode(airlineName, primaryAirlineCode);
+  const [failedLogoCode, setFailedLogoCode] = useState<string | null>(null);
+  const canShowAirlineLogo = logoCode !== null && failedLogoCode !== logoCode;
 
   return (
     <span className="deals-airline-logo" title={airlineName}>
-      {logoCode ? (
+      {canShowAirlineLogo ? (
         <img
           alt={`${airlineName} logo`}
           loading="lazy"
+          onError={() => setFailedLogoCode(logoCode)}
           src={`https://images.kiwi.com/airlines/64/${logoCode}.png`}
         />
       ) : (
         <span aria-label={`${airlineName} logo`} className="deals-airline-logo__fallback" role="img">
-          {getAirlineInitials(airlineName)}
+          <Plane aria-hidden="true" size={24} strokeWidth={2.15} />
         </span>
       )}
     </span>
@@ -2128,7 +2149,10 @@ function DealFlightCard({
           <div className="deals-search-card__segment">
             <div className="deals-search-card__airline">
               {showAirlineLogo ? (
-                <AirlineLogo airlineName={airlineName} />
+                <AirlineLogo
+                  airlineName={airlineName}
+                  primaryAirlineCode={deal.primaryAirlineCode}
+                />
               ) : (
                 <span>{getDisplayAirlineSummary(deal)}</span>
               )}
@@ -2168,7 +2192,10 @@ function DealFlightCard({
           <div className="deals-search-card__segment">
             <div className="deals-search-card__airline">
               {showAirlineLogo ? (
-                <AirlineLogo airlineName={airlineName} />
+                <AirlineLogo
+                  airlineName={airlineName}
+                  primaryAirlineCode={deal.primaryAirlineCode}
+                />
               ) : (
                 <span>{getDisplayAirlineSummary(deal)}</span>
               )}

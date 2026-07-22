@@ -749,15 +749,12 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card .deals-airline-logo__fallback {
   display: inline-grid;
   place-items: center;
-  min-width: 2.45rem;
+  width: 2.45rem;
   height: 2.05rem;
-  padding: 0 0.45rem;
   border: 1px solid rgba(29, 39, 51, 0.12);
   border-radius: 0.55rem;
   background: #f5f8fc;
   color: #0d2340;
-  font-size: 0.78rem;
-  font-weight: 850;
 }
 
 @media (max-width: 980px) {

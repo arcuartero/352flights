@@ -33,6 +33,7 @@ export type CampaignPreviewDeal = {
   tripNights: number;
   maxStops: string;
   airlineSummary: string | null;
+  primaryAirlineCode: string | null;
   outboundDepartureAt: string | null;
   outboundArrivalAt: string | null;
   returnDepartureAt: string | null;
