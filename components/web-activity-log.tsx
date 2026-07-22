@@ -165,7 +165,8 @@ function shouldIgnoreFetchUrl(url: string) {
   return (
     url.startsWith("https://en.wikipedia.org/api/rest_v1/page/summary/") ||
     path === "/api/ops/scanner-status" ||
-    path === "/api/ops/pattern-discovery-status"
+    path === "/api/ops/pattern-discovery-status" ||
+    path === "/api/ops/pattern-discovery-live-status"
   );
 }
 

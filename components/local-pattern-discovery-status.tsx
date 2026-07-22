@@ -119,8 +119,14 @@ export function LocalPatternDiscoveryStatusWidget({
 
   useEffect(() => {
     let isMounted = true;
+    let isRequestPending = false;
 
     async function loadStatus() {
+      if (isRequestPending || document.hidden || !navigator.onLine) {
+        return;
+      }
+
+      isRequestPending = true;
       try {
         const response = await fetch("/api/ops/pattern-discovery-live-status", {
           cache: "no-store",
@@ -135,15 +141,27 @@ export function LocalPatternDiscoveryStatusWidget({
         }
       } catch {
         // Quiet polling failure.
+      } finally {
+        isRequestPending = false;
+      }
+    }
+
+    function refreshVisibleStatus() {
+      if (!document.hidden && navigator.onLine) {
+        void loadStatus();
       }
     }
 
     void loadStatus();
     const interval = window.setInterval(loadStatus, 7000);
+    document.addEventListener("visibilitychange", refreshVisibleStatus);
+    window.addEventListener("online", refreshVisibleStatus);
 
     return () => {
       isMounted = false;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshVisibleStatus);
+      window.removeEventListener("online", refreshVisibleStatus);
     };
   }, []);
 
