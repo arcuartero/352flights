@@ -27,6 +27,11 @@ const STORAGE_KEY = "luxflightdeals-web-activity-log";
 const MAX_ENTRIES = 220;
 const MAX_FETCH_ERROR_BODY_LENGTH = 420;
 const FETCH_ERROR_DEDUP_MS = 30_000;
+const QUIET_POLLING_PATHS = [
+  "/api/ops/scanner-status",
+  "/api/ops/pattern-discovery-status",
+  "/api/ops/pattern-discovery-live-status",
+];
 
 function buildId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -56,7 +61,13 @@ function safeSessionStorageRead() {
     }
 
     const parsed = JSON.parse(raw) as ActivityLogEntry[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (entry) =>
+            entry.kind !== "fetch" ||
+            !QUIET_POLLING_PATHS.some((path) => entry.detail?.startsWith(`${path} ·`)),
+        )
+      : [];
   } catch {
     return [];
   }
@@ -164,9 +175,7 @@ function shouldIgnoreFetchUrl(url: string) {
 
   return (
     url.startsWith("https://en.wikipedia.org/api/rest_v1/page/summary/") ||
-    path === "/api/ops/scanner-status" ||
-    path === "/api/ops/pattern-discovery-status" ||
-    path === "/api/ops/pattern-discovery-live-status"
+    QUIET_POLLING_PATHS.includes(path)
   );
 }
 
