@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { createPortal } from "react-dom";
-import { Plane } from "lucide-react";
+import { Info, Plane } from "lucide-react";
 
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { NewsletterForm } from "@/components/newsletter-form";
@@ -705,19 +713,10 @@ function formatSearchSavingsLabel(
 
   switch (deal.pricePosition) {
     case "exceptional":
-      if (isStrongPriceDeal(deal)) {
-        return t
-          ? t("deals.priceExceptional", { pct: belowPct, usualSuffix })
-          : `Exceptional price · ${belowPct}% below usual${usualSuffix}`;
-      }
-
-      return t
-        ? t("deals.priceBelowUsual", { pct: belowPct, usualSuffix })
-        : `Good price · ${belowPct}% below usual${usualSuffix}`;
     case "below_usual":
       return t
-        ? t("deals.priceBelowUsual", { pct: belowPct, usualSuffix })
-        : `Good price · ${belowPct}% below usual${usualSuffix}`;
+        ? `${t("deals.belowUsual", { pct: belowPct })}${usualSuffix}`
+        : `${belowPct}% below usual${usualSuffix}`;
     case "typical":
       return t
         ? t("deals.priceTypical", { usualSuffix })
@@ -732,17 +731,46 @@ function formatSearchSavingsLabel(
   }
 }
 
-function formatUsualPriceExplanation(deal: CampaignPreviewDeal, t?: Translate) {
+function formatComparisonWeekday(value: string | null, locale: Locale) {
+  if (!value) {
+    return "n/a";
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${value.slice(0, 10)}T12:00:00Z`));
+}
+
+function formatUsualPriceExplanation(
+  deal: CampaignPreviewDeal,
+  locale: Locale,
+  t?: Translate,
+) {
   if (deal.baselinePrice === null) {
     return null;
   }
 
+  const duration = `${deal.tripNights} ${
+    deal.tripNights === 1
+      ? t
+        ? t("deals.night")
+        : "night"
+      : t
+        ? t("deals.nights")
+        : "nights"
+  }`;
+  const values = {
+    count: deal.historyPoints,
+    destination: deal.destinationCity,
+    outboundWeekday: formatComparisonWeekday(deal.departureDate, locale),
+    returnWeekday: formatComparisonWeekday(deal.returnDate, locale),
+    duration,
+  };
+
   return t
-    ? t("deals.usualPriceExplanation", {
-        count: deal.historyPoints,
-        destination: deal.destinationCity,
-      })
-    : `Usual means the median of ${deal.historyPoints} recent fares to ${deal.destinationCity} with the same weekdays and trip length.`;
+    ? t("deals.usualPriceExplanation", values)
+    : `Usual price: median of ${values.count} recent fares to ${values.destination} leaving on ${values.outboundWeekday}, returning on ${values.returnWeekday}, with a ${values.duration} stay.`;
 }
 
 function isStrongPriceDeal(deal: CampaignPreviewDeal) {
@@ -2137,9 +2165,10 @@ function DealFlightCard({
   shiftDurationLeft?: boolean;
   showAirlineLogo?: boolean;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const usualTooltipId = useId();
   const savingsLabel = formatSearchSavingsLabel(deal, t);
-  const usualPriceExplanation = formatUsualPriceExplanation(deal, t);
+  const usualPriceExplanation = formatUsualPriceExplanation(deal, locale, t);
   const outboundDuration = formatFlightDuration(
     deal.outboundDepartureAt,
     deal.outboundArrivalAt,
@@ -2274,10 +2303,30 @@ function DealFlightCard({
       {showBooking ? (
         <aside className="deals-search-card__booking">
           <strong className="deals-search-card__price">{formatCurrency(deal.dealPrice)}</strong>
-          <p className={`deals-search-card__saving${strongPrice ? " is-positive" : " is-neutral"}`}>{savingsLabel}</p>
-          {usualPriceExplanation ? (
-            <p className="deals-search-card__usual-note">{usualPriceExplanation}</p>
-          ) : null}
+          <div className="deals-search-card__saving-row">
+            <p className={`deals-search-card__saving${strongPrice ? " is-positive" : " is-neutral"}`}>
+              {savingsLabel}
+            </p>
+            {usualPriceExplanation ? (
+              <span className="deals-search-card__usual-tooltip">
+                <button
+                  aria-describedby={usualTooltipId}
+                  aria-label={usualPriceExplanation}
+                  className="deals-search-card__usual-tooltip-trigger"
+                  type="button"
+                >
+                  <Info aria-hidden="true" size={15} strokeWidth={2} />
+                </button>
+                <span
+                  className="deals-search-card__usual-tooltip-bubble"
+                  id={usualTooltipId}
+                  role="tooltip"
+                >
+                  {usualPriceExplanation}
+                </span>
+              </span>
+            ) : null}
+          </div>
           {ctaHref ? (
             ctaExternal ? (
               <a className="deals-search-card__cta" href={ctaHref} rel="noreferrer" target="_blank">
