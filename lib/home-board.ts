@@ -8,6 +8,13 @@ export type HomeBoardDestination = {
   nights: string;
 };
 
+export type HomeRecentDrop = {
+  city: string;
+  route: string;
+  price: number;
+  drop: number;
+};
+
 const LANDMARK_TITLE_BY_DESTINATION: Record<string, string> = {
   agadir: "Kasbah of Agadir Oufella",
   ajaccio: "Citadel of Ajaccio",
@@ -57,44 +64,6 @@ const LANDMARK_TITLE_BY_DESTINATION: Record<string, string> = {
   zurich: "Quaibrucke, Zurich",
 };
 
-const FALLBACK_HOME_BOARD_DESTINATIONS: HomeBoardDestination[] = [
-  {
-    city: "Lisbon",
-    landmark: "Belem Tower",
-    price: 39,
-    drop: 47,
-    nights: "4 nights",
-  },
-  {
-    city: "Rome",
-    landmark: "Colosseum",
-    price: 44,
-    drop: 41,
-    nights: "3 nights",
-  },
-  {
-    city: "Barcelona",
-    landmark: "Sagrada Familia",
-    price: 36,
-    drop: 38,
-    nights: "weekend",
-  },
-  {
-    city: "Budapest",
-    landmark: "Hungarian Parliament Building",
-    price: 49,
-    drop: 35,
-    nights: "5 nights",
-  },
-  {
-    city: "Porto",
-    landmark: "Dom Luis I Bridge",
-    price: 42,
-    drop: 36,
-    nights: "4 nights",
-  },
-];
-
 function normalizeDestinationKey(city: string) {
   return city.trim().toLowerCase();
 }
@@ -109,6 +78,25 @@ function getDropPercent(deal: CampaignPreviewDeal) {
 
 function formatNights(nights: number) {
   return `${nights} ${nights === 1 ? "night" : "nights"}`;
+}
+
+function isNonstopDeal(deal: CampaignPreviewDeal) {
+  const routeIsNonstop = deal.maxStops.trim().toUpperCase() === "NON_STOP";
+  const outboundIsNonstop =
+    deal.outboundStopCount === null ? routeIsNonstop : deal.outboundStopCount === 0;
+  const returnIsNonstop =
+    deal.returnStopCount === null ? routeIsNonstop : deal.returnStopCount === 0;
+
+  return outboundIsNonstop && returnIsNonstop;
+}
+
+function getVerifiedTimestamp(deal: CampaignPreviewDeal) {
+  if (!deal.verifiedAt) {
+    return 0;
+  }
+
+  const timestamp = new Date(deal.verifiedAt).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function compareBoardDeals(left: CampaignPreviewDeal, right: CampaignPreviewDeal) {
@@ -131,6 +119,30 @@ function compareBoardDeals(left: CampaignPreviewDeal, right: CampaignPreviewDeal
   return rightVerified - leftVerified;
 }
 
+function compareRecentDropDeals(left: CampaignPreviewDeal, right: CampaignPreviewDeal) {
+  const freshnessDifference = getVerifiedTimestamp(right) - getVerifiedTimestamp(left);
+  if (freshnessDifference !== 0) {
+    return freshnessDifference;
+  }
+
+  const leftDrop = getDropPercent(left) ?? -1;
+  const rightDrop = getDropPercent(right) ?? -1;
+  if (leftDrop !== rightDrop) {
+    return rightDrop - leftDrop;
+  }
+
+  if (left.dealPrice !== right.dealPrice) {
+    return left.dealPrice - right.dealPrice;
+  }
+
+  return left.destinationCity.localeCompare(right.destinationCity);
+}
+
+function getOriginAirport(deal: CampaignPreviewDeal) {
+  const match = deal.routeLabel.match(/^([A-Z0-9]{3})\s*->/i);
+  return match?.[1]?.toUpperCase() ?? "LUX";
+}
+
 export function buildHomeBoardDestinations(
   deals: readonly CampaignPreviewDeal[],
   limit: number = 5,
@@ -139,7 +151,7 @@ export function buildHomeBoardDestinations(
 
   for (const deal of deals) {
     const city = deal.destinationCity?.trim();
-    if (!city || deal.dealPrice <= 0) {
+    if (!city || deal.dealPrice <= 0 || !isNonstopDeal(deal)) {
       continue;
     }
 
@@ -153,7 +165,7 @@ export function buildHomeBoardDestinations(
   }
 
   if (groups.size === 0) {
-    return FALLBACK_HOME_BOARD_DESTINATIONS.slice(0, limit);
+    return [];
   }
 
   return [...groups.entries()]
@@ -183,4 +195,43 @@ export function buildHomeBoardDestinations(
       return left.city.localeCompare(right.city);
     })
     .slice(0, limit);
+}
+
+export function buildHomeRecentDrops(
+  deals: readonly CampaignPreviewDeal[],
+  limit: number = 8,
+): HomeRecentDrop[] {
+  const latestDropByDestination = new Map<string, CampaignPreviewDeal>();
+
+  for (const deal of deals) {
+    const city = deal.destinationCity?.trim();
+    const destinationAirport = deal.destinationAirport?.trim().toUpperCase();
+    const drop = getDropPercent(deal);
+    const hasReliableBaseline =
+      deal.baselinePrice !== null &&
+      deal.baselinePrice > 0 &&
+      deal.historyPoints >= 3 &&
+      deal.dropRatio !== null &&
+      deal.dropRatio > 0 &&
+      deal.dropRatio < 1;
+
+    if (!city || !destinationAirport || deal.dealPrice <= 0 || !drop || !hasReliableBaseline) {
+      continue;
+    }
+
+    const existing = latestDropByDestination.get(destinationAirport);
+    if (!existing || compareRecentDropDeals(deal, existing) < 0) {
+      latestDropByDestination.set(destinationAirport, deal);
+    }
+  }
+
+  return [...latestDropByDestination.values()]
+    .sort(compareRecentDropDeals)
+    .slice(0, limit)
+    .map((deal) => ({
+      city: deal.destinationCity.trim(),
+      route: `${getOriginAirport(deal)} → ${deal.destinationAirport.trim().toUpperCase()}`,
+      price: deal.dealPrice,
+      drop: getDropPercent(deal) ?? 0,
+    }));
 }

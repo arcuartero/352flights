@@ -8,7 +8,7 @@ import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
 import { useI18n } from "@/lib/i18n";
 import { toDestinationSlug } from "@/lib/destination-slugs";
-import type { HomeBoardDestination } from "@/lib/home-board";
+import type { HomeBoardDestination, HomeRecentDrop } from "@/lib/home-board";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
@@ -19,17 +19,6 @@ import {
   type TripFilter,
   type WhenFilter,
 } from "@/lib/public-deals-search";
-
-const TICKER_FARES = [
-  { route: "LUX → LIS", price: "€39", drop: "−47%" },
-  { route: "LUX → BCN", price: "€36", drop: "−38%" },
-  { route: "LUX → FCO", price: "€44", drop: "−41%" },
-  { route: "LUX → OPO", price: "€42", drop: "−36%" },
-  { route: "LUX → BUD", price: "€49", drop: "−35%" },
-  { route: "LUX → CPH", price: "€58", drop: "−29%" },
-  { route: "LUX → MXP", price: "€31", drop: "−47%" },
-  { route: "LUX → VIE", price: "€54", drop: "−27%" },
-];
 
 const RHYTHMS = [
   {
@@ -285,6 +274,7 @@ type V2LandingProps = {
   boardDestinations?: HomeBoardDestination[];
   deals?: CampaignPreviewDeal[];
   destinationPhotoUrls?: Record<string, string>;
+  recentDrops?: HomeRecentDrop[];
 };
 
 function normalizeDestinationKey(value: string) {
@@ -381,6 +371,7 @@ export function V2Landing({
   boardDestinations = [],
   deals = [],
   destinationPhotoUrls = {},
+  recentDrops = [],
 }: V2LandingProps) {
   const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -649,24 +640,29 @@ export function V2Landing({
       </section>
 
       {/* ---------- Section 2 of 8 · Departure board — infinite marquee strip ---------- */}
-      <section className="v2-ticker" id="v2-board" aria-label={t("home.recentDrops")}>
-        <div className="v2-ticker__track" aria-hidden="true">
-          {[0, 1].map((copy) => (
-            <ul className="v2-ticker__group" key={copy}>
-              {TICKER_FARES.map((fare) => (
-                <li key={`${copy}-${fare.route}`}>
-                  <span className="v2-ticker__route">{fare.route}</span>
-                  <span className="v2-ticker__price">{fare.price}</span>
-                  <span className="v2-ticker__drop">{fare.drop}</span>
-                </li>
-              ))}
-            </ul>
-          ))}
-        </div>
-        <p className="sr-only">
-          {t("home.recentDrops")}: {TICKER_FARES.map((fare) => `${fare.route} ${fare.price}`).join(", ")}
-        </p>
-      </section>
+      {recentDrops.length > 0 ? (
+        <section className="v2-ticker" id="v2-board" aria-label={t("home.recentDrops")}>
+          <div className="v2-ticker__track" aria-hidden="true">
+            {[0, 1].map((copy) => (
+              <ul className="v2-ticker__group" key={copy}>
+                {recentDrops.map((fare) => (
+                  <li key={`${copy}-${fare.route}`}>
+                    <span className="v2-ticker__route">{fare.route}</span>
+                    <span className="v2-ticker__price">€{Math.round(fare.price)}</span>
+                    <span className="v2-ticker__drop">−{fare.drop}%</span>
+                  </li>
+                ))}
+              </ul>
+            ))}
+          </div>
+          <p className="sr-only">
+            {t("home.recentDrops")}:{" "}
+            {recentDrops
+              .map((fare) => `${fare.route} €${Math.round(fare.price)}, −${fare.drop}%`)
+              .join(", ")}
+          </p>
+        </section>
+      ) : null}
 
       {boardDestinations.length > 0 ? (
         <section className="v2-bento" aria-label="Destinations on the board">
