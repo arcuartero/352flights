@@ -35,7 +35,7 @@ export const DEFAULT_DEAL_SEARCH_FILTERS: DealSearchFilters = {
   whenFilter: "any",
   tripFilter: "any",
   budgetFilter: "any",
-  directOnly: false,
+  directOnly: true,
   themeFilter: "any",
   destinationFilter: "any",
   departureWeekdayFilter: "any",
@@ -116,7 +116,10 @@ export function parseDealSearchFilters(
     budgetFilter: BUDGET_FILTERS.has((budgetValue as BudgetFilter) ?? "any")
       ? ((budgetValue as BudgetFilter) ?? "any")
       : "any",
-    directOnly: directValue === "1" || directValue === "true",
+    directOnly:
+      directValue === undefined
+        ? DEFAULT_DEAL_SEARCH_FILTERS.directOnly
+        : directValue === "1" || directValue === "true",
     themeFilter: THEME_FILTERS.has((themeValue as ThemeFilter) ?? "any")
       ? ((themeValue as ThemeFilter) ?? "any")
       : "any",
@@ -163,8 +166,8 @@ export function buildDealsSearchHref(
     params.set("budget", filters.budgetFilter);
   }
 
-  if (filters.directOnly) {
-    params.set("direct", "1");
+  if (filters.directOnly !== DEFAULT_DEAL_SEARCH_FILTERS.directOnly) {
+    params.set("direct", filters.directOnly ? "1" : "0");
   }
 
   if (filters.themeFilter !== "any") {
