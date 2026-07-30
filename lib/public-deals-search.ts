@@ -1,4 +1,9 @@
-export type WhenFilter = "any" | "next_30" | "may_aug" | "school_holidays" | "this_weekend";
+export type WhenFilter =
+  | "any"
+  | "next_30"
+  | "school_holidays"
+  | "this_weekend"
+  | "custom";
 export type TripFilter = "any" | "weekend" | "weeklong" | "long_stay";
 export type BudgetFilter = "any" | "50" | "80" | "120" | "200";
 export type ThemeFilter = "any" | "beach" | "city" | "nature";
@@ -29,6 +34,8 @@ export type DealSearchFilters = {
   destinationFilter: string;
   departureWeekdayFilter: DepartureWeekdayFilter;
   durationFilter: DurationFilter;
+  dateFrom: string | null;
+  dateTo: string | null;
 };
 
 export const DEFAULT_DEAL_SEARCH_FILTERS: DealSearchFilters = {
@@ -40,14 +47,16 @@ export const DEFAULT_DEAL_SEARCH_FILTERS: DealSearchFilters = {
   destinationFilter: "any",
   departureWeekdayFilter: "any",
   durationFilter: "any",
+  dateFrom: null,
+  dateTo: null,
 };
 
 const WHEN_FILTERS = new Set<WhenFilter>([
   "any",
   "next_30",
-  "may_aug",
   "school_holidays",
   "this_weekend",
+  "custom",
 ]);
 
 const TRIP_FILTERS = new Set<TripFilter>(["any", "weekend", "weeklong", "long_stay"]);
@@ -94,6 +103,15 @@ function getParamValue(
   return Array.isArray(value) ? value[0] : value;
 }
 
+function parseDateParam(value: string | undefined) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : value;
+}
+
 export function parseDealSearchFilters(
   source: Record<string, string | string[] | undefined> | URLSearchParams,
 ): DealSearchFilters {
@@ -105,11 +123,16 @@ export function parseDealSearchFilters(
   const destinationValue = getParamValue(source, "destination");
   const departureWeekdayValue = getParamValue(source, "departure_weekday");
   const durationValue = getParamValue(source, "duration");
+  const dateFrom = parseDateParam(getParamValue(source, "date_from"));
+  const dateTo = parseDateParam(getParamValue(source, "date_to"));
+  const parsedWhenFilter = WHEN_FILTERS.has((whenValue as WhenFilter) ?? "any")
+    ? ((whenValue as WhenFilter) ?? "any")
+    : "any";
+  const hasValidCustomRange = Boolean(dateFrom && dateTo && dateFrom <= dateTo);
+  const hasSelectedCustomRange = parsedWhenFilter === "custom" && hasValidCustomRange;
 
   return {
-    whenFilter: WHEN_FILTERS.has((whenValue as WhenFilter) ?? "any")
-      ? ((whenValue as WhenFilter) ?? "any")
-      : "any",
+    whenFilter: parsedWhenFilter === "custom" && !hasValidCustomRange ? "any" : parsedWhenFilter,
     tripFilter: TRIP_FILTERS.has((tripValue as TripFilter) ?? "any")
       ? ((tripValue as TripFilter) ?? "any")
       : "any",
@@ -135,6 +158,8 @@ export function parseDealSearchFilters(
     durationFilter: DURATION_FILTERS.has((durationValue as DurationFilter) ?? "any")
       ? ((durationValue as DurationFilter) ?? "any")
       : "any",
+    dateFrom: hasSelectedCustomRange ? dateFrom : null,
+    dateTo: hasSelectedCustomRange ? dateTo : null,
   };
 }
 
@@ -154,8 +179,16 @@ export function buildDealsSearchHref(
 ) {
   const params = new URLSearchParams();
 
-  if (filters.whenFilter !== "any") {
+  if (
+    filters.whenFilter !== "any" &&
+    (filters.whenFilter !== "custom" || (filters.dateFrom && filters.dateTo))
+  ) {
     params.set("when", filters.whenFilter);
+  }
+
+  if (filters.whenFilter === "custom" && filters.dateFrom && filters.dateTo) {
+    params.set("date_from", filters.dateFrom);
+    params.set("date_to", filters.dateTo);
   }
 
   if (filters.tripFilter !== "any") {
@@ -203,6 +236,7 @@ export function hasActiveDealSearchFilters(filters: DealSearchFilters) {
     filters.themeFilter !== "any" ||
     filters.destinationFilter !== "any" ||
     filters.departureWeekdayFilter !== "any" ||
-    filters.durationFilter !== "any"
+    filters.durationFilter !== "any" ||
+    Boolean(filters.dateFrom && filters.dateTo)
   );
 }
