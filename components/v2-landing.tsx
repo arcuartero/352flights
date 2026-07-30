@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguageSelector } from "@/components/language-selector";
+import { PublicDealsDatePicker } from "@/components/public-deals-date-picker";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
 import { useI18n } from "@/lib/i18n";
@@ -285,22 +286,32 @@ function normalizeDestinationKey(value: string) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
-function matchesWhenFilter(deal: CampaignPreviewDeal, whenFilter: WhenFilter, now: Date) {
+function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters, now: Date) {
   const departure = deal.departureDate ? new Date(deal.departureDate) : null;
   if (!departure || Number.isNaN(departure.getTime())) {
-    return whenFilter === "any";
+    return filters.whenFilter === "any";
   }
 
   const daysUntilDeparture = Math.ceil((departure.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
   const weekday = departure.getDay();
 
-  switch (whenFilter) {
+  switch (filters.whenFilter) {
     case "next_30":
       return daysUntilDeparture >= 0 && daysUntilDeparture <= 30;
     case "school_holidays":
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":
       return daysUntilDeparture >= 0 && daysUntilDeparture <= 28 && [4, 5, 6].includes(weekday);
+    case "custom": {
+      const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+      return Boolean(
+        departureDateKey &&
+          filters.dateFrom &&
+          filters.dateTo &&
+          departureDateKey >= filters.dateFrom &&
+          departureDateKey <= filters.dateTo,
+      );
+    }
     case "any":
     default:
       return true;
@@ -338,7 +349,7 @@ function matchesHomeSearchFilters(
     return false;
   }
 
-  if (!matchesWhenFilter(deal, filters.whenFilter, now)) {
+  if (!matchesWhenFilter(deal, filters, now)) {
     return false;
   }
 
@@ -440,15 +451,12 @@ export function V2Landing({
   const selectedDestinationLabel =
     destinationOptions.find((option) => option.value === filters.destinationFilter)?.label ??
     t("common.anyDestination");
-  const selectedWhenLabel =
-    searchWhenOptions.find((option) => option.value === filters.whenFilter)?.label ?? t("common.anytime");
   const selectedTripLabel =
     searchTripOptions.find((option) => option.value === filters.tripFilter)?.label ?? t("common.anyTrip");
   const selectedBudgetLabel =
     searchBudgetOptions.find((option) => option.value === filters.budgetFilter)?.label ?? t("common.anyBudget");
   const mobileDestinationLabel =
     filters.destinationFilter === "any" ? t("home.searchChooseDestination") : selectedDestinationLabel;
-  const mobileWhenLabel = filters.whenFilter === "any" ? t("home.searchChooseDates") : selectedWhenLabel;
   const mobileTripLabel = filters.tripFilter === "any" ? t("common.tripType") : selectedTripLabel;
   const mobileBudgetLabel =
     filters.budgetFilter === "any" ? t("common.budgetMax") : selectedBudgetLabel;
@@ -564,26 +572,20 @@ export function V2Landing({
               ))}
             </select>
           </label>
-          <label className="v2-search__field v2-search__field--when" data-mobile-value={mobileWhenLabel}>
-            <span>{t("common.when")}</span>
-            <select
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  whenFilter: event.target.value as WhenFilter,
-                  dateFrom: null,
-                  dateTo: null,
-                }))
-              }
-              value={filters.whenFilter}
-            >
-              {searchWhenOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PublicDealsDatePicker
+            className="v2-search__field v2-search__field--when"
+            dateFrom={filters.dateFrom}
+            dateTo={filters.dateTo}
+            label={t("common.when")}
+            onChange={(selection) =>
+              setFilters((current) => ({
+                ...current,
+                ...selection,
+              }))
+            }
+            presetOptions={searchWhenOptions}
+            value={filters.whenFilter}
+          />
           <label className="v2-search__field v2-search__field--trip" data-mobile-value={mobileTripLabel}>
             <span>{t("common.tripType")}</span>
             <select
