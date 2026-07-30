@@ -4,8 +4,6 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import {
   useEffect,
@@ -65,6 +63,13 @@ function isSameMonth(left: Date, right: Date) {
   );
 }
 
+function getCalendarDays(month: Date) {
+  const monthStart = startOfMonth(month);
+  const mondayOffset = (monthStart.getUTCDay() + 6) % 7;
+  const gridStart = addDays(monthStart, -mondayOffset);
+  return Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
+}
+
 function localeTag(locale: Locale) {
   return locale === "pt" ? "pt-PT" : locale;
 }
@@ -113,6 +118,7 @@ export function PublicDealsDatePicker({
 }: PublicDealsDatePickerProps) {
   const { locale, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
+  const [draftWhenFilter, setDraftWhenFilter] = useState<WhenFilter>(value);
   const [draftFrom, setDraftFrom] = useState<string | null>(dateFrom);
   const [draftTo, setDraftTo] = useState<string | null>(dateTo);
   const today = useMemo(() => {
@@ -121,13 +127,12 @@ export function PublicDealsDatePicker({
   }, []);
   const minDate = dateToKey(today);
   const maxDate = dateToKey(addDays(addMonths(startOfMonth(today), 19), -1));
-  const [visibleMonth, setVisibleMonth] = useState(() =>
-    startOfMonth(dateFrom ? dateFromKey(dateFrom) : today),
-  );
   const [opensAbove, setOpensAbove] = useState(false);
   const [popoverMaxHeight, setPopoverMaxHeight] = useState(560);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const monthsScrollRef = useRef<HTMLDivElement | null>(null);
+  const monthRefs = useRef<Array<HTMLElement | null>>([]);
   const pickerId = useId();
 
   const selectedPreset = presetOptions.find((option) => option.value === value);
@@ -147,12 +152,27 @@ export function PublicDealsDatePicker({
     [locale],
   );
 
-  const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(visibleMonth);
-    const mondayOffset = (monthStart.getUTCDay() + 6) % 7;
-    const gridStart = addDays(monthStart, -mondayOffset);
-    return Array.from({ length: 42 }, (_, index) => addDays(gridStart, index));
-  }, [visibleMonth]);
+  const calendarMonths = useMemo(
+    () => Array.from({ length: 19 }, (_, index) => addMonths(startOfMonth(today), index)),
+    [today],
+  );
+  const monthFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(localeTag(locale), {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      }),
+    [locale],
+  );
+  const fullDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(localeTag(locale), {
+        dateStyle: "full",
+        timeZone: "UTC",
+      }),
+    [locale],
+  );
 
   const openPicker = () => {
     const controlRect = rootRef.current?.getBoundingClientRect();
@@ -163,9 +183,9 @@ export function PublicDealsDatePicker({
       setOpensAbove(shouldOpenAbove);
       setPopoverMaxHeight(Math.floor(shouldOpenAbove ? spaceAbove : spaceBelow));
     }
-    setDraftFrom(dateFrom);
-    setDraftTo(dateTo);
-    setVisibleMonth(startOfMonth(dateFrom ? dateFromKey(dateFrom) : today));
+    setDraftWhenFilter(value);
+    setDraftFrom(value === "custom" ? dateFrom : null);
+    setDraftTo(value === "custom" ? dateTo : null);
     setIsOpen(true);
   };
 
@@ -194,7 +214,27 @@ export function PublicDealsDatePicker({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const selectedMonth = startOfMonth(dateFrom ? dateFromKey(dateFrom) : today);
+    const targetIndex = calendarMonths.findIndex((month) => isSameMonth(month, selectedMonth));
+
+    requestAnimationFrame(() => {
+      const scrollContainer = monthsScrollRef.current;
+      const targetMonth = monthRefs.current[Math.max(0, targetIndex)];
+      const firstMonth = monthRefs.current[0];
+      if (scrollContainer && targetMonth && firstMonth) {
+        scrollContainer.scrollTop = targetMonth.offsetTop - firstMonth.offsetTop;
+      }
+    });
+  }, [calendarMonths, dateFrom, isOpen, today]);
+
   const selectDate = (dateKey: string) => {
+    setDraftWhenFilter("custom");
+
     if (!draftFrom || draftTo) {
       setDraftFrom(dateKey);
       setDraftTo(null);
@@ -210,10 +250,13 @@ export function PublicDealsDatePicker({
     setDraftTo(dateKey);
   };
 
-  const previousMonth = addMonths(visibleMonth, -1);
-  const nextMonth = addMonths(visibleMonth, 1);
-  const canGoPrevious = previousMonth >= startOfMonth(today);
-  const canGoNext = nextMonth <= startOfMonth(dateFromKey(maxDate));
+  const selectedDraftPreset = presetOptions.find(
+    (option) => option.value === draftWhenFilter,
+  );
+  const canApply =
+    draftWhenFilter === "custom"
+      ? Boolean(draftFrom && draftTo)
+      : Boolean(selectedDraftPreset && !selectedDraftPreset.disabled);
 
   return (
     <div
@@ -251,7 +294,7 @@ export function PublicDealsDatePicker({
           <div className="deals-date-picker__presets">
             <span>{t("deals.datePicker.quickOptions")}</span>
             {presetOptions.map((option) => {
-              const isSelected = option.value === value;
+              const isSelected = option.value === draftWhenFilter;
               return (
                 <button
                   aria-pressed={isSelected}
@@ -259,12 +302,9 @@ export function PublicDealsDatePicker({
                   disabled={option.disabled}
                   key={option.value}
                   onClick={() => {
-                    onChange({
-                      whenFilter: option.value as WhenFilter,
-                      dateFrom: null,
-                      dateTo: null,
-                    });
-                    setIsOpen(false);
+                    setDraftWhenFilter(option.value as WhenFilter);
+                    setDraftFrom(null);
+                    setDraftTo(null);
                   }}
                   type="button"
                 >
@@ -274,9 +314,10 @@ export function PublicDealsDatePicker({
               );
             })}
             <button
-              aria-pressed={value === "custom"}
-              className={value === "custom" ? "is-selected" : ""}
+              aria-pressed={draftWhenFilter === "custom"}
+              className={draftWhenFilter === "custom" ? "is-selected" : ""}
               onClick={() => {
+                setDraftWhenFilter("custom");
                 if (!draftFrom || draftTo) {
                   setDraftFrom(null);
                   setDraftTo(null);
@@ -285,7 +326,9 @@ export function PublicDealsDatePicker({
               type="button"
             >
               <span>{t("deals.datePicker.custom")}</span>
-              {value === "custom" ? <Check aria-hidden="true" size={16} strokeWidth={2.2} /> : null}
+              {draftWhenFilter === "custom" ? (
+                <Check aria-hidden="true" size={16} strokeWidth={2.2} />
+              ) : null}
             </button>
           </div>
 
@@ -302,75 +345,65 @@ export function PublicDealsDatePicker({
               </div>
             </div>
 
-            <div className="deals-date-picker__month-nav">
-              <strong>
-                {new Intl.DateTimeFormat(localeTag(locale), {
-                  month: "long",
-                  year: "numeric",
-                  timeZone: "UTC",
-                }).format(visibleMonth)}
-              </strong>
-              <div>
-                <button
-                  aria-label={t("deals.datePicker.previousMonth")}
-                  disabled={!canGoPrevious}
-                  onClick={() => setVisibleMonth(previousMonth)}
-                  title={t("deals.datePicker.previousMonth")}
-                  type="button"
-                >
-                  <ChevronLeft aria-hidden="true" size={19} />
-                </button>
-                <button
-                  aria-label={t("deals.datePicker.nextMonth")}
-                  disabled={!canGoNext}
-                  onClick={() => setVisibleMonth(nextMonth)}
-                  title={t("deals.datePicker.nextMonth")}
-                  type="button"
-                >
-                  <ChevronRight aria-hidden="true" size={19} />
-                </button>
-              </div>
-            </div>
-
-            <div className="deals-date-picker__weekdays" aria-hidden="true">
-              {weekdayLabels.map((weekday) => (
-                <span key={weekday}>{weekday}</span>
-              ))}
-            </div>
-
-            <div className="deals-date-picker__days">
-              {calendarDays.map((day) => {
-                const key = dateToKey(day);
-                const isOutside = !isSameMonth(day, visibleMonth);
-                const isDisabled = isOutside || key < minDate || key > maxDate;
-                const isStart = key === draftFrom;
-                const isEnd = key === draftTo;
-                const isInRange = Boolean(draftFrom && draftTo && key > draftFrom && key < draftTo);
-                const isToday = key === minDate;
-
+            <div
+              aria-label={t("deals.datePicker.selectRange")}
+              className="deals-date-picker__months"
+              ref={monthsScrollRef}
+            >
+              {calendarMonths.map((month, monthIndex) => {
+                const monthKey = dateToKey(month).slice(0, 7);
                 return (
-                  <button
-                    aria-current={isToday ? "date" : undefined}
-                    aria-label={new Intl.DateTimeFormat(localeTag(locale), {
-                      dateStyle: "full",
-                      timeZone: "UTC",
-                    }).format(day)}
-                    className={[
-                      isOutside ? "is-outside" : "",
-                      isStart ? "is-range-start" : "",
-                      isEnd ? "is-range-end" : "",
-                      isInRange ? "is-in-range" : "",
-                      isToday ? "is-today" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    disabled={isDisabled}
-                    key={key}
-                    onClick={() => selectDate(key)}
-                    type="button"
+                  <section
+                    className="deals-date-picker__month"
+                    key={monthKey}
+                    ref={(element) => {
+                      monthRefs.current[monthIndex] = element;
+                    }}
                   >
-                    {day.getUTCDate()}
-                  </button>
+                    <strong className="deals-date-picker__month-title">
+                      {monthFormatter.format(month)}
+                    </strong>
+                    <div className="deals-date-picker__weekdays" aria-hidden="true">
+                      {weekdayLabels.map((weekday) => (
+                        <span key={`${monthKey}-${weekday}`}>{weekday}</span>
+                      ))}
+                    </div>
+                    <div className="deals-date-picker__days">
+                      {getCalendarDays(month).map((day) => {
+                        const key = dateToKey(day);
+                        const isOutside = !isSameMonth(day, month);
+                        const isDisabled = isOutside || key < minDate || key > maxDate;
+                        const isStart = key === draftFrom;
+                        const isEnd = key === draftTo;
+                        const isInRange = Boolean(
+                          draftFrom && draftTo && key > draftFrom && key < draftTo,
+                        );
+                        const isToday = key === minDate;
+
+                        return (
+                          <button
+                            aria-current={isToday ? "date" : undefined}
+                            aria-label={fullDateFormatter.format(day)}
+                            className={[
+                              isOutside ? "is-outside" : "",
+                              isStart ? "is-range-start" : "",
+                              isEnd ? "is-range-end" : "",
+                              isInRange ? "is-in-range" : "",
+                              isToday ? "is-today" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            disabled={isDisabled}
+                            key={`${monthKey}-${key}`}
+                            onClick={() => selectDate(key)}
+                            type="button"
+                          >
+                            {day.getUTCDate()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
                 );
               })}
             </div>
@@ -385,15 +418,16 @@ export function PublicDealsDatePicker({
               </button>
               <button
                 className="deals-date-picker__apply"
-                disabled={!draftFrom || !draftTo}
+                disabled={!canApply}
                 onClick={() => {
-                  if (!draftFrom || !draftTo) {
+                  if (!canApply) {
                     return;
                   }
+
                   onChange({
-                    whenFilter: "custom",
-                    dateFrom: draftFrom,
-                    dateTo: draftTo,
+                    whenFilter: draftWhenFilter,
+                    dateFrom: draftWhenFilter === "custom" ? draftFrom : null,
+                    dateTo: draftWhenFilter === "custom" ? draftTo : null,
                   });
                   setIsOpen(false);
                 }}
