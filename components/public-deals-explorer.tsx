@@ -2303,17 +2303,18 @@ function DealFlightCard({
               ) : (
                 <span>{getDisplayAirlineSummary(deal)}</span>
               )}
-              {routeLayout ? (
-                <Plane
-                  aria-hidden="true"
-                  className="deals-search-card__direction-icon deals-search-card__direction-icon--outbound"
-                  size={38}
-                  strokeWidth={2.2}
-                />
-              ) : (
+              {!routeLayout ? (
                 <small>{t("deals.outbound")}</small>
-              )}
+              ) : null}
             </div>
+            {routeLayout ? (
+              <Plane
+                aria-hidden="true"
+                className="deals-search-card__direction-icon deals-search-card__direction-icon--outbound"
+                size={38}
+                strokeWidth={2.2}
+              />
+            ) : null}
 
             <div className="deals-search-card__journey">
               {routeLayout ? (
@@ -2387,17 +2388,18 @@ function DealFlightCard({
               ) : (
                 <span>{getDisplayAirlineSummary(deal)}</span>
               )}
-              {routeLayout ? (
-                <Plane
-                  aria-hidden="true"
-                  className="deals-search-card__direction-icon deals-search-card__direction-icon--return"
-                  size={38}
-                  strokeWidth={2.2}
-                />
-              ) : (
+              {!routeLayout ? (
                 <small>{t("deals.return")}</small>
-              )}
+              ) : null}
             </div>
+            {routeLayout ? (
+              <Plane
+                aria-hidden="true"
+                className="deals-search-card__direction-icon deals-search-card__direction-icon--return"
+                size={38}
+                strokeWidth={2.2}
+              />
+            ) : null}
 
             <div className="deals-search-card__journey">
               {routeLayout ? (
