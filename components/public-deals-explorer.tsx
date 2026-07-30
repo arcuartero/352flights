@@ -3957,7 +3957,7 @@ export function PublicDealsExplorer({
                 />
 
                 <label
-                  className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
+                  className={`deals-toggle deals-toggle--untitled-field${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
                 >
                   <input
                     checked={draftFilters.directOnly}
