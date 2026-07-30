@@ -58,6 +58,7 @@ body:has(.v2) .scroll-top-button {
 .v2 [data-reveal].is-in {
   opacity: 1;
   transform: none;
+  will-change: auto;
 }
 
 /* ---------- shared type ---------- */
