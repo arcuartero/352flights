@@ -15,6 +15,7 @@ import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
   buildDealsSearchHref,
   DEFAULT_DEAL_SEARCH_FILTERS,
+  doesTripIncludeWeekend,
   isTripInCurrentWeekend,
   type BudgetFilter,
   type DealSearchFilters,
@@ -301,6 +302,8 @@ function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":
       return isTripInCurrentWeekend(deal.departureDate, deal.returnDate, now);
+    case "weekends":
+      return doesTripIncludeWeekend(deal.departureDate, deal.returnDate);
     case "custom": {
       const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
       return Boolean(
@@ -396,6 +399,7 @@ export function V2Landing({
       [
         { value: "any" as WhenFilter, label: t("common.anytime") },
         { value: "this_weekend" as WhenFilter, label: t("common.thisWeekend") },
+        { value: "weekends" as WhenFilter, label: t("deals.when.weekends") },
         { value: "next_30" as WhenFilter, label: t("common.next30") },
         { value: "school_holidays" as WhenFilter, label: t("common.schoolHolidays") },
       ].map((option) => ({
