@@ -33,6 +33,7 @@ type PublicDealsDatePickerProps = {
   dateTo: string | null;
   presetOptions: PublicDealsSelectOption[];
   onChange: (selection: DatePickerSelection) => void;
+  className?: string;
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -108,6 +109,7 @@ export function PublicDealsDatePicker({
   dateTo,
   presetOptions,
   onChange,
+  className,
 }: PublicDealsDatePickerProps) {
   const { locale, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
@@ -214,7 +216,10 @@ export function PublicDealsDatePicker({
   const canGoNext = nextMonth <= startOfMonth(dateFromKey(maxDate));
 
   return (
-    <div className="deals-control deals-date-picker" ref={rootRef}>
+    <div
+      className={`deals-control deals-date-picker${className ? ` ${className}` : ""}`}
+      ref={rootRef}
+    >
       <span id={`${pickerId}-label`}>{label}</span>
       <button
         aria-controls={`${pickerId}-popover`}
