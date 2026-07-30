@@ -1179,6 +1179,8 @@ body:has(.page-shell--deals-city)::before {
   width: 1.7rem;
   height: 1.7rem;
   color: #80c7e3;
+  fill: currentColor;
+  stroke: none;
 }
 
 .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__direction-icon--outbound,
