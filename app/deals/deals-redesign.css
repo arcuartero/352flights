@@ -851,6 +851,11 @@ body:has(.page-shell--deals-city)::before {
   transform: translateX(0.9rem);
 }
 
+.page-shell--deals-search .deals-search-sidebar .deals-toggle--untitled-field,
+.page-shell--deals-city .deals-search-sidebar .deals-toggle--untitled-field {
+  margin-top: 1.4rem;
+}
+
 /* Breadcrumb current page in red, consistent with the v2 accent. */
 .page-shell--deals-search .deals-breadcrumb span[aria-current="page"],
 .page-shell--deals-city .deals-breadcrumb span[aria-current="page"] {
