@@ -1125,6 +1125,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__city-link,
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__city-link {
   font-size: 1.38rem;
+  font-weight: 700;
 }
 
 .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segments,
@@ -1203,7 +1204,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__leg-heading strong {
   color: #25814f;
   font-size: 0.94rem;
-  font-weight: 800;
+  font-weight: 400;
   letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
@@ -1213,7 +1214,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__leg-heading time {
   color: #667180;
   font-size: 1rem;
-  font-weight: 650;
+  font-weight: 400;
   line-height: 1.1;
 }
 
@@ -1239,7 +1240,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timepoint strong {
   font-family: var(--font-sans), sans-serif;
   font-size: 2rem;
-  font-weight: 720;
+  font-weight: 400;
   letter-spacing: 0;
   line-height: 0.95;
 }
@@ -1247,7 +1248,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__timepoint span,
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timepoint span {
   font-size: 0.94rem;
-  font-weight: 750;
+  font-weight: 400;
 }
 
 .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration,
@@ -1298,7 +1299,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration strong {
   color: #ee5757;
   font-size: 1rem;
-  font-weight: 750;
+  font-weight: 400;
   line-height: 1.05;
 }
 
@@ -1339,7 +1340,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__price {
   font-family: var(--font-sans), sans-serif;
   font-size: 3.55rem;
-  font-weight: 760;
+  font-weight: 400;
   letter-spacing: 0;
   line-height: 0.9;
 }
@@ -1354,6 +1355,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__saving,
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__saving {
   font-size: 1.05rem;
+  font-weight: 400;
   line-height: 1.28;
 }
 
@@ -1369,7 +1371,16 @@ body:has(.page-shell--deals-city)::before {
   min-height: 3.45rem;
   padding-inline: 1.15rem;
   font-size: 0.98rem;
-  font-weight: 720;
+  font-weight: 400;
+}
+
+.page-shell--deals-search .deals-search-card--route-layout .deals-search-card__usual-tooltip-bubble,
+.page-shell--deals-city .deals-search-card--route-layout .deals-search-card__usual-tooltip-bubble,
+.page-shell--deals-search .deals-search-card--route-layout .deals-search-card__facts span,
+.page-shell--deals-city .deals-search-card--route-layout .deals-search-card__facts span,
+.page-shell--deals-search .deals-search-card--route-layout .deals-search-card__pending,
+.page-shell--deals-city .deals-search-card--route-layout .deals-search-card__pending {
+  font-weight: 400;
 }
 
 .page-shell--deals-search .deals-search-group__header {
