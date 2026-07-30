@@ -267,6 +267,16 @@ body:has(.v2) .scroll-top-button {
   box-shadow: 0 36px 80px rgba(31, 95, 214, 0.16);
 }
 
+.v2-hero__canvas:has(.deals-date-picker__popover) {
+  z-index: 20;
+  overflow: visible;
+  will-change: auto;
+}
+
+.v2-search__bar:has(.deals-date-picker__popover) {
+  will-change: auto;
+}
+
 .v2-hero__photo {
   position: absolute;
   top: 0;
@@ -287,6 +297,7 @@ body:has(.v2) .scroll-top-button {
     rgba(0, 0, 0, 0.8) 32%,
     #000 46%
   );
+  border-radius: inherit;
 }
 
 .v2-hero__overlay {
@@ -296,6 +307,7 @@ body:has(.v2) .scroll-top-button {
   background:
     linear-gradient(90deg, rgba(225, 237, 252, 0.92) 12%, rgba(225, 237, 252, 0.5) 28%, rgba(225, 237, 252, 0.12) 44%, rgba(225, 237, 252, 0) 58%),
     linear-gradient(90deg, rgba(108, 152, 210, 0.2) 0%, rgba(108, 152, 210, 0.16) 30%, rgba(108, 152, 210, 0.06) 45%, rgba(108, 152, 210, 0) 58%);
+  border-radius: inherit;
 }
 
 .v2-hero__copy {
@@ -450,7 +462,14 @@ body:has(.v2) .scroll-top-button {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(11rem, auto) minmax(9rem, auto);
+  grid-template-columns:
+    minmax(7.5rem, 0.9fr)
+    minmax(7.5rem, 1fr)
+    minmax(10rem, 1.25fr)
+    minmax(7.5rem, 1fr)
+    minmax(7.5rem, 1fr)
+    minmax(11rem, auto)
+    minmax(9rem, auto);
   gap: 0.9rem;
   align-items: end;
   margin-top: clamp(2rem, 4vw, 3rem);
@@ -513,6 +532,25 @@ body:has(.v2) .scroll-top-button {
 .v2-search__field select:focus-visible {
   border-color: var(--v2-blue);
   outline: none;
+}
+
+.v2-search__field.deals-date-picker .deals-date-picker__trigger {
+  min-height: 2.7rem;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  border-color: var(--v2-hairline);
+  border-radius: 0.8rem;
+  font-family: inherit;
+}
+
+.v2-search__field.deals-date-picker .deals-date-picker__trigger strong {
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.v2-search__field.deals-date-picker .deals-date-picker__popover {
+  color: var(--v2-ink);
+  font-family: var(--font-sans), sans-serif;
 }
 
 .v2-search__toggle {
@@ -1498,6 +1536,10 @@ body:has(.v2) .scroll-top-button {
     border-right: 2px solid #0c2238;
   }
 
+  .v2-search__field--when.deals-date-picker {
+    overflow: visible;
+  }
+
   .v2-search__field--budget {
     grid-column: 1 / -1;
     border-top: 2px solid #0c2238;
@@ -1592,6 +1634,29 @@ body:has(.v2) .scroll-top-button {
     min-width: 100%;
     min-height: 100%;
     opacity: 0;
+  }
+
+  .v2-search__field--when.deals-date-picker .deals-date-picker__trigger {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .v2-search__field--when.deals-date-picker
+    .deals-date-picker__trigger
+    > svg:first-child {
+    display: none;
+  }
+
+  .v2-search__field--when.deals-date-picker .deals-date-picker__trigger strong {
+    font-size: 1rem;
+    font-weight: 650;
   }
 
   .v2-search__field[data-mobile-value] select {
