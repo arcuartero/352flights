@@ -1376,6 +1376,20 @@ body:has(.page-shell--deals-city)::before {
   background: #ffffff;
 }
 
+.page-shell--deals-search .deals-results-pagination__page-size select,
+.page-shell--deals-city .deals-results-pagination__page-size select {
+  border-color: rgba(29, 39, 51, 0.14);
+  background: #ffffff;
+  color: var(--v2-ink);
+}
+
+.page-shell--deals-search .deals-results-pagination__page-size select:focus-visible,
+.page-shell--deals-city .deals-results-pagination__page-size select:focus-visible {
+  border-color: var(--v2-accent);
+  outline: 2px solid rgba(225, 50, 44, 0.16);
+  outline-offset: 2px;
+}
+
 .page-shell--deals-search .deals-results-pagination__load-more,
 .page-shell--deals-city .deals-results-pagination__load-more {
   border-color: rgba(225, 50, 44, 0.18);
