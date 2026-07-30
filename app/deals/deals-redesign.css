@@ -1204,7 +1204,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__leg-heading strong {
   color: #25814f;
   font-size: 0.94rem;
-  font-weight: 400;
+  font-weight: 650;
   letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
@@ -1240,7 +1240,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timepoint strong {
   font-family: var(--font-sans), sans-serif;
   font-size: 2rem;
-  font-weight: 400;
+  font-weight: 650;
   letter-spacing: 0;
   line-height: 0.95;
 }
@@ -1340,7 +1340,7 @@ body:has(.page-shell--deals-city)::before {
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__price {
   font-family: var(--font-sans), sans-serif;
   font-size: 3.55rem;
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 0.9;
 }
