@@ -594,6 +594,31 @@ function parseLocalDateTimeParts(value: string) {
   };
 }
 
+function getArrivalDayOffset(departureAt: string | null, arrivalAt: string | null) {
+  if (!departureAt || !arrivalAt) {
+    return 0;
+  }
+
+  const departure = parseLocalDateTimeParts(departureAt);
+  const arrival = parseLocalDateTimeParts(arrivalAt);
+  if (!departure || !arrival) {
+    return 0;
+  }
+
+  const departureDay = Date.UTC(departure.year, departure.month - 1, departure.day);
+  const arrivalDay = Date.UTC(arrival.year, arrival.month - 1, arrival.day);
+  const dayOffset = Math.round((arrivalDay - departureDay) / 86_400_000);
+
+  return Math.max(0, dayOffset);
+}
+
+function formatArrivalDayOffsetLabel(dayOffset: number, locale: Locale) {
+  return new Intl.RelativeTimeFormat(locale, {
+    numeric: "always",
+    style: "long",
+  }).format(dayOffset, "day");
+}
+
 function getTimeZoneOffsetMinutes(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -2211,6 +2236,14 @@ function DealFlightCard({
     deal.destinationAirport,
     "LUX",
   );
+  const outboundArrivalDayOffset = getArrivalDayOffset(
+    deal.outboundDepartureAt,
+    deal.outboundArrivalAt,
+  );
+  const returnArrivalDayOffset = getArrivalDayOffset(
+    deal.returnDepartureAt,
+    deal.returnArrivalAt,
+  );
   const holidayMatch = getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate);
   const airlineName = getPrimaryAirlineName(deal);
   const outboundStopsLabel = formatLegStops(deal.outboundStopCount, deal.maxStops, t);
@@ -2302,6 +2335,15 @@ function DealFlightCard({
                     {(routeLayout
                       ? formatFlightTime(deal.outboundArrivalAt)
                       : formatFlightClock(deal.outboundArrivalAt)) ?? t("deals.timeNA")}
+                    {outboundArrivalDayOffset > 0 ? (
+                      <small
+                        aria-label={formatArrivalDayOffsetLabel(outboundArrivalDayOffset, locale)}
+                        className="deals-search-card__arrival-day-offset"
+                        title={formatArrivalDayOffsetLabel(outboundArrivalDayOffset, locale)}
+                      >
+                        +{outboundArrivalDayOffset}
+                      </small>
+                    ) : null}
                   </strong>
                   <span>{deal.destinationAirport}</span>
                 </div>
@@ -2377,6 +2419,15 @@ function DealFlightCard({
                     {(routeLayout
                       ? formatFlightTime(deal.returnArrivalAt)
                       : formatFlightClock(deal.returnArrivalAt)) ?? t("deals.timeNA")}
+                    {returnArrivalDayOffset > 0 ? (
+                      <small
+                        aria-label={formatArrivalDayOffsetLabel(returnArrivalDayOffset, locale)}
+                        className="deals-search-card__arrival-day-offset"
+                        title={formatArrivalDayOffsetLabel(returnArrivalDayOffset, locale)}
+                      >
+                        +{returnArrivalDayOffset}
+                      </small>
+                    ) : null}
                   </strong>
                   <span>LUX</span>
                 </div>
