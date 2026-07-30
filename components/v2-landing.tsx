@@ -391,12 +391,30 @@ export function V2Landing({
   useParallax(heroMediaRef, 0.1);
 
   const searchHref = useMemo(() => buildDealsSearchHref(filters), [filters]);
-  const searchWhenOptions: Array<{ value: WhenFilter; label: string }> = [
-    { value: "any", label: t("common.anytime") },
-    { value: "this_weekend", label: t("common.thisWeekend") },
-    { value: "next_30", label: t("common.next30") },
-    { value: "school_holidays", label: t("common.schoolHolidays") },
-  ];
+  const searchWhenOptions = useMemo(
+    () =>
+      [
+        { value: "any" as WhenFilter, label: t("common.anytime") },
+        { value: "this_weekend" as WhenFilter, label: t("common.thisWeekend") },
+        { value: "next_30" as WhenFilter, label: t("common.next30") },
+        { value: "school_holidays" as WhenFilter, label: t("common.schoolHolidays") },
+      ].map((option) => ({
+        ...option,
+        disabled: !deals.some((deal) =>
+          matchesHomeSearchFilters(
+            deal,
+            {
+              ...filters,
+              whenFilter: option.value,
+              dateFrom: null,
+              dateTo: null,
+            },
+            now,
+          ),
+        ),
+      })),
+    [deals, filters, now, t],
+  );
   const searchTripOptions: Array<{ value: TripFilter; label: string }> = [
     { value: "any", label: t("common.anyTrip") },
     { value: "weekend", label: t("common.weekend") },
