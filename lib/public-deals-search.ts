@@ -3,6 +3,7 @@ export type WhenFilter =
   | "next_30"
   | "school_holidays"
   | "this_weekend"
+  | "weekends"
   | "custom";
 export type TripFilter = "any" | "weekend" | "weeklong" | "long_stay";
 export type BudgetFilter = "any" | "50" | "80" | "120" | "200";
@@ -56,6 +57,7 @@ const WHEN_FILTERS = new Set<WhenFilter>([
   "next_30",
   "school_holidays",
   "this_weekend",
+  "weekends",
   "custom",
 ]);
 
@@ -115,6 +117,37 @@ export function isTripInCurrentWeekend(
       : departureDateKey;
 
   return departureDateKey <= sundayDateKey && returnDateKey >= saturdayDateKey;
+}
+
+export function doesTripIncludeWeekend(
+  departureDate: string | null | undefined,
+  returnDate: string | null | undefined,
+) {
+  const departureDateKey = extractDateKey(departureDate);
+  if (!departureDateKey) {
+    return false;
+  }
+
+  const parsedReturnDateKey = extractDateKey(returnDate);
+  const returnDateKey =
+    parsedReturnDateKey && parsedReturnDateKey >= departureDateKey
+      ? parsedReturnDateKey
+      : departureDateKey;
+  const departure = new Date(`${departureDateKey}T12:00:00Z`);
+  const tripEnd = new Date(`${returnDateKey}T12:00:00Z`);
+
+  if (Number.isNaN(departure.getTime()) || Number.isNaN(tripEnd.getTime())) {
+    return false;
+  }
+
+  for (let date = departure; date <= tripEnd; date = addUtcDays(date, 1)) {
+    const weekday = date.getUTCDay();
+    if (weekday === 0 || weekday === 6) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function normalizeDestinationFilterValue(value: string) {
