@@ -538,6 +538,23 @@ function formatDateWithoutWeekday(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatLegDate(value: string | null, locale: Locale) {
+  if (!value) {
+    return "n/a";
+  }
+
+  const formatted = new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+    .format(new Date(value))
+    .replace(/,/g, "");
+
+  return `${formatted.charAt(0).toUpperCase()}${formatted.slice(1)}`;
+}
+
 function formatFlightClock(value: string | null) {
   if (!value) {
     return null;
@@ -545,6 +562,17 @@ function formatFlightClock(value: string | null) {
 
   return new Intl.DateTimeFormat("en-GB", {
     weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatFlightTime(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
@@ -2149,6 +2177,7 @@ function DealFlightCard({
   showWeekdayInDate = true,
   shiftDurationLeft = false,
   showAirlineLogo = false,
+  layout = "default",
 }: {
   deal: CampaignPreviewDeal;
   combinationsCount: number;
@@ -2164,6 +2193,7 @@ function DealFlightCard({
   showWeekdayInDate?: boolean;
   shiftDurationLeft?: boolean;
   showAirlineLogo?: boolean;
+  layout?: "default" | "route";
 }) {
   const { locale, t } = useI18n();
   const usualTooltipId = useId();
@@ -2188,7 +2218,8 @@ function DealFlightCard({
   const resolvedCtaLabel = ctaLabel ?? t("deals.bookOnSkyscanner");
   const resolvedPendingLabel = pendingLabel === "Skyscanner link pending" ? t("deals.skyscannerPending") : pendingLabel;
   const strongPrice = isStrongPriceDeal(deal);
-  const cardClassName = `${className ?? "deals-search-card"}${strongPrice ? " deals-search-card--strong-price" : ""}`;
+  const routeLayout = layout === "route";
+  const cardClassName = `${className ?? "deals-search-card"}${strongPrice ? " deals-search-card--strong-price" : ""}${routeLayout ? " deals-search-card--route-layout" : ""}`;
   const destinationHref = buildDestinationDealsHref(deal.destinationCity);
 
   return (
@@ -2213,35 +2244,67 @@ function DealFlightCard({
               ) : (
                 <span>{getDisplayAirlineSummary(deal)}</span>
               )}
-              <small>{t("deals.outbound")}</small>
+              {routeLayout ? (
+                <Plane
+                  aria-hidden="true"
+                  className="deals-search-card__direction-icon deals-search-card__direction-icon--outbound"
+                  size={38}
+                  strokeWidth={2.2}
+                />
+              ) : (
+                <small>{t("deals.outbound")}</small>
+              )}
             </div>
 
-            <div className="deals-search-card__timeline">
-              <div className="deals-search-card__timepoint deals-search-card__timepoint--departure">
-                <small className="deals-search-card__timepoint-date">
-                  {showWeekdayInDate
-                    ? formatDateWithWeekday(deal.departureDate)
-                    : formatDateWithoutWeekday(deal.departureDate)}
-                </small>
-                <strong>{formatFlightClock(deal.outboundDepartureAt) ?? t("deals.timeNA")}</strong>
-                <span>LUX</span>
-              </div>
-              <div
-                className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
-              >
-                <span>{outboundDuration ?? `${deal.tripNights} ${t("deals.nights")}`}</span>
-                <strong>{outboundStopsLabel}</strong>
-              </div>
-              <div className="deals-search-card__timepoint deals-search-card__timepoint--arrival">
-                {showArrivalDate ? (
-                  <small className="deals-search-card__timepoint-date">
-                    {showWeekdayInDate
-                      ? formatDateWithWeekday(deal.outboundArrivalAt)
-                      : formatDateWithoutWeekday(deal.outboundArrivalAt)}
-                  </small>
-                ) : null}
-                <strong>{formatFlightClock(deal.outboundArrivalAt) ?? t("deals.timeNA")}</strong>
-                <span>{deal.destinationAirport}</span>
+            <div className="deals-search-card__journey">
+              {routeLayout ? (
+                <div className="deals-search-card__leg-heading">
+                  <strong>{t("deals.outbound")}</strong>
+                  <time dateTime={deal.departureDate ?? undefined}>
+                    {formatLegDate(deal.departureDate, locale)}
+                  </time>
+                </div>
+              ) : null}
+              <div className="deals-search-card__timeline">
+                <div className="deals-search-card__timepoint deals-search-card__timepoint--departure">
+                  {!routeLayout ? (
+                    <small className="deals-search-card__timepoint-date">
+                      {showWeekdayInDate
+                        ? formatDateWithWeekday(deal.departureDate)
+                        : formatDateWithoutWeekday(deal.departureDate)}
+                    </small>
+                  ) : null}
+                  <strong>
+                    {(routeLayout
+                      ? formatFlightTime(deal.outboundDepartureAt)
+                      : formatFlightClock(deal.outboundDepartureAt)) ?? t("deals.timeNA")}
+                  </strong>
+                  <span>LUX</span>
+                </div>
+                <div
+                  className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
+                >
+                  <span>{outboundDuration ?? `${deal.tripNights} ${t("deals.nights")}`}</span>
+                  <strong>{outboundStopsLabel}</strong>
+                </div>
+                <div
+                  className="deals-search-card__timepoint deals-search-card__timepoint--arrival"
+                  title={routeLayout && showArrivalDate ? formatLegDate(deal.outboundArrivalAt, locale) : undefined}
+                >
+                  {!routeLayout && showArrivalDate ? (
+                    <small className="deals-search-card__timepoint-date">
+                      {showWeekdayInDate
+                        ? formatDateWithWeekday(deal.outboundArrivalAt)
+                        : formatDateWithoutWeekday(deal.outboundArrivalAt)}
+                    </small>
+                  ) : null}
+                  <strong>
+                    {(routeLayout
+                      ? formatFlightTime(deal.outboundArrivalAt)
+                      : formatFlightClock(deal.outboundArrivalAt)) ?? t("deals.timeNA")}
+                  </strong>
+                  <span>{deal.destinationAirport}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2256,35 +2319,67 @@ function DealFlightCard({
               ) : (
                 <span>{getDisplayAirlineSummary(deal)}</span>
               )}
-              <small>{t("deals.return")}</small>
+              {routeLayout ? (
+                <Plane
+                  aria-hidden="true"
+                  className="deals-search-card__direction-icon deals-search-card__direction-icon--return"
+                  size={38}
+                  strokeWidth={2.2}
+                />
+              ) : (
+                <small>{t("deals.return")}</small>
+              )}
             </div>
 
-            <div className="deals-search-card__timeline">
-              <div className="deals-search-card__timepoint deals-search-card__timepoint--departure">
-                <small className="deals-search-card__timepoint-date">
-                  {showWeekdayInDate
-                    ? formatDateWithWeekday(deal.returnDate)
-                    : formatDateWithoutWeekday(deal.returnDate)}
-                </small>
-                <strong>{formatFlightClock(deal.returnDepartureAt) ?? t("deals.timeNA")}</strong>
-                <span>{deal.destinationAirport}</span>
-              </div>
-              <div
-                className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
-              >
-                <span>{returnDuration ?? formatStayHours(deal.destinationStayHours, deal.tripNights)}</span>
-                <strong>{returnStopsLabel}</strong>
-              </div>
-              <div className="deals-search-card__timepoint deals-search-card__timepoint--arrival">
-                {showArrivalDate ? (
-                  <small className="deals-search-card__timepoint-date">
-                    {showWeekdayInDate
-                      ? formatDateWithWeekday(deal.returnArrivalAt)
-                      : formatDateWithoutWeekday(deal.returnArrivalAt)}
-                  </small>
-                ) : null}
-                <strong>{formatFlightClock(deal.returnArrivalAt) ?? t("deals.timeNA")}</strong>
-                <span>LUX</span>
+            <div className="deals-search-card__journey">
+              {routeLayout ? (
+                <div className="deals-search-card__leg-heading">
+                  <strong>{t("deals.return")}</strong>
+                  <time dateTime={deal.returnDate ?? undefined}>
+                    {formatLegDate(deal.returnDate, locale)}
+                  </time>
+                </div>
+              ) : null}
+              <div className="deals-search-card__timeline">
+                <div className="deals-search-card__timepoint deals-search-card__timepoint--departure">
+                  {!routeLayout ? (
+                    <small className="deals-search-card__timepoint-date">
+                      {showWeekdayInDate
+                        ? formatDateWithWeekday(deal.returnDate)
+                        : formatDateWithoutWeekday(deal.returnDate)}
+                    </small>
+                  ) : null}
+                  <strong>
+                    {(routeLayout
+                      ? formatFlightTime(deal.returnDepartureAt)
+                      : formatFlightClock(deal.returnDepartureAt)) ?? t("deals.timeNA")}
+                  </strong>
+                  <span>{deal.destinationAirport}</span>
+                </div>
+                <div
+                  className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
+                >
+                  <span>{returnDuration ?? formatStayHours(deal.destinationStayHours, deal.tripNights)}</span>
+                  <strong>{returnStopsLabel}</strong>
+                </div>
+                <div
+                  className="deals-search-card__timepoint deals-search-card__timepoint--arrival"
+                  title={routeLayout && showArrivalDate ? formatLegDate(deal.returnArrivalAt, locale) : undefined}
+                >
+                  {!routeLayout && showArrivalDate ? (
+                    <small className="deals-search-card__timepoint-date">
+                      {showWeekdayInDate
+                        ? formatDateWithWeekday(deal.returnArrivalAt)
+                        : formatDateWithoutWeekday(deal.returnArrivalAt)}
+                    </small>
+                  ) : null}
+                  <strong>
+                    {(routeLayout
+                      ? formatFlightTime(deal.returnArrivalAt)
+                      : formatFlightClock(deal.returnArrivalAt)) ?? t("deals.timeNA")}
+                  </strong>
+                  <span>LUX</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2364,6 +2459,7 @@ function SearchResultCard({
       showAirlineLogo
       showArrivalDate
       showWeekdayInDate={false}
+      layout="route"
     />
   );
 }
