@@ -83,6 +83,40 @@ const DEAL_SEARCH_SORTS = new Set<DealSearchSort>([
 ]);
 export const DEFAULT_DEAL_SEARCH_SORT: DealSearchSort = "price_asc";
 
+function extractDateKey(value: string | null | undefined) {
+  return value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+}
+
+function addUtcDays(date: Date, days: number) {
+  const result = new Date(date);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
+}
+
+export function isTripInCurrentWeekend(
+  departureDate: string | null | undefined,
+  returnDate: string | null | undefined,
+  now: Date,
+) {
+  const departureDateKey = extractDateKey(departureDate);
+  if (!departureDateKey || Number.isNaN(now.getTime())) {
+    return false;
+  }
+
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12));
+  const daysSinceMonday = (today.getUTCDay() + 6) % 7;
+  const monday = addUtcDays(today, -daysSinceMonday);
+  const saturdayDateKey = addUtcDays(monday, 5).toISOString().slice(0, 10);
+  const sundayDateKey = addUtcDays(monday, 6).toISOString().slice(0, 10);
+  const parsedReturnDateKey = extractDateKey(returnDate);
+  const returnDateKey =
+    parsedReturnDateKey && parsedReturnDateKey >= departureDateKey
+      ? parsedReturnDateKey
+      : departureDateKey;
+
+  return departureDateKey <= sundayDateKey && returnDateKey >= saturdayDateKey;
+}
+
 function normalizeDestinationFilterValue(value: string) {
   return value
     .trim()
