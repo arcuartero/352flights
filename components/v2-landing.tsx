@@ -291,15 +291,12 @@ function matchesWhenFilter(deal: CampaignPreviewDeal, whenFilter: WhenFilter, no
     return whenFilter === "any";
   }
 
-  const departureMonth = departure.getMonth();
   const daysUntilDeparture = Math.ceil((departure.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
   const weekday = departure.getDay();
 
   switch (whenFilter) {
     case "next_30":
       return daysUntilDeparture >= 0 && daysUntilDeparture <= 30;
-    case "may_aug":
-      return departureMonth >= 4 && departureMonth <= 7;
     case "school_holidays":
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":
@@ -388,7 +385,6 @@ export function V2Landing({
     { value: "any", label: t("common.anytime") },
     { value: "this_weekend", label: t("common.thisWeekend") },
     { value: "next_30", label: t("common.next30") },
-    { value: "may_aug", label: t("common.mayAug") },
     { value: "school_holidays", label: t("common.schoolHolidays") },
   ];
   const searchTripOptions: Array<{ value: TripFilter; label: string }> = [
@@ -575,6 +571,8 @@ export function V2Landing({
                 setFilters((current) => ({
                   ...current,
                   whenFilter: event.target.value as WhenFilter,
+                  dateFrom: null,
+                  dateTo: null,
                 }))
               }
               value={filters.whenFilter}
