@@ -15,6 +15,7 @@ import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
   buildDealsSearchHref,
   DEFAULT_DEAL_SEARCH_FILTERS,
+  isTripInCurrentWeekend,
   type BudgetFilter,
   type DealSearchFilters,
   type TripFilter,
@@ -293,15 +294,13 @@ function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters
   }
 
   const daysUntilDeparture = Math.ceil((departure.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-  const weekday = departure.getDay();
-
   switch (filters.whenFilter) {
     case "next_30":
       return daysUntilDeparture >= 0 && daysUntilDeparture <= 30;
     case "school_holidays":
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":
-      return daysUntilDeparture >= 0 && daysUntilDeparture <= 28 && [4, 5, 6].includes(weekday);
+      return isTripInCurrentWeekend(deal.departureDate, deal.returnDate, now);
     case "custom": {
       const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
       return Boolean(
