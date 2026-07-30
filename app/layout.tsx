@@ -7,6 +7,7 @@ import { getSiteUrl } from "@/lib/env";
 import { LanguageProvider } from "@/lib/i18n";
 
 import "./globals.css";
+import "./public-deals-date-picker.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
