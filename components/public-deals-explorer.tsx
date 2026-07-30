@@ -21,6 +21,10 @@ import {
   type PublicDealsSelectOption as SelectOption,
 } from "@/components/public-deals-select";
 import {
+  formatPublicDealDateRange,
+  PublicDealsDatePicker as DealsDatePicker,
+} from "@/components/public-deals-date-picker";
+import {
   getDestinationHeroDescription as getSeoDestinationHeroDescription,
   getDestinationTheme,
 } from "@/lib/destination-content";
@@ -252,7 +256,6 @@ const WHEN_OPTIONS: SelectOption[] = [
   { value: "any", label: "Anytime" },
   { value: "this_weekend", label: "This weekend" },
   { value: "next_30", label: "Next 30 days" },
-  { value: "may_aug", label: "May to August" },
   { value: "school_holidays", label: "School holidays" },
 ];
 
@@ -1112,7 +1115,7 @@ function resetQuickChip(
   switch (chip) {
     case "this_weekend":
     case "school_holidays":
-      return { ...filters, whenFilter: "any" };
+      return { ...filters, whenFilter: "any", dateFrom: null, dateTo: null };
     case "weekend":
     case "weeklong":
       return { ...filters, tripFilter: "any" };
@@ -1543,25 +1546,32 @@ function isWeeklongDeal(deal: CampaignPreviewDeal) {
   return deal.tripNights >= 5 && deal.tripNights <= 7;
 }
 
-function matchesWhenFilter(deal: CampaignPreviewDeal, whenFilter: WhenFilter, now: Date) {
+function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters, now: Date) {
   const departure = deal.departureDate ? new Date(deal.departureDate) : null;
   if (!departure || Number.isNaN(departure.getTime())) {
-    return whenFilter === "any";
+    return filters.whenFilter === "any";
   }
 
-  const departureMonth = departure.getMonth();
   const daysUntilDeparture = Math.ceil((departure.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
   const weekday = departure.getDay();
 
-  switch (whenFilter) {
+  switch (filters.whenFilter) {
     case "next_30":
       return daysUntilDeparture >= 0 && daysUntilDeparture <= 30;
-    case "may_aug":
-      return departureMonth >= 4 && departureMonth <= 7;
     case "school_holidays":
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":
       return daysUntilDeparture >= 0 && daysUntilDeparture <= 28 && [4, 5, 6].includes(weekday);
+    case "custom": {
+      const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+      return Boolean(
+        departureDateKey &&
+          filters.dateFrom &&
+          filters.dateTo &&
+          departureDateKey >= filters.dateFrom &&
+          departureDateKey <= filters.dateTo,
+      );
+    }
     case "any":
     default:
       return true;
@@ -1607,7 +1617,7 @@ function matchesDealSearchFilters(
     return false;
   }
 
-  if (!matchesWhenFilter(deal, filters.whenFilter, now)) {
+  if (!matchesWhenFilter(deal, filters, now)) {
     return false;
   }
 
@@ -1665,7 +1675,9 @@ function areDealSearchFiltersEqual(left: DealSearchFilters, right: DealSearchFil
     left.themeFilter === right.themeFilter &&
     left.destinationFilter === right.destinationFilter &&
     left.departureWeekdayFilter === right.departureWeekdayFilter &&
-    left.durationFilter === right.durationFilter
+    left.durationFilter === right.durationFilter &&
+    left.dateFrom === right.dateFrom &&
+    left.dateTo === right.dateTo
   );
 }
 
@@ -1880,13 +1892,23 @@ function applyQuickChip(
 ): DealSearchFilters {
   switch (chip) {
     case "this_weekend":
-      return { ...filters, whenFilter: "this_weekend" };
+      return {
+        ...filters,
+        whenFilter: "this_weekend",
+        dateFrom: null,
+        dateTo: null,
+      };
     case "weekend":
       return { ...filters, tripFilter: "weekend" };
     case "weeklong":
       return { ...filters, tripFilter: "weeklong" };
     case "school_holidays":
-      return { ...filters, whenFilter: "school_holidays" };
+      return {
+        ...filters,
+        whenFilter: "school_holidays",
+        dateFrom: null,
+        dateTo: null,
+      };
     case "under_50":
       return { ...filters, budgetFilter: "50" };
     case "cheap_direct":
@@ -2815,7 +2837,7 @@ export function PublicDealsExplorer({
   searchPathname = "/deals/search",
 }: PublicDealsExplorerProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const lockedDestinationFilter = useMemo(
     () => (lockedDestinationCity ? normalizeDestinationKey(lockedDestinationCity) : null),
     [lockedDestinationCity],
@@ -3091,6 +3113,8 @@ export function PublicDealsExplorer({
       buildAvailabilityOptions(WHEN_OPTIONS, data.deals, draftFilters, now, (value) => ({
         ...draftFilters,
         whenFilter: value as WhenFilter,
+        dateFrom: null,
+        dateTo: null,
       })).map((option) => ({ ...option, label: t(`deals.when.${option.value}`) })),
     [data.deals, draftFilters, now, t],
   );
@@ -3144,8 +3168,21 @@ export function PublicDealsExplorer({
       if (effectiveFilters.whenFilter !== "any") {
         chips.push({
           key: "when",
-          label: findOptionLabel(resultsWhenOptions, effectiveFilters.whenFilter),
-          onRemove: () => setDraftFilters((current) => ({ ...current, whenFilter: "any" })),
+          label:
+            effectiveFilters.whenFilter === "custom"
+              ? formatPublicDealDateRange(
+                  effectiveFilters.dateFrom,
+                  effectiveFilters.dateTo,
+                  locale,
+                )
+              : findOptionLabel(resultsWhenOptions, effectiveFilters.whenFilter),
+          onRemove: () =>
+            setDraftFilters((current) => ({
+              ...current,
+              whenFilter: "any",
+              dateFrom: null,
+              dateTo: null,
+            })),
         });
       }
 
@@ -3188,6 +3225,7 @@ export function PublicDealsExplorer({
       departureWeekdayOptions,
       destinationOptions,
       effectiveFilters,
+      locale,
       lockedDestinationFilter,
       resultsBudgetOptions,
       resultsDurationOptions,
@@ -3449,15 +3487,17 @@ export function PublicDealsExplorer({
               value={draftFilters.destinationFilter}
             />
 
-            <DealsSelect
+            <DealsDatePicker
+              dateFrom={draftFilters.dateFrom}
+              dateTo={draftFilters.dateTo}
               label={t("common.when")}
-              onChange={(nextValue) =>
+              onChange={(selection) =>
                 setDraftFilters((current) => ({
                   ...current,
-                  whenFilter: nextValue as WhenFilter,
+                  ...selection,
                 }))
               }
-              options={resultsWhenOptions}
+              presetOptions={resultsWhenOptions}
               value={draftFilters.whenFilter}
             />
 
@@ -3706,15 +3746,17 @@ export function PublicDealsExplorer({
                       value={draftFilters.departureWeekdayFilter}
                     />
 
-                    <DealsSelect
+                    <DealsDatePicker
+                      dateFrom={draftFilters.dateFrom}
+                      dateTo={draftFilters.dateTo}
                       label={t("common.when")}
-                      onChange={(nextValue) =>
+                      onChange={(selection) =>
                         setDraftFilters((current) => ({
                           ...current,
-                          whenFilter: nextValue as WhenFilter,
+                          ...selection,
                         }))
                       }
-                      options={resultsWhenOptions}
+                      presetOptions={resultsWhenOptions}
                       value={draftFilters.whenFilter}
                     />
 
@@ -3908,15 +3950,17 @@ export function PublicDealsExplorer({
                   value={draftFilters.departureWeekdayFilter}
                 />
 
-                <DealsSelect
+                <DealsDatePicker
+                  dateFrom={draftFilters.dateFrom}
+                  dateTo={draftFilters.dateTo}
                   label={t("common.when")}
-                  onChange={(nextValue) =>
+                  onChange={(selection) =>
                     setDraftFilters((current) => ({
                       ...current,
-                      whenFilter: nextValue as WhenFilter,
+                      ...selection,
                     }))
                   }
-                  options={resultsWhenOptions}
+                  presetOptions={resultsWhenOptions}
                   value={draftFilters.whenFilter}
                 />
 
