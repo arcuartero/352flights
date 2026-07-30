@@ -323,7 +323,8 @@ const SEARCH_QUICK_CHIPS: QuickChip[] = [
   "nature",
 ];
 
-const RESULTS_PAGE_SIZE = 12;
+const RESULTS_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200] as const;
+const DEFAULT_RESULTS_PAGE_SIZE = RESULTS_PAGE_SIZE_OPTIONS[0];
 const STRONG_PRICE_VISUAL_RATIO = 0.8;
 
 const THEME_BY_DESTINATION: Record<string, ThemeFilter> = {
@@ -2543,33 +2544,56 @@ function SearchResultCard({
 function ResultsLoadMore({
   total,
   visibleCount,
+  pageSize,
   onLoadMore,
+  onPageSizeChange,
 }: {
   total: number;
   visibleCount: number;
+  pageSize: number;
   onLoadMore: () => void;
+  onPageSizeChange: (pageSize: number) => void;
 }) {
-  if (total <= RESULTS_PAGE_SIZE) {
+  if (total <= 0) {
     return null;
   }
 
   const end = Math.min(total, visibleCount);
   const hasMore = end < total;
+  const pageSizeOptions = RESULTS_PAGE_SIZE_OPTIONS.filter(
+    (option, index) => index === 0 || option <= total,
+  );
 
   return (
     <div className="deals-results-pagination" aria-label="Fare results">
       <p>
         Mostrando {end} de {total}
       </p>
-      {hasMore ? (
-        <button
-          className="deals-results-pagination__load-more"
-          onClick={onLoadMore}
-          type="button"
-        >
-          Mostrar más
-        </button>
-      ) : null}
+      <div className="deals-results-pagination__settings">
+        <label className="deals-results-pagination__page-size">
+          <span>Mostrar</span>
+          <select
+            aria-label="Número de tarifas visibles"
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            value={pageSize}
+          >
+            {pageSizeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        {hasMore ? (
+          <button
+            className="deals-results-pagination__load-more"
+            onClick={onLoadMore}
+            type="button"
+          >
+            Mostrar más
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -2876,6 +2900,7 @@ export function PublicDealsExplorer({
   const [styleStartIndex, setStyleStartIndex] = useState(0);
   const [styleVisibleCount, setStyleVisibleCount] = useState(5);
   const [resultsPage, setResultsPage] = useState(1);
+  const [resultsPageSize, setResultsPageSize] = useState<number>(DEFAULT_RESULTS_PAGE_SIZE);
   const now = useMemo(() => new Date(), []);
   const effectiveFilters =
     mode === "results" || mode === "city"
@@ -2969,9 +2994,23 @@ export function PublicDealsExplorer({
         ? groupedOpportunityDeals.find((group) => openSearchCityGroups.has(group.key)) ?? null
         : null;
   const resultsSourceDeals = selectedSearchGroup?.deals ?? opportunityDeals;
-  const resultsPageCount = Math.max(1, Math.ceil(resultsSourceDeals.length / RESULTS_PAGE_SIZE));
+  const availableResultsPageSizes = RESULTS_PAGE_SIZE_OPTIONS.filter(
+    (option, index) => index === 0 || option <= resultsSourceDeals.length,
+  );
+  const effectiveResultsPageSize = availableResultsPageSizes.includes(
+    resultsPageSize as (typeof RESULTS_PAGE_SIZE_OPTIONS)[number],
+  )
+    ? resultsPageSize
+    : availableResultsPageSizes.at(-1) ?? DEFAULT_RESULTS_PAGE_SIZE;
+  const resultsPageCount = Math.max(
+    1,
+    Math.ceil(resultsSourceDeals.length / effectiveResultsPageSize),
+  );
   const clampedResultsPage = Math.min(resultsPage, resultsPageCount);
-  const visibleResultsCount = Math.min(resultsSourceDeals.length, clampedResultsPage * RESULTS_PAGE_SIZE);
+  const visibleResultsCount = Math.min(
+    resultsSourceDeals.length,
+    clampedResultsPage * effectiveResultsPageSize,
+  );
   const paginatedResultDeals = resultsSourceDeals.slice(
     0,
     visibleResultsCount,
@@ -3906,6 +3945,11 @@ export function PublicDealsExplorer({
                         onLoadMore={() =>
                           setResultsPage((current) => Math.min(resultsPageCount, current + 1))
                         }
+                        onPageSizeChange={(pageSize) => {
+                          setResultsPageSize(pageSize);
+                          setResultsPage(1);
+                        }}
+                        pageSize={effectiveResultsPageSize}
                         total={resultsSourceDeals.length}
                         visibleCount={visibleResultsCount}
                       />
@@ -4134,6 +4178,11 @@ export function PublicDealsExplorer({
                     onLoadMore={() =>
                       setResultsPage((current) => Math.min(resultsPageCount, current + 1))
                     }
+                    onPageSizeChange={(pageSize) => {
+                      setResultsPageSize(pageSize);
+                      setResultsPage(1);
+                    }}
+                    pageSize={effectiveResultsPageSize}
                     total={resultsSourceDeals.length}
                     visibleCount={visibleResultsCount}
                   />
@@ -4154,6 +4203,11 @@ export function PublicDealsExplorer({
                     onLoadMore={() =>
                       setResultsPage((current) => Math.min(resultsPageCount, current + 1))
                     }
+                    onPageSizeChange={(pageSize) => {
+                      setResultsPageSize(pageSize);
+                      setResultsPage(1);
+                    }}
+                    pageSize={effectiveResultsPageSize}
                     total={resultsSourceDeals.length}
                     visibleCount={visibleResultsCount}
                   />
