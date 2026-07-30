@@ -37,6 +37,7 @@ import {
   buildDealsSearchHref,
   DEFAULT_DEAL_SEARCH_FILTERS,
   DEFAULT_DEAL_SEARCH_SORT,
+  doesTripIncludeWeekend,
   isTripInCurrentWeekend,
   type BudgetFilter,
   type DealSearchSort,
@@ -256,6 +257,7 @@ const LANDMARK_TITLE_BY_DESTINATION: Record<string, string> = {
 const WHEN_OPTIONS: SelectOption[] = [
   { value: "any", label: "Anytime" },
   { value: "this_weekend", label: "This weekend" },
+  { value: "weekends", label: "Weekends" },
   { value: "next_30", label: "Next 30 days" },
   { value: "school_holidays", label: "School holidays" },
 ];
@@ -1561,6 +1563,8 @@ function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":
       return isTripInCurrentWeekend(deal.departureDate, deal.returnDate, now);
+    case "weekends":
+      return doesTripIncludeWeekend(deal.departureDate, deal.returnDate);
     case "custom": {
       const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
       return Boolean(
