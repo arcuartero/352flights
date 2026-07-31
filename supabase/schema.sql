@@ -422,6 +422,10 @@ create table if not exists public.price_scan_runs (
   completed_at timestamptz,
   duration_ms bigint
     check (duration_ms is null or duration_ms >= 0),
+  search_window_start date,
+  search_window_end date,
+  scanned_cities jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(scanned_cities) = 'array'),
   routes_planned integer not null default 0 check (routes_planned >= 0),
   routes_started integer not null default 0 check (routes_started >= 0),
   routes_completed integer not null default 0 check (routes_completed >= 0),
