@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from statistics import mean, median
 from typing import Any
 
@@ -102,6 +102,8 @@ def build_price_scan_run_summary(
     patterns_planned: int,
     patterns_scanned: int,
     retry_counts: dict[str, int],
+    search_window_start: date | None,
+    search_window_end: date | None,
     stopped_reason: str | None = None,
     stopped_reason_code: str | None = None,
 ) -> dict[str, Any]:
@@ -235,6 +237,14 @@ def build_price_scan_run_summary(
         )
     )
 
+    scanned_cities = sorted(
+        {
+            route.destination_city
+            for route in routes
+            if route.key in started_route_keys
+        }
+    )
+
     return {
         "run_key": run_key,
         "scanner_source": scanner_source,
@@ -242,17 +252,14 @@ def build_price_scan_run_summary(
         "started_at": started_at.isoformat(),
         "completed_at": completed_at.isoformat() if completed_at else None,
         "duration_ms": duration_ms if completed_at else None,
+        "search_window_start": search_window_start.isoformat() if search_window_start else None,
+        "search_window_end": search_window_end.isoformat() if search_window_end else None,
+        "scanned_cities": scanned_cities,
         "routes_planned": len(routes),
         "routes_started": len(started_route_keys),
         "routes_completed": len(completed_route_keys),
         "destinations_planned": len({route.destination_city for route in routes}),
-        "destinations_scanned": len(
-            {
-                route.destination_city
-                for route in routes
-                if route.key in started_route_keys
-            }
-        ),
+        "destinations_scanned": len(scanned_cities),
         "patterns_planned": patterns_planned,
         "patterns_scanned": patterns_scanned,
         "rules_scanned": patterns_scanned + sum(retry_counts.values()),
