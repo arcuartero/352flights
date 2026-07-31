@@ -41,8 +41,8 @@ except ImportError as exc:  # pragma: no cover - only triggers before deps are i
         "Scanner dependencies are missing. Run `uv sync` from the scanner directory first."
     ) from exc
 
-GLOBAL_LOOKAHEAD_START_DAYS = 14
-GLOBAL_LOOKAHEAD_END_DAYS = 180
+GLOBAL_LOOKAHEAD_START_DAYS = 3
+GLOBAL_LOOKAHEAD_END_DAYS = 250
 
 
 def load_routes(config: ScannerConfig) -> list[RouteSeed]:
