@@ -72,6 +72,9 @@ export type PriceScanRun = {
   startedAt: string;
   completedAt: string | null;
   durationMs: number | null;
+  searchWindowStart: string | null;
+  searchWindowEnd: string | null;
+  scannedCities: string[];
   routesPlanned: number;
   routesStarted: number;
   routesCompleted: number;
@@ -111,6 +114,9 @@ type PriceScanRunRow = {
   started_at: string;
   completed_at: string | null;
   duration_ms: number | null;
+  search_window_start: string | null;
+  search_window_end: string | null;
+  scanned_cities: unknown;
   routes_planned: number;
   routes_started: number;
   routes_completed: number;
@@ -150,6 +156,9 @@ const baseSelect = [
   "started_at",
   "completed_at",
   "duration_ms",
+  "search_window_start",
+  "search_window_end",
+  "scanned_cities",
   "routes_planned",
   "routes_started",
   "routes_completed",
@@ -196,6 +205,12 @@ function arrayValue<T>(value: unknown) {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function stringArrayValue(value: unknown) {
+  return arrayValue<unknown>(value).filter(
+    (item): item is string => typeof item === "string" && item.length > 0,
+  );
+}
+
 function recordValue(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -209,6 +224,14 @@ function countRecord(value: unknown) {
 }
 
 function mapRun(row: PriceScanRunRow): PriceScanRun {
+  const destinations = arrayValue<PriceScanDestinationSummary>(row.destinations);
+  const storedScannedCities = stringArrayValue(row.scanned_cities);
+  const scannedCities = storedScannedCities.length > 0
+    ? storedScannedCities
+    : destinations
+        .filter((destination) => destination.routes_started > 0)
+        .map((destination) => destination.destination_city);
+
   return {
     id: row.id,
     runKey: row.run_key,
@@ -217,6 +240,9 @@ function mapRun(row: PriceScanRunRow): PriceScanRun {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     durationMs: nullableNumber(row.duration_ms),
+    searchWindowStart: row.search_window_start,
+    searchWindowEnd: row.search_window_end,
+    scannedCities,
     routesPlanned: numberValue(row.routes_planned),
     routesStarted: numberValue(row.routes_started),
     routesCompleted: numberValue(row.routes_completed),
@@ -239,7 +265,7 @@ function mapRun(row: PriceScanRunRow): PriceScanRun {
     medianPrice: nullableNumber(row.median_price),
     stoppedReason: row.stopped_reason,
     stoppedReasonCode: row.stopped_reason_code,
-    destinations: arrayValue<PriceScanDestinationSummary>(row.destinations),
+    destinations,
     routes: arrayValue<PriceScanRouteSummary>(row.routes),
     patterns: row.patterns
       ? arrayValue<PriceScanPatternSummary>(row.patterns)
