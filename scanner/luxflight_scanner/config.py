@@ -72,6 +72,7 @@ class ScannerConfig:
         "SCANNER_SERVICE_CALENDAR_ROUTING",
         "NON_STOP",
     )
+    scanner_source: str = os.getenv("SCANNER_RUN_SOURCE", "local").strip() or "local"
     supabase_url: str | None = os.getenv("SUPABASE_URL")
     supabase_service_role_key: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
