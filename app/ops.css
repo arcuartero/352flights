@@ -733,7 +733,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.65rem 0.7rem;
+  padding: 0;
   border-bottom: 1px solid var(--line-strong);
   background: color-mix(in srgb, var(--panel-strong) 96%, transparent);
   color: var(--muted);
@@ -741,6 +741,40 @@
   letter-spacing: 0.08em;
   text-align: left;
   text-transform: uppercase;
+}
+
+.price-scan-history th button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  padding: 0.65rem 0.7rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.price-scan-history th button:hover,
+.price-scan-history th button:focus-visible,
+.price-scan-history th button.is-active {
+  color: var(--text-strong);
+}
+
+.price-scan-history th button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.price-scan-history th button svg {
+  flex: 0 0 auto;
+  opacity: 0.7;
 }
 
 .price-scan-history td {
