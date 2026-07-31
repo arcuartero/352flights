@@ -19,6 +19,7 @@ def _load_state(state_path: Path) -> dict[str, Any]:
             "route_service_months": [],
             "route_search_rules": [],
             "route_service_change_events": [],
+            "price_scan_runs": [],
         }
 
     with state_path.open("r", encoding="utf-8") as file:
@@ -30,6 +31,7 @@ def _load_state(state_path: Path) -> dict[str, Any]:
     payload.setdefault("route_service_months", [])
     payload.setdefault("route_search_rules", [])
     payload.setdefault("route_service_change_events", [])
+    payload.setdefault("price_scan_runs", [])
     return payload
 
 
@@ -129,6 +131,8 @@ class LocalSupabaseSync:
             "deals_synced": 0,
             "snapshots_skipped": 0,
             "deals_skipped": 0,
+            "scan_runs_synced": 0,
+            "scan_runs_skipped": 0,
             "errors": [],
         }
 
@@ -220,6 +224,43 @@ class LocalSupabaseSync:
                     {
                         "type": "deal",
                         "local_snapshot_id": local_snapshot_id,
+                        "error": str(error),
+                    }
+                )
+
+        for scan_run in state["price_scan_runs"]:
+            if _is_synced(scan_run):
+                report["scan_runs_skipped"] += 1
+                continue
+
+            run_key = str(scan_run.get("run_key") or "")
+            try:
+                sync_errors = list(report["errors"])
+                remote_payload = {
+                    **scan_run,
+                    "sync_status": "partial" if sync_errors else "completed",
+                    "sync_summary": {
+                        "snapshots_synced": report["snapshots_synced"],
+                        "snapshots_skipped": report["snapshots_skipped"],
+                        "deals_synced": report["deals_synced"],
+                        "deals_skipped": report["deals_skipped"],
+                        "errors": sync_errors,
+                    },
+                }
+                remote_run_id = self.supabase.save_scan_run(remote_payload)
+                scan_run["sync_status"] = remote_payload["sync_status"]
+                scan_run["sync_summary"] = remote_payload["sync_summary"]
+                scan_run["sync"] = {
+                    "supabase_id": remote_run_id,
+                    "synced_at": utcnow_iso(),
+                }
+                report["scan_runs_synced"] += 1
+                _persist_state(self.state_path, state)
+            except Exception as error:  # pragma: no cover - depends on live Supabase
+                report["errors"].append(
+                    {
+                        "type": "price_scan_run",
+                        "run_key": run_key,
                         "error": str(error),
                     }
                 )
