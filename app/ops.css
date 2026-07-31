@@ -777,6 +777,22 @@
   opacity: 0.7;
 }
 
+html[data-theme="light"] .price-scan-history .is-problem-metric,
+html[data-theme="light"] .price-scan-history th.is-problem-metric button {
+  color: #b42318;
+  font-weight: 650;
+}
+
+html[data-theme="dark"] .price-scan-history .is-problem-metric,
+html[data-theme="dark"] .price-scan-history th.is-problem-metric button {
+  color: #ffad96;
+  font-weight: 650;
+}
+
+html[data-theme="dark"] .price-scan-history td.is-problem-metric {
+  background: color-mix(in srgb, #ff7f66 7%, transparent);
+}
+
 .price-scan-history td {
   padding: 0.62rem 0.7rem;
   border-bottom: 1px solid var(--line);
