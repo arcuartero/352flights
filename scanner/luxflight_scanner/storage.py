@@ -73,6 +73,7 @@ class LocalStore:
                 "route_service_months": [],
                 "route_search_rules": [],
                 "route_service_change_events": [],
+                "price_scan_runs": [],
             }
 
         with self.state_path.open("r", encoding="utf-8") as file:
@@ -84,6 +85,7 @@ class LocalStore:
         payload.setdefault("route_service_months", [])
         payload.setdefault("route_search_rules", [])
         payload.setdefault("route_service_change_events", [])
+        payload.setdefault("price_scan_runs", [])
         return payload
 
     def _persist(self) -> None:
@@ -191,6 +193,21 @@ class LocalStore:
             }
             self._persist()
             return
+
+    def save_scan_run(self, summary: dict[str, Any]) -> None:
+        run_key = str(summary["run_key"])
+        payload = dict(summary)
+        payload.pop("sync", None)
+
+        for index, item in enumerate(self._state["price_scan_runs"]):
+            if str(item.get("run_key")) != run_key:
+                continue
+            self._state["price_scan_runs"][index] = payload
+            self._persist()
+            return
+
+        self._state["price_scan_runs"].append(payload)
+        self._persist()
 
     def route_pattern_overrides(self, route_id: str) -> list[dict[str, Any]]:
         today = datetime.now(timezone.utc).date().isoformat()
@@ -367,12 +384,13 @@ class SupabaseStore:
         operation_label: str,
         headers: dict[str, str],
         json: dict[str, Any] | list[dict[str, Any]],
+        params: dict[str, str] | None = None,
     ) -> httpx.Response:
         last_error: httpx.RequestError | None = None
 
         for attempt in range(1, self.write_attempts + 1):
             try:
-                return self.client.post(path, headers=headers, json=json)
+                return self.client.post(path, headers=headers, json=json, params=params)
             except httpx.RequestError as error:
                 last_error = error
                 if attempt >= self.write_attempts:
@@ -510,6 +528,26 @@ class SupabaseStore:
         if not data:
             return None
         return str(data[0]["id"])
+
+    def save_scan_run(self, summary: dict[str, Any]) -> str:
+        payload = {
+            key: value
+            for key, value in summary.items()
+            if key != "sync"
+        }
+        payload["updated_at"] = utcnow_iso()
+        response = self._post_with_retry(
+            "/rest/v1/price_scan_runs",
+            operation_label="price scan run upsert",
+            headers={
+                "Prefer": "resolution=merge-duplicates,return=representation",
+            },
+            json=payload,
+            params={"on_conflict": "run_key"},
+        )
+        response.raise_for_status()
+        data = response.json()
+        return str(data[0]["id"]) if data else str(summary["run_key"])
 
     def save_deal(self, route_id: str, snapshot_id: str, deal: DealCandidate) -> None:
         if has_non_positive_price(deal.deal_price):
