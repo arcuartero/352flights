@@ -4,8 +4,9 @@ import json
 import random
 import sys
 import time
+import uuid
 from dataclasses import asdict, replace
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from statistics import median
 from typing import Any, Iterable
@@ -19,6 +20,7 @@ from luxflight_scanner.models import (
     SearchPattern,
     SnapshotRecord,
 )
+from luxflight_scanner.run_summary import build_price_scan_run_summary
 from luxflight_scanner.storage import LocalStore, SupabaseStore, create_store
 
 try:
@@ -245,6 +247,7 @@ class LuxFlightScanner:
             else None
         )
         self.live_sync_remote_route_ids: dict[str, str] = {}
+        self._run_retry_counts: dict[str, int] = {}
         self._random = random.Random()
         self.date_search = SearchDates()
         self.flight_search = SearchFlights()
@@ -521,6 +524,10 @@ class LuxFlightScanner:
                 )
             except Exception as error:
                 if attempt < attempts and self._is_timeout_error(error):
+                    retry_key = f"{route.key}:{pattern.key}"
+                    self._run_retry_counts[retry_key] = (
+                        self._run_retry_counts.get(retry_key, 0) + 1
+                    )
                     self._log_progress(
                         f"Pattern retry: {pattern_progress_label} · "
                         f"{route.origin_airport} -> {route.destination_airport} "
@@ -2407,22 +2414,59 @@ class LuxFlightScanner:
 
         return diagnostic
 
+    def _save_scan_run_summary(self, summary: dict[str, Any]) -> None:
+        try:
+            self.store.save_scan_run(summary)
+        except Exception as error:  # pragma: no cover - depends on storage availability
+            self._log_progress(f"Scan summary persistence failed: {error}")
+
     def scan(self, limit: int | None = None) -> dict[str, Any]:
         report: list[dict[str, Any]] = []
         routes = self.routes[:limit] if limit else self.routes
+        run_key = str(uuid.uuid4())
+        started_at = datetime.now(timezone.utc)
+        started_route_keys: set[str] = set()
+        completed_route_keys: set[str] = set()
+        patterns_planned = 0
         patterns_scanned = 0
         total_routes = len(routes)
         consecutive_network_outage_failures = 0
         stopped_reason: str | None = None
         stopped_reason_code: str | None = None
+        run_status = "running"
+        fatal_error: BaseException | None = None
+        final_summary: dict[str, Any] | None = None
+        self._run_retry_counts = {}
+
+        def save_running_checkpoint() -> None:
+            self._save_scan_run_summary(
+                build_price_scan_run_summary(
+                    run_key=run_key,
+                    scanner_source=self.config.scanner_source,
+                    routes=routes,
+                    report=report,
+                    started_at=started_at,
+                    completed_at=None,
+                    status="running",
+                    started_route_keys=started_route_keys,
+                    completed_route_keys=completed_route_keys,
+                    patterns_planned=patterns_planned,
+                    patterns_scanned=patterns_scanned,
+                    retry_counts=self._run_retry_counts,
+                )
+            )
+
+        save_running_checkpoint()
 
         try:
             for route_index, route in enumerate(routes, start=1):
                 if route_index > 1:
                     self._pause_between_routes()
+                started_route_keys.add(route.key)
                 try:
                     route_id = self.store.ensure_route(route)
                     patterns = self._patterns_for_route(route, route_id)
+                    patterns_planned += len(patterns)
                     route_progress_label = f"{route_index}/{total_routes}"
                     self._log_progress(
                         f"Route start: {route_progress_label} · "
@@ -2430,6 +2474,8 @@ class LuxFlightScanner:
                         f"({route.bucket}, {len(patterns)} patterns)"
                     )
                     consecutive_network_outage_failures = 0
+                    if isinstance(self.store, LocalStore):
+                        save_running_checkpoint()
                 except Exception as error:  # pragma: no cover - depends on live upstream behavior
                     error_type = self._classify_error_type(error)
                     consecutive_network_outage_failures = (
@@ -2449,6 +2495,8 @@ class LuxFlightScanner:
                             "error_type": error_type,
                         }
                     )
+                    if isinstance(self.store, LocalStore):
+                        save_running_checkpoint()
                     continue
 
                 date_results_cache: dict[tuple[int, str, str | None, str | None], list[object]] = {}
@@ -2610,17 +2658,60 @@ class LuxFlightScanner:
                             "candidate": asdict(candidate) if candidate else None,
                         }
                     )
+                completed_route_keys.add(route.key)
+                if isinstance(self.store, LocalStore):
+                    save_running_checkpoint()
         except NetworkOutageCircuitBreakerError as error:
             stopped_reason = str(error)
             stopped_reason_code = "network_outage"
+            run_status = "partial"
+        except KeyboardInterrupt as error:
+            stopped_reason = "Scanner stopped before completing the run."
+            stopped_reason_code = "stopped"
+            run_status = "stopped"
+            fatal_error = error
+        except BaseException as error:  # pragma: no cover - defensive run accounting
+            stopped_reason = str(error)
+            stopped_reason_code = "fatal_error"
+            run_status = "failed"
+            fatal_error = error
+        finally:
+            completed_at = datetime.now(timezone.utc)
+            if run_status == "running":
+                has_errors = any(item.get("status") == "error" for item in report)
+                run_status = "completed_with_errors" if has_errors else "completed"
+
+            final_summary = build_price_scan_run_summary(
+                run_key=run_key,
+                scanner_source=self.config.scanner_source,
+                routes=routes,
+                report=report,
+                started_at=started_at,
+                completed_at=completed_at,
+                status=run_status,
+                started_route_keys=started_route_keys,
+                completed_route_keys=completed_route_keys,
+                patterns_planned=patterns_planned,
+                patterns_scanned=patterns_scanned,
+                retry_counts=self._run_retry_counts,
+                stopped_reason=stopped_reason,
+                stopped_reason_code=stopped_reason_code,
+            )
+            self._save_scan_run_summary(final_summary)
+
+        if fatal_error is not None:
+            raise fatal_error
 
         return {
             "generated_at": datetime.utcnow().isoformat() + "Z",
-            "routes_scanned": len(routes),
+            "run_key": run_key,
+            "routes_scanned": len(started_route_keys),
             "patterns_scanned": patterns_scanned,
+            "rules_scanned": patterns_scanned + sum(self._run_retry_counts.values()),
             "report": report,
             "stopped_reason": stopped_reason,
             "stopped_reason_code": stopped_reason_code,
+            "run_summary": final_summary,
         }
 
     def discover_route_patterns(
