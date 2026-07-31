@@ -168,7 +168,7 @@ function explainScannerHealthAlert(alert: {
   }
 
   if (alert.likelyIssue === "no_active_rules") {
-    return "This alert exists because the route has no active search rules inside the current 14-180 day price window, so the price scanner has nothing exact to search.";
+    return "This alert exists because the route has no active search rules inside the current 3-250 day price window, so the price scanner has nothing exact to search.";
   }
 
   if (alert.likelyIssue === "no_detected_departures") {
