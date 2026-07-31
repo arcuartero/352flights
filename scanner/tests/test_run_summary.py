@@ -15,8 +15,8 @@ class PriceScanRunSummaryTests(unittest.TestCase):
             destination_city="Milan",
             bucket="weekend_europe",
             trip_nights=3,
-            lookahead_start_days=14,
-            lookahead_end_days=180,
+            lookahead_start_days=3,
+            lookahead_end_days=250,
             max_stops="NON_STOP",
             teaser="Milan",
         )
