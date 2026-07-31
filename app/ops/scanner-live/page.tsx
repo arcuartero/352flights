@@ -4,14 +4,28 @@ import { RecentSnapshotsPanel } from "@/components/recent-snapshots-panel";
 import { VpsScannerControlPanel } from "@/components/vps-scanner-control-panel";
 import { getOpsDashboardData } from "@/lib/ops";
 import { getPriceScanRunHistory } from "@/lib/price-scan-runs";
+import { recoverLatestVpsPriceScanRun } from "@/lib/price-scan-run-recovery";
+import {
+  callVpsScannerAgent,
+  hasVpsScannerAgentConfig,
+  type VpsScannerAgentStatus,
+} from "@/lib/vps-scanner-agent";
 
 export const dynamic = "force-dynamic";
 
 export default async function OpsScannerLivePage() {
-  const [dashboard, history] = await Promise.all([
-    getOpsDashboardData(),
-    getPriceScanRunHistory(100),
-  ]);
+  const dashboardPromise = getOpsDashboardData();
+
+  if (hasVpsScannerAgentConfig()) {
+    try {
+      const status = await callVpsScannerAgent<VpsScannerAgentStatus>("status");
+      await recoverLatestVpsPriceScanRun(status);
+    } catch {
+      // History remains available when the remote agent cannot be reached.
+    }
+  }
+
+  const [dashboard, history] = await Promise.all([dashboardPromise, getPriceScanRunHistory(100)]);
 
   return (
     <main className="ops-shell ops-shell--scanner-live">
