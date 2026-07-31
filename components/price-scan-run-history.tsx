@@ -165,6 +165,7 @@ function SortableHeader<Key extends string>({
   label,
   onSort,
   sort,
+  tone,
   tooltip,
 }: {
   column: Key;
@@ -172,6 +173,7 @@ function SortableHeader<Key extends string>({
   label: string;
   onSort: (column: Key, kind: SortKind) => void;
   sort: SortState<Key>;
+  tone?: "problem";
   tooltip: string;
 }) {
   const active = sort.key === column;
@@ -182,7 +184,10 @@ function SortableHeader<Key extends string>({
     : ArrowUpDown;
 
   return (
-    <th aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+    <th
+      aria-sort={active ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+      className={tone === "problem" ? "is-problem-metric" : undefined}
+    >
       <button
         aria-label={`${label}. ${tooltip}`}
         className={active ? "is-active" : undefined}
@@ -242,11 +247,11 @@ function DestinationSummaryTable({ rows }: { rows: PriceScanDestinationSummary[]
           <SortableHeader column="patterns" kind="number" label="Patterns" onSort={onSort} sort={sort} tooltip="Date and weekday combinations processed for this city." />
           <SortableHeader column="rules" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Actual scanner searches performed, including fallback searches." />
           <SortableHeader column="found" kind="number" label="Found" onSort={onSort} sort={sort} tooltip="Patterns for which the scanner found a valid fare." />
-          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tooltip="Patterns completed without an available valid fare." />
-          <SortableHeader column="timeout" kind="number" label="Timeout" onSort={onSort} sort={sort} tooltip="Searches stopped because the provider did not answer in time." />
-          <SortableHeader column="network" kind="number" label="Net / DNS" onSort={onSort} sort={sort} tooltip="Searches affected by network connectivity or DNS failures." />
-          <SortableHeader column="hard" kind="number" label="Hard" onSort={onSort} sort={sort} tooltip="Unexpected scanner or provider errors that were not recoverable." />
-          <SortableHeader column="retries" kind="number" label="Retries" onSort={onSort} sort={sort} tooltip="Additional attempts made after a failed or inconclusive search." />
+          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tone="problem" tooltip="Patterns completed without an available valid fare." />
+          <SortableHeader column="timeout" kind="number" label="Timeout" onSort={onSort} sort={sort} tone="problem" tooltip="Searches stopped because the provider did not answer in time." />
+          <SortableHeader column="network" kind="number" label="Net / DNS" onSort={onSort} sort={sort} tone="problem" tooltip="Searches affected by network connectivity or DNS failures." />
+          <SortableHeader column="hard" kind="number" label="Hard" onSort={onSort} sort={sort} tone="problem" tooltip="Unexpected scanner or provider errors that were not recoverable." />
+          <SortableHeader column="retries" kind="number" label="Retries" onSort={onSort} sort={sort} tone="problem" tooltip="Additional attempts made after a failed or inconclusive search." />
         </tr>
       </thead>
       <tbody>
@@ -260,11 +265,11 @@ function DestinationSummaryTable({ rows }: { rows: PriceScanDestinationSummary[]
             <td>{destination.patterns_scanned}</td>
             <td>{destination.rules_scanned}</td>
             <td>{destination.found_prices}</td>
-            <td>{destination.no_results}</td>
-            <td>{destination.timed_out}</td>
-            <td>{destination.network_outages}</td>
-            <td>{destination.hard_errors}</td>
-            <td>{destination.retries}</td>
+            <td className="is-problem-metric">{destination.no_results}</td>
+            <td className="is-problem-metric">{destination.timed_out}</td>
+            <td className="is-problem-metric">{destination.network_outages}</td>
+            <td className="is-problem-metric">{destination.hard_errors}</td>
+            <td className="is-problem-metric">{destination.retries}</td>
           </tr>
         ))}
       </tbody>
@@ -282,7 +287,8 @@ type RouteSortKey =
   | "noResult"
   | "timeout"
   | "network"
-  | "hard";
+  | "hard"
+  | "retries";
 
 function routeStatus(route: PriceScanRouteSummary) {
   return route.completed ? "Completed" : route.started ? "Partial" : "Not started";
@@ -305,7 +311,8 @@ function RouteAuditTable({ rows }: { rows: PriceScanRouteSummary[] }) {
         if (key === "noResult") return row.no_results;
         if (key === "timeout") return row.timed_out;
         if (key === "network") return row.network_outages;
-        return row.hard_errors;
+        if (key === "hard") return row.hard_errors;
+        return row.retries;
       }),
     [rows, sort],
   );
@@ -322,10 +329,11 @@ function RouteAuditTable({ rows }: { rows: PriceScanRouteSummary[] }) {
           <SortableHeader column="patterns" kind="number" label="Patterns" onSort={onSort} sort={sort} tooltip="Date and weekday combinations processed for this route." />
           <SortableHeader column="rules" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Actual scanner searches performed for this route." />
           <SortableHeader column="found" kind="number" label="Found" onSort={onSort} sort={sort} tooltip="Patterns on this route for which a valid fare was found." />
-          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tooltip="Patterns completed without an available valid fare." />
-          <SortableHeader column="timeout" kind="number" label="Timeout" onSort={onSort} sort={sort} tooltip="Searches stopped because the provider did not answer in time." />
-          <SortableHeader column="network" kind="number" label="Net / DNS" onSort={onSort} sort={sort} tooltip="Searches affected by network connectivity or DNS failures." />
-          <SortableHeader column="hard" kind="number" label="Hard" onSort={onSort} sort={sort} tooltip="Unexpected non-recoverable scanner or provider errors." />
+          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tone="problem" tooltip="Patterns completed without an available valid fare." />
+          <SortableHeader column="timeout" kind="number" label="Timeout" onSort={onSort} sort={sort} tone="problem" tooltip="Searches stopped because the provider did not answer in time." />
+          <SortableHeader column="network" kind="number" label="Net / DNS" onSort={onSort} sort={sort} tone="problem" tooltip="Searches affected by network connectivity or DNS failures." />
+          <SortableHeader column="hard" kind="number" label="Hard" onSort={onSort} sort={sort} tone="problem" tooltip="Unexpected non-recoverable scanner or provider errors." />
+          <SortableHeader column="retries" kind="number" label="Retries" onSort={onSort} sort={sort} tone="problem" tooltip="Additional attempts made after a failed or inconclusive route search." />
         </tr>
       </thead>
       <tbody>
@@ -337,10 +345,11 @@ function RouteAuditTable({ rows }: { rows: PriceScanRouteSummary[] }) {
             <td>{route.patterns_scanned}</td>
             <td>{route.rules_scanned}</td>
             <td>{route.found_prices}</td>
-            <td>{route.no_results}</td>
-            <td>{route.timed_out}</td>
-            <td>{route.network_outages}</td>
-            <td>{route.hard_errors}</td>
+            <td className="is-problem-metric">{route.no_results}</td>
+            <td className="is-problem-metric">{route.timed_out}</td>
+            <td className="is-problem-metric">{route.network_outages}</td>
+            <td className="is-problem-metric">{route.hard_errors}</td>
+            <td className="is-problem-metric">{route.retries}</td>
           </tr>
         ))}
       </tbody>
