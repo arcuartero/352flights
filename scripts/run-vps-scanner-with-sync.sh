@@ -63,6 +63,7 @@ cd "$SCANNER_DIR"
 
 export SCANNER_STORAGE_MODE=local
 export SCANNER_STATE_FILE="${SCANNER_STATE_FILE:-$SCANNER_DIR/state.json}"
+export SCANNER_RUN_SOURCE="${SCANNER_RUN_SOURCE:-vps}"
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Starting local scanner."
 uv run luxflight-scan "$@" --json > "$LOG_DIR/vps-scanner-$RUN_ID.json"
