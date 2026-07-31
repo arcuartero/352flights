@@ -37,6 +37,15 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatDate(value: string | null) {
+  if (!value) return "Not recorded";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
 function formatDuration(value: number | null) {
   if (value === null) return "In progress";
   const totalMinutes = Math.max(Math.round(value / 60_000), 0);
@@ -292,6 +301,37 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                       <div><span>Hard errors</span><strong>{run.hardErrors}</strong></div>
                       <div><span>Retries</span><strong>{run.retries}</strong></div>
                       <div><span>Sync</span><strong>{run.syncStatus}</strong></div>
+                    </div>
+
+                    <div className="price-scan-history__run-scope">
+                      <div>
+                        <span>Started</span>
+                        <strong>{formatDateTime(run.startedAt)}</strong>
+                      </div>
+                      <div>
+                        <span>Finished</span>
+                        <strong>
+                          {run.completedAt ? formatDateTime(run.completedAt) : "In progress"}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Duration</span>
+                        <strong>{formatDuration(run.durationMs)}</strong>
+                      </div>
+                      <div>
+                        <span>Search dates</span>
+                        <strong>
+                          {formatDate(run.searchWindowStart)} to {formatDate(run.searchWindowEnd)}
+                        </strong>
+                      </div>
+                      <div className="is-cities">
+                        <span>Cities scanned</span>
+                        <strong>
+                          {run.scannedCities.length > 0
+                            ? run.scannedCities.join(", ")
+                            : "No city started"}
+                        </strong>
+                      </div>
                     </div>
 
                     <div className="price-scan-history__price-band">
