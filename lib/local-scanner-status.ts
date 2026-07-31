@@ -35,8 +35,8 @@ type CompletedRunSnapshot = {
 };
 
 const LOG_META_MARKER = " ||meta|| ";
-const GLOBAL_LOOKAHEAD_START_DAYS = 14;
-const GLOBAL_LOOKAHEAD_END_DAYS = 180;
+const GLOBAL_LOOKAHEAD_START_DAYS = 3;
+const GLOBAL_LOOKAHEAD_END_DAYS = 250;
 
 async function pathExists(targetPath: string) {
   try {
