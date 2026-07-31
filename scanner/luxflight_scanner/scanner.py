@@ -2430,6 +2430,9 @@ class LuxFlightScanner:
         patterns_planned = 0
         patterns_scanned = 0
         total_routes = len(routes)
+        route_windows = [self._search_window_dates(route) for route in routes]
+        search_window_start = min((window[0] for window in route_windows), default=None)
+        search_window_end = max((window[1] for window in route_windows), default=None)
         consecutive_network_outage_failures = 0
         stopped_reason: str | None = None
         stopped_reason_code: str | None = None
@@ -2453,6 +2456,8 @@ class LuxFlightScanner:
                     patterns_planned=patterns_planned,
                     patterns_scanned=patterns_scanned,
                     retry_counts=self._run_retry_counts,
+                    search_window_start=search_window_start,
+                    search_window_end=search_window_end,
                 )
             )
 
@@ -2694,6 +2699,8 @@ class LuxFlightScanner:
                 patterns_planned=patterns_planned,
                 patterns_scanned=patterns_scanned,
                 retry_counts=self._run_retry_counts,
+                search_window_start=search_window_start,
+                search_window_end=search_window_end,
                 stopped_reason=stopped_reason,
                 stopped_reason_code=stopped_reason_code,
             )
