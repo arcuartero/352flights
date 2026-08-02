@@ -70,9 +70,16 @@ class SnapshotRecord:
 @dataclass(frozen=True)
 class PatternSelectionResult:
     snapshot: SnapshotRecord | None
+    additional_snapshots: tuple[SnapshotRecord, ...] = ()
     no_result_reason: str | None = None
     no_result_reason_code: str | None = None
     no_result_diagnostic: dict[str, object] | None = None
+
+    @property
+    def snapshots(self) -> tuple[SnapshotRecord, ...]:
+        if self.snapshot is None:
+            return ()
+        return (self.snapshot, *self.additional_snapshots)
 
 
 @dataclass(frozen=True)

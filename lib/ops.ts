@@ -49,7 +49,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 
 const DEAL_AUTO_EXPIRE_DAYS = 4;
-const PUBLIC_FARE_LOOKBACK_DAYS = 14;
+const PUBLIC_FARE_LOOKBACK_DAYS = 1;
 const PUBLIC_FARES_PER_DESTINATION = 3;
 const PUBLIC_ALL_FARES_PER_DESTINATION = null;
 const PUBLIC_FARE_MIN_HISTORY_POINTS = 3;
@@ -1917,109 +1917,129 @@ function buildPublicFaresFromSnapshots(
       (left, right) =>
         new Date(right.scanned_at).getTime() - new Date(left.scanned_at).getTime(),
     );
-    const snapshot = series[0];
-    const route = routeMap.get(snapshot.route_id);
-    if (!route) {
-      continue;
-    }
+    const hasPublicationDecisions = series.some((snapshot) =>
+      Object.prototype.hasOwnProperty.call(snapshot.metadata ?? {}, "public_fare_eligible"),
+    );
+    const selectedSnapshots = hasPublicationDecisions
+      ? series.filter((snapshot) => {
+          if (snapshot.metadata?.["public_fare_eligible"] === true) {
+            return true;
+          }
 
-    const historyPrices = series
-      .slice(1, PUBLIC_FARE_HISTORY_LIMIT + 1)
-      .map((item) => Number(item.price))
-      .filter((value) => Number.isFinite(value) && value > 0);
-    const metadataHistoryPoints = extractMetadataNumber(
-      snapshot.metadata,
-      "historical_history_points",
-    );
-    const historyPoints = Math.max(
-      0,
-      Math.trunc(metadataHistoryPoints ?? historyPrices.length),
-    );
-    const metadataBaseline = extractMetadataNumber(
-      snapshot.metadata,
-      "historical_baseline_price",
-    );
-    const baselinePrice =
-      metadataBaseline ??
-      (historyPrices.length >= PUBLIC_FARE_MIN_HISTORY_POINTS
-        ? medianPrice(historyPrices)
-        : null);
-    const metadataDropRatio = extractMetadataNumber(
-      snapshot.metadata,
-      "historical_drop_ratio",
-    );
-    const dropRatio =
-      metadataDropRatio ??
-      (baselinePrice && baselinePrice > 0 ? Number(snapshot.price) / baselinePrice : null);
-    const pricePosition = classifyFarePrice(dropRatio, historyPoints);
-    const patternLabel = extractPatternLabel(snapshot.metadata);
-    const airlineNames = extractAirlineNames(snapshot.metadata);
-    const airlineSummary = formatAirlineSummary(airlineNames);
-    const bookingUrl = buildSkyscannerUrl({
-      originAirport: route.originAirport,
-      destinationAirport: route.destinationAirport,
-      departureDate: snapshot.departure_date,
-      returnDate: snapshot.return_date,
-      maxStops: snapshot.max_stops || route.maxStops,
-    });
-    const price = Number(snapshot.price);
-    const positionScore: Record<FarePricePosition, number> = {
-      exceptional: 100,
-      below_usual: 80,
-      typical: 60,
-      above_usual: 40,
-      new_price: 50,
-    };
+          const monthlyRatio = extractMetadataNumber(
+            snapshot.metadata,
+            "public_monthly_drop_ratio",
+          );
+          return (
+            monthlyRatio !== null &&
+            monthlyRatio <= PUBLIC_TYPICAL_PRICE_RATIO &&
+            Boolean(getMatchingLuxSchoolHoliday(snapshot.departure_date, snapshot.return_date))
+          );
+        })
+      : series.slice(0, 1);
 
-    fares.push({
-      id: `fare-${snapshot.id}`,
-      score: positionScore[pricePosition],
-      routeLabel: formatDisplayRouteLabel(route.label, patternLabel),
-      title: `Luxembourg to ${route.destinationCity} from ${price.toFixed(0)} ${snapshot.currency}`,
-      summary: `Live ${snapshot.trip_nights}-night return fare, last verified ${snapshot.scanned_at}.`,
-      routeBucket: deriveStayBucketFromNights(snapshot.trip_nights),
-      editorialSection: getPrimaryEditorialSection({
-        routeBucket: deriveStayBucketFromNights(snapshot.trip_nights),
-        tripNights: snapshot.trip_nights,
-        dropRatio,
+    for (const snapshot of selectedSnapshots) {
+      const route = routeMap.get(snapshot.route_id);
+      if (!route) {
+        continue;
+      }
+
+      const historyPrices = series
+        .filter((item) => item.id !== snapshot.id)
+        .slice(0, PUBLIC_FARE_HISTORY_LIMIT)
+        .map((item) => Number(item.price))
+        .filter((value) => Number.isFinite(value) && value > 0);
+      const metadataHistoryPoints =
+        extractMetadataNumber(snapshot.metadata, "public_reference_points") ??
+        extractMetadataNumber(snapshot.metadata, "historical_history_points");
+      const historyPoints = Math.max(
+        0,
+        Math.trunc(metadataHistoryPoints ?? historyPrices.length),
+      );
+      const metadataBaseline =
+        extractMetadataNumber(snapshot.metadata, "public_reference_price") ??
+        extractMetadataNumber(snapshot.metadata, "historical_baseline_price");
+      const baselinePrice =
+        metadataBaseline ??
+        (historyPrices.length >= PUBLIC_FARE_MIN_HISTORY_POINTS
+          ? medianPrice(historyPrices)
+          : null);
+      const metadataDropRatio =
+        extractMetadataNumber(snapshot.metadata, "public_monthly_drop_ratio") ??
+        extractMetadataNumber(snapshot.metadata, "historical_drop_ratio");
+      const dropRatio =
+        metadataDropRatio ??
+        (baselinePrice && baselinePrice > 0 ? Number(snapshot.price) / baselinePrice : null);
+      const pricePosition = classifyFarePrice(dropRatio, historyPoints);
+      const patternLabel = extractPatternLabel(snapshot.metadata);
+      const airlineNames = extractAirlineNames(snapshot.metadata);
+      const airlineSummary = formatAirlineSummary(airlineNames);
+      const bookingUrl = buildSkyscannerUrl({
+        originAirport: route.originAirport,
+        destinationAirport: route.destinationAirport,
         departureDate: snapshot.departure_date,
-      }),
-      destinationCity: route.destinationCity,
-      destinationAirport: route.destinationAirport,
-      dealPrice: price,
-      baselinePrice,
-      dropRatio,
-      pricePosition,
-      historyPoints,
-      isEditorialDeal: snapshot.metadata?.["editorial_deal_candidate"] === true,
-      departureDate: snapshot.departure_date,
-      returnDate: snapshot.return_date,
-      tripNights: snapshot.trip_nights,
-      maxStops: snapshot.max_stops || route.maxStops,
-      airlineSummary,
-      primaryAirlineCode: extractPrimaryAirlineCode(snapshot.metadata),
-      outboundStopCount: extractStopCount(snapshot.metadata, "outbound_stop_count"),
-      returnStopCount: extractStopCount(snapshot.metadata, "return_stop_count"),
-      outboundDepartureAt: extractMetadataDateTime(
-        snapshot.metadata,
-        "outbound_departure_at",
-      ),
-      outboundArrivalAt: extractMetadataDateTime(
-        snapshot.metadata,
-        "outbound_arrival_at",
-      ),
-      returnDepartureAt: extractMetadataDateTime(
-        snapshot.metadata,
-        "return_departure_at",
-      ),
-      returnArrivalAt: extractMetadataDateTime(
-        snapshot.metadata,
-        "return_arrival_at",
-      ),
-      destinationStayHours: extractDestinationStayHours(snapshot.metadata),
-      verifiedAt: snapshot.scanned_at,
-      bookingUrl,
-    });
+        returnDate: snapshot.return_date,
+        maxStops: snapshot.max_stops || route.maxStops,
+      });
+      const price = Number(snapshot.price);
+      const positionScore: Record<FarePricePosition, number> = {
+        exceptional: 100,
+        below_usual: 80,
+        typical: 60,
+        above_usual: 40,
+        new_price: 50,
+      };
+
+      fares.push({
+        id: `fare-${snapshot.id}`,
+        score: positionScore[pricePosition],
+        routeLabel: formatDisplayRouteLabel(route.label, patternLabel),
+        title: `Luxembourg to ${route.destinationCity} from ${price.toFixed(0)} ${snapshot.currency}`,
+        summary: `Live ${snapshot.trip_nights}-night return fare, last verified ${snapshot.scanned_at}.`,
+        routeBucket: deriveStayBucketFromNights(snapshot.trip_nights),
+        editorialSection: getPrimaryEditorialSection({
+          routeBucket: deriveStayBucketFromNights(snapshot.trip_nights),
+          tripNights: snapshot.trip_nights,
+          dropRatio,
+          departureDate: snapshot.departure_date,
+        }),
+        destinationCity: route.destinationCity,
+        destinationAirport: route.destinationAirport,
+        dealPrice: price,
+        baselinePrice,
+        dropRatio,
+        pricePosition,
+        historyPoints,
+        isEditorialDeal: snapshot.metadata?.["editorial_deal_candidate"] === true,
+        departureDate: snapshot.departure_date,
+        returnDate: snapshot.return_date,
+        tripNights: snapshot.trip_nights,
+        maxStops: snapshot.max_stops || route.maxStops,
+        airlineSummary,
+        primaryAirlineCode: extractPrimaryAirlineCode(snapshot.metadata),
+        outboundStopCount: extractStopCount(snapshot.metadata, "outbound_stop_count"),
+        returnStopCount: extractStopCount(snapshot.metadata, "return_stop_count"),
+        outboundDepartureAt: extractMetadataDateTime(
+          snapshot.metadata,
+          "outbound_departure_at",
+        ),
+        outboundArrivalAt: extractMetadataDateTime(
+          snapshot.metadata,
+          "outbound_arrival_at",
+        ),
+        returnDepartureAt: extractMetadataDateTime(
+          snapshot.metadata,
+          "return_departure_at",
+        ),
+        returnArrivalAt: extractMetadataDateTime(
+          snapshot.metadata,
+          "return_arrival_at",
+        ),
+        destinationStayHours: extractDestinationStayHours(snapshot.metadata),
+        verifiedAt: snapshot.scanned_at,
+        bookingUrl,
+      });
+    }
   }
 
   const grouped = new Map<string, CampaignPreviewDeal[]>();

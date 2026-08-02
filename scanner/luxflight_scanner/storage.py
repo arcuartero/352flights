@@ -94,17 +94,33 @@ class LocalStore:
     def ensure_route(self, route: RouteSeed) -> str:
         return route.key
 
-    def latest_prices(self, route_id: str, limit: int, pattern_key: str | None = None) -> list[float]:
+    def latest_prices(
+        self,
+        route_id: str,
+        limit: int,
+        pattern_key: str | None = None,
+        pattern_month_start: str | None = None,
+        max_stops: str | None = None,
+    ) -> list[float]:
         snapshots = [
             snapshot["price"]
             for snapshot in self._state["snapshots"]
             if snapshot["route_id"] == route_id
             and not has_short_destination_stay(snapshot.get("metadata"))
+            and (max_stops is None or snapshot.get("max_stops") == max_stops)
             and (
                 pattern_key is None
                 or (
                     isinstance(snapshot.get("metadata"), dict)
                     and snapshot["metadata"].get("pattern_key") == pattern_key
+                )
+            )
+            and (
+                pattern_month_start is None
+                or (
+                    isinstance(snapshot.get("metadata"), dict)
+                    and snapshot["metadata"].get("pattern_month_start")
+                    == pattern_month_start
                 )
             )
         ]
@@ -444,7 +460,14 @@ class SupabaseStore:
         created = insert_response.json()
         return created[0]["id"]
 
-    def latest_prices(self, route_id: str, limit: int, pattern_key: str | None = None) -> list[float]:
+    def latest_prices(
+        self,
+        route_id: str,
+        limit: int,
+        pattern_key: str | None = None,
+        pattern_month_start: str | None = None,
+        max_stops: str | None = None,
+    ) -> list[float]:
         params = {
             "route_id": f"eq.{route_id}",
             "select": "price,metadata",
@@ -453,6 +476,10 @@ class SupabaseStore:
         }
         if pattern_key:
             params["metadata->>pattern_key"] = f"eq.{pattern_key}"
+        if pattern_month_start:
+            params["metadata->>pattern_month_start"] = f"eq.{pattern_month_start}"
+        if max_stops:
+            params["max_stops"] = f"eq.{max_stops}"
 
         response = self.client.get(
             "/rest/v1/price_snapshots",

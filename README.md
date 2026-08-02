@@ -44,9 +44,11 @@ This repo starts the product in three layers:
 ### Scanner
 
 - Loads routes from `data/lux-routes.json`
-- Searches cheapest flexible-date roundtrips from `LUX`
+- Searches multiple valid roundtrips for every active route, pattern, and month from `LUX`
 - Stores snapshots locally or in Supabase
 - Flags deal candidates once a route has enough price history
+- Publishes fresh fares when they are the monthly pattern low, depart within 30 days at no more
+  than 5% above the reference, or are at least 12% below the comparable median
 
 ## Environment
 
@@ -171,6 +173,11 @@ Behavior:
 - without them, the scanner falls back to `scanner/state.json`
 - with `SCANNER_STORAGE_MODE=local`, the scanner always writes to `scanner/state.json`, even if Supabase credentials are present
 - run `uv run luxflight-scan --sync-local-to-supabase --json` to upload pending local snapshots and deals to Supabase
+- the public reference uses the median for the same route, exact weekday/duration pattern,
+  stop category, and departure month; it falls back to the same pattern across months until
+  the monthly cohort reaches 8 prices
+- the public site only loads qualifying snapshots verified during the previous 24 hours and
+  removes repeated copies of the same itinerary
 
 For the cheap online setup, keep the web on Vercel and run the 11-hour scanner on a small VPS with local storage plus sync. See `docs/cheap-online-setup.md`.
 

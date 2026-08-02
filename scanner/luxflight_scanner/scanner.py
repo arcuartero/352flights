@@ -226,6 +226,11 @@ WEEKEND_MAX_NIGHTS = 4
 PUBLIC_EXCEPTIONAL_PRICE_RATIO = 0.85
 PUBLIC_BELOW_USUAL_PRICE_RATIO = 0.95
 PUBLIC_TYPICAL_PRICE_RATIO = 1.05
+PUBLIC_MONTHLY_DISCOUNT_RATIO = 0.88
+PUBLIC_NEAR_DEPARTURE_RATIO = 1.05
+PUBLIC_NEAR_DEPARTURE_DAYS = 30
+PUBLIC_REFERENCE_MIN_POINTS = 8
+PUBLIC_FARES_PER_EXACT_DATE_PAIR = 10
 
 
 class NetworkOutageCircuitBreakerError(RuntimeError):
@@ -1771,6 +1776,8 @@ class LuxFlightScanner:
                     ),
                 )
 
+            valid_snapshots: list[SnapshotRecord] = []
+            seen_itineraries: set[tuple[object, ...]] = set()
             fallback_snapshot: SnapshotRecord | None = None
             relaxed_snapshot: SnapshotRecord | None = None
             rejected_short_stays: list[float] = []
@@ -1779,7 +1786,7 @@ class LuxFlightScanner:
             for departure_date, return_date in exact_pairs:
                 itineraries = self._run_flight_search(
                     self._build_flight_filters(route, departure_date, return_date),
-                    top_n=3,
+                    top_n=PUBLIC_FARES_PER_EXACT_DATE_PAIR,
                 )
 
                 if not itineraries:
@@ -1823,7 +1830,20 @@ class LuxFlightScanner:
                             rejected_snapshot = candidate_snapshot
                         continue
 
-                    return PatternSelectionResult(snapshot=candidate_snapshot)
+                    itinerary_key = (
+                        candidate_snapshot.departure_date,
+                        candidate_snapshot.return_date,
+                        candidate_snapshot.metadata.get("outbound_departure_at"),
+                        candidate_snapshot.metadata.get("outbound_arrival_at"),
+                        candidate_snapshot.metadata.get("return_departure_at"),
+                        candidate_snapshot.metadata.get("return_arrival_at"),
+                        candidate_snapshot.metadata.get("primary_airline_code"),
+                        candidate_snapshot.price,
+                    )
+                    if itinerary_key in seen_itineraries:
+                        continue
+                    seen_itineraries.add(itinerary_key)
+                    valid_snapshots.append(candidate_snapshot)
 
                 if fallback_snapshot is None:
                     fallback_snapshot = self._build_candidate_snapshot_from_itinerary(
@@ -1833,6 +1853,16 @@ class LuxFlightScanner:
                         departure_date,
                         return_date,
                     )
+
+            if valid_snapshots:
+                ordered_snapshots = sorted(
+                    valid_snapshots,
+                    key=lambda item: (item.departure_date, item.price),
+                )
+                return PatternSelectionResult(
+                    snapshot=ordered_snapshots[0],
+                    additional_snapshots=tuple(ordered_snapshots[1:]),
+                )
 
             if relaxed_snapshot is not None:
                 self._log_progress(
@@ -2338,6 +2368,68 @@ class LuxFlightScanner:
         }
         return replace(snapshot, metadata=metadata)
 
+    def _snapshot_with_publication_context(
+        self,
+        snapshot: SnapshotRecord,
+        pattern: SearchPattern,
+        monthly_history: Iterable[float],
+        pattern_history: Iterable[float],
+        current_batch_prices: Iterable[float],
+    ) -> SnapshotRecord:
+        monthly_values = [
+            float(value)
+            for value in (*monthly_history, *current_batch_prices)
+            if value is not None and float(value) > 0
+        ]
+        pattern_values = [
+            float(value)
+            for value in pattern_history
+            if value is not None and float(value) > 0
+        ]
+
+        if len(monthly_values) >= PUBLIC_REFERENCE_MIN_POINTS:
+            reference_values = monthly_values
+            reference_scope = "pattern_month"
+        elif len(pattern_values) >= PUBLIC_REFERENCE_MIN_POINTS:
+            reference_values = pattern_values
+            reference_scope = "pattern_all_months"
+        else:
+            reference_values = []
+            reference_scope = "insufficient_history"
+
+        baseline = float(median(reference_values)) if reference_values else None
+        drop_ratio = snapshot.price / baseline if baseline and baseline > 0 else None
+        departure = date.fromisoformat(snapshot.departure_date)
+        days_until_departure = (departure - date.today()).days
+        lowest_monthly_price = min(monthly_values) if monthly_values else snapshot.price
+        reasons: list[str] = []
+
+        if snapshot.price <= lowest_monthly_price:
+            reasons.append("lowest_pattern_month_price")
+        if (
+            0 <= days_until_departure <= PUBLIC_NEAR_DEPARTURE_DAYS
+            and drop_ratio is not None
+            and drop_ratio <= PUBLIC_NEAR_DEPARTURE_RATIO
+        ):
+            reasons.append("near_departure_at_fair_price")
+        if drop_ratio is not None and drop_ratio <= PUBLIC_MONTHLY_DISCOUNT_RATIO:
+            reasons.append("strong_monthly_discount")
+
+        metadata = {
+            **snapshot.metadata,
+            "public_fare_eligible": bool(reasons),
+            "public_fare_reasons": reasons,
+            "public_reference_scope": reference_scope,
+            "public_reference_price": baseline,
+            "public_reference_points": len(reference_values),
+            "public_monthly_points": len(monthly_values),
+            "public_monthly_lowest_price": lowest_monthly_price,
+            "public_monthly_drop_ratio": round(drop_ratio, 4) if drop_ratio is not None else None,
+            "public_days_until_departure": days_until_departure,
+            "public_pattern_month_start": pattern.month_start,
+        }
+        return replace(snapshot, metadata=metadata)
+
     def _build_deal_skip_diagnostic(
         self,
         route: RouteSeed,
@@ -2516,10 +2608,18 @@ class LuxFlightScanner:
                             f"{route.origin_airport} -> {route.destination_airport} "
                             f"{pattern.label}"
                         )
-                        history = self.store.latest_prices(
+                        pattern_history = self.store.latest_prices(
                             route_id,
                             self.config.history_window,
                             pattern_key=pattern.key,
+                            max_stops=route.max_stops,
+                        )
+                        monthly_history = self.store.latest_prices(
+                            route_id,
+                            self.config.history_window,
+                            pattern_key=pattern.key,
+                            pattern_month_start=pattern.month_start,
+                            max_stops=route.max_stops,
                         )
                         selection = self._pick_cheapest_for_pattern_with_retry(
                             route,
@@ -2581,87 +2681,103 @@ class LuxFlightScanner:
                         )
                         continue
 
-                    snapshot = selection.snapshot
-                    candidate, deal_skip_diagnostic = self._score_deal(
-                        route,
-                        snapshot,
-                        history,
+                    snapshots = selection.snapshots
+                    batch_prices = [snapshot.price for snapshot in snapshots]
+                    scoring_history = (
+                        monthly_history
+                        if len(monthly_history) >= PUBLIC_REFERENCE_MIN_POINTS
+                        else pattern_history
                     )
-                    snapshot = self._snapshot_with_price_context(
-                        snapshot,
-                        history,
-                        candidate,
-                        deal_skip_diagnostic,
-                    )
-                    try:
-                        snapshot_id = self.store.save_snapshot(route_id, snapshot)
-                        if candidate is not None:
-                            self.store.save_deal(route_id, snapshot_id, candidate)
-                        self._sync_snapshot_live(
+
+                    for snapshot in snapshots:
+                        candidate, deal_skip_diagnostic = self._score_deal(
                             route,
-                            route_id,
-                            snapshot_id,
                             snapshot,
+                            scoring_history,
+                        )
+                        snapshot = self._snapshot_with_price_context(
+                            snapshot,
+                            scoring_history,
                             candidate,
+                            deal_skip_diagnostic,
                         )
-                    except Exception as error:  # pragma: no cover - depends on live network behavior
-                        error_type = self._classify_error_type(error)
-                        consecutive_network_outage_failures = (
-                            consecutive_network_outage_failures + 1
-                            if error_type == "network_outage"
-                            else 0
+                        snapshot = self._snapshot_with_publication_context(
+                            snapshot,
+                            pattern,
+                            monthly_history,
+                            pattern_history,
+                            batch_prices,
                         )
-                        self._log_progress(
-                            f"{self._error_log_prefix(error_type)}: {pattern_progress_label} · "
-                            f"{route.origin_airport} -> {route.destination_airport} "
-                            f"{pattern.label} during persistence ({error})"
-                        )
+                        try:
+                            snapshot_id = self.store.save_snapshot(route_id, snapshot)
+                            if candidate is not None:
+                                self.store.save_deal(route_id, snapshot_id, candidate)
+                            self._sync_snapshot_live(
+                                route,
+                                route_id,
+                                snapshot_id,
+                                snapshot,
+                                candidate,
+                            )
+                        except Exception as error:  # pragma: no cover - depends on live network behavior
+                            error_type = self._classify_error_type(error)
+                            consecutive_network_outage_failures = (
+                                consecutive_network_outage_failures + 1
+                                if error_type == "network_outage"
+                                else 0
+                            )
+                            self._log_progress(
+                                f"{self._error_log_prefix(error_type)}: {pattern_progress_label} · "
+                                f"{route.origin_airport} -> {route.destination_airport} "
+                                f"{pattern.label} during persistence ({error})"
+                            )
+                            report.append(
+                                {
+                                    "route": asdict(route),
+                                    "pattern": asdict(pattern),
+                                    "status": "error",
+                                    "error": str(error),
+                                    "error_type": error_type,
+                                }
+                            )
+                            self._trip_network_outage_breaker_if_needed(
+                                consecutive_network_outage_failures,
+                                error,
+                            )
+                            continue
+
+                        consecutive_network_outage_failures = 0
+                        if candidate is None and deal_skip_diagnostic is not None:
+                            self._log_progress(
+                                f"Deal skipped: {pattern_progress_label} · "
+                                f"{route.origin_airport} -> {route.destination_airport} "
+                                f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f} "
+                                f"({deal_skip_diagnostic['reason']})"
+                                f"{self._log_meta_suffix(deal_skip_diagnostic)}"
+                            )
+                        elif candidate is not None:
+                            self._log_progress(
+                                f"Deal candidate: {pattern_progress_label} · "
+                                f"{route.origin_airport} -> {route.destination_airport} "
+                                f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f} "
+                                f"({candidate.send_type})"
+                            )
                         report.append(
                             {
                                 "route": asdict(route),
                                 "pattern": asdict(pattern),
-                                "status": "error",
-                                "error": str(error),
-                                "error_type": error_type,
+                                "status": "deal" if candidate else "tracked",
+                                "snapshot": asdict(snapshot),
+                                "history_points": len(scoring_history),
+                                "deal_skip_diagnostic": deal_skip_diagnostic,
+                                "candidate": asdict(candidate) if candidate else None,
                             }
                         )
-                        self._trip_network_outage_breaker_if_needed(
-                            consecutive_network_outage_failures,
-                            error,
-                        )
-                        continue
 
-                    consecutive_network_outage_failures = 0
                     self._log_progress(
                         f"Pattern done: {pattern_progress_label} · "
                         f"{route.origin_airport} -> {route.destination_airport} "
-                        f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f}"
-                    )
-                    if candidate is None and deal_skip_diagnostic is not None:
-                        self._log_progress(
-                            f"Deal skipped: {pattern_progress_label} · "
-                            f"{route.origin_airport} -> {route.destination_airport} "
-                            f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f} "
-                            f"({deal_skip_diagnostic['reason']})"
-                            f"{self._log_meta_suffix(deal_skip_diagnostic)}"
-                        )
-                    elif candidate is not None:
-                        self._log_progress(
-                            f"Deal candidate: {pattern_progress_label} · "
-                            f"{route.origin_airport} -> {route.destination_airport} "
-                            f"{pattern.label} at {snapshot.currency} {snapshot.price:.0f} "
-                            f"({candidate.send_type})"
-                        )
-                    report.append(
-                        {
-                            "route": asdict(route),
-                            "pattern": asdict(pattern),
-                            "status": "deal" if candidate else "tracked",
-                            "snapshot": asdict(snapshot),
-                            "history_points": len(history),
-                            "deal_skip_diagnostic": deal_skip_diagnostic,
-                            "candidate": asdict(candidate) if candidate else None,
-                        }
+                        f"{pattern.label} captured {len(snapshots)} fare(s)"
                     )
                 completed_route_keys.add(route.key)
                 if isinstance(self.store, LocalStore):
