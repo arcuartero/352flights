@@ -141,17 +141,26 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-search .deals-search-layout {
-  grid-template-columns: minmax(240px, 295px) minmax(0, 1fr);
-  gap: clamp(1.2rem, 2vw, 2rem);
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 0;
+}
+
+.page-shell--deals-search .deals-search-layout__filters {
+  padding-right: clamp(1.2rem, 2vw, 2rem);
+  border-right: 1px solid rgba(29, 39, 51, 0.1);
+}
+
+.page-shell--deals-search .deals-search-layout__results {
+  padding-left: clamp(1.2rem, 2vw, 2rem);
 }
 
 .page-shell--deals-search .deals-search-sidebar {
   align-self: start;
   gap: 0;
-  padding: 1.25rem;
-  border: 1px solid rgba(29, 39, 51, 0.1);
-  border-radius: 1.15rem;
-  background: #ffffff;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
@@ -654,21 +663,30 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-city .deals-city-page .deals-search-layout {
-  grid-template-columns: minmax(240px, 295px) minmax(0, 1fr);
-  gap: clamp(1.2rem, 2vw, 2rem);
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 0;
   padding: clamp(1.1rem, 1.8vw, 1.45rem);
   border-radius: 1.45rem;
   background: #fff;
   box-shadow: 0 18px 42px rgba(29, 39, 51, 0.06);
 }
 
+.page-shell--deals-city .deals-search-layout__filters {
+  padding-right: clamp(1.2rem, 2vw, 2rem);
+  border-right: 1px solid rgba(29, 39, 51, 0.1);
+}
+
+.page-shell--deals-city .deals-search-layout__results {
+  padding-left: clamp(1.2rem, 2vw, 2rem);
+}
+
 .page-shell--deals-city .deals-search-sidebar {
   align-self: start;
   gap: 0;
-  padding: 1.25rem;
-  border: 1px solid rgba(29, 39, 51, 0.1);
-  border-radius: 1.15rem;
-  background: #fff;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
 }
 
@@ -2241,16 +2259,19 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-search-layout__filters,
   .page-shell--deals-city .deals-search-layout__filters {
     order: 2;
+    padding-right: 0;
+    border-right: 0;
   }
 
   .page-shell--deals-search .deals-search-layout__results,
   .page-shell--deals-city .deals-search-layout__results {
     order: 1;
+    padding-left: 0;
   }
 
   .page-shell--deals-search .deals-search-sidebar,
   .page-shell--deals-city .deals-search-sidebar {
-    padding: 0.9rem;
+    padding: 0;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segment,
