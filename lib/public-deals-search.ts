@@ -1,5 +1,9 @@
 export type WhenFilter =
   | "any"
+  | "this_month"
+  | "next_month"
+  | "this_year"
+  | "next_year"
   | "next_30"
   | "school_holidays"
   | "this_weekend"
@@ -54,6 +58,10 @@ export const DEFAULT_DEAL_SEARCH_FILTERS: DealSearchFilters = {
 
 const WHEN_FILTERS = new Set<WhenFilter>([
   "any",
+  "this_month",
+  "next_month",
+  "this_year",
+  "next_year",
   "next_30",
   "school_holidays",
   "this_weekend",
@@ -93,6 +101,62 @@ function addUtcDays(date: Date, days: number) {
   const result = new Date(date);
   result.setUTCDate(result.getUTCDate() + days);
   return result;
+}
+
+function utcToday(now: Date) {
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12));
+}
+
+function toDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function getWhenFilterDateRange(
+  whenFilter: WhenFilter,
+  now: Date,
+): { dateFrom: string; dateTo: string } | null {
+  if (Number.isNaN(now.getTime())) {
+    return null;
+  }
+
+  const today = utcToday(now);
+  const year = today.getUTCFullYear();
+  const month = today.getUTCMonth();
+
+  switch (whenFilter) {
+    case "this_weekend": {
+      const daysSinceMonday = (today.getUTCDay() + 6) % 7;
+      const monday = addUtcDays(today, -daysSinceMonday);
+      return {
+        dateFrom: toDateKey(addUtcDays(monday, 5)),
+        dateTo: toDateKey(addUtcDays(monday, 6)),
+      };
+    }
+    case "next_30":
+      return { dateFrom: toDateKey(today), dateTo: toDateKey(addUtcDays(today, 30)) };
+    case "this_month":
+      return {
+        dateFrom: toDateKey(today),
+        dateTo: toDateKey(new Date(Date.UTC(year, month + 1, 0, 12))),
+      };
+    case "next_month":
+      return {
+        dateFrom: toDateKey(new Date(Date.UTC(year, month + 1, 1, 12))),
+        dateTo: toDateKey(new Date(Date.UTC(year, month + 2, 0, 12))),
+      };
+    case "this_year":
+      return {
+        dateFrom: toDateKey(today),
+        dateTo: toDateKey(new Date(Date.UTC(year, 11, 31, 12))),
+      };
+    case "next_year":
+      return {
+        dateFrom: toDateKey(new Date(Date.UTC(year + 1, 0, 1, 12))),
+        dateTo: toDateKey(new Date(Date.UTC(year + 1, 11, 31, 12))),
+      };
+    default:
+      return null;
+  }
 }
 
 export function isTripInCurrentWeekend(

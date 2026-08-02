@@ -56,9 +56,9 @@
   left: 0;
   z-index: 90;
   display: grid;
-  grid-template-columns: 11.5rem minmax(19rem, 1fr);
+  grid-template-columns: 14.5rem minmax(19rem, 1fr);
   grid-template-rows: minmax(0, 1fr);
-  width: min(36rem, calc(100vw - 2rem));
+  width: min(39rem, calc(100vw - 2rem));
   height: min(37rem, var(--deals-date-picker-max-height, 40rem));
   max-height: var(--deals-date-picker-max-height, 40rem);
   overflow: hidden;
@@ -93,7 +93,8 @@
 }
 
 .deals-date-picker__presets button {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1rem;
   gap: 0.55rem;
   align-items: center;
   justify-content: space-between;
@@ -126,12 +127,23 @@
 }
 
 .deals-date-picker__presets button span {
+  overflow: hidden;
   color: inherit;
   font-size: inherit;
   font-weight: 620;
   letter-spacing: 0;
   line-height: 1.25;
+  text-overflow: ellipsis;
   text-transform: none;
+  white-space: nowrap;
+}
+
+.deals-date-picker__preset-check {
+  visibility: hidden;
+}
+
+.deals-date-picker__preset-check[data-visible="true"] {
+  visibility: visible;
 }
 
 .deals-date-picker__calendar {
@@ -255,6 +267,13 @@
   color: #a51f1b;
 }
 
+.deals-date-picker__days button.is-preset-selected {
+  border-radius: 0.5rem;
+  background: #fee9e7;
+  color: #a51f1b;
+  font-weight: 650;
+}
+
 .deals-date-picker__days button.is-range-start,
 .deals-date-picker__days button.is-range-end {
   border-radius: 0.5rem;
@@ -318,7 +337,7 @@
     top: 50%;
     bottom: auto;
     left: 50%;
-    width: min(36rem, calc(100vw - 2rem));
+    width: min(39rem, calc(100vw - 2rem));
     height: min(37rem, calc(100vh - 2rem));
     max-height: none;
     transform: translate(-50%, -50%);

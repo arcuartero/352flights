@@ -16,7 +16,8 @@ import {
 
 import type { PublicDealsSelectOption } from "@/components/public-deals-select";
 import { useI18n, type Locale } from "@/lib/i18n";
-import type { WhenFilter } from "@/lib/public-deals-search";
+import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
+import { getWhenFilterDateRange, type WhenFilter } from "@/lib/public-deals-search";
 
 type DatePickerSelection = {
   whenFilter: WhenFilter;
@@ -140,6 +141,9 @@ export function PublicDealsDatePicker({
     value === "custom"
       ? formatPublicDealDateRange(dateFrom, dateTo, locale) || t("deals.datePicker.custom")
       : selectedPreset?.label ?? t("deals.when.any");
+  const draftPresetRange = getWhenFilterDateRange(draftWhenFilter, today);
+  const visualFrom = draftWhenFilter === "custom" ? draftFrom : draftPresetRange?.dateFrom ?? null;
+  const visualTo = draftWhenFilter === "custom" ? draftTo : draftPresetRange?.dateTo ?? null;
 
   const weekdayLabels = useMemo(
     () =>
@@ -183,9 +187,10 @@ export function PublicDealsDatePicker({
       setOpensAbove(shouldOpenAbove);
       setPopoverMaxHeight(Math.floor(shouldOpenAbove ? spaceAbove : spaceBelow));
     }
+    const presetRange = getWhenFilterDateRange(value, today);
     setDraftWhenFilter(value);
-    setDraftFrom(value === "custom" ? dateFrom : null);
-    setDraftTo(value === "custom" ? dateTo : null);
+    setDraftFrom(value === "custom" ? dateFrom : presetRange?.dateFrom ?? null);
+    setDraftTo(value === "custom" ? dateTo : presetRange?.dateTo ?? null);
     setIsOpen(true);
   };
 
@@ -219,7 +224,7 @@ export function PublicDealsDatePicker({
       return;
     }
 
-    const selectedMonth = startOfMonth(dateFrom ? dateFromKey(dateFrom) : today);
+    const selectedMonth = startOfMonth(visualFrom ? dateFromKey(visualFrom) : today);
     const targetIndex = calendarMonths.findIndex((month) => isSameMonth(month, selectedMonth));
 
     requestAnimationFrame(() => {
@@ -230,7 +235,7 @@ export function PublicDealsDatePicker({
         scrollContainer.scrollTop = targetMonth.offsetTop - firstMonth.offsetTop;
       }
     });
-  }, [calendarMonths, dateFrom, isOpen, today]);
+  }, [calendarMonths, isOpen, today, visualFrom]);
 
   const selectDate = (dateKey: string) => {
     setDraftWhenFilter("custom");
@@ -302,14 +307,23 @@ export function PublicDealsDatePicker({
                   disabled={option.disabled}
                   key={option.value}
                   onClick={() => {
-                    setDraftWhenFilter(option.value as WhenFilter);
-                    setDraftFrom(null);
-                    setDraftTo(null);
+                    const whenFilter = option.value as WhenFilter;
+                    const presetRange = getWhenFilterDateRange(whenFilter, today);
+                    setDraftWhenFilter(whenFilter);
+                    setDraftFrom(presetRange?.dateFrom ?? null);
+                    setDraftTo(presetRange?.dateTo ?? null);
+                    onChange({ whenFilter, dateFrom: null, dateTo: null });
                   }}
                   type="button"
                 >
                   <span>{option.label}</span>
-                  {isSelected ? <Check aria-hidden="true" size={16} strokeWidth={2.2} /> : null}
+                  <Check
+                    aria-hidden="true"
+                    className="deals-date-picker__preset-check"
+                    data-visible={isSelected ? "true" : "false"}
+                    size={16}
+                    strokeWidth={2.2}
+                  />
                 </button>
               );
             })}
@@ -326,9 +340,13 @@ export function PublicDealsDatePicker({
               type="button"
             >
               <span>{t("deals.datePicker.custom")}</span>
-              {draftWhenFilter === "custom" ? (
-                <Check aria-hidden="true" size={16} strokeWidth={2.2} />
-              ) : null}
+              <Check
+                aria-hidden="true"
+                className="deals-date-picker__preset-check"
+                data-visible={draftWhenFilter === "custom" ? "true" : "false"}
+                size={16}
+                strokeWidth={2.2}
+              />
             </button>
           </div>
 
@@ -336,12 +354,12 @@ export function PublicDealsDatePicker({
             <div className="deals-date-picker__fields" aria-live="polite">
               <div>
                 <span>{t("deals.datePicker.startDate")}</span>
-                <strong>{formatDateField(draftFrom, locale) ?? "—"}</strong>
+                <strong>{formatDateField(visualFrom, locale) ?? "—"}</strong>
               </div>
               <i aria-hidden="true">–</i>
               <div>
                 <span>{t("deals.datePicker.endDate")}</span>
-                <strong>{formatDateField(draftTo, locale) ?? "—"}</strong>
+                <strong>{formatDateField(visualTo, locale) ?? "—"}</strong>
               </div>
             </div>
 
@@ -373,11 +391,17 @@ export function PublicDealsDatePicker({
                         const key = dateToKey(day);
                         const isOutside = !isSameMonth(day, month);
                         const isDisabled = isOutside || key < minDate || key > maxDate;
-                        const isStart = key === draftFrom;
-                        const isEnd = key === draftTo;
+                        const isStart = !isOutside && key === visualFrom;
+                        const isEnd = !isOutside && key === visualTo;
                         const isInRange = Boolean(
-                          draftFrom && draftTo && key > draftFrom && key < draftTo,
+                          !isOutside && visualFrom && visualTo && key > visualFrom && key < visualTo,
                         );
+                        const isPresetSelected =
+                          !isOutside &&
+                          ((draftWhenFilter === "weekends" &&
+                            (day.getUTCDay() === 0 || day.getUTCDay() === 6)) ||
+                            (draftWhenFilter === "school_holidays" &&
+                              Boolean(getMatchingLuxSchoolHoliday(key, key))));
                         const isToday = key === minDate;
 
                         return (
@@ -389,6 +413,7 @@ export function PublicDealsDatePicker({
                               isStart ? "is-range-start" : "",
                               isEnd ? "is-range-end" : "",
                               isInRange ? "is-in-range" : "",
+                              isPresetSelected ? "is-preset-selected" : "",
                               isToday ? "is-today" : "",
                             ]
                               .filter(Boolean)

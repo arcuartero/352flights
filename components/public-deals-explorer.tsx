@@ -37,6 +37,7 @@ import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 import {
   buildDealsSearchHref,
   DEFAULT_DEAL_SEARCH_FILTERS,
+  getWhenFilterDateRange,
   DEFAULT_DEAL_SEARCH_SORT,
   doesTripIncludeWeekend,
   isTripInCurrentWeekend,
@@ -260,6 +261,10 @@ const WHEN_OPTIONS: SelectOption[] = [
   { value: "this_weekend", label: "This weekend" },
   { value: "weekends", label: "Weekends" },
   { value: "next_30", label: "Next 30 days" },
+  { value: "this_month", label: "This month" },
+  { value: "next_month", label: "Next month" },
+  { value: "this_year", label: "This year" },
+  { value: "next_year", label: "Next year" },
   { value: "school_holidays", label: "School holidays" },
 ];
 
@@ -1557,10 +1562,21 @@ function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters
     return filters.whenFilter === "any";
   }
 
-  const daysUntilDeparture = Math.ceil((departure.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
   switch (filters.whenFilter) {
     case "next_30":
-      return daysUntilDeparture >= 0 && daysUntilDeparture <= 30;
+    case "this_month":
+    case "next_month":
+    case "this_year":
+    case "next_year": {
+      const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+      const range = getWhenFilterDateRange(filters.whenFilter, now);
+      return Boolean(
+        departureDateKey &&
+          range &&
+          departureDateKey >= range.dateFrom &&
+          departureDateKey <= range.dateTo,
+      );
+    }
     case "school_holidays":
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":

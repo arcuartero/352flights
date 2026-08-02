@@ -16,6 +16,7 @@ import {
   buildDealsSearchHref,
   DEFAULT_DEAL_SEARCH_FILTERS,
   doesTripIncludeWeekend,
+  getWhenFilterDateRange,
   isTripInCurrentWeekend,
   type BudgetFilter,
   type DealSearchFilters,
@@ -294,10 +295,21 @@ function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters
     return filters.whenFilter === "any";
   }
 
-  const daysUntilDeparture = Math.ceil((departure.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
   switch (filters.whenFilter) {
     case "next_30":
-      return daysUntilDeparture >= 0 && daysUntilDeparture <= 30;
+    case "this_month":
+    case "next_month":
+    case "this_year":
+    case "next_year": {
+      const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+      const range = getWhenFilterDateRange(filters.whenFilter, now);
+      return Boolean(
+        departureDateKey &&
+          range &&
+          departureDateKey >= range.dateFrom &&
+          departureDateKey <= range.dateTo,
+      );
+    }
     case "school_holidays":
       return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
     case "this_weekend":
@@ -401,6 +413,10 @@ export function V2Landing({
         { value: "this_weekend" as WhenFilter, label: t("common.thisWeekend") },
         { value: "weekends" as WhenFilter, label: t("deals.when.weekends") },
         { value: "next_30" as WhenFilter, label: t("common.next30") },
+        { value: "this_month" as WhenFilter, label: t("deals.when.this_month") },
+        { value: "next_month" as WhenFilter, label: t("deals.when.next_month") },
+        { value: "this_year" as WhenFilter, label: t("deals.when.this_year") },
+        { value: "next_year" as WhenFilter, label: t("deals.when.next_year") },
         { value: "school_holidays" as WhenFilter, label: t("common.schoolHolidays") },
       ].map((option) => ({
         ...option,
