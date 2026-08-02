@@ -61,6 +61,73 @@ class LocalSupabaseSync:
         }
         self.remote_route_ids: dict[str, str] = {}
 
+    @staticmethod
+    def _with_local_route_id(
+        rows: list[dict[str, Any]],
+        local_route_id: str,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                **row,
+                "route_id": local_route_id,
+            }
+            for row in rows
+        ]
+
+    def pull_scanner_configuration(self) -> dict[str, Any]:
+        """Refresh the local scan plan from the configuration stored in Supabase."""
+        state = _load_state(self.state_path)
+        pulled_at = utcnow_iso()
+        pattern_overrides: list[dict[str, Any]] = []
+        search_rules: list[dict[str, Any]] = []
+        service_months: list[dict[str, Any]] = []
+        routes_refreshed = 0
+
+        for route in self.routes_by_key.values():
+            remote_route_id = self._remote_route_id(route)
+            local_route_id = route.key
+            pattern_overrides.extend(
+                self._with_local_route_id(
+                    self.supabase.route_pattern_overrides(remote_route_id),
+                    local_route_id,
+                )
+            )
+            search_rules.extend(
+                self._with_local_route_id(
+                    self.supabase.route_search_rules(remote_route_id),
+                    local_route_id,
+                )
+            )
+            service_months.extend(
+                self._with_local_route_id(
+                    self.supabase.route_service_months(remote_route_id, route.max_stops),
+                    local_route_id,
+                )
+            )
+            routes_refreshed += 1
+
+        state["route_pattern_overrides"] = pattern_overrides
+        state["route_search_rules"] = search_rules
+        state["route_service_months"] = service_months
+        state["scanner_configuration"] = {
+            "pulled_at": pulled_at,
+            "source": "supabase",
+            "routes": routes_refreshed,
+            "pattern_overrides": len(pattern_overrides),
+            "search_rules": len(search_rules),
+            "service_months": len(service_months),
+        }
+        _persist_state(self.state_path, state)
+
+        return {
+            "state_path": str(self.state_path),
+            "generated_at": pulled_at,
+            "routes_refreshed": routes_refreshed,
+            "pattern_overrides_pulled": len(pattern_overrides),
+            "search_rules_pulled": len(search_rules),
+            "service_months_pulled": len(service_months),
+        }
+
     def _route_for_snapshot(self, snapshot: dict[str, Any]) -> RouteSeed:
         route_id = str(snapshot.get("route_id") or "")
         route = self.routes_by_key.get(route_id)

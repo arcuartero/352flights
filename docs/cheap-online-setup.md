@@ -286,6 +286,10 @@ No se pierden los precios. Quedan guardados en:
 
 El siguiente sync vuelve a intentarlo.
 
+Antes de cada Price Scanner, el script descarga de Supabase las reglas mensuales y los
+calendarios creados por Dates Scanner. Si esa descarga falla, el proceso se detiene para evitar
+escanear únicamente los patrones genéricos y dejar meses o aerolíneas sin cobertura.
+
 ## Coste esperado
 
 Con el VPS pequeño, el coste principal será el servidor de Hetzner. Vercel puede seguir en gratis y Supabase debería aguantar al principio si no subimos millones de filas.

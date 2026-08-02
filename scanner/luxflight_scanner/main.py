@@ -52,6 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Upload unsynced records from the local state file to Supabase.",
     )
     parser.add_argument(
+        "--pull-supabase-configuration",
+        action="store_true",
+        help="Refresh local route rules and service calendars from Supabase.",
+    )
+    parser.add_argument(
         "--sync-limit",
         type=int,
         default=None,
@@ -77,6 +82,19 @@ def main() -> None:
         if report["errors"]:
             print(f"Sync finished with {len(report['errors'])} error(s).")
             raise SystemExit(1)
+        return
+
+    if args.pull_supabase_configuration:
+        report = LocalSupabaseSync(config).pull_scanner_configuration()
+        if args.json:
+            print(json.dumps(report, indent=2))
+            return
+
+        print(
+            f"Refreshed {report['routes_refreshed']} routes with "
+            f"{report['search_rules_pulled']} monthly rules and "
+            f"{report['service_months_pulled']} service months."
+        )
         return
 
     scanner = LuxFlightScanner(config)
