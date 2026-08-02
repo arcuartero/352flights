@@ -146,13 +146,29 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-search .deals-search-sidebar {
-  min-height: 100%;
+  align-self: start;
+  gap: 0;
   padding: 1.25rem;
+  border: 1px solid rgba(29, 39, 51, 0.1);
   border-radius: 1.15rem;
   background: #ffffff;
+  box-shadow: none;
+}
+
+.page-shell--deals-search .deals-search-sidebar__section {
+  padding-block: 1rem;
+}
+
+.page-shell--deals-search .deals-search-sidebar__section:first-child {
+  padding-top: 0;
+}
+
+.page-shell--deals-search .deals-search-sidebar__section:last-child {
+  padding-bottom: 0;
 }
 
 .page-shell--deals-search .deals-search-sidebar__section + .deals-search-sidebar__section {
+  padding-top: 1rem;
   border-top-color: rgba(29, 39, 51, 0.09);
 }
 
@@ -647,14 +663,26 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-city .deals-search-sidebar {
-  min-height: 100%;
+  align-self: start;
+  gap: 0;
   padding: 1.25rem;
+  border: 1px solid rgba(29, 39, 51, 0.1);
   border-radius: 1.15rem;
   background: #fff;
+  box-shadow: none;
+}
+
+.page-shell--deals-city .deals-search-sidebar__section {
+  padding-block: 1rem;
 }
 
 .page-shell--deals-city .deals-search-sidebar__section + .deals-search-sidebar__section {
+  padding-top: 1rem;
   border-top-color: rgba(29, 39, 51, 0.09);
+}
+
+.page-shell--deals-city .deals-search-sidebar__section:last-child {
+  padding-bottom: 0;
 }
 
 .page-shell--deals-city .deals-search-fixed-route {
@@ -2402,20 +2430,29 @@ body:has(.page-shell--deals-city)::before {
   display: grid;
   width: 100%;
   min-width: 0;
-  padding: 1rem;
-  border: 1px solid rgba(31, 95, 214, 0.16);
-  border-radius: 0.75rem;
+  padding: 0 0 1rem;
+  border: 0;
+  border-radius: 0;
   color: var(--v2-ink);
-  background: #ffffff;
+  background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: color 160ms ease;
 }
 
 .monthly-price-card:hover {
-  border-color: rgba(31, 95, 214, 0.34);
-  box-shadow: 0 10px 24px rgba(29, 39, 51, 0.07);
-  transform: translateY(-1px);
+  color: var(--v2-blue-strong);
+}
+
+.monthly-price-card:focus-visible {
+  outline: 2px solid var(--v2-blue-strong);
+  outline-offset: 0.35rem;
+  border-radius: 0.35rem;
+}
+
+.monthly-price-card + .deals-search-sidebar__section {
+  padding-top: 1rem;
+  border-top: 1px solid rgba(29, 39, 51, 0.09);
 }
 
 .monthly-price-card__heading {
