@@ -16,6 +16,7 @@ import { Info, Plane } from "lucide-react";
 
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { MonthlyPriceCard } from "@/components/monthly-price-card";
 import {
   PublicDealsSelect as DealsSelect,
   type PublicDealsSelectOption as SelectOption,
@@ -3764,6 +3765,14 @@ export function PublicDealsExplorer({
             <section className="deals-search-layout">
               <aside className="deals-search-layout__filters">
                 <div className="deals-search-sidebar">
+                  <MonthlyPriceCard
+                    destinationCity={lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
+                    destinationSlug={toDestinationSlug(
+                      lockedDestinationCity ?? selectedSearchGroup?.city ?? "",
+                    )}
+                    directOnly={effectiveFilters.directOnly}
+                    tripType={effectiveFilters.tripFilter}
+                  />
                   <div className="deals-search-sidebar__section">
                     <div className="deals-search-fixed-route">
                       <div className="deals-control deals-control--static deals-control--origin-fixed">
