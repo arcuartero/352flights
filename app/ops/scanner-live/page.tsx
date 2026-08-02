@@ -1,7 +1,6 @@
 import { OpsSubnav } from "@/components/ops-subnav";
 import { PriceScanRunHistory } from "@/components/price-scan-run-history";
 import { RecentSnapshotsPanel } from "@/components/recent-snapshots-panel";
-import { VpsScannerControlPanel } from "@/components/vps-scanner-control-panel";
 import { getOpsDashboardData } from "@/lib/ops";
 import { getPriceScanRunHistory } from "@/lib/price-scan-runs";
 import { recoverLatestVpsPriceScanRun } from "@/lib/price-scan-run-recovery";
@@ -30,7 +29,6 @@ export default async function OpsScannerLivePage() {
   return (
     <main className="ops-shell ops-shell--scanner-live">
       <OpsSubnav />
-      <VpsScannerControlPanel />
       <PriceScanRunHistory error={history.error} runs={history.runs} />
       <div className="ops-shell__center-panel">
         <RecentSnapshotsPanel
