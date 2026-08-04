@@ -49,7 +49,8 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 
 const DEAL_AUTO_EXPIRE_DAYS = 4;
-const PUBLIC_FARE_LOOKBACK_DAYS = 1;
+// Keep the last successful scan visible through short scanner outages.
+const PUBLIC_FARE_LOOKBACK_DAYS = 7;
 const PUBLIC_FARES_PER_DESTINATION = 3;
 const PUBLIC_ALL_FARES_PER_DESTINATION = null;
 const PUBLIC_FARE_MIN_HISTORY_POINTS = 3;
