@@ -128,6 +128,8 @@ def build_price_scan_run_summary(
         pattern_key = _pattern_key(route_key, pattern)
         snapshot = item.get("snapshot")
         snapshot = snapshot if isinstance(snapshot, dict) else None
+        metadata = snapshot.get("metadata") if snapshot else None
+        metadata = metadata if isinstance(metadata, dict) else {}
         diagnostic = item.get("diagnostic")
         diagnostic = diagnostic if isinstance(diagnostic, dict) else None
         retry_count = retry_counts.get(pattern_key, 0)
@@ -167,6 +169,14 @@ def build_price_scan_run_summary(
                     "retry_count": retry_count,
                     "rules_scanned": 1 + retry_count,
                     "diagnostic": diagnostic,
+                    "airline": metadata.get("airline_summary") or metadata.get("primary_airline"),
+                    "airline_code": metadata.get("primary_airline_code"),
+                    "outbound_departure_at": metadata.get("outbound_departure_at"),
+                    "outbound_arrival_at": metadata.get("outbound_arrival_at"),
+                    "return_departure_at": metadata.get("return_departure_at"),
+                    "return_arrival_at": metadata.get("return_arrival_at"),
+                    "outbound_stop_count": metadata.get("outbound_stop_count"),
+                    "return_stop_count": metadata.get("return_stop_count"),
                 }
             )
 

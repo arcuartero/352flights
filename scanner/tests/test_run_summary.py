@@ -44,6 +44,16 @@ class PriceScanRunSummaryTests(unittest.TestCase):
                     "currency": "EUR",
                     "departure_date": "2026-09-04",
                     "return_date": "2026-09-07",
+                    "metadata": {
+                        "airline_summary": "Luxair",
+                        "primary_airline_code": "LG",
+                        "outbound_departure_at": "2026-09-04T18:20",
+                        "outbound_arrival_at": "2026-09-04T19:30",
+                        "return_departure_at": "2026-09-07T07:10",
+                        "return_arrival_at": "2026-09-07T08:20",
+                        "outbound_stop_count": 0,
+                        "return_stop_count": 0,
+                    },
                 },
             },
             {
@@ -96,6 +106,12 @@ class PriceScanRunSummaryTests(unittest.TestCase):
         self.assertEqual(summary["scanned_cities"], ["Milan"])
         self.assertEqual(summary["search_window_start"], "2026-08-03")
         self.assertEqual(summary["search_window_end"], "2027-04-07")
+        self.assertEqual(summary["patterns"][0]["airline"], "Luxair")
+        self.assertEqual(summary["patterns"][0]["airline_code"], "LG")
+        self.assertEqual(
+            summary["patterns"][0]["outbound_departure_at"],
+            "2026-09-04T18:20",
+        )
 
 
 if __name__ == "__main__":

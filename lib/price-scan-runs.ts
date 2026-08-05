@@ -62,6 +62,14 @@ export type PriceScanPatternSummary = {
   error: string | null;
   retry_count: number;
   rules_scanned: number;
+  airline: string | null;
+  airline_code: string | null;
+  outbound_departure_at: string | null;
+  outbound_arrival_at: string | null;
+  return_departure_at: string | null;
+  return_arrival_at: string | null;
+  outbound_stop_count: number | null;
+  return_stop_count: number | null;
 };
 
 export type PriceScanRun = {
@@ -223,6 +231,84 @@ function countRecord(value: unknown) {
   );
 }
 
+function nullableString(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function patternItineraryKey(pattern: PriceScanPatternSummary) {
+  return [
+    pattern.route_key,
+    pattern.pattern_key,
+    pattern.departure_date,
+    pattern.return_date,
+    pattern.price,
+  ].join("|");
+}
+
+async function enrichPatternItineraries(run: PriceScanRun) {
+  const patterns = run.patterns ?? [];
+  if (patterns.length === 0 || patterns.every((pattern) => pattern.airline)) return run;
+
+  const supabase = getSupabaseAdminClient();
+  const rows: Array<{
+    price: number;
+    departure_date: string;
+    return_date: string | null;
+    metadata: unknown;
+  }> = [];
+  const pageSize = 1_000;
+
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase
+      .from("price_snapshots")
+      .select("price,departure_date,return_date,metadata")
+      .gte("scanned_at", run.startedAt)
+      .order("scanned_at", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (run.completedAt) query = query.lte("scanned_at", run.completedAt);
+    const page = await query;
+    if (page.error) throw new Error(page.error.message);
+    const pageRows = (page.data ?? []) as typeof rows;
+    rows.push(...pageRows);
+    if (pageRows.length < pageSize) break;
+  }
+
+  const itineraries = new Map<string, Array<Record<string, unknown>>>();
+  for (const row of rows) {
+    const metadata = recordValue(row.metadata);
+    const key = [
+      nullableString(metadata.local_route_id),
+      nullableString(metadata.pattern_key),
+      row.departure_date,
+      row.return_date,
+      numberValue(row.price),
+    ].join("|");
+    const current = itineraries.get(key) ?? [];
+    current.push(metadata);
+    itineraries.set(key, current);
+  }
+
+  return {
+    ...run,
+    patterns: patterns.map((pattern) => {
+      if (pattern.airline) return pattern;
+      const metadata = itineraries.get(patternItineraryKey(pattern))?.shift();
+      if (!metadata) return pattern;
+      return {
+        ...pattern,
+        airline: nullableString(metadata.airline_summary) ?? nullableString(metadata.primary_airline),
+        airline_code: nullableString(metadata.primary_airline_code),
+        outbound_departure_at: nullableString(metadata.outbound_departure_at),
+        outbound_arrival_at: nullableString(metadata.outbound_arrival_at),
+        return_departure_at: nullableString(metadata.return_departure_at),
+        return_arrival_at: nullableString(metadata.return_arrival_at),
+        outbound_stop_count: nullableNumber(metadata.outbound_stop_count),
+        return_stop_count: nullableNumber(metadata.return_stop_count),
+      };
+    }),
+  };
+}
+
 function mapRun(row: PriceScanRunRow): PriceScanRun {
   const destinations = arrayValue<PriceScanDestinationSummary>(row.destinations);
   const storedScannedCities = stringArrayValue(row.scanned_cities);
@@ -322,8 +408,9 @@ export async function getPriceScanRun(id: string) {
       return { run: null as PriceScanRun | null, error: formatError(error) };
     }
 
+    const run = data ? mapRun(data as unknown as PriceScanRunRow) : null;
     return {
-      run: data ? mapRun(data as unknown as PriceScanRunRow) : null,
+      run: run ? await enrichPatternItineraries(run) : null,
       error: null as string | null,
     };
   } catch (error) {

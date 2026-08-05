@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -83,6 +83,39 @@ function formatMoney(value: number | null, currency: string | null) {
     currency: currency ?? "EUR",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function formatFlightTime(value: string | null) {
+  if (!value) return "time unavailable";
+  const match = value.match(/T(\d{2}:\d{2})/);
+  return match?.[1] ?? value;
+}
+
+function itineraryDetail(pattern: PriceScanPatternSummary) {
+  if (!pattern.airline) return pattern.reason ?? pattern.error ?? "Itinerary details unavailable";
+  const outbound = `${formatFlightTime(pattern.outbound_departure_at)}–${formatFlightTime(pattern.outbound_arrival_at)}`;
+  const inbound = `${formatFlightTime(pattern.return_departure_at)}–${formatFlightTime(pattern.return_arrival_at)}`;
+  const stops = Math.max(
+    pattern.outbound_stop_count ?? 0,
+    pattern.return_stop_count ?? 0,
+  );
+  return `${pattern.airline_code ? `${pattern.airline_code} · ` : ""}${pattern.airline} · Out ${outbound} · Back ${inbound} · ${stops === 0 ? "Direct" : `${stops} stop${stops === 1 ? "" : "s"}`}`;
+}
+
+function ItineraryDetail({ pattern }: { pattern: PriceScanPatternSummary }) {
+  if (!pattern.airline) return pattern.reason ?? pattern.error ?? "Itinerary details unavailable";
+  const stops = Math.max(
+    pattern.outbound_stop_count ?? 0,
+    pattern.return_stop_count ?? 0,
+  );
+  return (
+    <>
+      <strong>{pattern.airline_code ? `${pattern.airline_code} · ` : ""}{pattern.airline}</strong>
+      <small>
+        Out {formatFlightTime(pattern.outbound_departure_at)}–{formatFlightTime(pattern.outbound_arrival_at)} · Back {formatFlightTime(pattern.return_departure_at)}–{formatFlightTime(pattern.return_arrival_at)} · {stops === 0 ? "Direct" : `${stops} stop${stops === 1 ? "" : "s"}`}
+      </small>
+    </>
+  );
 }
 
 function statusLabel(status: string) {
@@ -376,7 +409,7 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
         if (key === "outcome") return patternOutcomeLabel(row);
         if (key === "price") return row.price;
         if (key === "rules") return row.rules_scanned;
-        return row.reason ?? row.error ?? "Completed normally";
+        return itineraryDetail(row);
       }),
     [rows, sort],
   );
@@ -393,7 +426,7 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
           <SortableHeader column="outcome" kind="text" label="Outcome" onSort={onSort} sort={sort} tooltip="Final result of the pattern: price, no result, timeout, network failure, or error." />
           <SortableHeader column="price" kind="number" label="Price" onSort={onSort} sort={sort} tooltip="Valid fare found for this pattern, in the displayed currency." />
           <SortableHeader column="rules" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Number of actual searches performed for this pattern." />
-          <SortableHeader column="detail" kind="text" label="Detail" onSort={onSort} sort={sort} tooltip="Provider result, rejection reason, or technical error recorded for the pattern." />
+          <SortableHeader column="detail" kind="text" label="Itinerary / detail" onSort={onSort} sort={sort} tooltip="Airline, outbound and return times, stops, rejection reason, or technical error. A pattern can contain several distinct itineraries." />
         </tr>
       </thead>
       <tbody>
@@ -405,7 +438,7 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
             <td>{patternOutcomeLabel(pattern)}</td>
             <td>{formatMoney(pattern.price, pattern.currency)}</td>
             <td>{pattern.rules_scanned}</td>
-            <td>{pattern.reason ?? pattern.error ?? "Completed normally"}</td>
+            <td><ItineraryDetail pattern={pattern} /></td>
           </tr>
         ))}
       </tbody>
@@ -425,6 +458,8 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     message: string;
     runId: string;
   } | null>(null);
+  const loadedPatternRunIds = useRef(new Set<string>());
+  const runningPatternRunIds = useRef(new Set<string>());
   const visibleRuns = liveRuns.slice(0, runLimit);
 
   useEffect(() => {
@@ -447,6 +482,42 @@ export function PriceScanRunHistory({ error, runs }: Props) {
         if (!disposed) {
           setLiveRuns(payload.runs);
           setLiveError(null);
+        }
+        const runningLoadedIds = payload.runs
+          .filter((run) => {
+            if (!loadedPatternRunIds.current.has(run.id)) return false;
+            if (run.status === "running") {
+              runningPatternRunIds.current.add(run.id);
+              return true;
+            }
+            if (runningPatternRunIds.current.has(run.id)) {
+              runningPatternRunIds.current.delete(run.id);
+              return true;
+            }
+            return false;
+          })
+          .map((run) => run.id);
+        const refreshedDetails = await Promise.allSettled(
+          runningLoadedIds.map(async (runId) => {
+            const detailResponse = await fetch(`/api/ops/price-scan-runs/${runId}`, {
+              cache: "no-store",
+              signal: controller?.signal,
+            });
+            const detailPayload = (await detailResponse.json()) as RunDetailResponse;
+            if (!detailResponse.ok || !detailPayload.ok) {
+              throw new Error("Pattern refresh failed.");
+            }
+            return [runId, detailPayload.run.patterns ?? []] as const;
+          }),
+        );
+        if (!disposed) {
+          setLoadedPatterns((current) => {
+            const next = { ...current };
+            for (const result of refreshedDetails) {
+              if (result.status === "fulfilled") next[result.value[0]] = result.value[1];
+            }
+            return next;
+          });
         }
       } catch (requestError) {
         if (!disposed && !(requestError instanceof DOMException && requestError.name === "AbortError")) {
@@ -515,7 +586,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
   );
 
   async function loadPatterns(runId: string) {
-    if (loadedPatterns[runId] || loadingRunId === runId) return;
+    if (loadingRunId === runId) return;
     setLoadingRunId(runId);
     setLoadError(null);
     try {
@@ -532,6 +603,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
         ...current,
         [runId]: payload.run.patterns ?? [],
       }));
+      loadedPatternRunIds.current.add(runId);
     } catch (requestError) {
       setLoadError({
         message:
@@ -759,17 +831,17 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                       <div className="price-scan-history__section-head">
                         <div>
                           <h3>Pattern audit</h3>
-                          <p>Exact weekday and duration rule outcomes for this scan.</p>
+                          <p>Each found row is a distinct itinerary; one pattern and date pair can contain several schedules and prices.</p>
                         </div>
                         <button
                           className="ops-button ops-button--ghost"
-                          disabled={loadingRunId === run.id || Boolean(patterns)}
+                          disabled={loadingRunId === run.id}
                           onClick={() => void loadPatterns(run.id)}
                           type="button"
                         >
                           <RefreshCw aria-hidden="true" size={15} />
                           {patterns
-                            ? `${patterns.length} patterns loaded`
+                            ? `${patterns.length} results · Refresh`
                             : loadingRunId === run.id
                               ? "Loading"
                               : "Load pattern audit"}
