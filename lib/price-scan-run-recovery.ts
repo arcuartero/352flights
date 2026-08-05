@@ -287,6 +287,51 @@ export async function recordVpsPriceScanStartFailure(
   if (insert.error) throw new Error(insert.error.message);
 }
 
+async function reconcileSupersededRunningRuns(activeRunStartedAt: string) {
+  const supabase = getSupabaseAdminClient();
+  const staleRuns = await supabase
+    .from("price_scan_runs")
+    .select("id,started_at,updated_at,sync_summary")
+    .eq("status", "running")
+    .lt("started_at", activeRunStartedAt);
+  if (staleRuns.error) throw new Error(staleRuns.error.message);
+
+  const runs = (staleRuns.data ?? []) as Array<{
+    id: string;
+    started_at: string;
+    updated_at: string;
+    sync_summary: Record<string, unknown> | null;
+  }>;
+
+  await Promise.all(runs.map(async (run) => {
+    const completedAt = run.updated_at || activeRunStartedAt;
+    const update = await supabase
+      .from("price_scan_runs")
+      .update({
+        status: "stopped",
+        completed_at: completedAt,
+        duration_ms: Math.max(
+          new Date(completedAt).getTime() - new Date(run.started_at).getTime(),
+          0,
+        ),
+        stopped_reason: "Scanner stopped before completion. A newer scanner execution started.",
+        stopped_reason_code: "superseded_by_new_run",
+        sync_status: "partial",
+        sync_summary: {
+          ...(run.sync_summary ?? {}),
+          reconciled_from_vps_status: true,
+          superseded_by_started_at: activeRunStartedAt,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", run.id)
+      .eq("status", "running");
+    if (update.error) throw new Error(update.error.message);
+  }));
+
+  return runs.length;
+}
+
 export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus) {
   const serviceStartedAt = parseTimestamp(status.service.ExecMainStartTimestamp);
   const serviceCompletedAt = parseTimestamp(status.service.ExecMainExitTimestamp);
@@ -299,7 +344,16 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
     return recoverFailedServiceAttempt(status, serviceStartedAt, serviceCompletedAt);
   }
 
-  if (status.running) return { recovered: false, reason: "scanner_running" };
+  if (status.running) {
+    const reconciled = serviceStartedAt
+      ? await reconcileSupersededRunningRuns(serviceStartedAt)
+      : 0;
+    return {
+      recovered: reconciled > 0,
+      reason: reconciled > 0 ? "superseded_runs_reconciled" : "scanner_running",
+      count: reconciled,
+    };
+  }
 
   const events = latestRunEvents(status);
   const startedAt = events[0]?.timestamp ?? parseTimestamp(status.service.ExecMainStartTimestamp);
