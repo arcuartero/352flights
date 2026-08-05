@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import { NextResponse } from "next/server";
 
 import { getLocalScannerStatus, resolveScannerRoot } from "@/lib/local-scanner-status";
+import { recordVpsPriceScanStartFailure } from "@/lib/price-scan-run-recovery";
 import {
   callVpsScannerAgent,
   hasVpsScannerAgentConfig,
@@ -69,17 +70,20 @@ export async function POST(request: Request) {
   }
 
   if (hasVpsScannerAgentConfig()) {
+    const startedAt = new Date().toISOString();
     try {
       const result = await callVpsScannerAgent<VpsScannerActionResponse>("start", {
         method: "POST",
       });
       return NextResponse.json(result);
     } catch (error) {
+      const detail = error instanceof Error ? error.message : "Unknown VPS scanner error.";
+      await recordVpsPriceScanStartFailure(startedAt, detail).catch(() => undefined);
       return NextResponse.json(
         {
           ok: false,
           reason: "vps_start_failed",
-          detail: error instanceof Error ? error.message : "Unknown VPS scanner error.",
+          detail,
         },
         { status: 502 },
       );

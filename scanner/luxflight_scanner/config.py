@@ -28,6 +28,7 @@ class ScannerConfig:
     flash_ratio: float = float(os.getenv("SCANNER_FLASH_RATIO", "0.60"))
     sync_snapshots_live: bool = env_flag("SCANNER_SYNC_SNAPSHOTS_LIVE", True)
     sync_deals_live: bool = env_flag("SCANNER_SYNC_DEALS_LIVE", True)
+    sync_scan_runs_live: bool = env_flag("SCANNER_SYNC_SCAN_RUNS_LIVE", True)
     search_request_timeout_seconds: float = float(
         os.getenv("SCANNER_SEARCH_REQUEST_TIMEOUT_SECONDS", "15")
     )

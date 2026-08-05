@@ -31,6 +31,14 @@ type SnapshotRow = {
 };
 
 const RUN_START_MESSAGES = ["Starting local scanner.", "Starting local Lux flight scan."];
+const SYSTEMD_FAILURE_RESULTS = new Set([
+  "exit-code",
+  "failed",
+  "resources",
+  "signal",
+  "timeout",
+  "watchdog",
+]);
 
 function parseTimestamp(value: string | undefined) {
   if (!value || value === "n/a") return null;
@@ -84,6 +92,113 @@ function latestRunEvents(status: VpsScannerAgentStatus) {
   }
 
   return startIndex >= 0 ? events.slice(startIndex) : events;
+}
+
+function serviceExitStatus(status: VpsScannerAgentStatus) {
+  const raw = status.service.ExecMainStatus;
+  if (!raw || raw === "n/a") return null;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function serviceFailed(status: VpsScannerAgentStatus) {
+  const exitStatus = serviceExitStatus(status);
+  const result = status.service.Result?.toLowerCase();
+  return !status.running && (
+    (exitStatus !== null && exitStatus !== 0) ||
+    (result ? SYSTEMD_FAILURE_RESULTS.has(result) : false)
+  );
+}
+
+function scannerStartedDuringServiceAttempt(
+  status: VpsScannerAgentStatus,
+  startedAt: string,
+  completedAt: string,
+) {
+  const startMs = new Date(startedAt).getTime();
+  const completedMs = new Date(completedAt).getTime();
+  return status.journal
+    .map(parseJournalLine)
+    .filter((event): event is JournalEvent => Boolean(event))
+    .some((event) =>
+      RUN_START_MESSAGES.includes(event.message) &&
+      event.timestampMs >= startMs - 5_000 &&
+      event.timestampMs <= completedMs + 5_000,
+    );
+}
+
+async function recoverFailedServiceAttempt(
+  status: VpsScannerAgentStatus,
+  startedAt: string,
+  completedAt: string,
+) {
+  const supabase = getSupabaseAdminClient();
+  const startMs = new Date(startedAt).getTime();
+  const exitStatus = serviceExitStatus(status);
+  const serviceResult = status.service.Result ?? "failed";
+  const reasonCode = exitStatus === 203
+    ? "systemd_exec_203"
+    : `systemd_${serviceResult.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+  const stoppedReason = exitStatus === 203
+    ? "Scanner service could not execute the scanner command (systemd 203/EXEC)."
+    : `Scanner service failed before the scanner started (${serviceResult}${exitStatus === null ? "" : `, exit ${exitStatus}`}).`;
+  const existingStart = new Date(startMs - 120_000).toISOString();
+  const existingEnd = new Date(startMs + 120_000).toISOString();
+  const existing = await supabase
+    .from("price_scan_runs")
+    .select("id,status,error_breakdown,sync_summary")
+    .gte("started_at", existingStart)
+    .lte("started_at", existingEnd)
+    .limit(1);
+  if (existing.error) throw new Error(existing.error.message);
+
+  const existingRun = existing.data?.[0] as {
+    id: string;
+    status: string;
+    error_breakdown: Record<string, unknown> | null;
+    sync_summary: Record<string, unknown> | null;
+  } | undefined;
+  const failureFields = {
+    status: "failed",
+    completed_at: completedAt,
+    duration_ms: Math.max(new Date(completedAt).getTime() - startMs, 0),
+    stopped_reason: stoppedReason,
+    stopped_reason_code: reasonCode,
+    error_breakdown: {
+      ...(existingRun?.error_breakdown ?? {}),
+      systemd_service_failure: 1,
+    },
+    sync_status: "failed",
+    sync_summary: {
+      ...(existingRun?.sync_summary ?? {}),
+      recovered_from_vps_status: true,
+      systemd_result: serviceResult,
+      systemd_exit_status: exitStatus,
+      failure_before_scanner_start: true,
+    },
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existingRun) {
+    if (existingRun.status !== "running") {
+      return { recovered: false, reason: "already_stored" };
+    }
+    const update = await supabase
+      .from("price_scan_runs")
+      .update(failureFields)
+      .eq("id", existingRun.id);
+    if (update.error) throw new Error(update.error.message);
+    return { recovered: true, reason: "failed_run_updated" };
+  }
+
+  const insert = await supabase.from("price_scan_runs").insert({
+    run_key: `vps-systemd:${startedAt}`,
+    scanner_source: "vps_systemd",
+    started_at: startedAt,
+    ...failureFields,
+  });
+  if (insert.error) throw new Error(insert.error.message);
+  return { recovered: true, reason: "failed_run_stored" };
 }
 
 function numberMeta(meta: Record<string, unknown> | null, key: string) {
@@ -149,7 +264,41 @@ function outcomeForEvents(events: JournalEvent[], key: string | null) {
   };
 }
 
+export async function recordVpsPriceScanStartFailure(
+  startedAt: string,
+  detail: string,
+) {
+  const supabase = getSupabaseAdminClient();
+  const completedAt = new Date().toISOString();
+  const insert = await supabase.from("price_scan_runs").upsert({
+    run_key: `vps-start-request:${startedAt}`,
+    scanner_source: "vps_control",
+    status: "failed",
+    started_at: startedAt,
+    completed_at: completedAt,
+    duration_ms: Math.max(new Date(completedAt).getTime() - new Date(startedAt).getTime(), 0),
+    stopped_reason: detail,
+    stopped_reason_code: "vps_start_failed",
+    error_breakdown: { vps_start_failed: 1 },
+    sync_status: "failed",
+    sync_summary: { failure_before_scanner_start: true },
+    updated_at: completedAt,
+  }, { onConflict: "run_key" });
+  if (insert.error) throw new Error(insert.error.message);
+}
+
 export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus) {
+  const serviceStartedAt = parseTimestamp(status.service.ExecMainStartTimestamp);
+  const serviceCompletedAt = parseTimestamp(status.service.ExecMainExitTimestamp);
+  if (
+    serviceFailed(status) &&
+    serviceStartedAt &&
+    serviceCompletedAt &&
+    !scannerStartedDuringServiceAttempt(status, serviceStartedAt, serviceCompletedAt)
+  ) {
+    return recoverFailedServiceAttempt(status, serviceStartedAt, serviceCompletedAt);
+  }
+
   if (status.running) return { recovered: false, reason: "scanner_running" };
 
   const events = latestRunEvents(status);
@@ -290,12 +439,13 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
     .sort()
     .at(-1) ?? null;
   const runKey = `vps-recovered:${startedAt}`;
+  const runFailed = serviceFailed(status);
   const hasErrors = timedOut + networkOutages + hardErrors > 0;
 
   const insert = await supabase.from("price_scan_runs").insert({
     run_key: runKey,
     scanner_source: "vps_recovered",
-    status: hasErrors ? "completed_with_errors" : "completed",
+    status: runFailed ? "failed" : hasErrors ? "completed_with_errors" : "completed",
     started_at: startedAt,
     completed_at: completedAt,
     duration_ms: Math.max(new Date(completedAt).getTime() - startMs, 0),
@@ -356,12 +506,17 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
       timeout: timedOut,
       network_outage: networkOutages,
       hard_error: hardErrors,
+      ...(runFailed ? { systemd_service_failure: 1 } : {}),
     },
-    sync_status: "completed",
+    stopped_reason: runFailed ? "Scanner service exited before completing the run." : null,
+    stopped_reason_code: runFailed ? "systemd_service_failure" : null,
+    sync_status: runFailed ? "failed" : "completed",
     sync_summary: {
       recovered_from_vps_status: true,
       recovered_snapshot_count: snapshots.length,
       journal_event_count: events.length,
+      systemd_result: status.service.Result ?? null,
+      systemd_exit_status: serviceExitStatus(status),
     },
     updated_at: new Date().toISOString(),
   });

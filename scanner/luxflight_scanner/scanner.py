@@ -245,7 +245,11 @@ class LuxFlightScanner:
         self.live_sync_store = (
             SupabaseStore(config)
             if (
-                (config.sync_snapshots_live or config.sync_deals_live)
+                (
+                    config.sync_snapshots_live
+                    or config.sync_deals_live
+                    or config.sync_scan_runs_live
+                )
                 and config.has_supabase_credentials
                 and not config.use_supabase
             )
@@ -2511,6 +2515,14 @@ class LuxFlightScanner:
             self.store.save_scan_run(summary)
         except Exception as error:  # pragma: no cover - depends on storage availability
             self._log_progress(f"Scan summary persistence failed: {error}")
+
+        if self.live_sync_store is None or not self.config.sync_scan_runs_live:
+            return
+
+        try:
+            self.live_sync_store.save_scan_run(summary)
+        except Exception as error:  # pragma: no cover - depends on live network behavior
+            self._log_progress(f"Scan summary live sync failed: {error}")
 
     def scan(self, limit: int | None = None) -> dict[str, Any]:
         report: list[dict[str, Any]] = []
