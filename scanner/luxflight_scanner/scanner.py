@@ -231,6 +231,7 @@ PUBLIC_NEAR_DEPARTURE_RATIO = 1.05
 PUBLIC_NEAR_DEPARTURE_DAYS = 30
 PUBLIC_REFERENCE_MIN_POINTS = 8
 PUBLIC_FARES_PER_EXACT_DATE_PAIR = 10
+SCAN_RUN_CHECKPOINT_INTERVAL_SECONDS = 15
 
 
 class NetworkOutageCircuitBreakerError(RuntimeError):
@@ -2543,9 +2544,19 @@ class LuxFlightScanner:
         run_status = "running"
         fatal_error: BaseException | None = None
         final_summary: dict[str, Any] | None = None
+        last_checkpoint_at: datetime | None = None
         self._run_retry_counts = {}
 
-        def save_running_checkpoint() -> None:
+        def save_running_checkpoint(*, force: bool = False) -> None:
+            nonlocal last_checkpoint_at
+            checkpoint_at = datetime.now(timezone.utc)
+            if (
+                not force
+                and last_checkpoint_at is not None
+                and (checkpoint_at - last_checkpoint_at).total_seconds()
+                < SCAN_RUN_CHECKPOINT_INTERVAL_SECONDS
+            ):
+                return
             self._save_scan_run_summary(
                 build_price_scan_run_summary(
                     run_key=run_key,
@@ -2564,8 +2575,9 @@ class LuxFlightScanner:
                     search_window_end=search_window_end,
                 )
             )
+            last_checkpoint_at = checkpoint_at
 
-        save_running_checkpoint()
+        save_running_checkpoint(force=True)
 
         try:
             for route_index, route in enumerate(routes, start=1):
@@ -2583,8 +2595,7 @@ class LuxFlightScanner:
                         f"({route.bucket}, {len(patterns)} patterns)"
                     )
                     consecutive_network_outage_failures = 0
-                    if isinstance(self.store, LocalStore):
-                        save_running_checkpoint()
+                    save_running_checkpoint()
                 except Exception as error:  # pragma: no cover - depends on live upstream behavior
                     error_type = self._classify_error_type(error)
                     consecutive_network_outage_failures = (
@@ -2604,8 +2615,7 @@ class LuxFlightScanner:
                             "error_type": error_type,
                         }
                     )
-                    if isinstance(self.store, LocalStore):
-                        save_running_checkpoint()
+                    save_running_checkpoint()
                     continue
 
                 date_results_cache: dict[tuple[int, str, str | None, str | None], list[object]] = {}
@@ -2662,6 +2672,7 @@ class LuxFlightScanner:
                                 "error_type": error_type,
                             }
                         )
+                        save_running_checkpoint()
                         self._trip_network_outage_breaker_if_needed(
                             consecutive_network_outage_failures,
                             error,
@@ -2691,6 +2702,7 @@ class LuxFlightScanner:
                                 "diagnostic": selection.no_result_diagnostic,
                             }
                         )
+                        save_running_checkpoint()
                         continue
 
                     snapshots = selection.snapshots
@@ -2791,9 +2803,9 @@ class LuxFlightScanner:
                         f"{route.origin_airport} -> {route.destination_airport} "
                         f"{pattern.label} captured {len(snapshots)} fare(s)"
                     )
-                completed_route_keys.add(route.key)
-                if isinstance(self.store, LocalStore):
                     save_running_checkpoint()
+                completed_route_keys.add(route.key)
+                save_running_checkpoint()
         except NetworkOutageCircuitBreakerError as error:
             stopped_reason = str(error)
             stopped_reason_code = "network_outage"

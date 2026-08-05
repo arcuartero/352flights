@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -24,6 +24,10 @@ type Props = {
 
 type RunDetailResponse =
   | { ok: true; run: PriceScanRun }
+  | { ok: false; reason: string; detail?: string };
+
+type RunHistoryResponse =
+  | { ok: true; runs: PriceScanRun[] }
   | { ok: false; reason: string; detail?: string };
 
 type SortDirection = "asc" | "desc";
@@ -410,6 +414,8 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
 }
 
 export function PriceScanRunHistory({ error, runs }: Props) {
+  const [liveRuns, setLiveRuns] = useState(runs);
+  const [liveError, setLiveError] = useState(error);
   const [runLimit, setRunLimit] = useState(Math.min(10, Math.max(runs.length, 1)));
   const [loadedPatterns, setLoadedPatterns] = useState<
     Record<string, PriceScanPatternSummary[]>
@@ -419,7 +425,51 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     message: string;
     runId: string;
   } | null>(null);
-  const visibleRuns = runs.slice(0, runLimit);
+  const visibleRuns = liveRuns.slice(0, runLimit);
+
+  useEffect(() => {
+    let disposed = false;
+    let controller: AbortController | null = null;
+
+    async function refreshRuns() {
+      if (document.visibilityState === "hidden") return;
+      controller?.abort();
+      controller = new AbortController();
+      try {
+        const response = await fetch("/api/ops/price-scan-runs", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as RunHistoryResponse;
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.ok ? "Scan history refresh failed." : payload.detail ?? payload.reason);
+        }
+        if (!disposed) {
+          setLiveRuns(payload.runs);
+          setLiveError(null);
+        }
+      } catch (requestError) {
+        if (!disposed && !(requestError instanceof DOMException && requestError.name === "AbortError")) {
+          setLiveError(
+            requestError instanceof Error ? requestError.message : "Scan history refresh failed.",
+          );
+        }
+      }
+    }
+
+    const interval = window.setInterval(() => void refreshRuns(), 4_000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refreshRuns();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      disposed = true;
+      controller?.abort();
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   const aggregate = useMemo(() => {
     const destinationNames = new Set<string>();
@@ -458,8 +508,8 @@ export function PriceScanRunHistory({ error, runs }: Props) {
 
   const limitOptions = Array.from(
     new Set(
-      [10, 25, 50, 100, runs.length]
-        .filter((value) => value > 0 && value <= runs.length)
+      [10, 25, 50, 100, liveRuns.length]
+        .filter((value) => value > 0 && value <= liveRuns.length)
         .sort((left, right) => left - right),
     ),
   );
@@ -506,7 +556,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
             route-level detail.
           </p>
         </div>
-        {runs.length > 0 ? (
+        {liveRuns.length > 0 ? (
           <label className="price-scan-history__range">
             <span>Aggregate</span>
             <select
@@ -523,13 +573,13 @@ export function PriceScanRunHistory({ error, runs }: Props) {
         ) : null}
       </div>
 
-      {error ? (
+      {liveError ? (
         <p className="ops-status ops-status--error">
-          Scan history could not be read: {error}
+          Scan history could not be refreshed: {liveError}
         </p>
       ) : null}
 
-      {runs.length === 0 && !error ? (
+      {liveRuns.length === 0 && !liveError ? (
         <div className="price-scan-history__empty">
           <Database aria-hidden="true" size={22} />
           <div>
@@ -539,7 +589,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
         </div>
       ) : null}
 
-      {runs.length > 0 ? (
+      {liveRuns.length > 0 ? (
         <>
           <div className="price-scan-history__definitions" aria-label="Metric definitions">
             <span><strong>Destinations</strong> unique cities attempted</span>
