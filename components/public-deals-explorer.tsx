@@ -3330,6 +3330,18 @@ export function PublicDealsExplorer({
   }, [filteredDeals]);
   const cityHeroDeal = mode === "city" ? filteredDeals[0] ?? null : null;
   const cityLowestPrice = mode === "city" ? getLowestPrice(filteredDeals) : null;
+  const cityHeroTitle =
+    lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination");
+  const cityHeroTitleLongestWord = Math.max(
+    0,
+    ...cityHeroTitle.split(/\s+/).map((word) => word.length),
+  );
+  const cityHeroTitleLengthClass =
+    cityHeroTitleLongestWord >= 12
+      ? " deals-city-page__hero-title--extra-long"
+      : cityHeroTitleLongestWord >= 9 || cityHeroTitle.length >= 18
+        ? " deals-city-page__hero-title--long"
+        : "";
   const breadcrumbCurrentLabel =
     mode === "city"
       ? lockedDestinationCity ?? selectedSearchGroup?.city ?? "Destination"
@@ -3680,19 +3692,14 @@ export function PublicDealsExplorer({
                 <nav className="deals-breadcrumb deals-breadcrumb--city-hero" aria-label="Breadcrumb">
                   <Link href="/">{t("common.home")}</Link>
                   <span aria-hidden="true">›</span>
-                  <span aria-current="page">
-                    {lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
-                  </span>
+                  <span aria-current="page">{cityHeroTitle}</span>
                 </nav>
-                <h1 className="deals-city-page__hero-title">
-                  {lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
+                <h1 className={`deals-city-page__hero-title${cityHeroTitleLengthClass}`}>
+                  {cityHeroTitle}
                 </h1>
                 <span className="deals-city-page__hero-wave" aria-hidden="true" />
                 <p className="deals-city-page__hero-desc">
-                  {getDestinationHeroDescription(
-                    lockedDestinationCity ?? selectedSearchGroup?.city ?? "this destination",
-                    t,
-                  )}
+                  {getDestinationHeroDescription(cityHeroTitle, t)}
                 </p>
                 <ul className="deals-city-page__hero-trust">
                   <li>

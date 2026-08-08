@@ -515,7 +515,7 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-city .deals-city-page__hero {
-  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(2.2rem, 4vw, 4.4rem);
   min-height: clamp(27rem, 36vw, 34rem);
   padding: clamp(2.3rem, 4.3vw, 4.8rem);
@@ -527,7 +527,8 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-city .deals-city-page__hero-copy {
-  max-width: 32rem;
+  min-width: 0;
+  max-width: 100%;
   align-content: center;
   align-self: center;
   height: auto;
@@ -540,9 +541,18 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-city .deals-city-page__hero-title {
+  max-width: 100%;
   color: #0b203d;
-  font-size: clamp(5rem, 8vw, 7.15rem);
+  font-size: clamp(4.4rem, 6.2vw, 6.25rem);
   line-height: 0.86;
+}
+
+.page-shell--deals-city .deals-city-page__hero-title--long {
+  font-size: clamp(3.9rem, 5.5vw, 5.65rem);
+}
+
+.page-shell--deals-city .deals-city-page__hero-title--extra-long {
+  font-size: clamp(3.45rem, 4.8vw, 4.95rem);
 }
 
 .page-shell--deals-city .deals-city-page__hero-wave {
@@ -562,7 +572,7 @@ body:has(.page-shell--deals-city)::before {
   border-radius: 0;
   background: transparent;
   backdrop-filter: none;
-  max-width: 34rem;
+  max-width: 100%;
   color: #27364a;
   font-size: clamp(1.05rem, 1.18vw, 1.2rem);
   line-height: 1.58;
@@ -610,7 +620,7 @@ body:has(.page-shell--deals-city)::before {
 
 .page-shell--deals-city .deals-city-page__hero-summary {
   top: clamp(1.55rem, 3vw, 2.4rem);
-  left: clamp(-2.4rem, -2.2vw, -1rem);
+  left: clamp(1rem, 2vw, 1.8rem);
   min-width: clamp(13.5rem, 16vw, 16rem);
   min-height: clamp(13.2rem, 17vw, 16.2rem);
   padding: clamp(1.35rem, 2.4vw, 2rem);
