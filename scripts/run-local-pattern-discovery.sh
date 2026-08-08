@@ -121,7 +121,7 @@ if (( FORCE_RUN == 1 )); then
   echo "[$TIMESTAMP] Force-run requested, bypassing monthly duplicate-run guard." >> "$STDOUT_LOG"
 fi
 
-DISCOVERY_ARGS=(run luxflight-scan --discover-patterns --json)
+DISCOVERY_ARGS=(run luxflight-scan --discover-patterns --only-missing-service-months --json)
 if [[ -n "$TARGET_ORIGIN" ]]; then
   DISCOVERY_ARGS+=(--origin-airport "$TARGET_ORIGIN")
 fi
