@@ -100,7 +100,7 @@ if [[ "${#DISCOVERY_ARGS[@]}" -gt 0 ]]; then
 fi
 
 set +e
-"$UV_BIN" run luxflight-scan --discover-patterns --json "${DISCOVERY_ARGS[@]}" 2>&1 | tee "$RUN_LOG"
+"$UV_BIN" run luxflight-scan --discover-patterns --only-missing-service-months --json "${DISCOVERY_ARGS[@]}" 2>&1 | tee "$RUN_LOG"
 discovery_status="${PIPESTATUS[0]}"
 set -e
 

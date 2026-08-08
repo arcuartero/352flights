@@ -29,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Map supported route patterns and save per-route overrides.",
     )
     parser.add_argument(
+        "--only-missing-service-months",
+        action="store_true",
+        help="Skip routes that already have a complete service-calendar horizon.",
+    )
+    parser.add_argument(
         "--origin-airport",
         type=str,
         default=None,
@@ -109,7 +114,11 @@ def main() -> None:
         }
 
     report = (
-        scanner.discover_route_patterns(limit=args.limit, route_filter=route_filter)
+        scanner.discover_route_patterns(
+            limit=args.limit,
+            route_filter=route_filter,
+            only_missing_service_months=args.only_missing_service_months,
+        )
         if args.discover_patterns
         else scanner.scan(limit=args.limit)
     )
