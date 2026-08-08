@@ -615,6 +615,105 @@
   padding: 1rem;
 }
 
+.price-scan-history__explanation {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-soft) 28%, var(--panel) 72%);
+}
+
+.price-scan-history__explanation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.price-scan-history__explanation-head h3 {
+  margin: 0.15rem 0 0;
+  color: var(--text-strong);
+  font-size: 1.1rem;
+}
+
+.price-scan-history__explanation-head .ops-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.price-scan-history__explanation-head svg.is-spinning {
+  animation: ops-spin 0.8s linear infinite;
+}
+
+@keyframes ops-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.price-scan-history__explanation-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-block: 0.8rem;
+  border-block: 1px solid var(--line);
+  color: var(--accent);
+}
+
+.price-scan-history__explanation-lead strong {
+  color: var(--text-strong);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.price-scan-history__explanation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+
+.price-scan-history__explanation-grid article {
+  min-width: 0;
+  padding: 0.2rem 1rem 0.7rem 0;
+}
+
+.price-scan-history__explanation-grid article:nth-child(even) {
+  padding-inline: 1rem 0;
+  border-left: 1px solid var(--line);
+}
+
+.price-scan-history__explanation-grid article:nth-child(n + 3) {
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.price-scan-history__explanation-grid article.is-impact span {
+  color: var(--success);
+}
+
+.price-scan-history__explanation-grid span {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.price-scan-history__explanation-grid p {
+  margin: 0.35rem 0 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.price-scan-history__explanation > small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .price-scan-history__run-metrics {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -859,6 +958,27 @@ html[data-theme="dark"] .price-scan-history td.is-problem-metric {
 
   .price-scan-history__run-scope {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .price-scan-history__explanation-head {
+    display: grid;
+  }
+
+  .price-scan-history__explanation-head .ops-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .price-scan-history__explanation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .price-scan-history__explanation-grid article,
+  .price-scan-history__explanation-grid article:nth-child(even),
+  .price-scan-history__explanation-grid article:nth-child(n + 3) {
+    padding: 0.75rem 0;
+    border: 0;
+    border-top: 1px solid var(--line);
   }
 }
 

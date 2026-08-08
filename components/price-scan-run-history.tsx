@@ -7,6 +7,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   Database,
+  FileText,
   RefreshCw,
 } from "lucide-react";
 
@@ -37,6 +38,15 @@ type SortState<Key extends string> = {
   key: Key;
 };
 type SortValue = number | string | null | undefined;
+
+type RunExplanation = {
+  generatedAt: string;
+  headline: string;
+  work: string;
+  findings: string;
+  issues: string;
+  impact: string;
+};
 
 const noResultLabels: Record<string, string> = {
   no_flights_found: "No flights found",
@@ -142,6 +152,113 @@ function percentage(numerator: number, denominator: number) {
 
 function sum(runs: PriceScanRun[], read: (run: PriceScanRun) => number) {
   return runs.reduce((total, run) => total + read(run), 0);
+}
+
+function plural(value: number, singular: string, pluralForm = `${singular}s`) {
+  return `${value} ${value === 1 ? singular : pluralForm}`;
+}
+
+function spanishList(values: string[]) {
+  return new Intl.ListFormat("es", {
+    style: "long",
+    type: "conjunction",
+  }).format(values);
+}
+
+function syncCount(run: PriceScanRun, key: string) {
+  const value = run.syncSummary[key];
+  const parsed = typeof value === "number" ? value : Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildRunExplanation(run: PriceScanRun): RunExplanation {
+  const terminalOutcomes =
+    run.foundPrices +
+    run.noResults +
+    run.timedOut +
+    run.networkOutages +
+    run.hardErrors;
+  const foundRate = percentage(run.foundPrices, terminalOutcomes);
+  const completedCoverage = percentage(run.routesCompleted, run.routesPlanned);
+  const problemCount = run.timedOut + run.networkOutages + run.hardErrors;
+  const pendingRoutes = Math.max(run.routesPlanned - run.routesCompleted, 0);
+  const topDestinations = [...run.destinations]
+    .filter((destination) => destination.found_prices > 0)
+    .sort((left, right) => right.found_prices - left.found_prices)
+    .slice(0, 3)
+    .map((destination) => destination.destination_city);
+  const topDestinationText = topDestinations.length > 0
+    ? ` Las ciudades con más resultados fueron ${spanishList(topDestinations)}.`
+    : "";
+  const dominantNoResult = Object.entries(run.noResultBreakdown)
+    .sort((left, right) => right[1] - left[1])[0];
+  const dominantNoResultText = dominantNoResult
+    ? ` La causa más repetida sin resultado fue “${
+        noResultLabels[dominantNoResult[0]] ?? dominantNoResult[0].replaceAll("_", " ")
+      }” (${dominantNoResult[1]}).`
+    : "";
+  const rateLimited = Number(run.errorBreakdown.rate_limited ?? 0);
+  const syncedSnapshots = syncCount(run, "snapshots_synced");
+
+  let headline = "Este escaneo terminó y dejó resultados utilizables.";
+  if (run.status === "running") {
+    headline = "Este escaneo sigue en marcha; las cifras todavía pueden aumentar.";
+  } else if (run.status === "failed") {
+    headline = "Este escaneo falló antes de completar el trabajo previsto.";
+  } else if (run.status === "stopped") {
+    headline = "Este escaneo fue detenido antes de completar todas las rutas.";
+  } else if (run.status === "completed_with_errors" || run.status === "partial") {
+    headline = "Este escaneo produjo precios, pero terminó con trabajo incompleto o incidencias.";
+  }
+
+  const work = [
+    `Revisó ${plural(run.destinationsScanned, "ciudad", "ciudades")} y ${run.routesStarted} de ${run.routesPlanned} rutas previstas (${completedCoverage} completado).`,
+    `Procesó ${plural(run.patternsScanned, "combinación", "combinaciones")} de fechas y realizó ${plural(run.rulesScanned, "búsqueda", "búsquedas")} reales.`,
+    run.searchWindowStart && run.searchWindowEnd
+      ? `El periodo analizado fue del ${formatDate(run.searchWindowStart)} al ${formatDate(run.searchWindowEnd)}.`
+      : "El periodo exacto de búsqueda no quedó registrado.",
+  ].join(" ");
+
+  const priceSummary = run.foundPrices > 0
+    ? `Los precios encontrados van de ${formatMoney(run.minPrice, run.currency)} a ${formatMoney(run.maxPrice, run.currency)}, con una mediana de ${formatMoney(run.medianPrice, run.currency)}.`
+    : "No encontró una tarifa válida nueva.";
+  const findings = `Encontró ${plural(run.foundPrices, "precio", "precios")} o itinerarios válidos (${foundRate} de los resultados finales) y marcó ${plural(run.dealCandidates, "candidato a oferta", "candidatos a oferta")}. ${priceSummary}${topDestinationText}`;
+
+  let issues = `Hubo ${plural(run.noResults, "búsqueda sin vuelo válido", "búsquedas sin vuelo válido")} y ${plural(problemCount, "incidencia técnica", "incidencias técnicas")}: ${run.timedOut} por espera agotada, ${run.networkOutages} de red/DNS y ${run.hardErrors} errores no recuperados.`;
+  if (run.retries > 0) {
+    issues += ` El escáner hizo ${plural(run.retries, "reintento")} para recuperar búsquedas.`;
+  }
+  if (rateLimited > 0) {
+    issues += ` ${plural(rateLimited, "fallo", "fallos")} fueron límites 429 del proveedor.`;
+  }
+  issues += dominantNoResultText;
+  if (problemCount === 0 && run.noResults === 0) {
+    issues = "No se registraron errores técnicos ni búsquedas sin resultado en los datos actuales.";
+  }
+
+  let impact = "Todavía no hay precios nuevos de este registro que puedan afectar a la web pública.";
+  if (run.status === "running") {
+    impact = `La web puede ir recibiendo resultados mientras continúa el escaneo. Por ahora hay ${plural(run.dealCandidates, "precio especialmente interesante", "precios especialmente interesantes")} que pueden destacar para el usuario tras la sincronización.`;
+  } else if (run.syncStatus === "completed") {
+    const syncDetail = syncedSnapshots > 0
+      ? ` Se sincronizaron ${plural(syncedSnapshots, "registro de precio", "registros de precio")}.`
+      : " La sincronización consta como completada.";
+    impact = `${plural(run.foundPrices, "resultado válido", "resultados válidos")} quedaron disponibles para actualizar comparaciones, medias mensuales y listados de rutas.${syncDetail} ${plural(run.dealCandidates, "precio", "precios")} cumplen los criterios para ser candidatos a oferta visible.`;
+  } else if (run.foundPrices > 0) {
+    impact = `El escáner encontró ${plural(run.foundPrices, "precio", "precios")}, pero la sincronización figura como “${run.syncStatus}”. Hasta que termine, la web puede no reflejar todos esos resultados.`;
+  }
+  if (pendingRoutes > 0) {
+    impact += ` Quedaron ${plural(pendingRoutes, "ruta", "rutas")} sin completar, por lo que esas rutas pueden conservar información anterior o mostrar menos opciones nuevas.`;
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    headline,
+    work,
+    findings,
+    issues,
+    impact,
+  };
 }
 
 function patternOutcomeLabel(pattern: PriceScanPatternSummary) {
@@ -458,6 +575,14 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     message: string;
     runId: string;
   } | null>(null);
+  const [explanations, setExplanations] = useState<Record<string, RunExplanation>>({});
+  const [refreshingExplanationRunId, setRefreshingExplanationRunId] = useState<
+    string | null
+  >(null);
+  const [explanationError, setExplanationError] = useState<{
+    message: string;
+    runId: string;
+  } | null>(null);
   const loadedPatternRunIds = useRef(new Set<string>());
   const runningPatternRunIds = useRef(new Set<string>());
   const visibleRuns = liveRuns.slice(0, runLimit);
@@ -617,6 +742,55 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     }
   }
 
+  function explainRunWhenOpened(run: PriceScanRun) {
+    setExplanations((current) => {
+      if (current[run.id]) return current;
+      return { ...current, [run.id]: buildRunExplanation(run) };
+    });
+  }
+
+  async function refreshExplanation(run: PriceScanRun) {
+    if (refreshingExplanationRunId === run.id) return;
+    setRefreshingExplanationRunId(run.id);
+    setExplanationError(null);
+    try {
+      const response = await fetch(`/api/ops/price-scan-runs/${run.id}`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as RunDetailResponse;
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.ok
+            ? "No se pudo actualizar la explicación."
+            : payload.detail ?? payload.reason,
+        );
+      }
+      setLiveRuns((current) =>
+        current.map((item) => (item.id === run.id ? payload.run : item)),
+      );
+      if (payload.run.patterns) {
+        setLoadedPatterns((current) => ({
+          ...current,
+          [run.id]: payload.run.patterns ?? [],
+        }));
+      }
+      setExplanations((current) => ({
+        ...current,
+        [run.id]: buildRunExplanation(payload.run),
+      }));
+    } catch (requestError) {
+      setExplanationError({
+        message:
+          requestError instanceof Error
+            ? requestError.message
+            : "No se pudo actualizar la explicación.",
+        runId: run.id,
+      });
+    } finally {
+      setRefreshingExplanationRunId(null);
+    }
+  }
+
   return (
     <section className="ops-panel ops-panel--wide price-scan-history">
       <div className="price-scan-history__header">
@@ -695,9 +869,16 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                 run.networkOutages +
                 run.hardErrors;
               const patterns = loadedPatterns[run.id];
+              const explanation = explanations[run.id];
 
               return (
-                <details className="price-scan-history__run" key={run.id}>
+                <details
+                  className="price-scan-history__run"
+                  key={run.id}
+                  onToggle={(event) => {
+                    if (event.currentTarget.open) explainRunWhenOpened(run);
+                  }}
+                >
                   <summary>
                     <div className="price-scan-history__run-identity">
                       <span className={`ops-send-badge ${statusTone(run.status)}`}>
@@ -722,6 +903,69 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                   </summary>
 
                   <div className="price-scan-history__run-body">
+                    {explanation ? (
+                      <section
+                        aria-label="Explicación sencilla del escaneo"
+                        className="price-scan-history__explanation"
+                      >
+                        <div className="price-scan-history__explanation-head">
+                          <div>
+                            <p className="ops-panel__eyebrow">Resumen fácil</p>
+                            <h3>Qué pasó en este escaneo</h3>
+                          </div>
+                          <button
+                            className="ops-button ops-button--ghost"
+                            disabled={refreshingExplanationRunId === run.id}
+                            onClick={() => void refreshExplanation(run)}
+                            type="button"
+                          >
+                            <RefreshCw
+                              aria-hidden="true"
+                              className={
+                                refreshingExplanationRunId === run.id
+                                  ? "is-spinning"
+                                  : undefined
+                              }
+                              size={15}
+                            />
+                            {refreshingExplanationRunId === run.id
+                              ? "Actualizando"
+                              : "Actualizar explicación"}
+                          </button>
+                        </div>
+                        <div className="price-scan-history__explanation-lead">
+                          <FileText aria-hidden="true" size={20} />
+                          <strong>{explanation.headline}</strong>
+                        </div>
+                        <div className="price-scan-history__explanation-grid">
+                          <article>
+                            <span>Qué hizo</span>
+                            <p>{explanation.work}</p>
+                          </article>
+                          <article>
+                            <span>Qué encontró</span>
+                            <p>{explanation.findings}</p>
+                          </article>
+                          <article>
+                            <span>Qué problemas hubo</span>
+                            <p>{explanation.issues}</p>
+                          </article>
+                          <article className="is-impact">
+                            <span>Impacto para el usuario y la web</span>
+                            <p>{explanation.impact}</p>
+                          </article>
+                        </div>
+                        <small>
+                          Generado con los datos guardados a las {formatDateTime(explanation.generatedAt)}.
+                        </small>
+                        {explanationError?.runId === run.id ? (
+                          <p className="ops-status ops-status--error">
+                            {explanationError.message}
+                          </p>
+                        ) : null}
+                      </section>
+                    ) : null}
+
                     <div className="price-scan-history__run-metrics">
                       <div><span>Found rate</span><strong>{percentage(run.foundPrices, terminalOutcomes)}</strong></div>
                       <div><span>Found prices</span><strong>{run.foundPrices}</strong></div>
