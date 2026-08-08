@@ -3024,6 +3024,7 @@ class LuxFlightScanner:
         self,
         limit: int | None = None,
         route_filter: dict[str, str | None] | None = None,
+        only_missing_service_months: bool = False,
     ) -> dict[str, Any]:
         report: list[dict[str, Any]] = []
         filtered_routes = [
@@ -3035,6 +3036,24 @@ class LuxFlightScanner:
         for route in routes:
             try:
                 route_id = self.store.ensure_route(route)
+                service_routing = self._service_calendar_routing_for_route(route)
+                existing_service_months = self.store.route_service_months(route_id, service_routing)
+                if (
+                    only_missing_service_months
+                    and len(existing_service_months) >= max(self.config.service_calendar_month_horizon, 1)
+                ):
+                    report.append(
+                        {
+                            "route": asdict(route),
+                            "status": "service_calendar_already_complete",
+                            "service_months": existing_service_months,
+                        }
+                    )
+                    self._log_progress(
+                        f"Pattern discovery skipped: {route.origin_airport} -> {route.destination_airport} "
+                        f"already has {len(existing_service_months)} service months"
+                    )
+                    continue
                 self._log_progress(
                     f"Pattern discovery start: {route.origin_airport} -> {route.destination_airport} "
                     f"({route.bucket})"
@@ -3050,8 +3069,6 @@ class LuxFlightScanner:
                 continue
 
             try:
-                service_routing = self._service_calendar_routing_for_route(route)
-                existing_service_months = self.store.route_service_months(route_id, service_routing)
                 detected_service_months = self._discover_service_months_for_route(route)
                 change_events = self._build_service_change_events(
                     existing_service_months,
