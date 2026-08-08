@@ -38,6 +38,21 @@ class ScannerConfig:
     search_pause_max_seconds: float = float(
         os.getenv("SCANNER_SEARCH_PAUSE_MAX_SECONDS", "2.2")
     )
+    search_http_min_interval_seconds: float = float(
+        os.getenv("SCANNER_SEARCH_HTTP_MIN_INTERVAL_SECONDS", "0.4")
+    )
+    search_rate_limit_attempts: int = int(
+        os.getenv("SCANNER_SEARCH_RATE_LIMIT_ATTEMPTS", "4")
+    )
+    search_rate_limit_base_seconds: float = float(
+        os.getenv("SCANNER_SEARCH_RATE_LIMIT_BASE_SECONDS", "30")
+    )
+    search_rate_limit_max_seconds: float = float(
+        os.getenv("SCANNER_SEARCH_RATE_LIMIT_MAX_SECONDS", "300")
+    )
+    search_rate_limit_jitter_ratio: float = float(
+        os.getenv("SCANNER_SEARCH_RATE_LIMIT_JITTER_RATIO", "0.25")
+    )
     route_pause_min_seconds: float = float(
         os.getenv("SCANNER_ROUTE_PAUSE_MIN_SECONDS", "2.5")
     )

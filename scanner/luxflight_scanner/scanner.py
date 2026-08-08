@@ -7,6 +7,7 @@ import time
 import uuid
 from dataclasses import asdict, replace
 from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from functools import wraps
 from statistics import median
 from typing import Any, Iterable
@@ -259,6 +260,10 @@ class LuxFlightScanner:
         self.live_sync_remote_route_ids: dict[str, str] = {}
         self._run_retry_counts: dict[str, int] = {}
         self._random = random.Random()
+        self._next_http_request_at = 0.0
+        self._rate_limit_until = 0.0
+        self._active_pattern_retry_key: str | None = None
+        self._active_pattern_retry_label: str | None = None
         self.date_search = SearchDates()
         self.flight_search = SearchFlights()
         self._install_default_timeout(self.date_search.client)
@@ -390,19 +395,158 @@ class LuxFlightScanner:
 
         timeout_seconds = self.config.search_request_timeout_seconds
 
+        # fli can make several raw requests inside one round-trip search. Pace the
+        # underlying session so those internal requests cannot arrive as a burst.
+        raw_client = getattr(client, "_client", None)
+        if raw_client is not None and not getattr(
+            raw_client,
+            "_luxcheapflights_pacing_patched",
+            False,
+        ):
+            for method_name in ("get", "post"):
+                original_raw = getattr(raw_client, method_name, None)
+                if original_raw is None:
+                    continue
+
+                @wraps(original_raw)
+                def paced_request(
+                    *args: Any,
+                    __original: Any = original_raw,
+                    **kwargs: Any,
+                ) -> Any:
+                    self._wait_for_http_request_slot()
+                    kwargs.setdefault("timeout", timeout_seconds)
+                    return __original(*args, **kwargs)
+
+                setattr(raw_client, method_name, paced_request)
+
+            setattr(raw_client, "_luxcheapflights_pacing_patched", True)
+
         for method_name in ("get", "post"):
             original = getattr(client, method_name, None)
             if original is None:
                 continue
 
             @wraps(original)
-            def with_timeout(*args: Any, __original: Any = original, **kwargs: Any) -> Any:
+            def with_timeout_and_rate_limit_retry(
+                *args: Any,
+                __original: Any = original,
+                **kwargs: Any,
+            ) -> Any:
                 kwargs.setdefault("timeout", timeout_seconds)
-                return __original(*args, **kwargs)
+                attempts = max(1, self.config.search_rate_limit_attempts)
 
-            setattr(client, method_name, with_timeout)
+                for attempt in range(1, attempts + 1):
+                    try:
+                        return __original(*args, **kwargs)
+                    except Exception as error:
+                        if not self._is_rate_limit_error(error) or attempt >= attempts:
+                            raise
+
+                        delay = self._rate_limit_retry_delay(error, attempt)
+                        self._rate_limit_until = max(
+                            self._rate_limit_until,
+                            time.monotonic() + delay,
+                        )
+                        self._record_rate_limit_retry()
+                        context = (
+                            f" · {self._active_pattern_retry_label}"
+                            if self._active_pattern_retry_label
+                            else ""
+                        )
+                        self._log_progress(
+                            "Search rate limited (HTTP 429): "
+                            f"pausing {delay:.0f}s before attempt "
+                            f"{attempt + 1}/{attempts}{context}"
+                        )
+
+                raise RuntimeError("Unreachable rate-limit retry state.")
+
+            setattr(client, method_name, with_timeout_and_rate_limit_retry)
 
         setattr(client, "_luxcheapflights_timeout_patched", True)
+
+    def _wait_for_http_request_slot(self) -> None:
+        wait_until = max(self._next_http_request_at, self._rate_limit_until)
+        delay = wait_until - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
+
+        interval = max(0.0, self.config.search_http_min_interval_seconds)
+        self._next_http_request_at = time.monotonic() + interval
+
+    @staticmethod
+    def _exception_chain(error: BaseException) -> list[BaseException]:
+        chain: list[BaseException] = []
+        current: BaseException | None = error
+        seen: set[int] = set()
+        while current is not None and id(current) not in seen:
+            seen.add(id(current))
+            chain.append(current)
+            current = current.__cause__ or current.__context__
+        return chain
+
+    @classmethod
+    def _is_rate_limit_error(cls, error: BaseException) -> bool:
+        markers = (
+            "http error 429",
+            "status code 429",
+            "too many requests",
+            "rate limit",
+            "ratelimit",
+        )
+        return any(
+            marker in str(item).lower()
+            for item in cls._exception_chain(error)
+            for marker in markers
+        )
+
+    @classmethod
+    def _retry_after_seconds(cls, error: BaseException) -> float | None:
+        for item in cls._exception_chain(error):
+            response = getattr(item, "response", None)
+            headers = getattr(response, "headers", None)
+            if headers is None:
+                continue
+            value = headers.get("Retry-After") or headers.get("retry-after")
+            if value is None:
+                continue
+            try:
+                return max(0.0, float(value))
+            except (TypeError, ValueError):
+                try:
+                    retry_at = parsedate_to_datetime(str(value))
+                    if retry_at.tzinfo is None:
+                        retry_at = retry_at.replace(tzinfo=timezone.utc)
+                    return max(
+                        0.0,
+                        (retry_at - datetime.now(timezone.utc)).total_seconds(),
+                    )
+                except (TypeError, ValueError, OverflowError):
+                    continue
+        return None
+
+    def _rate_limit_retry_delay(self, error: BaseException, attempt: int) -> float:
+        maximum = max(0.0, self.config.search_rate_limit_max_seconds)
+        retry_after = self._retry_after_seconds(error)
+        if retry_after is not None:
+            return retry_after
+
+        base = max(0.0, self.config.search_rate_limit_base_seconds)
+        delay = base * (2 ** max(0, attempt - 1))
+        if maximum > 0:
+            delay = min(delay, maximum)
+        jitter_ratio = max(0.0, self.config.search_rate_limit_jitter_ratio)
+        if delay > 0 and jitter_ratio > 0:
+            delay += self._random.uniform(0.0, delay * jitter_ratio)
+        return delay
+
+    def _record_rate_limit_retry(self) -> None:
+        if not self._active_pattern_retry_key:
+            return
+        self._run_retry_counts[self._active_pattern_retry_key] = (
+            self._run_retry_counts.get(self._active_pattern_retry_key, 0) + 1
+        )
 
     def _sleep_with_jitter(self, min_seconds: float, max_seconds: float) -> None:
         safe_min = max(0.0, float(min_seconds))
@@ -488,6 +632,8 @@ class LuxFlightScanner:
             return "network_outage"
         if self._is_timeout_error(error):
             return "timeout"
+        if self._is_rate_limit_error(error):
+            return "rate_limited"
         return "hard_error"
 
     @staticmethod
@@ -496,6 +642,8 @@ class LuxFlightScanner:
             return "Pattern timed out"
         if error_type == "network_outage":
             return "Pattern network outage"
+        if error_type == "rate_limited":
+            return "Pattern rate limited"
         return "Pattern hard error"
 
     def _trip_network_outage_breaker_if_needed(
@@ -523,29 +671,40 @@ class LuxFlightScanner:
         pattern_progress_label: str,
     ) -> PatternSelectionResult:
         attempts = 2
+        retry_key = f"{route.key}:{pattern.key}"
+        previous_retry_key = self._active_pattern_retry_key
+        previous_retry_label = self._active_pattern_retry_label
+        self._active_pattern_retry_key = retry_key
+        self._active_pattern_retry_label = (
+            f"{pattern_progress_label} · {route.origin_airport} -> "
+            f"{route.destination_airport} {pattern.label}"
+        )
 
-        for attempt in range(1, attempts + 1):
-            try:
-                return self._pick_cheapest_for_pattern(
-                    route,
-                    pattern,
-                    date_results_cache,
-                    service_month_rows,
-                )
-            except Exception as error:
-                if attempt < attempts and self._is_timeout_error(error):
-                    retry_key = f"{route.key}:{pattern.key}"
-                    self._run_retry_counts[retry_key] = (
-                        self._run_retry_counts.get(retry_key, 0) + 1
+        try:
+            for attempt in range(1, attempts + 1):
+                try:
+                    return self._pick_cheapest_for_pattern(
+                        route,
+                        pattern,
+                        date_results_cache,
+                        service_month_rows,
                     )
-                    self._log_progress(
-                        f"Pattern retry: {pattern_progress_label} · "
-                        f"{route.origin_airport} -> {route.destination_airport} "
-                        f"{pattern.label} after timeout (retrying once)"
-                    )
-                    continue
+                except Exception as error:
+                    if attempt < attempts and self._is_timeout_error(error):
+                        self._run_retry_counts[retry_key] = (
+                            self._run_retry_counts.get(retry_key, 0) + 1
+                        )
+                        self._log_progress(
+                            f"Pattern retry: {pattern_progress_label} · "
+                            f"{route.origin_airport} -> {route.destination_airport} "
+                            f"{pattern.label} after timeout (retrying once)"
+                        )
+                        continue
 
-                raise
+                    raise
+        finally:
+            self._active_pattern_retry_key = previous_retry_key
+            self._active_pattern_retry_label = previous_retry_label
 
     @staticmethod
     def _log_meta_suffix(payload: dict[str, object] | None) -> str:
