@@ -332,6 +332,50 @@ async function reconcileSupersededRunningRuns(activeRunStartedAt: string) {
   return runs.length;
 }
 
+async function reconcileInactiveRunningRuns() {
+  const supabase = getSupabaseAdminClient();
+  const staleRuns = await supabase
+    .from("price_scan_runs")
+    .select("id,started_at,updated_at,sync_summary")
+    .eq("status", "running");
+  if (staleRuns.error) throw new Error(staleRuns.error.message);
+
+  const runs = (staleRuns.data ?? []) as Array<{
+    id: string;
+    started_at: string;
+    updated_at: string;
+    sync_summary: Record<string, unknown> | null;
+  }>;
+
+  await Promise.all(runs.map(async (run) => {
+    const completedAt = run.updated_at || new Date().toISOString();
+    const update = await supabase
+      .from("price_scan_runs")
+      .update({
+        status: "stopped",
+        completed_at: completedAt,
+        duration_ms: Math.max(
+          new Date(completedAt).getTime() - new Date(run.started_at).getTime(),
+          0,
+        ),
+        stopped_reason: "The Price Scanner is no longer running on the VPS. This run was closed at its last saved checkpoint.",
+        stopped_reason_code: "vps_service_inactive",
+        sync_status: "partial",
+        sync_summary: {
+          ...(run.sync_summary ?? {}),
+          reconciled_from_vps_status: true,
+          price_service_running: false,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", run.id)
+      .eq("status", "running");
+    if (update.error) throw new Error(update.error.message);
+  }));
+
+  return runs.length;
+}
+
 export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus) {
   const serviceStartedAt = parseTimestamp(status.service.ExecMainStartTimestamp);
   const serviceCompletedAt = parseTimestamp(status.service.ExecMainExitTimestamp);
@@ -341,7 +385,13 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
     serviceCompletedAt &&
     !scannerStartedDuringServiceAttempt(status, serviceStartedAt, serviceCompletedAt)
   ) {
-    return recoverFailedServiceAttempt(status, serviceStartedAt, serviceCompletedAt);
+    const recovery = await recoverFailedServiceAttempt(status, serviceStartedAt, serviceCompletedAt);
+    const inactiveRunsReconciled = await reconcileInactiveRunningRuns();
+    return {
+      ...recovery,
+      recovered: recovery.recovered || inactiveRunsReconciled > 0,
+      count: inactiveRunsReconciled + (recovery.recovered ? 1 : 0),
+    };
   }
 
   if (status.running) {
@@ -355,6 +405,8 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
     };
   }
 
+  const inactiveRunsReconciled = await reconcileInactiveRunningRuns();
+
   const events = latestRunEvents(status);
   const startedAt = events[0]?.timestamp ?? parseTimestamp(status.service.ExecMainStartTimestamp);
   const completedAt =
@@ -365,7 +417,13 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
     )?.timestamp ?? parseTimestamp(status.service.ExecMainExitTimestamp);
 
   if (!startedAt || !completedAt) {
-    return { recovered: false, reason: "missing_run_timestamps" };
+    return {
+      recovered: inactiveRunsReconciled > 0,
+      reason: inactiveRunsReconciled > 0
+        ? "inactive_runs_reconciled"
+        : "missing_run_timestamps",
+      count: inactiveRunsReconciled,
+    };
   }
 
   const supabase = getSupabaseAdminClient();
@@ -380,7 +438,11 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
     .limit(1);
   if (existing.error) throw new Error(existing.error.message);
   if ((existing.data ?? []).length > 0) {
-    return { recovered: false, reason: "already_stored" };
+    return {
+      recovered: inactiveRunsReconciled > 0,
+      reason: inactiveRunsReconciled > 0 ? "inactive_runs_reconciled" : "already_stored",
+      count: inactiveRunsReconciled,
+    };
   }
 
   const [routesQuery, snapshotsQuery] = await Promise.all([

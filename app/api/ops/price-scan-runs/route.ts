@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   }
 
   const runningCount = history.runs.filter((run) => run.status === "running").length;
-  if (runningCount > 1 && hasVpsScannerAgentConfig()) {
+  if (runningCount > 0 && hasVpsScannerAgentConfig()) {
     try {
       const status = await callVpsScannerAgent<VpsScannerAgentStatus>("status");
       const recovery = await recoverLatestVpsPriceScanRun(status);
