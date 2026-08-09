@@ -630,7 +630,10 @@ class SupabaseStore:
             params={"on_conflict": "run_key"},
         )
         if self._is_missing_table_error(response):
-            return str(summary["run_key"])
+            raise RuntimeError(
+                "Supabase table date_scan_runs is unavailable. "
+                "Apply supabase/migrations/20260809100000_date_scan_runs.sql."
+            )
         response.raise_for_status()
         data = response.json()
         return str(data[0]["id"]) if data else str(summary["run_key"])
