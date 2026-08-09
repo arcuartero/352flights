@@ -264,6 +264,7 @@ class LuxFlightScanner:
         self._rate_limit_until = 0.0
         self._active_pattern_retry_key: str | None = None
         self._active_pattern_retry_label: str | None = None
+        self._pattern_discovery_state: dict[str, Any] | None = None
         self.date_search = SearchDates()
         self.flight_search = SearchFlights()
         self._install_default_timeout(self.date_search.client)
@@ -274,6 +275,75 @@ class LuxFlightScanner:
     def _log_progress(message: str) -> None:
         timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}Z] {message}", file=sys.stderr, flush=True)
+
+    def _save_pattern_discovery_run(self, *, status: str, completed_at: datetime | None = None, error: str | None = None) -> None:
+        state = self._pattern_discovery_state
+        if state is None:
+            return
+
+        finished = completed_at or datetime.now(timezone.utc)
+        report = state["report"]
+        route_results = []
+        destinations: set[str] = set()
+        routes_started = state.get("routes_started", set())
+        routes_completed = state.get("routes_completed", set())
+        for item in report:
+            route = item.get("route") if isinstance(item, dict) else None
+            if not isinstance(route, dict):
+                continue
+            route_key = f"{route.get('origin_airport', '?')}:{route.get('destination_airport', '?')}:{route.get('max_stops', '?')}"
+            destination = route.get("destination_city")
+            if destination:
+                destinations.add(str(destination))
+            service_months = item.get("service_months")
+            service_months = service_months if isinstance(service_months, list) else []
+            departures = sum(
+                len(month.get("departure_dates", []))
+                for month in service_months
+                if isinstance(month, dict) and isinstance(month.get("departure_dates"), list)
+            )
+            route_results.append({
+                "route_key": route_key,
+                "route_label": f"{route.get('origin_airport', '?')} -> {route.get('destination_airport', '?')}",
+                "destination_city": destination,
+                "status": item.get("status"),
+                "service_months": len(service_months),
+                "departures_detected": departures,
+                "cadence_changes": len(item.get("cadence_changes", [])) if isinstance(item.get("cadence_changes"), list) else 0,
+                "error": item.get("error"),
+            })
+
+        summary = {
+            "run_key": state["run_key"],
+            "scanner_source": self.config.scanner_source,
+            "status": status,
+            "started_at": state["started_at"].isoformat(),
+            "completed_at": completed_at.isoformat() if completed_at else None,
+            "duration_ms": max(round((finished - state["started_at"]).total_seconds() * 1000), 0),
+            "routes_planned": state["routes_planned"],
+            "routes_started": len(routes_started),
+            "routes_completed": len(routes_completed),
+            "destinations_scanned": len(destinations),
+            "service_months_scanned": sum(item["service_months"] for item in route_results),
+            "departures_detected": sum(item["departures_detected"] for item in route_results),
+            "cadence_changes": sum(item["cadence_changes"] for item in route_results),
+            "no_dates_found": sum(1 for item in report if item.get("status") == "service_calendar_error" or (item.get("status") == "uses_defaults" and not item.get("service_months"))),
+            "skipped_complete": sum(1 for item in report if item.get("status") == "service_calendar_already_complete"),
+            "hard_errors": sum(1 for item in report if item.get("status") in {"error", "service_calendar_error"}),
+            "routes": route_results,
+            "error": error,
+        }
+        try:
+            self.store.save_date_scan_run(summary)
+        except Exception as persistence_error:  # pragma: no cover - depends on storage availability
+            self._log_progress(f"Date scan summary persistence failed: {persistence_error}")
+
+    def _pattern_discovery_checkpoint(self) -> None:
+        self._save_pattern_discovery_run(status="running")
+
+    def _mark_pattern_route_completed(self, route: RouteSeed) -> None:
+        if self._pattern_discovery_state is not None:
+            self._pattern_discovery_state["routes_completed"].add(route.key)
 
     def _live_sync_remote_route_id(self, route: RouteSeed) -> str | None:
         if self.live_sync_store is None:
@@ -3026,7 +3096,62 @@ class LuxFlightScanner:
         route_filter: dict[str, str | None] | None = None,
         only_missing_service_months: bool = False,
     ) -> dict[str, Any]:
+        started_at = datetime.now(timezone.utc)
+        filtered_routes = [
+            route for route in self.routes if self._route_matches_filter(route, route_filter)
+        ]
+        routes = filtered_routes[:limit] if limit else filtered_routes
+        self._pattern_discovery_state = {
+            "run_key": str(uuid.uuid4()),
+            "started_at": started_at,
+            "routes_planned": len(routes),
+            "report": [],
+            "routes_started": set(),
+            "routes_completed": set(),
+        }
+        self._pattern_discovery_checkpoint()
+
+        try:
+            result = self._discover_route_patterns_impl(
+                limit=limit,
+                route_filter=route_filter,
+                only_missing_service_months=only_missing_service_months,
+            )
+            has_errors = any(
+                item.get("status") in {"error", "service_calendar_error"}
+                for item in result.get("report", [])
+            )
+            self._save_pattern_discovery_run(
+                status="completed_with_errors" if has_errors else "completed",
+                completed_at=datetime.now(timezone.utc),
+            )
+            return result
+        except KeyboardInterrupt:
+            self._save_pattern_discovery_run(
+                status="stopped",
+                completed_at=datetime.now(timezone.utc),
+                error="Discovery stopped before all routes were checked.",
+            )
+            raise
+        except BaseException as error:
+            self._save_pattern_discovery_run(
+                status="failed",
+                completed_at=datetime.now(timezone.utc),
+                error=str(error),
+            )
+            raise
+        finally:
+            self._pattern_discovery_state = None
+
+    def _discover_route_patterns_impl(
+        self,
+        limit: int | None = None,
+        route_filter: dict[str, str | None] | None = None,
+        only_missing_service_months: bool = False,
+    ) -> dict[str, Any]:
         report: list[dict[str, Any]] = []
+        if self._pattern_discovery_state is not None:
+            self._pattern_discovery_state["report"] = report
         filtered_routes = [
             route for route in self.routes if self._route_matches_filter(route, route_filter)
         ]
@@ -3034,6 +3159,8 @@ class LuxFlightScanner:
         routes_with_service_changes = 0
 
         for route in routes:
+            if self._pattern_discovery_state is not None:
+                self._pattern_discovery_state["routes_started"].add(route.key)
             try:
                 route_id = self.store.ensure_route(route)
                 service_routing = self._service_calendar_routing_for_route(route)
@@ -3053,6 +3180,8 @@ class LuxFlightScanner:
                         f"Pattern discovery skipped: {route.origin_airport} -> {route.destination_airport} "
                         f"already has {len(existing_service_months)} service months"
                     )
+                    self._mark_pattern_route_completed(route)
+                    self._pattern_discovery_checkpoint()
                     continue
                 self._log_progress(
                     f"Pattern discovery start: {route.origin_airport} -> {route.destination_airport} "
@@ -3066,6 +3195,8 @@ class LuxFlightScanner:
                         "error": str(error),
                     }
                 )
+                self._mark_pattern_route_completed(route)
+                self._pattern_discovery_checkpoint()
                 continue
 
             try:
@@ -3090,6 +3221,8 @@ class LuxFlightScanner:
                         "error": str(error),
                     }
                 )
+                self._mark_pattern_route_completed(route)
+                self._pattern_discovery_checkpoint()
                 continue
 
             if change_events:
@@ -3120,6 +3253,8 @@ class LuxFlightScanner:
                     f"Pattern discovery skipped: {route.origin_airport} -> {route.destination_airport} "
                     "uses manual override"
                 )
+                self._mark_pattern_route_completed(route)
+                self._pattern_discovery_checkpoint()
                 continue
 
             self._log_progress(
@@ -3135,6 +3270,8 @@ class LuxFlightScanner:
                     "cadence_changes": change_events,
                 }
             )
+            self._mark_pattern_route_completed(route)
+            self._pattern_discovery_checkpoint()
 
         return {
             "generated_at": datetime.utcnow().isoformat() + "Z",

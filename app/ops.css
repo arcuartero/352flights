@@ -534,6 +534,42 @@
   background: color-mix(in srgb, var(--accent-soft) 54%, var(--panel-muted) 46%);
 }
 
+.date-scan-history__route-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.date-scan-history__route-list > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) minmax(120px, 1fr) minmax(120px, .8fr) minmax(220px, 1.4fr);
+  gap: 12px;
+  align-items: center;
+  padding: 11px 13px;
+  border: 1px solid var(--ops-border, rgba(148, 163, 184, .16));
+  border-radius: 8px;
+  color: var(--ops-muted, #aab3c2);
+  font-size: 12px;
+}
+
+.date-scan-history__route-list strong {
+  color: var(--ops-text, #f4f1e9);
+}
+
+.date-scan-history__route-list span:last-child {
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .date-scan-history__route-list > div {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .date-scan-history__route-list span:last-child {
+    text-align: left;
+  }
+}
+
 .price-scan-history__list {
   display: grid;
   gap: 0.7rem;
