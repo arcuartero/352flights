@@ -158,6 +158,31 @@ function mergeLiveRun(persisted: DateScanRun, live: DateScanRun): DateScanRun {
   };
 }
 
+function markStaleVpsRunStopped(
+  run: DateScanRun,
+  status: Awaited<ReturnType<typeof getPatternDiscoveryStatus>>,
+) {
+  if (run.status !== "running" || status.running || status.source !== "vps") {
+    return run;
+  }
+
+  const completedAt =
+    status.latestFailedAt ?? status.latestFinishedAt ?? new Date().toISOString();
+  const durationMs = Math.max(new Date(completedAt).getTime() - new Date(run.startedAt).getTime(), 0);
+
+  return {
+    ...run,
+    status: status.latestFailedAt ? "failed" : "stopped",
+    completedAt,
+    durationMs,
+    error:
+      run.error ??
+      (status.latestFailedAt
+        ? "El servicio VPS terminó con un error antes de completar esta ejecución."
+        : "El servicio VPS ya no está activo; esta ejecución quedó detenida."),
+  };
+}
+
 export async function getDateScanRunHistory(limit = 100) {
   try {
     const liveStatusPromise = getPatternDiscoveryStatus().catch(() => null);
@@ -167,9 +192,12 @@ export async function getDateScanRunHistory(limit = 100) {
       .order("started_at", { ascending: false })
       .limit(Math.max(1, Math.min(limit, 200)));
 
-    const runs = (data ?? []).map((row) => mapRun(row as unknown as DateScanRunRow));
+    let runs = (data ?? []).map((row) => mapRun(row as unknown as DateScanRunRow));
     const liveStatus = await liveStatusPromise;
     const liveRun = liveStatus ? liveRunFromStatus(liveStatus) : null;
+    if (liveStatus) {
+      runs = runs.map((run) => markStaleVpsRunStopped(run, liveStatus));
+    }
     if (liveRun) {
       const existingIndex = runs.findIndex(
         (run) => run.status === "running" && run.startedAt === liveRun.startedAt,
