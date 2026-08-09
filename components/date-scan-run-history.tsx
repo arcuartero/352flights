@@ -39,8 +39,21 @@ function statusTone(status: string) {
   return "is-error";
 }
 
+function currentRouteLabel(run: DateScanRun) {
+  return run.routes.at(-1)?.route_label ?? "Preparando la siguiente ruta";
+}
+
 function buildExplanation(run: DateScanRun) {
   const pending = Math.max(run.routesPlanned - run.routesCompleted, 0);
+  if (run.status === "running") {
+    return {
+      headline: `El scanner está comprobando rutas: ${run.routesCompleted} de ${run.routesPlanned}.`,
+      work: `Ya ha terminado ${run.routesCompleted} ruta${run.routesCompleted === 1 ? "" : "s"} y todavía quedan ${pending}. Ahora está trabajando en ${currentRouteLabel(run)}.`,
+      findings: "Todavía no hay un resultado final. Las fechas detectadas, cambios de frecuencia y errores se contabilizarán cuando se complete cada ruta.",
+      issues: "Los campos de calendario y resultados aparecen vacíos porque esta ejecución aún no los ha consolidado; no significa que haya encontrado cero vuelos.",
+    };
+  }
+
   const topRoutes = run.routes
     .filter((route) => route.departures_detected > 0)
     .sort((a, b) => b.departures_detected - a.departures_detected)
@@ -59,6 +72,28 @@ function buildExplanation(run: DateScanRun) {
     work: `Comprobó ${run.destinationsScanned} ciudades y ${run.routesCompleted} de ${run.routesPlanned} rutas. Revisó ${run.serviceMonthsScanned} meses de calendario y detectó ${run.departuresDetected} fechas de salida.`,
     findings: `${run.cadenceChanges} cambios de cadencia quedaron registrados. ${run.skippedComplete} rutas ya completas se omitieron para no repetir trabajo.${topRoutes ? ` Más fechas se detectaron en ${topRoutes}.` : ""}`,
     issues: `${run.noDatesFound} rutas no devolvieron fechas y ${run.hardErrors} tuvieron errores técnicos.${pending > 0 ? ` Quedaron ${pending} rutas pendientes.` : ""}${run.error ? ` ${run.error}` : ""}`,
+  };
+}
+
+function runSummary(run: DateScanRun) {
+  if (run.status === "running") {
+    return {
+      coverageLabel: "Progreso",
+      coverage: `${run.routesCompleted} de ${run.routesPlanned} rutas`,
+      calendarLabel: "Pendientes",
+      calendar: `${Math.max(run.routesPlanned - run.routesCompleted, 0)} por revisar`,
+      resultLabel: "Ruta actual",
+      result: currentRouteLabel(run),
+    };
+  }
+
+  return {
+    coverageLabel: "Cobertura",
+    coverage: `${run.destinationsScanned} ciudades · ${run.routesCompleted}/${run.routesPlanned} rutas`,
+    calendarLabel: "Calendario",
+    calendar: `${run.serviceMonthsScanned} meses · ${run.departuresDetected} salidas`,
+    resultLabel: "Resultado",
+    result: `${run.cadenceChanges} cambios · ${run.noDatesFound} sin fechas`,
   };
 }
 
@@ -94,6 +129,7 @@ export function DateScanRunHistory({ error, runs }: Props) {
   }, []);
 
   const aggregate = useMemo(() => ({
+    active: liveRuns.filter((run) => run.status === "running"),
     destinations: new Set(liveRuns.flatMap((run) => run.routes.map((route) => route.destination_city).filter(Boolean))).size,
     routes: liveRuns.reduce((sum, run) => sum + run.routesCompleted, 0),
     months: liveRuns.reduce((sum, run) => sum + run.serviceMonthsScanned, 0),
@@ -131,18 +167,27 @@ export function DateScanRunHistory({ error, runs }: Props) {
             <span><strong>Pendientes</strong> rutas aún no terminadas</span>
           </div>
           <section className="price-scan-history__aggregate" aria-label="Totales agregados">
-            <div><span>Scans</span><strong>{liveRuns.length}</strong></div>
-            <div><span>Ciudades</span><strong>{aggregate.destinations}</strong></div>
-            <div><span>Rutas</span><strong>{aggregate.routes}</strong></div>
-            <div><span>Meses</span><strong>{aggregate.months}</strong></div>
-            <div className="is-success"><span>Salidas detectadas</span><strong>{aggregate.departures}</strong></div>
-            <div className="is-success"><span>Cambios de cadencia</span><strong>{aggregate.changes}</strong></div>
-            <div><span>Sin fechas</span><strong>{aggregate.noDates}</strong></div>
-            <div className="is-error"><span>Errores</span><strong>{aggregate.errors}</strong></div>
+            {aggregate.active.length > 0 ? <>
+              <div className="is-live"><span>Scans en curso</span><strong>{aggregate.active.length}</strong></div>
+              <div><span>Rutas revisadas</span><strong>{aggregate.active.reduce((sum, run) => sum + run.routesCompleted, 0)}</strong></div>
+              <div><span>Rutas pendientes</span><strong>{aggregate.active.reduce((sum, run) => sum + Math.max(run.routesPlanned - run.routesCompleted, 0), 0)}</strong></div>
+              <div><span>Progreso total</span><strong>{aggregate.active.reduce((sum, run) => sum + run.routesCompleted, 0)} / {aggregate.active.reduce((sum, run) => sum + run.routesPlanned, 0)}</strong></div>
+              <div><span>Resultado</span><strong>Se calculará al terminar</strong></div>
+            </> : <>
+              <div><span>Scans</span><strong>{liveRuns.length}</strong></div>
+              <div><span>Ciudades</span><strong>{aggregate.destinations}</strong></div>
+              <div><span>Rutas</span><strong>{aggregate.routes}</strong></div>
+              <div><span>Meses</span><strong>{aggregate.months}</strong></div>
+              <div className="is-success"><span>Salidas detectadas</span><strong>{aggregate.departures}</strong></div>
+              <div className="is-success"><span>Cambios de cadencia</span><strong>{aggregate.changes}</strong></div>
+              <div><span>Sin fechas</span><strong>{aggregate.noDates}</strong></div>
+              <div className="is-error"><span>Errores</span><strong>{aggregate.errors}</strong></div>
+            </>}
           </section>
           <div className="price-scan-history__list">
             {liveRuns.map((run) => {
               const explanation = explanations[run.id];
+              const summary = runSummary(run);
               return (
                 <details className="price-scan-history__run" key={run.id} open={expanded[run.id] ?? false} onToggle={(event) => {
                   const open = event.currentTarget.open;
@@ -151,9 +196,9 @@ export function DateScanRunHistory({ error, runs }: Props) {
                 }}>
                   <summary>
                     <div className="price-scan-history__run-identity"><span className={`ops-send-badge ${statusTone(run.status)}`}>{statusLabel(run.status)}</span><strong>{formatDateTime(run.startedAt)}</strong><small>{run.scannerSource} · {formatDuration(run.durationMs)}</small></div>
-                    <div className="price-scan-history__run-stat"><span>Cobertura</span><strong>{run.destinationsScanned} ciudades · {run.routesCompleted}/{run.routesPlanned} rutas</strong></div>
-                    <div className="price-scan-history__run-stat"><span>Calendario</span><strong>{run.serviceMonthsScanned} meses · {run.departuresDetected} salidas</strong></div>
-                    <div className="price-scan-history__run-stat"><span>Resultado</span><strong>{run.cadenceChanges} cambios · {run.noDatesFound} sin fechas</strong></div>
+                    <div className="price-scan-history__run-stat"><span>{summary.coverageLabel}</span><strong>{summary.coverage}</strong></div>
+                    <div className="price-scan-history__run-stat"><span>{summary.calendarLabel}</span><strong>{summary.calendar}</strong></div>
+                    <div className="price-scan-history__run-stat"><span>{summary.resultLabel}</span><strong>{summary.result}</strong></div>
                     <ChevronDown aria-hidden="true" className="price-scan-history__chevron" size={20} />
                   </summary>
                   <div className="price-scan-history__run-body">
@@ -163,7 +208,7 @@ export function DateScanRunHistory({ error, runs }: Props) {
                       <div className="price-scan-history__explanation-grid"><article><span>Qué hizo</span><p>{explanation.work}</p></article><article><span>Qué encontró</span><p>{explanation.findings}</p></article><article><span>Qué problemas hubo</span><p>{explanation.issues}</p></article></div>
                     </section> : null}
                     <div className="date-scan-history__route-list">
-                      {run.routes.slice(-20).map((route) => <div key={`${run.id}:${route.route_key}`}><strong>{route.route_label}</strong><span>{route.destination_city ?? "Destino desconocido"}</span><span>{route.status}</span><span>{route.service_months} meses · {route.departures_detected} salidas · {route.cadence_changes} cambios</span></div>)}
+                      {run.routes.slice(-20).map((route) => <div key={`${run.id}:${route.route_key}`}><strong>{route.route_label}</strong><span>{route.destination_city ?? "Ruta actual"}</span><span>{route.status}</span><span>{run.status === "running" ? "Comprobando esta ruta ahora" : `${route.service_months} meses · ${route.departures_detected} salidas · ${route.cadence_changes} cambios`}</span></div>)}
                     </div>
                   </div>
                 </details>
