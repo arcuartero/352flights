@@ -139,6 +139,25 @@ function liveRunFromStatus(status: Awaited<ReturnType<typeof getPatternDiscovery
   };
 }
 
+function mergeLiveRun(persisted: DateScanRun, live: DateScanRun): DateScanRun {
+  const routes = [...persisted.routes];
+  const currentRoute = live.routes[0];
+  if (currentRoute && !routes.some((route) => route.route_key === currentRoute.route_key)) {
+    routes.push(currentRoute);
+  }
+
+  return {
+    ...persisted,
+    status: "running",
+    completedAt: null,
+    durationMs: null,
+    routesPlanned: live.routesPlanned || persisted.routesPlanned,
+    routesStarted: Math.max(persisted.routesStarted, live.routesStarted),
+    routes: routes.slice(-200),
+    error: null,
+  };
+}
+
 export async function getDateScanRunHistory(limit = 100) {
   try {
     const liveStatusPromise = getPatternDiscoveryStatus().catch(() => null);
@@ -151,8 +170,15 @@ export async function getDateScanRunHistory(limit = 100) {
     const runs = (data ?? []).map((row) => mapRun(row as unknown as DateScanRunRow));
     const liveStatus = await liveStatusPromise;
     const liveRun = liveStatus ? liveRunFromStatus(liveStatus) : null;
-    if (liveRun && !runs.some((run) => run.status === "running" && run.startedAt === liveRun.startedAt)) {
-      runs.unshift(liveRun);
+    if (liveRun) {
+      const existingIndex = runs.findIndex(
+        (run) => run.status === "running" && run.startedAt === liveRun.startedAt,
+      );
+      if (existingIndex >= 0) {
+        runs[existingIndex] = mergeLiveRun(runs[existingIndex], liveRun);
+      } else {
+        runs.unshift(liveRun);
+      }
     }
 
     if (error) return { runs, error: error.message };

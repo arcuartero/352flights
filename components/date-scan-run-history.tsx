@@ -45,15 +45,6 @@ function currentRouteLabel(run: DateScanRun) {
 
 function buildExplanation(run: DateScanRun) {
   const pending = Math.max(run.routesPlanned - run.routesCompleted, 0);
-  if (run.status === "running") {
-    return {
-      headline: `El scanner está comprobando rutas: ${run.routesCompleted} de ${run.routesPlanned}.`,
-      work: `Ya ha terminado ${run.routesCompleted} ruta${run.routesCompleted === 1 ? "" : "s"} y todavía quedan ${pending}. Ahora está trabajando en ${currentRouteLabel(run)}.`,
-      findings: "Todavía no hay un resultado final. Las fechas detectadas, cambios de frecuencia y errores se contabilizarán cuando se complete cada ruta.",
-      issues: "Los campos de calendario y resultados aparecen vacíos porque esta ejecución aún no los ha consolidado; no significa que haya encontrado cero vuelos.",
-    };
-  }
-
   const topRoutes = run.routes
     .filter((route) => route.departures_detected > 0)
     .sort((a, b) => b.departures_detected - a.departures_detected)
@@ -62,16 +53,20 @@ function buildExplanation(run: DateScanRun) {
     .join(", ");
 
   let headline = "El Date Scanner terminó y guardó sus resultados.";
-  if (run.status === "running") headline = "El Date Scanner sigue trabajando; las cifras todavía pueden aumentar.";
+  if (run.status === "running") headline = `El Date Scanner sigue trabajando: ${run.routesCompleted} de ${run.routesPlanned} rutas revisadas.`;
   if (run.status === "failed") headline = "El Date Scanner falló antes de completar el trabajo previsto.";
   if (run.status === "stopped" || run.status === "partial") headline = "El Date Scanner terminó de forma parcial y dejó guardado lo que pudo comprobar.";
   if (run.status === "completed_with_errors") headline = "El Date Scanner terminó, pero algunas rutas tuvieron incidencias.";
 
+  const partialNote = run.status === "running"
+    ? " Son cifras parciales: aumentarán cuando termine cada ruta restante."
+    : "";
+
   return {
     headline,
-    work: `Comprobó ${run.destinationsScanned} ciudades y ${run.routesCompleted} de ${run.routesPlanned} rutas. Revisó ${run.serviceMonthsScanned} meses de calendario y detectó ${run.departuresDetected} fechas de salida.`,
-    findings: `${run.cadenceChanges} cambios de cadencia quedaron registrados. ${run.skippedComplete} rutas ya completas se omitieron para no repetir trabajo.${topRoutes ? ` Más fechas se detectaron en ${topRoutes}.` : ""}`,
-    issues: `${run.noDatesFound} rutas no devolvieron fechas y ${run.hardErrors} tuvieron errores técnicos.${pending > 0 ? ` Quedaron ${pending} rutas pendientes.` : ""}${run.error ? ` ${run.error}` : ""}`,
+    work: `Hasta ahora ha comprobado ${run.destinationsScanned} ciudades y ${run.routesCompleted} de ${run.routesPlanned} rutas. Ha revisado ${run.serviceMonthsScanned} meses de calendario y detectado ${run.departuresDetected} fechas de salida.${partialNote}`,
+    findings: `Hasta ahora hay ${run.cadenceChanges} cambios de cadencia registrados y ${run.skippedComplete} rutas omitidas por estar completas.${topRoutes ? ` Las rutas con más salidas detectadas son ${topRoutes}.` : ""}${partialNote}`,
+    issues: `${run.noDatesFound} rutas no han devuelto fechas y ${run.hardErrors} han tenido errores técnicos.${pending > 0 ? ` Quedan ${pending} rutas pendientes.` : ""}${run.error ? ` ${run.error}` : ""}`,
   };
 }
 
@@ -208,7 +203,7 @@ export function DateScanRunHistory({ error, runs }: Props) {
                       <div className="price-scan-history__explanation-grid"><article><span>Qué hizo</span><p>{explanation.work}</p></article><article><span>Qué encontró</span><p>{explanation.findings}</p></article><article><span>Qué problemas hubo</span><p>{explanation.issues}</p></article></div>
                     </section> : null}
                     <div className="date-scan-history__route-list">
-                      {run.routes.slice(-20).map((route) => <div key={`${run.id}:${route.route_key}`}><strong>{route.route_label}</strong><span>{route.destination_city ?? "Ruta actual"}</span><span>{route.status}</span><span>{run.status === "running" ? "Comprobando esta ruta ahora" : `${route.service_months} meses · ${route.departures_detected} salidas · ${route.cadence_changes} cambios`}</span></div>)}
+                      {run.routes.slice(-20).map((route) => <div key={`${run.id}:${route.route_key}`}><strong>{route.route_label}</strong><span>{route.destination_city ?? "Ruta actual"}</span><span>{route.status}</span><span>{route.status === "running" ? "Comprobando esta ruta ahora" : `${route.service_months} meses · ${route.departures_detected} salidas · ${route.cadence_changes} cambios`}</span></div>)}
                     </div>
                   </div>
                 </details>
