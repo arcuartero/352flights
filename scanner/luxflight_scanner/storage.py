@@ -74,6 +74,7 @@ class LocalStore:
                 "route_search_rules": [],
                 "route_service_change_events": [],
                 "price_scan_runs": [],
+                "date_scan_runs": [],
             }
 
         with self.state_path.open("r", encoding="utf-8") as file:
@@ -86,6 +87,7 @@ class LocalStore:
         payload.setdefault("route_search_rules", [])
         payload.setdefault("route_service_change_events", [])
         payload.setdefault("price_scan_runs", [])
+        payload.setdefault("date_scan_runs", [])
         return payload
 
     def _persist(self) -> None:
@@ -223,6 +225,19 @@ class LocalStore:
             return
 
         self._state["price_scan_runs"].append(payload)
+        self._persist()
+
+    def save_date_scan_run(self, summary: dict[str, Any]) -> None:
+        run_key = str(summary["run_key"])
+        payload = dict(summary)
+        for index, item in enumerate(self._state["date_scan_runs"]):
+            if str(item.get("run_key")) != run_key:
+                continue
+            self._state["date_scan_runs"][index] = payload
+            self._persist()
+            return
+
+        self._state["date_scan_runs"].append(payload)
         self._persist()
 
     def route_pattern_overrides(self, route_id: str) -> list[dict[str, Any]]:
@@ -572,6 +587,28 @@ class SupabaseStore:
             json=payload,
             params={"on_conflict": "run_key"},
         )
+        response.raise_for_status()
+        data = response.json()
+        return str(data[0]["id"]) if data else str(summary["run_key"])
+
+    def save_date_scan_run(self, summary: dict[str, Any]) -> str:
+        payload = {
+            key: value
+            for key, value in summary.items()
+            if key != "sync"
+        }
+        payload["updated_at"] = utcnow_iso()
+        response = self._post_with_retry(
+            "/rest/v1/date_scan_runs",
+            operation_label="date scan run upsert",
+            headers={
+                "Prefer": "resolution=merge-duplicates,return=representation",
+            },
+            json=payload,
+            params={"on_conflict": "run_key"},
+        )
+        if self._is_missing_table_error(response):
+            return str(summary["run_key"])
         response.raise_for_status()
         data = response.json()
         return str(data[0]["id"]) if data else str(summary["run_key"])
