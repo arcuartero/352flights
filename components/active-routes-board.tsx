@@ -1546,6 +1546,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
 
   useEffect(() => {
     let isMounted = true;
+    let lastProgressSignature: string | null = null;
 
     async function loadStatus() {
       try {
@@ -1563,11 +1564,17 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
 
         const running = Boolean(payload.running);
         const wasRunning = wasDiscoveryRunningRef.current;
+        const progressSignature = JSON.stringify({
+          startedRoutes: (payload as { startedRoutes?: number | null }).startedRoutes ?? null,
+          currentRouteLabel: (payload as { currentRouteLabel?: string | null }).currentRouteLabel ?? null,
+          latestActivity: (payload as { latestActivity?: string | null }).latestActivity ?? null,
+        });
         wasDiscoveryRunningRef.current = running;
         setIsDiscoveryRunning(running);
-        if (wasRunning && !running) {
+        if ((running && lastProgressSignature !== null && progressSignature !== lastProgressSignature) || (wasRunning && !running)) {
           router.refresh();
         }
+        lastProgressSignature = progressSignature;
         if (!running) {
           setDiscoveryRouteId(null);
         }

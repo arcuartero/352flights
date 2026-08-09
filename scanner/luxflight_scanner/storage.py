@@ -268,6 +268,28 @@ class LocalStore:
             items = [item for item in items if item["month_start"] <= month_start_to]
         return sorted(items, key=lambda item: (item["month_start"], item.get("sort_order", 0)))
 
+    def replace_route_search_rules(
+        self,
+        route_id: str,
+        rules: list[dict[str, Any]],
+    ) -> None:
+        self._state["route_search_rules"] = [
+            item for item in self._state["route_search_rules"]
+            if item["route_id"] != route_id
+        ]
+        now = utcnow_iso()
+        for index, rule in enumerate(rules):
+            self._state["route_search_rules"].append({
+                "id": f"{route_id}:auto:{rule['month_start']}:{rule['pattern_key']}",
+                **rule,
+                "sort_order": index,
+                "source": "auto_date_scanner",
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now,
+            })
+        self._persist()
+
     def route_service_months(self, route_id: str, routing: str) -> list[dict[str, Any]]:
         return sorted(
             [
@@ -692,6 +714,32 @@ class SupabaseStore:
         if month_start_to is not None:
             data = [item for item in data if item["month_start"] <= month_start_to]
         return data
+
+    def replace_route_search_rules(
+        self,
+        route_id: str,
+        rules: list[dict[str, Any]],
+    ) -> None:
+        delete_response = self.client.delete(
+            "/rest/v1/route_search_rules",
+            params={"route_id": f"eq.{route_id}"},
+            headers={"Prefer": "return=minimal"},
+        )
+        if self._is_missing_table_error(delete_response):
+            return
+        delete_response.raise_for_status()
+
+        if not rules:
+            return
+
+        insert_response = self.client.post(
+            "/rest/v1/route_search_rules",
+            headers={"Prefer": "return=minimal"},
+            json=rules,
+        )
+        if self._is_missing_table_error(insert_response):
+            return
+        insert_response.raise_for_status()
 
     def route_service_months(self, route_id: str, routing: str) -> list[dict[str, Any]]:
         response = self.client.get(

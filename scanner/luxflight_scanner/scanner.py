@@ -1883,6 +1883,37 @@ class LuxFlightScanner:
 
         return discovered_months
 
+    def _reset_route_search_rules_from_service_months(
+        self,
+        route: RouteSeed,
+        route_id: str,
+        service_months: list[dict[str, Any]],
+    ) -> int:
+        """Make Active Routes follow the departures just detected for this route."""
+        patterns = route.patterns or self._default_patterns_for_route_seed(route)
+        rules: list[dict[str, Any]] = []
+        for month in service_months:
+            departure_weekdays = set(str(value) for value in (month.get("departure_weekdays") or []))
+            if not departure_weekdays:
+                continue
+
+            for pattern in patterns:
+                if pattern.departure_weekday not in departure_weekdays:
+                    continue
+                rules.append({
+                    "route_id": route_id,
+                    "month_start": month["month_start"],
+                    "pattern_key": pattern.key,
+                    "pattern_label": pattern.label,
+                    "departure_weekday": pattern.departure_weekday,
+                    "return_weekday": pattern.return_weekday,
+                    "trip_nights": pattern.trip_nights,
+                    "max_stops": route.max_stops,
+                })
+
+        self.store.replace_route_search_rules(route_id, rules)
+        return len(rules)
+
     def _service_months_log_summary(
         self,
         route: RouteSeed,
@@ -3211,8 +3242,17 @@ class LuxFlightScanner:
                     service_routing,
                     detected_service_months,
                 )
+                rules_reset = self._reset_route_search_rules_from_service_months(
+                    route,
+                    route_id,
+                    detected_service_months,
+                )
                 self.store.save_route_service_change_events(route_id, change_events)
                 self._log_progress(self._service_months_log_summary(route, detected_service_months))
+                self._log_progress(
+                    f"Active route refresh: {route.origin_airport} -> {route.destination_airport} "
+                    f"updated departures and reset {rules_reset} search rules"
+                )
             except Exception as error:  # pragma: no cover - depends on live upstream behavior
                 report.append(
                     {
@@ -3233,13 +3273,7 @@ class LuxFlightScanner:
                 )
 
             window_start, window_end = self._search_window_dates(route)
-            monthly_rule_rows = self.store.route_search_rules(
-                route_id,
-                month_start_from=self._month_start(window_start).isoformat(),
-                month_start_to=self._month_start(window_end).isoformat(),
-            )
-
-            if route.patterns or monthly_rule_rows:
+            if route.patterns:
                 report.append(
                     {
                         "route": asdict(route),
