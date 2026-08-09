@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 
 from luxflight_scanner.config import ScannerConfig
 from luxflight_scanner.scanner import LuxFlightScanner
@@ -71,6 +72,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    # Treat service shutdowns like Ctrl-C so the scanner can persist a stopped run.
+    def handle_stop(_signum: int, _frame: object) -> None:
+        raise KeyboardInterrupt()
+
+    signal.signal(signal.SIGINT, handle_stop)
+    signal.signal(signal.SIGTERM, handle_stop)
+
     args = build_parser().parse_args()
     config = ScannerConfig()
 
