@@ -1133,7 +1133,10 @@ export async function saveRoutePlannerSearchRules(input: {
   }
 }
 
-export async function createAutomaticRoutePlannerSearchRules(input: { routeId: string }) {
+export async function createAutomaticRoutePlannerSearchRules(input: {
+  routeId: string;
+  requireDetectedDepartures?: boolean;
+}) {
   const supabase = getSupabaseAdminClient();
   const routeId = input.routeId.trim();
 
@@ -1174,7 +1177,7 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
   const [serviceMonthsQuery, searchRulesQuery] = await Promise.all([
     supabase
       .from("route_service_months")
-      .select("route_id,month_start,departure_weekdays,routing")
+      .select("route_id,month_start,departure_dates,departure_weekdays,routing")
       .in("route_id", targetRouteIds)
       .order("month_start"),
     supabase
@@ -1195,6 +1198,20 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
 
   const serviceMonths = serviceMonthsQuery.data ?? [];
   const searchRules = searchRulesQuery.data ?? [];
+  const hasDetectedDepartures = serviceMonths.some(
+    (month) => Array.isArray(month.departure_dates) && month.departure_dates.length > 0,
+  );
+
+  if (input.requireDetectedDepartures && !hasDetectedDepartures) {
+    return {
+      routeId,
+      months: [] as Array<{ monthStart: string; patternKeys: string[] }>,
+      monthsUpdated: 0,
+      rulesAdded: 0,
+      skippedNoDetectedDepartures: true,
+    };
+  }
+
   const fallbackPatternKeys = fallbackPatternKeysForBuckets(
     targetRoutes.map((targetRoute) => targetRoute.bucket),
     route.max_stops,
@@ -1273,6 +1290,7 @@ export async function createAutomaticRoutePlannerSearchRules(input: { routeId: s
     months,
     monthsUpdated,
     rulesAdded,
+    skippedNoDetectedDepartures: false,
   };
 }
 
@@ -1283,7 +1301,13 @@ export async function createAutomaticRoutePlannerSearchRulesForRoutes(input: {
   const results = [];
 
   for (const routeId of routeIds) {
-    results.push(await createAutomaticRoutePlannerSearchRules({ routeId }));
+    const result = await createAutomaticRoutePlannerSearchRules({
+      routeId,
+      requireDetectedDepartures: true,
+    });
+    if (!result.skippedNoDetectedDepartures) {
+      results.push(result);
+    }
   }
 
   return results;

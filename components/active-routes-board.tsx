@@ -1717,18 +1717,40 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
   function createRulesForAllRoutes() {
     setBulkFeedback(null);
     setBulkError(null);
+
+    const routesWithDetectedDepartures = sortedRoutes.filter((route) =>
+      route.months.some((month) => month.departureDates.length > 0),
+    );
+    const skippedRouteCount = sortedRoutes.length - routesWithDetectedDepartures.length;
+
+    if (routesWithDetectedDepartures.length === 0) {
+      const message =
+        "No automatic rules were created because none of the visible destinations have detected departures.";
+      setBulkFeedback(message);
+      emitClientActivityLog({
+        kind: "action",
+        level: "warning",
+        title: "Global create rules found no detected departures",
+        detail: message,
+      });
+      return;
+    }
+
     startBulkTransition(async () => {
       try {
         const generatedPayload = await createAutomaticRoutePlannerRulesForRoutesAction({
-          routeIds: sortedRoutes.map((route) => route.id),
+          routeIds: routesWithDetectedDepartures.map((route) => route.id),
         });
         const routesUpdated = generatedPayload.filter((route) => route.rulesAdded > 0).length;
         const rulesAdded = generatedPayload.reduce((total, route) => total + route.rulesAdded, 0);
         const monthsUpdated = generatedPayload.reduce((total, route) => total + route.monthsUpdated, 0);
 
         if (rulesAdded === 0) {
-          const message =
-            "No new automatic rules were possible for the visible destinations with the currently detected outbound weekdays.";
+          const message = `No new automatic rules were possible for the destinations with detected departures.${
+            skippedRouteCount > 0
+              ? ` ${skippedRouteCount} destination(s) without detected departures were left unchanged.`
+              : ""
+          }`;
           setBulkFeedback(message);
           setBulkError(null);
           emitClientActivityLog({
@@ -1763,13 +1785,21 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
           );
         });
         setBulkFeedback(
-          `Automatic rules created in ${monthsUpdated} month(s) across ${routesUpdated} destination(s) and saved automatically.`,
+          `Automatic rules created in ${monthsUpdated} month(s) across ${routesUpdated} destination(s) and saved automatically.${
+            skippedRouteCount > 0
+              ? ` ${skippedRouteCount} destination(s) without detected departures were left unchanged.`
+              : ""
+          }`,
         );
         emitClientActivityLog({
           kind: "action",
           level: "info",
           title: "Global automatic rules created",
-          detail: `${monthsUpdated} month(s) updated in ${routesUpdated} destination(s) · ${rulesAdded} new rule slot(s) generated and saved automatically`,
+          detail: `${monthsUpdated} month(s) updated in ${routesUpdated} destination(s) · ${rulesAdded} new rule slot(s) generated and saved automatically${
+            skippedRouteCount > 0
+              ? ` · ${skippedRouteCount} destination(s) without detected departures left unchanged`
+              : ""
+          }`,
         });
         router.refresh();
       } catch (error) {
