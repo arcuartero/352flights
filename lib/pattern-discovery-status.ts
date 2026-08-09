@@ -148,6 +148,32 @@ function mergeRunningVpsStatus(
   };
 }
 
+function mergeStoppedVpsStatus(
+  persisted: LocalPatternDiscoveryStatus,
+  remote: VpsScannerAgentStatus,
+): LocalPatternDiscoveryStatus {
+  const result = remote.service.Result?.trim().toLowerCase() ?? "";
+  const exitAt = asIsoTimestamp(remote.service.ExecMainExitTimestamp);
+  const failedAt = result && result !== "success" ? exitAt : null;
+
+  return {
+    ...persisted,
+    source: "vps",
+    available: true,
+    running: false,
+    startedRoutes: null,
+    remainingRoutes: null,
+    currentRouteLabel: null,
+    latestFinishedAt:
+      result === "success" ? exitAt ?? persisted.latestFinishedAt : persisted.latestFinishedAt,
+    latestFailedAt: failedAt ?? persisted.latestFailedAt,
+    latestActivity: failedAt
+      ? `VPS discovery stopped with result ${remote.service.Result}.`
+      : "VPS discovery is not running.",
+    liveTotals: null,
+  };
+}
+
 export async function getPatternDiscoveryStatus(): Promise<LocalPatternDiscoveryStatus> {
   const persisted = await getLocalPatternDiscoveryStatus();
   if (!hasVpsScannerAgentConfig()) {
@@ -162,12 +188,9 @@ export async function getPatternDiscoveryStatus(): Promise<LocalPatternDiscovery
       return mergeRunningVpsStatus(persisted, remote);
     }
 
-    const result = remote.service.Result;
-    const failedAt =
-      result && result !== "success"
-        ? asIsoTimestamp(remote.service.ExecMainExitTimestamp)
-        : null;
-    return failedAt ? { ...persisted, latestFailedAt: failedAt } : persisted;
+    // VPS is authoritative when configured. Do not let an old local PID/log
+    // make the UI report a live discovery after the remote service stopped.
+    return mergeStoppedVpsStatus(persisted, remote);
   } catch {
     // Older agents do not expose Dates Scanner yet. Keep saved Supabase results available.
     return persisted;
