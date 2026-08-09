@@ -56,7 +56,15 @@ fi
 
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 export UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
-export SCANNER_STORAGE_MODE="${SCANNER_PATTERN_DISCOVERY_STORAGE_MODE:-auto}"
+
+if [[ -z "${SUPABASE_URL:-}" || -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
+  echo "Supabase credentials are required for Date Scanner history. Check $ROOT_DIR/.env." >&2
+  exit 78
+fi
+
+# Date Scanner runs must be written directly to Supabase so the live history
+# survives VPS restarts and is visible in /ops/dates-scanner.
+export SCANNER_STORAGE_MODE="supabase"
 
 UV_BIN="$(command -v uv || true)"
 if [[ -z "$UV_BIN" ]]; then
