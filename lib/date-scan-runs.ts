@@ -158,29 +158,79 @@ function mergeLiveRun(persisted: DateScanRun, live: DateScanRun): DateScanRun {
   };
 }
 
-function markStaleVpsRunStopped(
+function validTimestamp(value: string | null | undefined) {
+  const timestamp = value ? new Date(value).getTime() : Number.NaN;
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function finishStaleRun(
   run: DateScanRun,
   status: Awaited<ReturnType<typeof getPatternDiscoveryStatus>>,
-) {
-  if (run.status !== "running" || status.running || status.source !== "vps") {
-    return run;
+  nextRunStartedAt?: string,
+): DateScanRun {
+  if (run.status !== "running") return run;
+
+  const runStartedAt = validTimestamp(run.startedAt) ?? Date.now();
+  const failedAt = validTimestamp(status.latestFailedAt);
+  const finishedAt = validTimestamp(status.latestFinishedAt);
+  const nextStartedAt = validTimestamp(nextRunStartedAt);
+  const failedDuringThisRun = !status.running && failedAt !== null && failedAt >= runStartedAt;
+
+  let completedTimestamp = Date.now();
+  if (nextStartedAt !== null && nextStartedAt >= runStartedAt) {
+    completedTimestamp = nextStartedAt;
+  } else if (failedDuringThisRun && failedAt !== null) {
+    completedTimestamp = failedAt;
+  } else if (!status.running && finishedAt !== null && finishedAt >= runStartedAt) {
+    completedTimestamp = finishedAt;
   }
 
-  const completedAt =
-    status.latestFailedAt ?? status.latestFinishedAt ?? new Date().toISOString();
-  const durationMs = Math.max(new Date(completedAt).getTime() - new Date(run.startedAt).getTime(), 0);
+  const completedAt = new Date(completedTimestamp).toISOString();
+  const durationMs = Math.max(completedTimestamp - runStartedAt, 0);
 
   return {
     ...run,
-    status: status.latestFailedAt ? "failed" : "stopped",
+    status: failedDuringThisRun ? "failed" : "stopped",
     completedAt,
     durationMs,
     error:
       run.error ??
-      (status.latestFailedAt
+      (failedDuringThisRun
         ? "El servicio VPS terminó con un error antes de completar esta ejecución."
-        : "El servicio VPS ya no está activo; esta ejecución quedó detenida."),
+        : nextRunStartedAt
+          ? "Otra ejecución del Date Scanner empezó después; esta entrada anterior se cerró automáticamente."
+          : "El servicio VPS ya no está activo; esta ejecución quedó detenida."),
   };
+}
+
+function reconcileLiveRun(
+  runs: DateScanRun[],
+  status: Awaited<ReturnType<typeof getPatternDiscoveryStatus>>,
+  liveRun: DateScanRun | null,
+) {
+  if (!liveRun) {
+    return runs.map((run) => finishStaleRun(run, status));
+  }
+
+  const liveStartedAt = validTimestamp(liveRun.startedAt);
+  const matchingIndex = runs.findIndex((run) => {
+    const runStartedAt = validTimestamp(run.startedAt);
+    return (
+      run.status === "running" &&
+      run.scannerSource === liveRun.scannerSource &&
+      liveStartedAt !== null &&
+      runStartedAt !== null &&
+      Math.abs(runStartedAt - liveStartedAt) <= 120_000
+    );
+  });
+
+  const reconciled = runs.map((run, index) => {
+    if (index === matchingIndex) return mergeLiveRun(run, liveRun);
+    return finishStaleRun(run, status, liveRun.startedAt);
+  });
+
+  if (matchingIndex < 0) reconciled.unshift(liveRun);
+  return reconciled;
 }
 
 export async function getDateScanRunHistory(limit = 100) {
@@ -196,17 +246,7 @@ export async function getDateScanRunHistory(limit = 100) {
     const liveStatus = await liveStatusPromise;
     const liveRun = liveStatus ? liveRunFromStatus(liveStatus) : null;
     if (liveStatus) {
-      runs = runs.map((run) => markStaleVpsRunStopped(run, liveStatus));
-    }
-    if (liveRun) {
-      const existingIndex = runs.findIndex(
-        (run) => run.status === "running" && run.startedAt === liveRun.startedAt,
-      );
-      if (existingIndex >= 0) {
-        runs[existingIndex] = mergeLiveRun(runs[existingIndex], liveRun);
-      } else {
-        runs.unshift(liveRun);
-      }
+      runs = reconcileLiveRun(runs, liveStatus, liveRun);
     }
 
     if (error) return { runs, error: error.message };
