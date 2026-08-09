@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getPatternDiscoveryStatus } from "@/lib/pattern-discovery-status";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 export type DateScanRouteSummary = {
@@ -97,16 +98,65 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+function liveRunFromStatus(status: Awaited<ReturnType<typeof getPatternDiscoveryStatus>>): DateScanRun | null {
+  if (!status.running) return null;
+
+  const startedAt = status.startedAt ?? new Date().toISOString();
+  const routesStarted = status.startedRoutes ?? 0;
+  const currentRoute = status.currentRouteLabel;
+
+  return {
+    id: `live:${startedAt}`,
+    runKey: `live:${startedAt}`,
+    scannerSource: status.source,
+    status: "running",
+    startedAt,
+    completedAt: null,
+    durationMs: null,
+    routesPlanned: status.totalRoutes ?? 0,
+    routesStarted,
+    routesCompleted: routesStarted,
+    destinationsScanned: 0,
+    serviceMonthsScanned: 0,
+    departuresDetected: 0,
+    cadenceChanges: status.liveTotals?.cadenceChanges ?? 0,
+    noDatesFound: status.liveTotals?.noSupportedPatterns ?? 0,
+    skippedComplete: status.liveTotals?.usesDefaults ?? 0,
+    hardErrors: status.liveTotals?.hardErrors ?? 0,
+    routes: currentRoute
+      ? [{
+          route_key: currentRoute,
+          route_label: currentRoute,
+          destination_city: null,
+          status: "running",
+          service_months: 0,
+          departures_detected: 0,
+          cadence_changes: 0,
+          error: null,
+        }]
+      : [],
+    error: null,
+  };
+}
+
 export async function getDateScanRunHistory(limit = 100) {
   try {
+    const liveStatusPromise = getPatternDiscoveryStatus().catch(() => null);
     const { data, error } = await getSupabaseAdminClient()
       .from("date_scan_runs")
       .select(select)
       .order("started_at", { ascending: false })
       .limit(Math.max(1, Math.min(limit, 200)));
 
-    if (error) return { runs: [] as DateScanRun[], error: error.message };
-    return { runs: (data ?? []).map((row) => mapRun(row as unknown as DateScanRunRow)), error: null };
+    const runs = (data ?? []).map((row) => mapRun(row as unknown as DateScanRunRow));
+    const liveStatus = await liveStatusPromise;
+    const liveRun = liveStatus ? liveRunFromStatus(liveStatus) : null;
+    if (liveRun && !runs.some((run) => run.status === "running" && run.startedAt === liveRun.startedAt)) {
+      runs.unshift(liveRun);
+    }
+
+    if (error) return { runs, error: error.message };
+    return { runs, error: null };
   } catch (error) {
     return { runs: [] as DateScanRun[], error: errorMessage(error) };
   }

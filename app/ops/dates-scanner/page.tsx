@@ -11,8 +11,8 @@ export default async function OpsDatesScannerPage() {
   return (
     <main className="ops-shell ops-shell--scanner-live">
       <OpsSubnav />
-      <DateScanRunHistory error={history.error} runs={history.runs} />
       <LocalPatternDiscoveryStatusWidget displayMode="page" />
+      <DateScanRunHistory error={history.error} runs={history.runs} />
     </main>
   );
 }
