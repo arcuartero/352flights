@@ -45,7 +45,7 @@ ExecStart=$ROOT_DIR/scripts/run-vps-pattern-discovery.sh
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
-TimeoutStartSec=18h
+TimeoutStartSec=infinity
 
 [Install]
 WantedBy=multi-user.target

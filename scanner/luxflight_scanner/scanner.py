@@ -46,6 +46,42 @@ GLOBAL_LOOKAHEAD_START_DAYS = 3
 GLOBAL_LOOKAHEAD_END_DAYS = 250
 
 
+def service_calendar_is_fresh(
+    service_months: list[dict[str, Any]],
+    required_month_starts: Iterable[date],
+    *,
+    fresh_hours: int,
+    now: datetime | None = None,
+) -> bool:
+    required_months = {month.isoformat() for month in required_month_starts}
+    if not required_months:
+        return True
+
+    rows_by_month = {
+        str(row.get("month_start")): row
+        for row in service_months
+        if row.get("month_start")
+    }
+    if not required_months.issubset(rows_by_month):
+        return False
+
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(hours=max(fresh_hours, 0))
+    for month_start in required_months:
+        checked_at = rows_by_month[month_start].get("last_checked_at")
+        if not isinstance(checked_at, str) or not checked_at.strip():
+            return False
+        try:
+            parsed = datetime.fromisoformat(checked_at.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        if parsed < cutoff:
+            return False
+
+    return True
+
+
 def load_routes(config: ScannerConfig) -> list[RouteSeed]:
     with config.routes_path.open("r", encoding="utf-8") as file:
         payload = json.load(file)
@@ -3198,7 +3234,11 @@ class LuxFlightScanner:
                 existing_service_months = self.store.route_service_months(route_id, service_routing)
                 if (
                     only_missing_service_months
-                    and len(existing_service_months) >= max(self.config.service_calendar_month_horizon, 1)
+                    and service_calendar_is_fresh(
+                        existing_service_months,
+                        self._service_calendar_months(),
+                        fresh_hours=self.config.service_calendar_fresh_hours,
+                    )
                 ):
                     report.append(
                         {
@@ -3209,7 +3249,8 @@ class LuxFlightScanner:
                     )
                     self._log_progress(
                         f"Pattern discovery skipped: {route.origin_airport} -> {route.destination_airport} "
-                        f"already has {len(existing_service_months)} service months"
+                        f"already has a complete service calendar checked within the last "
+                        f"{self.config.service_calendar_fresh_hours} hours"
                     )
                     self._mark_pattern_route_completed(route)
                     self._pattern_discovery_checkpoint()

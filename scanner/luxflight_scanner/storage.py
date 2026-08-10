@@ -751,7 +751,8 @@ class SupabaseStore:
                 "route_id": f"eq.{route_id}",
                 "routing": f"eq.{routing}",
                 "select": (
-                    "month_start,routing,departure_dates,departure_weekdays,observed_patterns,sample_size"
+                    "month_start,routing,departure_dates,departure_weekdays,observed_patterns,"
+                    "sample_size,last_checked_at"
                 ),
                 "order": "month_start.asc",
             },
