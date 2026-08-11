@@ -6049,8 +6049,9 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
   z-index: 1000;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--bg) 20%, transparent);
+  background: rgba(255, 255, 255, 0.38);
   opacity: 0;
+  -webkit-backdrop-filter: blur(0);
   backdrop-filter: blur(0);
   cursor: progress;
   animation: flight-route-overlay-in 140ms ease-out forwards;
@@ -6133,6 +6134,7 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 @keyframes flight-route-overlay-in {
   to {
     opacity: 1;
+    -webkit-backdrop-filter: blur(7px);
     backdrop-filter: blur(7px);
   }
 }
@@ -6140,10 +6142,12 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 @keyframes flight-route-overlay-out {
   from {
     opacity: 1;
+    -webkit-backdrop-filter: blur(7px);
     backdrop-filter: blur(7px);
   }
   to {
     opacity: 0;
+    -webkit-backdrop-filter: blur(0);
     backdrop-filter: blur(0);
   }
 }
@@ -6177,6 +6181,7 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 
   .flight-route-loader {
     opacity: 1;
+    -webkit-backdrop-filter: blur(7px);
     backdrop-filter: blur(7px);
   }
 
