@@ -2,23 +2,66 @@
 
 import { Plane } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 type FlightRouteLoaderVisualProps = {
+  exiting?: boolean;
   label?: string;
 };
 
+type OrbitStyle = CSSProperties & {
+  "--flight-orbit-duration": string;
+  "--flight-orbit-height": string;
+  "--flight-orbit-start": string;
+  "--flight-orbit-width": string;
+};
+
+const defaultOrbit: OrbitStyle = {
+  "--flight-orbit-duration": "2.2s",
+  "--flight-orbit-height": "5.5rem",
+  "--flight-orbit-start": "0deg",
+  "--flight-orbit-width": "8rem",
+};
+
 export function FlightRouteLoaderVisual({
+  exiting = false,
   label = "Cargando la siguiente pagina",
 }: FlightRouteLoaderVisualProps) {
+  const [orbitStyle, setOrbitStyle] = useState<OrbitStyle>(defaultOrbit);
+  const [reverse, setReverse] = useState(false);
+
+  useEffect(() => {
+    const circular = Math.random() < 0.38;
+    const width = 7.2 + Math.random() * 3.8;
+    const height = circular ? width : 4.2 + Math.random() * 3.4;
+
+    setOrbitStyle({
+      "--flight-orbit-duration": `${(1.7 + Math.random() * 1.35).toFixed(2)}s`,
+      "--flight-orbit-height": `${height.toFixed(2)}rem`,
+      "--flight-orbit-start": `${Math.round(Math.random() * 359)}deg`,
+      "--flight-orbit-width": `${width.toFixed(2)}rem`,
+    });
+    setReverse(Math.random() < 0.5);
+  }, []);
+
   return (
-    <div className="flight-route-loader" role="status" aria-live="polite" aria-label={label}>
+    <div
+      className={`flight-route-loader${exiting ? " flight-route-loader--exiting" : ""}`}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
       <div className="flight-route-loader__stage" aria-hidden="true">
-        <div className="flight-route-loader__flight">
-          <span className="flight-route-loader__trail flight-route-loader__trail--1" />
-          <span className="flight-route-loader__trail flight-route-loader__trail--2" />
-          <span className="flight-route-loader__trail flight-route-loader__trail--3" />
-          <Plane className="flight-route-loader__plane" fill="currentColor" strokeWidth={1.8} />
+        <div
+          className={`flight-route-loader__orbit${reverse ? " flight-route-loader__orbit--reverse" : ""}`}
+          style={orbitStyle}
+        >
+          <div className="flight-route-loader__flight">
+            <span className="flight-route-loader__trail flight-route-loader__trail--1" />
+            <span className="flight-route-loader__trail flight-route-loader__trail--2" />
+            <span className="flight-route-loader__trail flight-route-loader__trail--3" />
+            <Plane className="flight-route-loader__plane" fill="currentColor" strokeWidth={1.8} />
+          </div>
         </div>
       </div>
       <span className="sr-only">{label}</span>
@@ -62,11 +105,35 @@ export function GlobalFlightRouteLoader() {
     () => `${pathname}?${searchParams.toString()}`,
     [pathname, searchParams],
   );
-  const [visible, setVisible] = useState(false);
+  const [phase, setPhase] = useState<"hidden" | "visible" | "exiting">("hidden");
+  const previousRouteKey = useRef(routeKey);
+  const hideTimer = useRef<number | null>(null);
+
+  const show = useCallback(() => {
+    if (hideTimer.current !== null) {
+      window.clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    setPhase("visible");
+  }, []);
+
+  const hideWithFade = useCallback(() => {
+    setPhase((current) => (current === "hidden" ? current : "exiting"));
+    if (hideTimer.current !== null) {
+      window.clearTimeout(hideTimer.current);
+    }
+    hideTimer.current = window.setTimeout(() => {
+      setPhase("hidden");
+      hideTimer.current = null;
+    }, 180);
+  }, []);
 
   useEffect(() => {
-    setVisible(false);
-  }, [routeKey]);
+    if (previousRouteKey.current !== routeKey) {
+      previousRouteKey.current = routeKey;
+      hideWithFade();
+    }
+  }, [hideWithFade, routeKey]);
 
   useEffect(() => {
     const showForLink = (event: MouseEvent) => {
@@ -77,7 +144,7 @@ export function GlobalFlightRouteLoader() {
 
       const anchor = target.closest<HTMLAnchorElement>("a[href]");
       if (anchor && isInternalPageLink(event, anchor)) {
-        setVisible(true);
+        show();
       }
     };
 
@@ -91,7 +158,7 @@ export function GlobalFlightRouteLoader() {
       const target = form.target;
       const action = new URL(form.action || window.location.href, window.location.href);
       if (method === "get" && target !== "_blank" && action.origin === window.location.origin) {
-        setVisible(true);
+        show();
       }
     };
 
@@ -102,16 +169,25 @@ export function GlobalFlightRouteLoader() {
       document.removeEventListener("click", showForLink, true);
       document.removeEventListener("submit", showForForm, true);
     };
-  }, []);
+  }, [show]);
 
   useEffect(() => {
-    if (!visible) {
+    if (phase !== "visible") {
       return;
     }
 
-    const safetyTimer = window.setTimeout(() => setVisible(false), 15000);
+    const safetyTimer = window.setTimeout(hideWithFade, 15000);
     return () => window.clearTimeout(safetyTimer);
-  }, [visible]);
+  }, [hideWithFade, phase]);
 
-  return visible ? <FlightRouteLoaderVisual /> : null;
+  useEffect(
+    () => () => {
+      if (hideTimer.current !== null) {
+        window.clearTimeout(hideTimer.current);
+      }
+    },
+    [],
+  );
+
+  return phase === "hidden" ? null : <FlightRouteLoaderVisual exiting={phase === "exiting"} />;
 }

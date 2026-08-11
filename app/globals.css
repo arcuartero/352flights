@@ -6049,26 +6049,46 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
   z-index: 1000;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--bg) 74%, transparent);
-  backdrop-filter: blur(5px);
+  background: color-mix(in srgb, var(--bg) 20%, transparent);
+  opacity: 0;
+  backdrop-filter: blur(0);
   cursor: progress;
+  animation: flight-route-overlay-in 140ms ease-out forwards;
+}
+
+.flight-route-loader--exiting {
+  pointer-events: none;
+  animation: flight-route-overlay-out 180ms ease-in forwards;
 }
 
 .flight-route-loader__stage {
   position: relative;
-  width: 9rem;
-  height: 7rem;
+  width: 12rem;
+  height: 10rem;
+}
+
+.flight-route-loader__orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--flight-orbit-width);
+  height: var(--flight-orbit-height);
+  animation: flight-route-orbit var(--flight-orbit-duration) linear infinite;
+}
+
+.flight-route-loader__orbit--reverse {
+  animation-direction: reverse;
 }
 
 .flight-route-loader__flight {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: calc(50% - 1.5rem);
+  right: -1.5rem;
   width: 3rem;
   height: 3rem;
   color: #2463d4;
   filter: drop-shadow(0 8px 14px rgba(36, 99, 212, 0.26));
-  animation: flight-route-wander 2.45s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  transform: rotate(90deg);
 }
 
 .flight-route-loader__plane {
@@ -6110,24 +6130,30 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
   animation-delay: -600ms;
 }
 
-@keyframes flight-route-wander {
-  0% {
-    transform: translate(-3.9rem, -2.5rem) rotate(12deg);
+@keyframes flight-route-overlay-in {
+  to {
+    opacity: 1;
+    backdrop-filter: blur(7px);
   }
-  17% {
-    transform: translate(0.85rem, -3.2rem) rotate(78deg);
+}
+
+@keyframes flight-route-overlay-out {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(7px);
   }
-  39% {
-    transform: translate(2.65rem, 0.5rem) rotate(162deg);
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0);
   }
-  61% {
-    transform: translate(-0.2rem, 2rem) rotate(226deg);
+}
+
+@keyframes flight-route-orbit {
+  from {
+    transform: translate(-50%, -50%) rotate(var(--flight-orbit-start));
   }
-  82% {
-    transform: translate(-4.15rem, 0.25rem) rotate(306deg);
-  }
-  100% {
-    transform: translate(-3.9rem, -2.5rem) rotate(372deg);
+  to {
+    transform: translate(-50%, -50%) rotate(calc(var(--flight-orbit-start) + 360deg));
   }
 }
 
@@ -6149,7 +6175,12 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
     scroll-behavior: auto !important;
   }
 
-  .flight-route-loader__flight {
-    transform: translate(-1.5rem, -1.5rem);
+  .flight-route-loader {
+    opacity: 1;
+    backdrop-filter: blur(7px);
+  }
+
+  .flight-route-loader__orbit {
+    transform: translate(-50%, -50%);
   }
 }
