@@ -28,7 +28,6 @@ export function FlightRouteLoaderVisual({
   label = "Cargando la siguiente pagina",
 }: FlightRouteLoaderVisualProps) {
   const [orbitStyle, setOrbitStyle] = useState<OrbitStyle>(defaultOrbit);
-  const [reverse, setReverse] = useState(false);
 
   useEffect(() => {
     const circular = Math.random() < 0.38;
@@ -41,7 +40,6 @@ export function FlightRouteLoaderVisual({
       "--flight-orbit-start": `${Math.round(Math.random() * 359)}deg`,
       "--flight-orbit-width": `${width.toFixed(2)}rem`,
     });
-    setReverse(Math.random() < 0.5);
   }, []);
 
   return (
@@ -53,7 +51,7 @@ export function FlightRouteLoaderVisual({
     >
       <div className="flight-route-loader__stage" aria-hidden="true">
         <div
-          className={`flight-route-loader__orbit${reverse ? " flight-route-loader__orbit--reverse" : ""}`}
+          className="flight-route-loader__orbit"
           style={orbitStyle}
         >
           <div className="flight-route-loader__flight">

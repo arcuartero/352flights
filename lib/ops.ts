@@ -52,6 +52,7 @@ const DEAL_AUTO_EXPIRE_DAYS = 4;
 // Keep the last successful scan visible through short scanner outages.
 const PUBLIC_FARE_LOOKBACK_DAYS = 7;
 const PUBLIC_FARES_PER_DESTINATION = 3;
+const PUBLIC_SEARCH_FARES_PER_DESTINATION = 24;
 const PUBLIC_ALL_FARES_PER_DESTINATION = null;
 const PUBLIC_FARE_MIN_HISTORY_POINTS = 3;
 const PUBLIC_FARE_HISTORY_LIMIT = 45;
@@ -258,24 +259,38 @@ async function fetchPagedSnapshots<T extends Record<string, unknown>>(
   let from = 0;
 
   while (true) {
-    const query = await readSupabaseWithRetry(() =>
-      buildPage(from, from + pageSize - 1),
+    const batch = await Promise.all(
+      Array.from({ length: 4 }, (_, pageIndex) => {
+        const pageFrom = from + pageIndex * pageSize;
+        return readSupabaseWithRetry(() =>
+          buildPage(pageFrom, pageFrom + pageSize - 1),
+        );
+      }),
     );
-    if (query.error) {
+    const failedPage = batch.find((query) => query.error);
+    if (failedPage?.error) {
       return {
         data: [] as T[],
-        error: formatError(query.error),
+        error: formatError(failedPage.error),
       };
     }
 
-    const pageRows = (query.data ?? []) as T[];
-    rows.push(...pageRows);
+    const pageRows = batch.map((query) => (query.data ?? []) as T[]);
+    for (const page of pageRows) {
+      rows.push(...page);
+      if (page.length < pageSize) {
+        return {
+          data: rows,
+          error: null as string | null,
+        };
+      }
+    }
 
-    if (pageRows.length < pageSize) {
+    if (pageRows.some((page) => page.length < pageSize)) {
       break;
     }
 
-    from += pageSize;
+    from += pageSize * batch.length;
   }
 
   return {
@@ -1887,6 +1902,7 @@ function buildPublicFaresFromSnapshots(
   routeMap: ReturnType<typeof buildRouteMap>,
   options?: {
     maxFaresPerDestination?: number | null;
+    balanceByMonth?: boolean;
   },
 ) {
   const snapshotsBySeries = new Map<string, SnapshotRow[]>();
@@ -2059,9 +2075,43 @@ function buildPublicFaresFromSnapshots(
   return [...grouped.values()]
     .flatMap((destinationFares) => {
       const sortedDestinationFares = destinationFares.sort(comparePublicDealsByPrice);
-      return maxFaresPerDestination === null
-        ? sortedDestinationFares
-        : sortedDestinationFares.slice(0, maxFaresPerDestination);
+      if (maxFaresPerDestination === null) {
+        return sortedDestinationFares;
+      }
+      if (!options?.balanceByMonth) {
+        return sortedDestinationFares.slice(0, maxFaresPerDestination);
+      }
+
+      const buckets = new Map<string, CampaignPreviewDeal[]>();
+      for (const fare of sortedDestinationFares) {
+        const departureMonth = fare.departureDate?.slice(0, 7) ?? "unknown";
+        const routing = fare.maxStops === "NON_STOP" ? "direct" : "stops";
+        const stay = fare.routeBucket;
+        const key = `${departureMonth}:${routing}:${stay}`;
+        const bucket = buckets.get(key) ?? [];
+        bucket.push(fare);
+        buckets.set(key, bucket);
+      }
+
+      const balanced: CampaignPreviewDeal[] = [];
+      let queues = [...buckets.values()];
+      while (balanced.length < maxFaresPerDestination && queues.length > 0) {
+        const remainingQueues: CampaignPreviewDeal[][] = [];
+        for (const queue of queues) {
+          const nextFare = queue.shift();
+          if (nextFare) {
+            balanced.push(nextFare);
+          }
+          if (queue.length > 0) {
+            remainingQueues.push(queue);
+          }
+          if (balanced.length >= maxFaresPerDestination) {
+            break;
+          }
+        }
+        queues = remainingQueues;
+      }
+      return balanced;
     })
     .sort(comparePublicDealsByPrice);
 }
@@ -3744,10 +3794,13 @@ function buildPublicDealsPageData(
   snapshots: SnapshotRow[],
   options?: {
     maxFaresPerDestination?: number | null;
+    balanceByMonth?: boolean;
+    includeSections?: boolean;
   },
 ): PublicDealsPageData {
   const deals = buildPublicFaresFromSnapshots(snapshots, buildRouteMap(routes), {
     maxFaresPerDestination: options?.maxFaresPerDestination,
+    balanceByMonth: options?.balanceByMonth,
   });
   const updatedAt = deals.reduce<string | null>((latest, deal) => {
     if (!deal.verifiedAt) return latest;
@@ -3762,7 +3815,7 @@ function buildPublicDealsPageData(
     schemaReady: true,
     onboardingMessage: null,
     deals,
-    sections: buildPublicDealsSections(deals),
+    sections: options?.includeSections === false ? [] : buildPublicDealsSections(deals),
     updatedAt,
   };
 }
@@ -3775,12 +3828,16 @@ async function getPublicDealsPageDataUncached(): Promise<PublicDealsPageData> {
 
 async function getPublicSearchDealsPageDataUncached(): Promise<PublicDealsPageData> {
   return getPublicDealsBoardDataUncached({
-    maxFaresPerDestination: PUBLIC_ALL_FARES_PER_DESTINATION,
+    maxFaresPerDestination: PUBLIC_SEARCH_FARES_PER_DESTINATION,
+    balanceByMonth: true,
+    includeSections: false,
   });
 }
 
 async function getPublicDealsBoardDataUncached(options: {
   maxFaresPerDestination: number | null;
+  balanceByMonth?: boolean;
+  includeSections?: boolean;
 }): Promise<PublicDealsPageData> {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return {
@@ -3816,6 +3873,7 @@ async function getPublicDealsBoardDataUncached(options: {
         )
         .gte("scanned_at", cutoffIso)
         .gte("departure_date", todayKey)
+        .eq("metadata->>public_fare_eligible", "true")
         .order("scanned_at", { ascending: false })
         .range(from, to),
     ),
@@ -3845,7 +3903,11 @@ async function getPublicDealsBoardDataUncached(options: {
   return buildPublicDealsPageData(
     (routesQuery.data ?? []) as RouteRow[],
     (publicSnapshotsQuery.data ?? []) as SnapshotRow[],
-    { maxFaresPerDestination: options.maxFaresPerDestination },
+    {
+      maxFaresPerDestination: options.maxFaresPerDestination,
+      balanceByMonth: options.balanceByMonth,
+      includeSections: options.includeSections,
+    },
   );
 }
 
@@ -3903,6 +3965,7 @@ async function getPublicCityDealsPageDataUncached(citySlug: string): Promise<Pub
       .in("route_id", routeIds)
       .gte("scanned_at", cutoffIso)
       .gte("departure_date", todayKey)
+      .eq("metadata->>public_fare_eligible", "true")
       .order("scanned_at", { ascending: false })
       .range(from, to),
   );
@@ -3913,23 +3976,24 @@ async function getPublicCityDealsPageDataUncached(citySlug: string): Promise<Pub
 
   return buildPublicDealsPageData(routes, (snapshotsQuery.data ?? []) as SnapshotRow[], {
     maxFaresPerDestination: PUBLIC_ALL_FARES_PER_DESTINATION,
+    includeSections: false,
   });
 }
 
 const getCachedPublicDealsPageData = unstable_cache(
   getPublicDealsPageDataUncached,
-  ["public-deals-page-data-v2"],
+  ["public-deals-page-data-v3"],
   {
-    revalidate: 60,
+    revalidate: 300,
     tags: ["public-deals"],
   },
 );
 
 const getCachedPublicSearchDealsPageData = unstable_cache(
   getPublicSearchDealsPageDataUncached,
-  ["public-search-deals-page-data-v1"],
+  ["public-search-deals-page-data-v3"],
   {
-    revalidate: 60,
+    revalidate: 300,
     tags: ["public-deals"],
   },
 );
@@ -3986,8 +4050,8 @@ export async function getPublicCityDealsPageData(citySlug: string): Promise<Publ
   const normalizedSlug = citySlug.trim().toLowerCase();
   const getCachedCityData = unstable_cache(
     () => getPublicCityDealsPageDataUncached(normalizedSlug),
-    ["public-city-deals-page-data-v2", normalizedSlug],
-    { revalidate: 60, tags: ["public-deals", `public-city-deals-${normalizedSlug}`] },
+    ["public-city-deals-page-data-v3", normalizedSlug],
+    { revalidate: 300, tags: ["public-deals", `public-city-deals-${normalizedSlug}`] },
   );
 
   try {

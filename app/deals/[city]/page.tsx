@@ -14,7 +14,7 @@ import {
   parseDealSearchSort,
 } from "@/lib/public-deals-search";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type DealsCityPageProps = {
   params: Promise<{

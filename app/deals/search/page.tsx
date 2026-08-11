@@ -5,7 +5,7 @@ import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { getPublicSearchDealsPageData } from "@/lib/ops";
 import { parseDealSearchFilters, parseDealSearchSort } from "@/lib/public-deals-search";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Buscar vuelos baratos desde Luxemburgo",

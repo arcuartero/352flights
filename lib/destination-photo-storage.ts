@@ -1,3 +1,5 @@
+import { revalidateTag, unstable_cache } from "next/cache";
+
 import { hasSupabaseAdminEnv } from "@/lib/env";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -107,9 +109,19 @@ export async function listDestinationPhotos(): Promise<DestinationPhotoEntry[]> 
     });
 }
 
-export async function getDestinationPhotoUrlMap(): Promise<Record<string, string>> {
+async function getDestinationPhotoUrlMapUncached(): Promise<Record<string, string>> {
   const photos = await listDestinationPhotos();
   return Object.fromEntries(photos.map((photo) => [photo.slug, photo.url]));
+}
+
+const getCachedDestinationPhotoUrlMap = unstable_cache(
+  getDestinationPhotoUrlMapUncached,
+  ["destination-photo-url-map-v1"],
+  { revalidate: 3600, tags: ["destination-photos"] },
+);
+
+export async function getDestinationPhotoUrlMap(): Promise<Record<string, string>> {
+  return getCachedDestinationPhotoUrlMap();
 }
 
 export async function uploadDestinationPhoto(input: {
@@ -147,6 +159,8 @@ export async function uploadDestinationPhoto(input: {
     throw uploaded.error;
   }
 
+  revalidateTag("destination-photos");
+
   const updatedAt = new Date().toISOString();
   return {
     slug,
@@ -175,4 +189,6 @@ export async function deleteDestinationPhoto(slugInput: string) {
   if (removed.error && !isMissingBucketError(removed.error)) {
     throw removed.error;
   }
+
+  revalidateTag("destination-photos");
 }

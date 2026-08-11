@@ -6077,10 +6077,6 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
   animation: flight-route-orbit var(--flight-orbit-duration) linear infinite;
 }
 
-.flight-route-loader__orbit--reverse {
-  animation-direction: reverse;
-}
-
 .flight-route-loader__flight {
   position: absolute;
   top: calc(50% - 1.5rem);
@@ -6103,32 +6099,38 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 .flight-route-loader__trail {
   position: absolute;
   top: 50%;
-  right: calc(100% - 0.35rem);
-  height: 0.26rem;
-  border-radius: 999px;
-  background: #ed332d;
+  right: calc(100% - 0.52rem);
+  border-radius: 999px 0 0 999px;
   transform: translateY(-50%);
   transform-origin: right center;
-  animation: flight-route-trail 900ms ease-in-out infinite alternate;
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+  animation: flight-route-trail 760ms ease-in-out infinite alternate;
 }
 
 .flight-route-loader__trail--1 {
-  width: 1.15rem;
-  opacity: 0.9;
+  width: 6.8rem;
+  height: 0.38rem;
+  background: linear-gradient(90deg, transparent 0%, rgba(237, 51, 45, 0.08) 18%, rgba(237, 51, 45, 0.48) 62%, #ed332d 100%);
+  filter: drop-shadow(0 0 0.22rem rgba(237, 51, 45, 0.38));
+  opacity: 0.94;
 }
 
 .flight-route-loader__trail--2 {
-  width: 0.72rem;
-  margin-right: 1.3rem;
-  opacity: 0.58;
-  animation-delay: -300ms;
+  top: calc(50% - 0.28rem);
+  width: 5.2rem;
+  height: 0.12rem;
+  background: linear-gradient(90deg, transparent 0%, rgba(237, 51, 45, 0.16) 42%, rgba(237, 51, 45, 0.62) 100%);
+  opacity: 0.62;
+  animation-delay: -260ms;
 }
 
 .flight-route-loader__trail--3 {
-  width: 0.38rem;
-  margin-right: 2.18rem;
-  opacity: 0.3;
-  animation-delay: -600ms;
+  top: calc(50% + 0.28rem);
+  width: 4.35rem;
+  height: 0.1rem;
+  background: linear-gradient(90deg, transparent 0%, rgba(237, 51, 45, 0.12) 38%, rgba(237, 51, 45, 0.52) 100%);
+  opacity: 0.48;
+  animation-delay: -520ms;
 }
 
 @keyframes flight-route-overlay-in {
@@ -6163,10 +6165,12 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 
 @keyframes flight-route-trail {
   from {
-    scale: 0.72 1;
+    scale: 0.84 0.82;
+    opacity: 0.62;
   }
   to {
-    scale: 1.08 1;
+    scale: 1.04 1;
+    opacity: 1;
   }
 }
 
