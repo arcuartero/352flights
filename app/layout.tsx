@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
+import { GlobalFlightRouteLoader } from "@/components/flight-route-loader";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { SiteChrome } from "@/components/site-chrome";
 import { WebActivityLog } from "@/components/web-activity-log";
@@ -51,6 +53,9 @@ export default function RootLayout({
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <LanguageProvider>
+          <Suspense fallback={null}>
+            <GlobalFlightRouteLoader />
+          </Suspense>
           <SiteChrome />
           {children}
           <WebActivityLog />
