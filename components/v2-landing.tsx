@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguageSelector } from "@/components/language-selector";
 import { PublicDealsDatePicker } from "@/components/public-deals-date-picker";
+import { PublicDealsSelect } from "@/components/public-deals-select";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
 import { useI18n } from "@/lib/i18n";
@@ -485,15 +486,10 @@ export function V2Landing({
     setFilters((current) => ({ ...current, destinationFilter: "any" }));
   }, [destinationOptions, filters.destinationFilter]);
 
-  const selectedDestinationLabel =
-    destinationOptions.find((option) => option.value === filters.destinationFilter)?.label ??
-    t("common.anyDestination");
   const selectedTripLabel =
     searchTripOptions.find((option) => option.value === filters.tripFilter)?.label ?? t("common.anyTrip");
   const selectedBudgetLabel =
     searchBudgetOptions.find((option) => option.value === filters.budgetFilter)?.label ?? t("common.anyBudget");
-  const mobileDestinationLabel =
-    filters.destinationFilter === "any" ? t("home.searchChooseDestination") : selectedDestinationLabel;
   const mobileTripLabel = filters.tripFilter === "any" ? t("common.tripType") : selectedTripLabel;
   const mobileBudgetLabel =
     filters.budgetFilter === "any" ? t("common.budgetMax") : selectedBudgetLabel;
@@ -594,21 +590,15 @@ export function V2Landing({
             <span>{t("common.from")}</span>
             <strong>Luxembourg</strong>
           </div>
-          <label className="v2-search__field v2-search__field--destination" data-mobile-value={mobileDestinationLabel}>
-            <span>{t("common.to")}</span>
-            <select
-              onChange={(event) =>
-                setFilters((current) => ({ ...current, destinationFilter: event.target.value }))
-              }
-              value={filters.destinationFilter}
-            >
-              {destinationOptions.map((destination) => (
-                <option key={destination.value} value={destination.value}>
-                  {destination.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PublicDealsSelect
+            className="v2-search__field v2-search__field--destination v2-search__destination-select"
+            label={t("common.to")}
+            onChange={(value) =>
+              setFilters((current) => ({ ...current, destinationFilter: value }))
+            }
+            options={destinationOptions}
+            value={filters.destinationFilter}
+          />
           <PublicDealsDatePicker
             className="v2-search__field v2-search__field--when"
             dateFrom={filters.dateFrom}
