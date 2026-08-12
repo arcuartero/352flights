@@ -4240,6 +4240,35 @@ body.is-resizing-columns * {
   justify-content: space-between;
 }
 
+.destination-photo-manager__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.destination-photo-manager__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.destination-photo-manager__download .is-spinning {
+  animation: destination-photo-download-spin 0.8s linear infinite;
+}
+
+@keyframes destination-photo-download-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .destination-photo-manager__download .is-spinning {
+    animation: none;
+  }
+}
+
 .destination-photo-manager__search {
   display: grid;
   gap: 0.35rem;
