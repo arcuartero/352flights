@@ -13,8 +13,6 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import {
-  createAutomaticRoutePlannerRulesAction,
-  createAutomaticRoutePlannerRulesForRoutesAction,
   saveRoutePlannerRulesAction,
 } from "@/app/ops/actions";
 import { emitClientActivityLog } from "@/lib/client-activity-log";
@@ -52,6 +50,27 @@ type RuleDraft = {
   returnWeekday: (typeof WEEKDAY_ORDER)[number];
   spansNextWeek: boolean;
 };
+
+async function createAutomaticRulesRequest<T>(body: { routeId: string } | { routeIds: string[] }) {
+  const response = await fetch("/api/ops/route-rules/automatic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | { result?: T; results?: T; error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? `Automatic rules request failed (${response.status}).`);
+  }
+
+  const result = payload?.result ?? payload?.results;
+  if (result === undefined) {
+    throw new Error("The server returned an invalid automatic rules response.");
+  }
+  return result;
+}
 
 const ACTIVE_ROUTE_COLUMN_DEFS = [
   { key: "route", width: 320, minWidth: 220 },
@@ -1143,7 +1162,9 @@ function RoutePlannerModal({
 
     startTransition(async () => {
       try {
-        const generated = await createAutomaticRoutePlannerRulesAction({
+        const generated = await createAutomaticRulesRequest<
+          Awaited<ReturnType<typeof import("@/lib/active-routes").createAutomaticRoutePlannerSearchRules>>
+        >({
           routeId: route.id,
         });
         const nextSelection: PlannerSelectionState = Object.fromEntries(
@@ -1738,7 +1759,13 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
 
     startBulkTransition(async () => {
       try {
-        const generatedPayload = await createAutomaticRoutePlannerRulesForRoutesAction({
+        const generatedPayload = await createAutomaticRulesRequest<
+          Awaited<
+            ReturnType<
+              typeof import("@/lib/active-routes").createAutomaticRoutePlannerSearchRulesForRoutes
+            >
+          >
+        >({
           routeIds: routesWithDetectedDepartures.map((route) => route.id),
         });
         const routesUpdated = generatedPayload.filter((route) => route.rulesAdded > 0).length;
