@@ -36,6 +36,8 @@ values
   ('LUX', 'LIS', 'Lisbon', 'weekend_europe', 'Strong year-round demand and headline-friendly pricing.', 5, 1, 7, 30, 140, 'NON_STOP'),
   ('LUX', 'OPO', 'Porto', 'weekend_europe', 'Lower average fare than Lisbon, useful for consistent deal volume.', 4, 1, 7, 30, 140, 'NON_STOP'),
   ('LUX', 'NCE', 'Nice', 'weekend_europe', 'High-demand Riviera route that suits both city and leisure sends.', 4, 1, 7, 21, 120, 'NON_STOP'),
+  ('LUX', 'MRS', 'Marseille', 'weekend_europe', 'Mediterranean city route with direct access to Provence and the coast.', 4, 1, 7, 3, 250, 'NON_STOP'),
+  ('LUX', 'TLS', 'Toulouse', 'weekend_europe', 'Southern France city route with useful weekend and short-break demand.', 4, 1, 7, 3, 250, 'NON_STOP'),
   ('LUX', 'ATH', 'Athens', 'weekend_europe', 'Mediterranean city-and-sun route with wide fare dispersion.', 5, 1, 7, 30, 150, 'NON_STOP'),
   ('LUX', 'IST', 'Istanbul', 'weekend_europe', 'Longer European-edge city break with strong headline potential.', 5, 1, 7, 30, 150, 'NON_STOP'),
   ('LUX', 'EDI', 'Edinburgh', 'weekend_europe', 'Clean weekend route with reliable seasonal city-break demand.', 3, 1, 7, 14, 100, 'NON_STOP'),

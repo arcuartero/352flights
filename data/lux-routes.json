@@ -313,6 +313,32 @@
   },
   {
     "origin_airport": "LUX",
+    "destination_airport": "MRS",
+    "destination_city": "Marseille",
+    "bucket": "weekend_europe",
+    "trip_nights": 4,
+    "min_trip_nights": 1,
+    "max_trip_nights": 7,
+    "lookahead_start_days": 3,
+    "lookahead_end_days": 250,
+    "max_stops": "NON_STOP",
+    "teaser": "Mediterranean city route with direct access to Provence and the coast."
+  },
+  {
+    "origin_airport": "LUX",
+    "destination_airport": "TLS",
+    "destination_city": "Toulouse",
+    "bucket": "weekend_europe",
+    "trip_nights": 4,
+    "min_trip_nights": 1,
+    "max_trip_nights": 7,
+    "lookahead_start_days": 3,
+    "lookahead_end_days": 250,
+    "max_stops": "NON_STOP",
+    "teaser": "Southern France city route with useful weekend and short-break demand."
+  },
+  {
+    "origin_airport": "LUX",
     "destination_airport": "ATH",
     "destination_city": "Athens",
     "bucket": "weekend_europe",
