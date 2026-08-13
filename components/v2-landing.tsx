@@ -51,7 +51,7 @@ const RHYTHMS = [
     key: "beach",
     label: "Beach weather",
     note: "Sea, sun, short flights",
-    city: "Palma",
+    city: "Palma de Mallorca",
     landmark: "Palma Cathedral",
   },
 ];
@@ -170,8 +170,16 @@ const TESTIMONIALS_ROW_B: Testimonial[] = [
 ];
 
 function landmarkSrc(city: string, landmark: string) {
-  const params = new URLSearchParams({ city, landmark });
+  const params = new URLSearchParams({ city, landmark, v: "2" });
   return `/api/landmark-photo?${params.toString()}`;
+}
+
+function useLocalPhotoFallback(event: React.SyntheticEvent<HTMLImageElement>, coastal = false) {
+  const image = event.currentTarget;
+  image.onerror = null;
+  image.src = coastal
+    ? "/destinations/coastal-town.webp"
+    : "/destinations/european-city.webp";
 }
 
 function buildRhythmSearchHref(key: string) {
@@ -711,6 +719,7 @@ export function V2Landing({
                 <img
                   alt={`${dest.city} — ${dest.landmark}`}
                   loading="lazy"
+                  onError={(event) => useLocalPhotoFallback(event)}
                   src={destinationPhotoUrls[toDestinationSlug(dest.city)] ?? landmarkSrc(dest.city, dest.landmark)}
                 />
                 <span className="v2-bento__shade" aria-hidden="true" />
@@ -739,6 +748,7 @@ export function V2Landing({
               <img
                 alt={rhythm.label}
                 loading="lazy"
+                onError={(event) => useLocalPhotoFallback(event, rhythm.key === "beach")}
                 src={destinationPhotoUrls[toDestinationSlug(rhythm.city)] ?? landmarkSrc(rhythm.city, rhythm.landmark)}
               />
               <span className="v2-rhythms__shade" aria-hidden="true" />

@@ -47,46 +47,24 @@ const REJECTED_IMAGE_URL_PATTERNS = [
 const LANDMARK_CANDIDATES_BY_CITY: Record<string, string[]> = {
   faro: ["Arco da Vila", "Faro Cathedral"],
   malta: ["St. John's Co-Cathedral", "Valletta"],
+  "palma de mallorca": ["Palma Cathedral", "Palma de Mallorca"],
 };
 
-function escapeXml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
-}
-
-function buildPlaceholderSvg(destinationCity: string, landmarkTitle: string) {
-  const city = escapeXml(destinationCity);
-  const landmark = escapeXml(landmarkTitle);
-
-  return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" preserveAspectRatio="xMidYMid slice">
-      <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#0d1a2a" />
-          <stop offset="100%" stop-color="#1a2940" />
-        </linearGradient>
-        <linearGradient id="glow" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="rgba(212,149,53,0.18)" />
-          <stop offset="100%" stop-color="rgba(212,149,53,0)" />
-        </linearGradient>
-      </defs>
-      <rect width="960" height="640" fill="url(#bg)" />
-      <circle cx="790" cy="100" r="180" fill="url(#glow)" />
-      <path d="M120 500C240 440 310 390 390 340C470 290 560 270 700 270C775 270 830 286 900 320V640H120Z" fill="rgba(255,255,255,0.06)" />
-      <path d="M340 520V330H390V520M435 520V250H485V520M530 520V380H580V520" fill="none" stroke="rgba(244,238,227,0.16)" stroke-width="24" stroke-linecap="round" />
-      <text x="72" y="92" fill="#d49535" font-family="Avenir Next, Segoe UI, sans-serif" font-size="28" letter-spacing="8">LANDMARK</text>
-      <text x="72" y="500" fill="#fffaf1" font-family="Iowan Old Style, Palatino Linotype, serif" font-size="60" font-weight="600">${city}</text>
-      <text x="72" y="554" fill="rgba(244,238,227,0.78)" font-family="Avenir Next, Segoe UI, sans-serif" font-size="30">${landmark}</text>
-    </svg>
-  `;
-}
+const COASTAL_DESTINATIONS = new Set([
+  "faro",
+  "malta",
+  "palma",
+  "palma de mallorca",
+]);
 
 function normalizeDestinationKey(value: string) {
   return value.trim().toLowerCase();
+}
+
+function getLocalPhotoFallback(destinationCity: string) {
+  return COASTAL_DESTINATIONS.has(normalizeDestinationKey(destinationCity))
+    ? "/destinations/coastal-town.webp"
+    : "/destinations/european-city.webp";
 }
 
 function isRejectedWikipediaImage(src: string) {
@@ -253,10 +231,11 @@ export async function GET(request: Request) {
     return response;
   }
 
-  return new Response(buildPlaceholderSvg(destinationCity, landmarkTitle), {
-    headers: {
-      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
-      "Content-Type": "image/svg+xml; charset=utf-8",
-    },
-  });
+  const response = NextResponse.redirect(
+    new URL(getLocalPhotoFallback(destinationCity), request.url),
+    307,
+  );
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("X-Photo-Source", "local-fallback");
+  return response;
 }
