@@ -34,6 +34,9 @@ export type DealSearchFilters = {
   whenFilter: WhenFilter;
   tripFilter: TripFilter;
   budgetFilter: BudgetFilter;
+  priceMin: number | null;
+  priceMax: number | null;
+  excludedAirlines: string[];
   directOnly: boolean;
   themeFilter: ThemeFilter;
   destinationFilter: string;
@@ -47,6 +50,9 @@ export const DEFAULT_DEAL_SEARCH_FILTERS: DealSearchFilters = {
   whenFilter: "any",
   tripFilter: "any",
   budgetFilter: "any",
+  priceMin: null,
+  priceMax: null,
+  excludedAirlines: [],
   directOnly: true,
   themeFilter: "any",
   destinationFilter: "any",
@@ -243,12 +249,41 @@ function parseDateParam(value: string | undefined) {
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : value;
 }
 
+function parsePriceParam(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
+}
+
+function normalizeAirlineFilterValue(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/&/g, "and")
+    .replace(/\s+/g, " ");
+}
+
 export function parseDealSearchFilters(
   source: Record<string, string | string[] | undefined> | URLSearchParams,
 ): DealSearchFilters {
   const whenValue = getParamValue(source, "when");
   const tripValue = getParamValue(source, "trip");
   const budgetValue = getParamValue(source, "budget");
+  const parsedPriceMin = parsePriceParam(getParamValue(source, "price_min"));
+  const parsedPriceMax = parsePriceParam(getParamValue(source, "price_max"));
+  const excludedAirlines = [
+    ...new Set(
+      (getParamValue(source, "exclude_airlines") ?? "")
+        .split(",")
+        .map(normalizeAirlineFilterValue)
+        .filter(Boolean),
+    ),
+  ];
   const directValue = getParamValue(source, "direct");
   const themeValue = getParamValue(source, "theme");
   const destinationValue = getParamValue(source, "destination");
@@ -261,6 +296,8 @@ export function parseDealSearchFilters(
     : "any";
   const hasValidCustomRange = Boolean(dateFrom && dateTo && dateFrom <= dateTo);
   const hasSelectedCustomRange = parsedWhenFilter === "custom" && hasValidCustomRange;
+  const hasValidPriceRange =
+    parsedPriceMin === null || parsedPriceMax === null || parsedPriceMin <= parsedPriceMax;
 
   return {
     whenFilter: parsedWhenFilter === "custom" && !hasValidCustomRange ? "any" : parsedWhenFilter,
@@ -270,6 +307,9 @@ export function parseDealSearchFilters(
     budgetFilter: BUDGET_FILTERS.has((budgetValue as BudgetFilter) ?? "any")
       ? ((budgetValue as BudgetFilter) ?? "any")
       : "any",
+    priceMin: hasValidPriceRange ? parsedPriceMin : null,
+    priceMax: hasValidPriceRange ? parsedPriceMax : null,
+    excludedAirlines,
     directOnly:
       directValue === undefined
         ? DEFAULT_DEAL_SEARCH_FILTERS.directOnly
@@ -330,6 +370,18 @@ export function buildDealsSearchHref(
     params.set("budget", filters.budgetFilter);
   }
 
+  if (filters.priceMin !== null) {
+    params.set("price_min", String(Math.round(filters.priceMin)));
+  }
+
+  if (filters.priceMax !== null) {
+    params.set("price_max", String(Math.round(filters.priceMax)));
+  }
+
+  if (filters.excludedAirlines.length > 0) {
+    params.set("exclude_airlines", [...filters.excludedAirlines].sort().join(","));
+  }
+
   if (filters.directOnly !== DEFAULT_DEAL_SEARCH_FILTERS.directOnly) {
     params.set("direct", filters.directOnly ? "1" : "0");
   }
@@ -363,6 +415,9 @@ export function hasActiveDealSearchFilters(filters: DealSearchFilters) {
     filters.whenFilter !== "any" ||
     filters.tripFilter !== "any" ||
     filters.budgetFilter !== "any" ||
+    filters.priceMin !== null ||
+    filters.priceMax !== null ||
+    filters.excludedAirlines.length > 0 ||
     filters.directOnly ||
     filters.themeFilter !== "any" ||
     filters.destinationFilter !== "any" ||

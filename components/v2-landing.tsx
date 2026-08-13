@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguageSelector } from "@/components/language-selector";
 import { PublicDealsDatePicker } from "@/components/public-deals-date-picker";
+import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import { PublicDealsSelect } from "@/components/public-deals-select";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
@@ -19,7 +20,6 @@ import {
   doesTripIncludeWeekend,
   getWhenFilterDateRange,
   isTripInCurrentWeekend,
-  type BudgetFilter,
   type DealSearchFilters,
   type TripFilter,
   type WhenFilter,
@@ -347,14 +347,6 @@ function matchesTripFilter(deal: CampaignPreviewDeal, tripFilter: TripFilter) {
   }
 }
 
-function matchesBudgetFilter(deal: CampaignPreviewDeal, budgetFilter: BudgetFilter) {
-  if (budgetFilter === "any") {
-    return true;
-  }
-
-  return deal.dealPrice <= Number(budgetFilter);
-}
-
 function matchesHomeSearchFilters(
   deal: CampaignPreviewDeal,
   filters: DealSearchFilters,
@@ -372,7 +364,11 @@ function matchesHomeSearchFilters(
     return false;
   }
 
-  if (!matchesBudgetFilter(deal, filters.budgetFilter)) {
+  if (filters.priceMin !== null && deal.dealPrice < filters.priceMin) {
+    return false;
+  }
+
+  if (filters.priceMax !== null && deal.dealPrice > filters.priceMax) {
     return false;
   }
 
@@ -442,13 +438,27 @@ export function V2Landing({
     { value: "weeklong", label: t("common.weeklong") },
     { value: "long_stay", label: t("common.longStay") },
   ];
-  const searchBudgetOptions: Array<{ value: BudgetFilter; label: string }> = [
-    { value: "any", label: t("common.anyBudget") },
-    { value: "50", label: t("common.under50") },
-    { value: "80", label: t("common.under80") },
-    { value: "120", label: t("common.under120") },
-    { value: "200", label: t("common.under200") },
-  ];
+  const priceBounds = useMemo(() => {
+    const filtersWithoutPrice = {
+      ...filters,
+      budgetFilter: "any" as const,
+      priceMin: null,
+      priceMax: null,
+    };
+    const matchingPrices = deals
+      .filter((deal) => matchesHomeSearchFilters(deal, filtersWithoutPrice, now))
+      .map((deal) => deal.dealPrice)
+      .filter((price) => Number.isFinite(price) && price > 0);
+    const fallbackPrices = deals
+      .map((deal) => deal.dealPrice)
+      .filter((price) => Number.isFinite(price) && price > 0);
+    const source = matchingPrices.length > 0 ? matchingPrices : fallbackPrices;
+
+    return {
+      min: source.length > 0 ? Math.floor(Math.min(...source)) : 0,
+      max: source.length > 0 ? Math.ceil(Math.max(...source)) : 1,
+    };
+  }, [deals, filters, now]);
   const destinationOptions = useMemo(() => {
     const filtersWithoutDestination = {
       ...filters,
@@ -488,11 +498,7 @@ export function V2Landing({
 
   const selectedTripLabel =
     searchTripOptions.find((option) => option.value === filters.tripFilter)?.label ?? t("common.anyTrip");
-  const selectedBudgetLabel =
-    searchBudgetOptions.find((option) => option.value === filters.budgetFilter)?.label ?? t("common.anyBudget");
   const mobileTripLabel = filters.tripFilter === "any" ? t("common.tripType") : selectedTripLabel;
-  const mobileBudgetLabel =
-    filters.budgetFilter === "any" ? t("common.budgetMax") : selectedBudgetLabel;
 
   return (
     <div className="v2" ref={rootRef}>
@@ -631,24 +637,21 @@ export function V2Landing({
               ))}
             </select>
           </label>
-          <label className="v2-search__field v2-search__field--budget" data-mobile-value={mobileBudgetLabel}>
-            <span>{t("common.budgetMax")}</span>
-            <select
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  budgetFilter: event.target.value as BudgetFilter,
-                }))
-              }
-              value={filters.budgetFilter}
-            >
-              {searchBudgetOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PublicDealsPriceRange
+            bounds={priceBounds}
+            className="v2-search__field v2-search__field--budget"
+            label={t("common.priceRange")}
+            onChange={(priceMin, priceMax) =>
+              setFilters((current) => ({
+                ...current,
+                budgetFilter: "any",
+                priceMin,
+                priceMax,
+              }))
+            }
+            priceMax={filters.priceMax}
+            priceMin={filters.priceMin}
+          />
           <label className="v2-search__toggle">
             <input
               checked={filters.directOnly}

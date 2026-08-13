@@ -1,0 +1,111 @@
+.deals-price-range {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.deals-price-range__label {
+  padding: 0;
+  color: #6d7988;
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.deals-price-range__values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--v2-ink);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.deals-price-range__values strong {
+  font-weight: 650;
+}
+
+.deals-price-range__slider {
+  position: relative;
+  height: 1.5rem;
+  isolation: isolate;
+}
+
+.deals-price-range__track,
+.deals-price-range__fill {
+  position: absolute;
+  top: 50%;
+  height: 0.3rem;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.deals-price-range__track {
+  right: 0;
+  left: 0;
+  background: #dce3eb;
+}
+
+.deals-price-range__fill {
+  right: calc(100% - var(--range-end));
+  left: var(--range-start);
+  background: var(--v2-accent);
+}
+
+.deals-price-range__slider input {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 1.5rem;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.deals-price-range__slider input::-webkit-slider-runnable-track {
+  height: 0.3rem;
+  background: transparent;
+}
+
+.deals-price-range__slider input::-webkit-slider-thumb {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: -0.4rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  appearance: none;
+  background: var(--v2-accent);
+  box-shadow: 0 0 0 1px rgba(237, 50, 43, 0.24), 0 2px 6px rgba(29, 39, 51, 0.2);
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.deals-price-range__slider input::-moz-range-track {
+  height: 0.3rem;
+  background: transparent;
+}
+
+.deals-price-range__slider input::-moz-range-thumb {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--v2-accent);
+  box-shadow: 0 0 0 1px rgba(237, 50, 43, 0.24), 0 2px 6px rgba(29, 39, 51, 0.2);
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.deals-price-range__slider input:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid color-mix(in srgb, var(--v2-blue) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.deals-price-range__slider input:focus-visible::-moz-range-thumb {
+  outline: 3px solid color-mix(in srgb, var(--v2-blue) 35%, transparent);
+  outline-offset: 2px;
+}

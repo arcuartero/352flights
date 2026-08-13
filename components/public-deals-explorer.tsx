@@ -17,6 +17,7 @@ import { Info, Plane } from "lucide-react";
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { MonthlyPriceCard } from "@/components/monthly-price-card";
+import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import {
   PublicDealsSelect as DealsSelect,
   type PublicDealsSelectOption as SelectOption,
@@ -1052,6 +1053,15 @@ function getPrimaryAirlineName(deal: CampaignPreviewDeal) {
   return primaryAirline ?? displaySummary;
 }
 
+function getDealAirlineNames(deal: CampaignPreviewDeal) {
+  const names = (deal.airlineSummary ?? "")
+    .split(/,|\+/)
+    .map((item) => item.trim())
+    .filter((item) => item && !/^\d+\s+more$/i.test(item));
+
+  return [...new Set(names)];
+}
+
 function getAirlineLogoCode(airlineName: string, primaryAirlineCode: string | null) {
   const normalizedCode = primaryAirlineCode?.trim().toUpperCase() ?? "";
   if (/^[A-Z0-9]{2,3}$/.test(normalizedCode)) {
@@ -1087,6 +1097,53 @@ function AirlineLogo({
         </span>
       )}
     </span>
+  );
+}
+
+type AirlineFilterOption = {
+  key: string;
+  label: string;
+};
+
+function DealsAirlineFilter({
+  excludedAirlines,
+  onChange,
+  options,
+  t,
+}: {
+  excludedAirlines: string[];
+  onChange: (excludedAirlines: string[]) => void;
+  options: AirlineFilterOption[];
+  t: Translate;
+}) {
+  if (options.length === 0) {
+    return null;
+  }
+
+  return (
+    <fieldset className="deals-airline-filter">
+      <legend>{t("deals.airlines")}</legend>
+      <div className="deals-airline-filter__options">
+        {options.map((option) => {
+          const checked = !excludedAirlines.includes(option.key);
+          return (
+            <label key={option.key}>
+              <input
+                checked={checked}
+                onChange={(event) => {
+                  const next = event.target.checked
+                    ? excludedAirlines.filter((key) => key !== option.key)
+                    : [...new Set([...excludedAirlines, option.key])];
+                  onChange(next);
+                }}
+                type="checkbox"
+              />
+              <span>{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -1131,7 +1188,13 @@ function resetQuickChip(
       return { ...filters, tripFilter: "any" };
     case "under_50":
     case "cheap_direct":
-      return { ...filters, budgetFilter: "any", directOnly: false };
+      return {
+        ...filters,
+        budgetFilter: "any",
+        priceMin: null,
+        priceMax: null,
+        directOnly: false,
+      };
     case "direct":
       return { ...filters, directOnly: false };
     case "beach":
@@ -1621,6 +1684,14 @@ function matchesBudgetFilter(deal: CampaignPreviewDeal, budgetFilter: BudgetFilt
   return deal.dealPrice <= Number(budgetFilter);
 }
 
+function matchesPriceRange(deal: CampaignPreviewDeal, filters: DealSearchFilters) {
+  if (filters.priceMin !== null && deal.dealPrice < filters.priceMin) {
+    return false;
+  }
+
+  return filters.priceMax === null || deal.dealPrice <= filters.priceMax;
+}
+
 function matchesDurationFilter(deal: CampaignPreviewDeal, durationFilter: DurationFilter) {
   if (durationFilter === "any") {
     return true;
@@ -1647,6 +1718,15 @@ function matchesDealSearchFilters(
   }
 
   if (!matchesBudgetFilter(deal, filters.budgetFilter)) {
+    return false;
+  }
+
+  if (!matchesPriceRange(deal, filters)) {
+    return false;
+  }
+
+  const airlineKeys = getDealAirlineNames(deal).map(normalizeAirlineName);
+  if (filters.excludedAirlines.some((airline) => airlineKeys.includes(airline))) {
     return false;
   }
 
@@ -1692,6 +1772,10 @@ function areDealSearchFiltersEqual(left: DealSearchFilters, right: DealSearchFil
     left.whenFilter === right.whenFilter &&
     left.tripFilter === right.tripFilter &&
     left.budgetFilter === right.budgetFilter &&
+    left.priceMin === right.priceMin &&
+    left.priceMax === right.priceMax &&
+    left.excludedAirlines.length === right.excludedAirlines.length &&
+    left.excludedAirlines.every((airline) => right.excludedAirlines.includes(airline)) &&
     left.directOnly === right.directOnly &&
     left.themeFilter === right.themeFilter &&
     left.destinationFilter === right.destinationFilter &&
@@ -1931,9 +2015,15 @@ function applyQuickChip(
         dateTo: null,
       };
     case "under_50":
-      return { ...filters, budgetFilter: "50" };
+      return { ...filters, budgetFilter: "50", priceMin: null, priceMax: null };
     case "cheap_direct":
-      return { ...filters, budgetFilter: "80", directOnly: true };
+      return {
+        ...filters,
+        budgetFilter: "80",
+        priceMin: null,
+        priceMax: null,
+        directOnly: true,
+      };
     case "direct":
       return { ...filters, directOnly: true };
     case "beach":
@@ -2977,6 +3067,58 @@ export function PublicDealsExplorer({
     return () => window.removeEventListener("resize", syncVisibleCount);
   }, []);
 
+  const filterFacetDeals = useMemo(() => {
+    const facetFilters = coerceFiltersForMode({
+      ...draftFilters,
+      budgetFilter: "any",
+      priceMin: null,
+      priceMax: null,
+      excludedAirlines: [],
+    });
+    return data.deals.filter((deal) => matchesDealSearchFilters(deal, facetFilters, now));
+  }, [coerceFiltersForMode, data.deals, draftFilters, now]);
+  const priceBounds = useMemo(() => {
+    const prices = filterFacetDeals
+      .map((deal) => deal.dealPrice)
+      .filter((price) => Number.isFinite(price) && price > 0);
+    const fallbackPrices = data.deals
+      .map((deal) => deal.dealPrice)
+      .filter((price) => Number.isFinite(price) && price > 0);
+    const source = prices.length > 0 ? prices : fallbackPrices;
+    return {
+      min: source.length > 0 ? Math.floor(Math.min(...source)) : 0,
+      max: source.length > 0 ? Math.ceil(Math.max(...source)) : 1,
+    };
+  }, [data.deals, filterFacetDeals]);
+  const airlineOptions = useMemo<AirlineFilterOption[]>(() => {
+    const labelsByKey = new Map<string, string>();
+    filterFacetDeals.forEach((deal) => {
+      getDealAirlineNames(deal).forEach((label) => {
+        const key = normalizeAirlineName(label);
+        if (key && !labelsByKey.has(key)) {
+          labelsByKey.set(key, label);
+        }
+      });
+    });
+    return [...labelsByKey]
+      .map(([key, label]) => ({ key, label }))
+      .sort((left, right) => left.label.localeCompare(right.label, locale));
+  }, [filterFacetDeals, locale]);
+  const airlineLabels = useMemo(
+    () => new Map(airlineOptions.map((option) => [option.key, option.label])),
+    [airlineOptions],
+  );
+  const legacyPriceMaximum =
+    draftFilters.budgetFilter === "any" ? null : Number(draftFilters.budgetFilter);
+  const updatePriceRange = useCallback((priceMin: number | null, priceMax: number | null) => {
+    setDraftFilters((current) => ({
+      ...current,
+      budgetFilter: "any",
+      priceMin,
+      priceMax,
+    }));
+  }, []);
+
   const filteredDeals = useMemo(() => {
     const nextDeals = data.deals.filter((deal) => matchesDealSearchFilters(deal, effectiveFilters, now));
 
@@ -3271,6 +3413,32 @@ export function PublicDealsExplorer({
         });
       }
 
+      if (effectiveFilters.priceMin !== null || effectiveFilters.priceMax !== null) {
+        chips.push({
+          key: "priceRange",
+          label: `€${effectiveFilters.priceMin ?? priceBounds.min} – €${effectiveFilters.priceMax ?? priceBounds.max}`,
+          onRemove: () =>
+            setDraftFilters((current) => ({
+              ...current,
+              budgetFilter: "any",
+              priceMin: null,
+              priceMax: null,
+            })),
+        });
+      }
+
+      effectiveFilters.excludedAirlines.forEach((airline) => {
+        chips.push({
+          key: `airline-${airline}`,
+          label: t("deals.withoutAirline", { airline: airlineLabels.get(airline) ?? airline }),
+          onRemove: () =>
+            setDraftFilters((current) => ({
+              ...current,
+              excludedAirlines: current.excludedAirlines.filter((key) => key !== airline),
+            })),
+        });
+      });
+
       if (effectiveFilters.directOnly) {
         chips.push({
           key: "directOnly",
@@ -3283,6 +3451,7 @@ export function PublicDealsExplorer({
     },
     [
       coerceFiltersForMode,
+      airlineLabels,
       departureWeekdayOptions,
       destinationOptions,
       effectiveFilters,
@@ -3292,6 +3461,8 @@ export function PublicDealsExplorer({
       resultsDurationOptions,
       resultsTripOptions,
       resultsWhenOptions,
+      priceBounds.max,
+      priceBounds.min,
       t,
     ],
   );
@@ -3586,16 +3757,13 @@ export function PublicDealsExplorer({
               value={draftFilters.tripFilter}
             />
 
-            <DealsSelect
-              label={t("common.budgetMax")}
-              onChange={(nextValue) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  budgetFilter: nextValue as BudgetFilter,
-                }))
-              }
-              options={resultsBudgetOptions}
-              value={draftFilters.budgetFilter}
+            <PublicDealsPriceRange
+              bounds={priceBounds}
+              label={t("common.priceRange")}
+              legacyMaximum={legacyPriceMaximum}
+              onChange={updatePriceRange}
+              priceMax={draftFilters.priceMax}
+              priceMin={draftFilters.priceMin}
             />
 
             <label
@@ -3800,7 +3968,7 @@ export function PublicDealsExplorer({
                     <div className="deals-search-fixed-route">
                       <div className="deals-control deals-control--static deals-control--origin-fixed">
                         <span>{t("deals.searchFrom")}</span>
-                        <strong>Luxembourg (LUX)</strong>
+                        <strong>Luxembourg</strong>
                       </div>
                       <div className="deals-search-fixed-route__destination">
                         <span>{t("common.destination")}</span>
@@ -3860,16 +4028,25 @@ export function PublicDealsExplorer({
                       value={draftFilters.durationFilter}
                     />
 
-                    <DealsSelect
-                      label={t("common.budgetMax")}
-                      onChange={(nextValue) =>
+                    <PublicDealsPriceRange
+                      bounds={priceBounds}
+                      label={t("common.priceRange")}
+                      legacyMaximum={legacyPriceMaximum}
+                      onChange={updatePriceRange}
+                      priceMax={draftFilters.priceMax}
+                      priceMin={draftFilters.priceMin}
+                    />
+
+                    <DealsAirlineFilter
+                      excludedAirlines={draftFilters.excludedAirlines}
+                      onChange={(excludedAirlines) =>
                         setDraftFilters((current) => ({
                           ...current,
-                          budgetFilter: nextValue as BudgetFilter,
+                          excludedAirlines,
                         }))
                       }
-                      options={resultsBudgetOptions}
-                      value={draftFilters.budgetFilter}
+                      options={airlineOptions}
+                      t={t}
                     />
 
                     <label
@@ -4002,7 +4179,7 @@ export function PublicDealsExplorer({
               <div className="deals-search-sidebar__section">
                 <div className="deals-control deals-control--static deals-control--origin-fixed">
                   <span>{t("deals.searchFrom")}</span>
-                  <strong>Luxembourg (LUX)</strong>
+                  <strong>Luxembourg</strong>
                 </div>
               </div>
 
@@ -4069,16 +4246,25 @@ export function PublicDealsExplorer({
                   value={draftFilters.durationFilter}
                 />
 
-                <DealsSelect
-                  label={t("common.budgetMax")}
-                  onChange={(nextValue) =>
+                <PublicDealsPriceRange
+                  bounds={priceBounds}
+                  label={t("common.priceRange")}
+                  legacyMaximum={legacyPriceMaximum}
+                  onChange={updatePriceRange}
+                  priceMax={draftFilters.priceMax}
+                  priceMin={draftFilters.priceMin}
+                />
+
+                <DealsAirlineFilter
+                  excludedAirlines={draftFilters.excludedAirlines}
+                  onChange={(excludedAirlines) =>
                     setDraftFilters((current) => ({
                       ...current,
-                      budgetFilter: nextValue as BudgetFilter,
+                      excludedAirlines,
                     }))
                   }
-                  options={resultsBudgetOptions}
-                  value={draftFilters.budgetFilter}
+                  options={airlineOptions}
+                  t={t}
                 />
 
                 <label

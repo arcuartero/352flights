@@ -912,6 +912,85 @@ body:has(.page-shell--deals-city)::before {
   margin-top: 1.4rem;
 }
 
+/* Price and airline filters */
+.deals-redesign .deals-airline-filter legend {
+  padding: 0;
+  color: #6d7988;
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.deals-redesign .deals-airline-filter {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.deals-redesign .deals-airline-filter__options {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 10.75rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-color: #c9d2dc transparent;
+  scrollbar-width: thin;
+}
+
+.deals-redesign .deals-airline-filter label {
+  display: grid;
+  grid-template-columns: 1.05rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+  min-height: 1.8rem;
+  color: var(--v2-ink);
+  font-size: 0.9rem;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.deals-redesign .deals-airline-filter input {
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  border: 1px solid #bdc7d2;
+  border-radius: 0.25rem;
+  appearance: none;
+  background: #fff;
+  cursor: pointer;
+}
+
+.deals-redesign .deals-airline-filter input::after {
+  content: "";
+  width: 0.52rem;
+  height: 0.28rem;
+  border-bottom: 2px solid #fff;
+  border-left: 2px solid #fff;
+  opacity: 0;
+  transform: translateY(-0.05rem) rotate(-45deg);
+}
+
+.deals-redesign .deals-airline-filter input:checked {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+}
+
+.deals-redesign .deals-airline-filter input:checked::after {
+  opacity: 1;
+}
+
+.deals-redesign .deals-airline-filter input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--v2-blue) 35%, transparent);
+  outline-offset: 2px;
+}
+
 /* Date range filter */
 .deals-redesign .deals-date-picker {
   position: relative;

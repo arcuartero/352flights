@@ -490,6 +490,68 @@ body:has(.v2) .scroll-top-button {
   min-width: 0;
 }
 
+.v2-search__field.deals-price-range {
+  align-self: end;
+  gap: 0.25rem;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__label {
+  color: var(--v2-ink-soft);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__values {
+  font-size: 0.78rem;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__slider {
+  height: 1.35rem;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__track,
+.v2-search__field.deals-price-range .deals-price-range__fill {
+  height: 0.25rem;
+  border-radius: 999px;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__track {
+  background: #dce3eb;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__fill {
+  background: var(--v2-accent);
+}
+
+.v2-search__field.deals-price-range .deals-price-range__slider input {
+  height: 1.35rem;
+}
+
+.v2-search__field.deals-price-range
+  .deals-price-range__slider
+  input::-webkit-slider-runnable-track {
+  height: 0.25rem;
+}
+
+.v2-search__field.deals-price-range
+  .deals-price-range__slider
+  input::-webkit-slider-thumb {
+  width: 1rem;
+  height: 1rem;
+  margin-top: -0.38rem;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__slider input::-moz-range-track {
+  height: 0.25rem;
+}
+
+.v2-search__field.deals-price-range .deals-price-range__slider input::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+}
+
 .v2-search__field > span,
 .v2-search__toggle > span {
   color: var(--v2-ink-soft);
@@ -1667,6 +1729,25 @@ body:has(.v2) .scroll-top-button {
   .v2-search__field--budget {
     grid-column: 1 / -1;
     border-top: 2px solid #0c2238;
+  }
+
+  .v2-search__field--budget.deals-price-range {
+    display: grid;
+    gap: 0.35rem;
+    min-height: 5.5rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .v2-search__field--budget.deals-price-range .deals-price-range__label {
+    width: auto;
+    height: auto;
+    color: #66707a;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+  }
+
+  .v2-search__field--budget.deals-price-range .deals-price-range__values {
+    font-size: 0.85rem;
   }
 
   .v2-search__toggle {
