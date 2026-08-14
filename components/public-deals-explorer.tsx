@@ -3016,6 +3016,13 @@ export function PublicDealsExplorer({
   const [styleVisibleCount, setStyleVisibleCount] = useState(5);
   const [resultsPage, setResultsPage] = useState(1);
   const [resultsPageSize, setResultsPageSize] = useState<number>(DEFAULT_RESULTS_PAGE_SIZE);
+  const fullSidebarRef = useRef<HTMLDivElement | null>(null);
+  const compactSidebarFrameRef = useRef<number | null>(null);
+  const [showCompactSidebar, setShowCompactSidebar] = useState(false);
+  const [compactSidebarPosition, setCompactSidebarPosition] = useState<{
+    left: number;
+    width: number;
+  } | null>(null);
   const now = useMemo(() => new Date(), []);
   const effectiveFilters =
     mode === "results" || mode === "city"
@@ -3072,6 +3079,57 @@ export function PublicDealsExplorer({
     window.addEventListener("resize", syncVisibleCount);
     return () => window.removeEventListener("resize", syncVisibleCount);
   }, []);
+
+  useEffect(() => {
+    if (mode !== "results" && mode !== "city") {
+      return;
+    }
+
+    const syncCompactSidebar = () => {
+      compactSidebarFrameRef.current = null;
+      const sidebar = fullSidebarRef.current;
+
+      if (!sidebar || window.innerWidth <= 980) {
+        setShowCompactSidebar(false);
+        return;
+      }
+
+      const bounds = sidebar.getBoundingClientRect();
+      const headerClearance = 92;
+      const nextPosition = {
+        left: Math.round(bounds.left),
+        width: Math.round(bounds.width),
+      };
+
+      setCompactSidebarPosition((current) =>
+        current?.left === nextPosition.left && current.width === nextPosition.width
+          ? current
+          : nextPosition,
+      );
+      setShowCompactSidebar(bounds.bottom <= headerClearance);
+    };
+
+    const scheduleCompactSidebarSync = () => {
+      if (compactSidebarFrameRef.current !== null) {
+        return;
+      }
+
+      compactSidebarFrameRef.current = window.requestAnimationFrame(syncCompactSidebar);
+    };
+
+    syncCompactSidebar();
+    window.addEventListener("scroll", scheduleCompactSidebarSync, { passive: true });
+    window.addEventListener("resize", scheduleCompactSidebarSync);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleCompactSidebarSync);
+      window.removeEventListener("resize", scheduleCompactSidebarSync);
+      if (compactSidebarFrameRef.current !== null) {
+        window.cancelAnimationFrame(compactSidebarFrameRef.current);
+        compactSidebarFrameRef.current = null;
+      }
+    };
+  }, [mode]);
 
   const filterFacetDeals = useMemo(() => {
     const facetFilters = coerceFiltersForMode({
@@ -3670,6 +3728,89 @@ export function PublicDealsExplorer({
     [data.deals, draftFilters, now],
   );
 
+  const renderCompactSidebar = (includeDestination: boolean) => {
+    if (!showCompactSidebar || !compactSidebarPosition) {
+      return null;
+    }
+
+    return createPortal(
+      <div
+        className="deals-search-compact-filters"
+        style={
+          {
+            "--compact-filter-left": `${compactSidebarPosition.left}px`,
+            "--compact-filter-width": `${compactSidebarPosition.width}px`,
+          } as CSSProperties
+        }
+      >
+        {includeDestination ? (
+          <DealsSelect
+            label={t("common.destination")}
+            onChange={(nextValue) =>
+              setDraftFilters((current) => ({
+                ...current,
+                destinationFilter: nextValue,
+              }))
+            }
+            options={destinationOptions}
+            value={draftFilters.destinationFilter}
+          />
+        ) : null}
+
+        <DealsSelect
+          label={t("deals.departureDay")}
+          onChange={(nextValue) =>
+            setDraftFilters((current) => ({
+              ...current,
+              departureWeekdayFilter: nextValue as DepartureWeekdayFilter,
+            }))
+          }
+          options={departureWeekdayOptions}
+          value={draftFilters.departureWeekdayFilter}
+        />
+
+        <DealsDatePicker
+          dateFrom={draftFilters.dateFrom}
+          dateTo={draftFilters.dateTo}
+          label={t("common.when")}
+          onChange={(selection) =>
+            setDraftFilters((current) => ({
+              ...current,
+              ...selection,
+            }))
+          }
+          presetOptions={resultsWhenOptions}
+          value={draftFilters.whenFilter}
+        />
+
+        <DealsSelect
+          label={t("common.tripType")}
+          onChange={(nextValue) =>
+            setDraftFilters((current) => ({
+              ...current,
+              tripFilter: nextValue as TripFilter,
+            }))
+          }
+          options={resultsTripOptions}
+          value={draftFilters.tripFilter}
+        />
+
+        <DealsSelect
+          label={t("deals.tripDuration")}
+          onChange={(nextValue) =>
+            setDraftFilters((current) => ({
+              ...current,
+              durationFilter: nextValue as DurationFilter,
+            }))
+          }
+          options={resultsDurationOptions}
+          value={draftFilters.durationFilter}
+        />
+      </div>,
+      document.body,
+    );
+  };
+
   if (!data.configured || !data.schemaReady) {
     return (
       <section className="section">
@@ -3961,7 +4102,7 @@ export function PublicDealsExplorer({
 
             <section className="deals-search-layout">
               <aside className="deals-search-layout__filters">
-                <div className="deals-search-sidebar">
+                <div className="deals-search-sidebar" ref={fullSidebarRef}>
                   <MonthlyPriceCard
                     destinationCity={lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
                     destinationSlug={toDestinationSlug(
@@ -4107,6 +4248,7 @@ export function PublicDealsExplorer({
                     </div>
                   </div>
                 </div>
+                {renderCompactSidebar(false)}
               </aside>
 
               <div className="deals-search-layout__results">
@@ -4188,7 +4330,7 @@ export function PublicDealsExplorer({
         <div className="deals-search-page-card">
           <section className="deals-search-layout">
             <aside className="deals-search-layout__filters">
-              <div className="deals-search-sidebar">
+              <div className="deals-search-sidebar" ref={fullSidebarRef}>
               <div className="deals-search-sidebar__section">
                 <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
               </div>
@@ -4335,8 +4477,9 @@ export function PublicDealsExplorer({
                   ))}
                 </div>
               </div>
-            </div>
-          </aside>
+              </div>
+              {renderCompactSidebar(true)}
+            </aside>
 
           <div className="deals-search-layout__results">
             <section className="deals-explorer__featured">
