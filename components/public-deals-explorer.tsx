@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -52,6 +53,11 @@ import {
   type WhenFilter,
 } from "@/lib/public-deals-search";
 import { formatStayBucketLabel } from "@/lib/stay-buckets";
+
+const PublicDealsMap = dynamic(
+  () => import("@/components/public-deals-map").then((module) => module.PublicDealsMap),
+  { ssr: false },
+);
 
 type PublicDealsExplorerProps = {
   data: PublicDealsPageData;
@@ -4075,6 +4081,10 @@ export function PublicDealsExplorer({
                   </div>
 
                   <div className="deals-search-sidebar__section">
+                    <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
+                  </div>
+
+                  <div className="deals-search-sidebar__section">
                     <p className="deals-explorer__kicker">{t("deals.quickFilters")}</p>
                     <div className="deals-search-sidebar__chips">
                       {SEARCH_QUICK_CHIPS.map((chip) => (
@@ -4297,6 +4307,10 @@ export function PublicDealsExplorer({
                   />
                   <span>{t("common.directOnly")}</span>
                 </label>
+              </div>
+
+              <div className="deals-search-sidebar__section">
+                <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
               </div>
 
               <div className="deals-search-sidebar__section">
