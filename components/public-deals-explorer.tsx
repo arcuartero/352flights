@@ -4081,10 +4081,6 @@ export function PublicDealsExplorer({
                   </div>
 
                   <div className="deals-search-sidebar__section">
-                    <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
-                  </div>
-
-                  <div className="deals-search-sidebar__section">
                     <p className="deals-explorer__kicker">{t("deals.quickFilters")}</p>
                     <div className="deals-search-sidebar__chips">
                       {SEARCH_QUICK_CHIPS.map((chip) => (
@@ -4193,6 +4189,10 @@ export function PublicDealsExplorer({
           <section className="deals-search-layout">
             <aside className="deals-search-layout__filters">
               <div className="deals-search-sidebar">
+              <div className="deals-search-sidebar__section">
+                <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
+              </div>
+
               <div className="deals-search-sidebar__section">
                 <div className="deals-control deals-control--static deals-control--origin-fixed">
                   <span className="deals-control__label-with-icon">
@@ -4307,10 +4307,6 @@ export function PublicDealsExplorer({
                   />
                   <span>{t("common.directOnly")}</span>
                 </label>
-              </div>
-
-              <div className="deals-search-sidebar__section">
-                <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
               </div>
 
               <div className="deals-search-sidebar__section">
