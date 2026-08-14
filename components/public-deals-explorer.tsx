@@ -12,7 +12,7 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { Info, Plane } from "lucide-react";
+import { Info, MapPin, Plane } from "lucide-react";
 
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { NewsletterForm } from "@/components/newsletter-form";
@@ -3967,7 +3967,10 @@ export function PublicDealsExplorer({
                   <div className="deals-search-sidebar__section">
                     <div className="deals-search-fixed-route">
                       <div className="deals-control deals-control--static deals-control--origin-fixed">
-                        <span>{t("deals.searchFrom")}</span>
+                        <span className="deals-control__label-with-icon">
+                          <MapPin aria-hidden="true" />
+                          {t("deals.searchFrom")}
+                        </span>
                         <strong>Luxembourg</strong>
                       </div>
                       <div className="deals-search-fixed-route__destination">
@@ -4028,26 +4031,30 @@ export function PublicDealsExplorer({
                       value={draftFilters.durationFilter}
                     />
 
-                    <PublicDealsPriceRange
-                      bounds={priceBounds}
-                      label={t("common.priceRange")}
-                      legacyMaximum={legacyPriceMaximum}
-                      onChange={updatePriceRange}
-                      priceMax={draftFilters.priceMax}
-                      priceMin={draftFilters.priceMin}
-                    />
+                    <div className="deals-search-sidebar__filter-group">
+                      <PublicDealsPriceRange
+                        bounds={priceBounds}
+                        label={t("common.priceRange")}
+                        legacyMaximum={legacyPriceMaximum}
+                        onChange={updatePriceRange}
+                        priceMax={draftFilters.priceMax}
+                        priceMin={draftFilters.priceMin}
+                      />
+                    </div>
 
-                    <DealsAirlineFilter
-                      excludedAirlines={draftFilters.excludedAirlines}
-                      onChange={(excludedAirlines) =>
-                        setDraftFilters((current) => ({
-                          ...current,
-                          excludedAirlines,
-                        }))
-                      }
-                      options={airlineOptions}
-                      t={t}
-                    />
+                    <div className="deals-search-sidebar__filter-group">
+                      <DealsAirlineFilter
+                        excludedAirlines={draftFilters.excludedAirlines}
+                        onChange={(excludedAirlines) =>
+                          setDraftFilters((current) => ({
+                            ...current,
+                            excludedAirlines,
+                          }))
+                        }
+                        options={airlineOptions}
+                        t={t}
+                      />
+                    </div>
 
                     <label
                       className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
@@ -4178,7 +4185,10 @@ export function PublicDealsExplorer({
               <div className="deals-search-sidebar">
               <div className="deals-search-sidebar__section">
                 <div className="deals-control deals-control--static deals-control--origin-fixed">
-                  <span>{t("deals.searchFrom")}</span>
+                  <span className="deals-control__label-with-icon">
+                    <MapPin aria-hidden="true" />
+                    {t("deals.searchFrom")}
+                  </span>
                   <strong>Luxembourg</strong>
                 </div>
               </div>
@@ -4246,26 +4256,30 @@ export function PublicDealsExplorer({
                   value={draftFilters.durationFilter}
                 />
 
-                <PublicDealsPriceRange
-                  bounds={priceBounds}
-                  label={t("common.priceRange")}
-                  legacyMaximum={legacyPriceMaximum}
-                  onChange={updatePriceRange}
-                  priceMax={draftFilters.priceMax}
-                  priceMin={draftFilters.priceMin}
-                />
+                <div className="deals-search-sidebar__filter-group">
+                  <PublicDealsPriceRange
+                    bounds={priceBounds}
+                    label={t("common.priceRange")}
+                    legacyMaximum={legacyPriceMaximum}
+                    onChange={updatePriceRange}
+                    priceMax={draftFilters.priceMax}
+                    priceMin={draftFilters.priceMin}
+                  />
+                </div>
 
-                <DealsAirlineFilter
-                  excludedAirlines={draftFilters.excludedAirlines}
-                  onChange={(excludedAirlines) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      excludedAirlines,
-                    }))
-                  }
-                  options={airlineOptions}
-                  t={t}
-                />
+                <div className="deals-search-sidebar__filter-group">
+                  <DealsAirlineFilter
+                    excludedAirlines={draftFilters.excludedAirlines}
+                    onChange={(excludedAirlines) =>
+                      setDraftFilters((current) => ({
+                        ...current,
+                        excludedAirlines,
+                      }))
+                    }
+                    options={airlineOptions}
+                    t={t}
+                  />
+                </div>
 
                 <label
                   className={`deals-toggle deals-toggle--untitled-field${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}

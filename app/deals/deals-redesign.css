@@ -181,6 +181,27 @@ body:has(.page-shell--deals-city)::before {
   border-top-color: rgba(29, 39, 51, 0.09);
 }
 
+.deals-redesign .deals-control__label-with-icon {
+  display: flex;
+  gap: 0.42rem;
+  align-items: center;
+}
+
+.deals-redesign .deals-control__label-with-icon svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--v2-accent);
+  stroke-width: 2;
+}
+
+.deals-redesign .deals-search-sidebar__filter-group {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(29, 39, 51, 0.09);
+}
+
 /* ============================================================
    City page — light editorial hero (copy left, contained photo
    right with a floating "from" card), then a white results card.
