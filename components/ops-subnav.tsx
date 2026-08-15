@@ -25,6 +25,10 @@ const links = [
     label: "Email Campaigns",
   },
   {
+    href: "/ops/tiktok-json",
+    label: "TikTok JSON",
+  },
+  {
     href: "/ops/active-routes",
     label: "Active Routes",
   },
