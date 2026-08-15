@@ -148,6 +148,7 @@ function mergeLiveRun(persisted: DateScanRun, live: DateScanRun): DateScanRun {
 
   return {
     ...persisted,
+    scannerSource: live.scannerSource,
     status: "running",
     completedAt: null,
     durationMs: null,
@@ -215,9 +216,14 @@ function reconcileLiveRun(
   const liveStartedAt = validTimestamp(liveRun.startedAt);
   const matchingIndex = runs.findIndex((run) => {
     const runStartedAt = validTimestamp(run.startedAt);
+    const sameScanner =
+      run.scannerSource === liveRun.scannerSource ||
+      // Older VPS discovery scripts used the default `local` label even though
+      // the control agent correctly reported that the process was on the VPS.
+      (liveRun.scannerSource === "vps" && run.scannerSource === "local");
     return (
       run.status === "running" &&
-      run.scannerSource === liveRun.scannerSource &&
+      sameScanner &&
       liveStartedAt !== null &&
       runStartedAt !== null &&
       Math.abs(runStartedAt - liveStartedAt) <= 120_000

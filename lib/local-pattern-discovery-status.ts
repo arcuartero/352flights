@@ -358,7 +358,27 @@ async function readTotalRoutes(scannerRoot: string) {
   try {
     const contents = await readFile(path.join(scannerRoot, "data", "lux-routes.json"), "utf-8");
     const payload = JSON.parse(contents);
-    return Array.isArray(payload) ? payload.length : null;
+    if (!Array.isArray(payload)) {
+      return null;
+    }
+
+    const routeIdentities = new Set<string>();
+    for (const item of payload) {
+      if (
+        !item ||
+        typeof item !== "object" ||
+        typeof item.origin_airport !== "string" ||
+        typeof item.destination_airport !== "string" ||
+        typeof item.max_stops !== "string"
+      ) {
+        continue;
+      }
+      routeIdentities.add(
+        `${item.origin_airport}:${item.destination_airport}:${item.max_stops}`,
+      );
+    }
+
+    return routeIdentities.size;
   } catch {
     return null;
   }

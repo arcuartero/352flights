@@ -85,7 +85,7 @@ class ScannerConfig:
         os.getenv("SCANNER_SERVICE_CALENDAR_MONTH_HORIZON", "9")
     )
     service_calendar_fresh_hours: int = int(
-        os.getenv("SCANNER_SERVICE_CALENDAR_FRESH_HOURS", "48")
+        os.getenv("SCANNER_SERVICE_CALENDAR_FRESH_HOURS", "168")
     )
     service_calendar_routing: str = os.getenv(
         "SCANNER_SERVICE_CALENDAR_ROUTING",

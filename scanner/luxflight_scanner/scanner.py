@@ -76,10 +76,31 @@ def service_calendar_is_fresh(
             return False
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-        if parsed < cutoff:
+        if parsed <= cutoff:
             return False
 
     return True
+
+
+def service_calendar_is_recent_success(
+    service_months: list[dict[str, Any]],
+    required_month_starts: Iterable[date],
+    *,
+    fresh_hours: int,
+    now: datetime | None = None,
+) -> bool:
+    if not service_calendar_is_fresh(
+        service_months,
+        required_month_starts,
+        fresh_hours=fresh_hours,
+        now=now,
+    ):
+        return False
+
+    return any(
+        isinstance(row.get("departure_dates"), list) and bool(row["departure_dates"])
+        for row in service_months
+    )
 
 
 def load_routes(config: ScannerConfig) -> list[RouteSeed]:
@@ -3234,7 +3255,7 @@ class LuxFlightScanner:
                 existing_service_months = self.store.route_service_months(route_id, service_routing)
                 if (
                     only_missing_service_months
-                    and service_calendar_is_fresh(
+                    and service_calendar_is_recent_success(
                         existing_service_months,
                         self._service_calendar_months(),
                         fresh_hours=self.config.service_calendar_fresh_hours,
@@ -3249,8 +3270,8 @@ class LuxFlightScanner:
                     )
                     self._log_progress(
                         f"Pattern discovery skipped: {route.origin_airport} -> {route.destination_airport} "
-                        f"already has a complete service calendar checked within the last "
-                        f"{self.config.service_calendar_fresh_hours} hours"
+                        "already completed successfully within the last "
+                        f"{self.config.service_calendar_fresh_hours / 24:g} days"
                     )
                     self._mark_pattern_route_completed(route)
                     self._pattern_discovery_checkpoint()
