@@ -65,6 +65,7 @@ fi
 # Date Scanner runs must be written directly to Supabase so the live history
 # survives VPS restarts and is visible in /ops/dates-scanner.
 export SCANNER_STORAGE_MODE="supabase"
+export SCANNER_RUN_SOURCE="vps"
 
 UV_BIN="$(command -v uv || true)"
 if [[ -z "$UV_BIN" ]]; then
