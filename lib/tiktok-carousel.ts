@@ -1,7 +1,9 @@
 import { toDestinationSlug } from "@/lib/destination-slugs";
 
 export const TIKTOK_TEMPLATE = "cheap-flights-tiktok" as const;
+export const TIKTOK_TRAVEL_OFFER_TEMPLATE = "travel-offer" as const;
 export const TIKTOK_LANGUAGE = "es" as const;
+export const TIKTOK_TRAVEL_OFFER_COUNT = 5;
 
 export type TikTokSourceOffer = {
   id: number;
@@ -12,6 +14,7 @@ export type TikTokSourceOffer = {
   returnDate: string;
   price: number;
   currency: string;
+  maxStops: string;
   scannedAt: string;
 };
 
@@ -95,6 +98,42 @@ export type TikTokGenerationResult = {
   }>;
 };
 
+export type TikTokTravelOfferOptions = Pick<
+  TikTokGenerationOptions,
+  "originAirport" | "startMonth" | "slideCount" | "now"
+>;
+
+export type TikTokTravelOfferSlide = {
+  title: string;
+  country: string;
+  origin: string;
+  destination: string;
+  outboundDate: string;
+  returnDate: string;
+  duration: string;
+  direct: boolean;
+  price: number;
+  currency: string;
+  cta: "Ver oferta";
+};
+
+export type TikTokTravelOfferDocument = {
+  template: typeof TIKTOK_TRAVEL_OFFER_TEMPLATE;
+  slides: TikTokTravelOfferSlide[];
+};
+
+export type TikTokTravelOfferGenerationResult = {
+  document: TikTokTravelOfferDocument;
+  warnings: string[];
+  preview: Array<{
+    title: string;
+    country: string;
+    dates: string;
+    price: number;
+    currency: string;
+  }>;
+};
+
 const SPANISH_MONTHS = [
   "Enero",
   "Febrero",
@@ -125,8 +164,93 @@ const SPANISH_SHORT_MONTHS = [
   "dic",
 ] as const;
 
+const TRAVEL_OFFER_SHORT_MONTHS = [
+  "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic",
+] as const;
+
 const ORIGIN_PRESENTATION: Record<string, TikTokOrigin> = {
   LUX: { airport: "LUX", city: "Luxemburgo", flag: "🇱🇺" },
+};
+
+const COUNTRY_AIRPORTS: Record<string, readonly string[]> = {
+  Alemania: ["BER", "MUC", "FRA", "HAM", "HDF", "GWT"],
+  Austria: ["VIE"],
+  Bulgaria: ["BOJ", "VAR"],
+  "Cabo Verde": ["BVC", "RAI", "SID", "VXE"],
+  Chequia: ["PRG"],
+  China: ["CGO"],
+  Croacia: ["ZAD", "BWK", "DBV"],
+  Dinamarca: ["CPH"],
+  Egipto: ["HRG", "RMF"],
+  Eslovenia: ["LJU"],
+  España: [
+    "BCN", "MAD", "PMI", "AGP", "ALC", "SVQ", "VLC", "IBZ", "TFS", "LPA",
+    "XRY", "LEI", "BIO", "FUE", "GRO", "ACE", "MAH", "SPC",
+  ],
+  "Estados Unidos": ["JFK", "EWR"],
+  Finlandia: ["HEL", "RVN"],
+  Francia: [
+    "CDG", "NCE", "MRS", "TLS", "FSC", "CLY", "AJA", "BIA", "BIQ", "BOD", "MPL", "TLN",
+  ],
+  Grecia: ["ATH", "KGS", "CFU", "CHQ", "HER", "RHO", "GPA", "SKG", "ZTH"],
+  Hungría: ["BUD"],
+  Irlanda: ["DUB"],
+  Italia: [
+    "MXP", "LIN", "BGY", "FCO", "RMI", "PSR", "BRI", "BLQ", "BZO", "BDS",
+    "CAG", "CTA", "FLR", "SUF", "NAP", "OLB", "PMO", "QSR", "VCE",
+  ],
+  Japón: ["NRT"],
+  Malta: ["MLA"],
+  Marruecos: ["RAK", "AGA"],
+  Montenegro: ["TIV"],
+  Noruega: ["OSL"],
+  "Países Bajos": ["AMS"],
+  Polonia: ["KRK", "WAW"],
+  Portugal: ["LIS", "OPO", "FAO", "FNC", "PXO"],
+  "Reino Unido": ["LHR", "LGW", "STN", "LCY", "EDI", "MAN"],
+  Rumanía: ["OTP"],
+  Senegal: ["DSS"],
+  Suecia: ["ARN"],
+  Suiza: ["ZRH", "GVA"],
+  Túnez: ["TUN", "DJE", "NBE", "MIR"],
+  Turquía: ["IST", "AYT", "ADB"],
+  "Emiratos Árabes Unidos": ["DXB", "DWC", "AUH"],
+};
+
+const COUNTRY_BY_AIRPORT = new Map(
+  Object.entries(COUNTRY_AIRPORTS).flatMap(([country, airports]) =>
+    airports.map((airport) => [airport, country] as const),
+  ),
+);
+
+const SPANISH_CITY_NAMES: Record<string, string> = {
+  athens: "Atenas",
+  bologna: "Bolonia",
+  bordeaux: "Burdeos",
+  bucharest: "Bucarest",
+  copenhagen: "Copenhague",
+  edinburgh: "Edimburgo",
+  florence: "Florencia",
+  hamburg: "Hamburgo",
+  "lamezia terme": "Lamezia Terme",
+  lisbon: "Lisboa",
+  london: "Londres",
+  marseille: "Marsella",
+  milan: "Milán",
+  munich: "Múnich",
+  naples: "Nápoles",
+  "new york": "Nueva York",
+  paris: "París",
+  porto: "Oporto",
+  prague: "Praga",
+  rome: "Roma",
+  seville: "Sevilla",
+  thessaloniki: "Tesalónica",
+  tokyo: "Tokio",
+  tunis: "Túnez",
+  venice: "Venecia",
+  vienna: "Viena",
+  warsaw: "Varsovia",
 };
 
 const TITLE_STYLE: TextStyle = {
@@ -343,12 +467,126 @@ function formatShortDate(value: string) {
   return `${parsed.day} ${SPANISH_SHORT_MONTHS[parsed.month - 1]}`;
 }
 
+function formatTravelOfferDate(value: string) {
+  const parsed = parseDateKey(value);
+  if (!parsed) return value;
+  return `${parsed.day} ${TRAVEL_OFFER_SHORT_MONTHS[parsed.month - 1]}`;
+}
+
 function currencySymbol(currency: string) {
   const normalized = currency.trim().toUpperCase();
   if (normalized === "EUR" || normalized === "€") return "€";
   if (normalized === "USD" || normalized === "$") return "$";
   if (normalized === "GBP" || normalized === "£") return "£";
   return currency.trim();
+}
+
+function uniquenessKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLocaleLowerCase("es");
+}
+
+function destinationCountry(offer: TikTokSourceOffer) {
+  return COUNTRY_BY_AIRPORT.get(offer.destinationAirport.trim().toUpperCase())
+    ?? "País no identificado";
+}
+
+function destinationTitle(city: string) {
+  const trimmed = city.trim();
+  return SPANISH_CITY_NAMES[uniquenessKey(trimmed)] ?? trimmed;
+}
+
+function formatDuration(departureDate: string, returnDate: string) {
+  const departure = parseDateKey(departureDate);
+  const arrival = parseDateKey(returnDate);
+  if (!departure || !arrival) return "";
+  const dayCount = Math.round(
+    (arrival.date.getTime() - departure.date.getTime()) / 86_400_000,
+  ) + 1;
+  return `${dayCount} ${dayCount === 1 ? "día" : "días"}`;
+}
+
+export function selectUniqueTravelOffers(
+  offers: TikTokSourceOffer[],
+  originAirport: string,
+  now = new Date(),
+  limit = TIKTOK_TRAVEL_OFFER_COUNT,
+) {
+  const normalizedOrigin = originAirport.trim().toUpperCase();
+  const todayKey = getTodayKey(now);
+  const selected: TikTokSourceOffer[] = [];
+  const cities = new Set<string>();
+  const countries = new Set<string>();
+
+  for (const offer of dedupeAndSort(offers)) {
+    if (!isValidOffer(offer, normalizedOrigin, todayKey)) continue;
+    const cityKey = uniquenessKey(offer.destinationCity);
+    const countryKey = uniquenessKey(destinationCountry(offer));
+    if (cities.has(cityKey) || countries.has(countryKey)) continue;
+    cities.add(cityKey);
+    countries.add(countryKey);
+    selected.push(offer);
+    if (selected.length === limit) break;
+  }
+
+  return selected;
+}
+
+export function generateTikTokTravelOffers(
+  sourceOffers: TikTokSourceOffer[],
+  options: TikTokTravelOfferOptions,
+): TikTokTravelOfferGenerationResult {
+  const dateRange = getTikTokCarouselDateRange(
+    options.startMonth,
+    options.slideCount,
+    options.now,
+  );
+  const offersInRange = sourceOffers.filter(
+    (offer) =>
+      offer.departureDate >= dateRange.fromDate &&
+      offer.departureDate < dateRange.toDateExclusive,
+  );
+  const selected = selectUniqueTravelOffers(
+    offersInRange,
+    options.originAirport,
+    options.now,
+  );
+  const warnings = selected.length < TIKTOK_TRAVEL_OFFER_COUNT
+    ? [
+        `Solo hay ${selected.length} ofertas válidas sin repetir ciudad ni país de las ${TIKTOK_TRAVEL_OFFER_COUNT} solicitadas.`,
+      ]
+    : [];
+  const slides: TikTokTravelOfferSlide[] = selected.map((offer) => ({
+    title: destinationTitle(offer.destinationCity),
+    country: destinationCountry(offer),
+    origin: offer.originAirport.trim().toUpperCase(),
+    destination: offer.destinationAirport.trim().toUpperCase(),
+    outboundDate: formatTravelOfferDate(offer.departureDate),
+    returnDate: formatTravelOfferDate(offer.returnDate),
+    duration: formatDuration(offer.departureDate, offer.returnDate),
+    direct: offer.maxStops.trim().toUpperCase() === "NON_STOP",
+    price: Math.round(offer.price),
+    currency: currencySymbol(offer.currency),
+    cta: "Ver oferta",
+  }));
+
+  return {
+    document: {
+      template: TIKTOK_TRAVEL_OFFER_TEMPLATE,
+      slides,
+    },
+    warnings,
+    preview: slides.map((slide) => ({
+      title: slide.title,
+      country: slide.country,
+      dates: `${slide.outboundDate} → ${slide.returnDate}`,
+      price: slide.price,
+      currency: slide.currency,
+    })),
+  };
 }
 
 function chooseSlideImage(

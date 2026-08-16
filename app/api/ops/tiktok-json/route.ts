@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { ensureOpsAuthorized } from "@/lib/ops-auth";
-import { buildTikTokCarousel } from "@/lib/tiktok-carousel-data";
+import { buildTikTokCarousel, buildTikTokTravelOffers } from "@/lib/tiktok-carousel-data";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const requestSchema = z.object({
+  format: z.enum(["travel-offer-1", "travel-offer-2"]).default("travel-offer-1"),
   originAirport: z.string().trim().min(3).max(4).default("LUX"),
   startMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
   slideCount: z.coerce.number().int().min(1).max(12).default(5),
@@ -20,9 +21,11 @@ export async function POST(request: Request) {
 
   try {
     const input = requestSchema.parse(await request.json());
-    const result = await buildTikTokCarousel(input);
+    const result = input.format === "travel-offer-2"
+      ? await buildTikTokTravelOffers(input)
+      : await buildTikTokCarousel(input);
     return NextResponse.json(
-      { ok: true, ...result },
+      { ok: true, format: input.format, ...result },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   } catch (error) {
