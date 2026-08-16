@@ -659,6 +659,7 @@ export function V2Landing({
             }
             priceMax={filters.priceMax}
             priceMin={filters.priceMin}
+            showHistogram
           />
           <label className="v2-search__toggle">
             <input
