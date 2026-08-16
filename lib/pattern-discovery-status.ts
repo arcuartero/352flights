@@ -35,6 +35,48 @@ function latestRunJournal(status: VpsScannerAgentStatus) {
   return startIndex >= 0 ? status.journal.slice(startIndex) : status.journal;
 }
 
+function serviceExitStatus(status: VpsScannerAgentStatus) {
+  const raw = status.service.ExecMainStatus;
+  if (!raw || raw === "n/a") return null;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function latestFailureDetail(status: VpsScannerAgentStatus) {
+  const scannerLines = status.latestScannerLog?.tail ?? [];
+  const journalLines = latestRunJournal(status).map(journalMessage);
+  const candidates = [...scannerLines, ...journalLines]
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && line.length <= 800)
+    .filter((line) => !line.startsWith("Traceback (most recent call last)"))
+    .filter((line) => !/^File \".*\", line \d+/.test(line))
+    .filter((line) => !line.startsWith("VPS route pattern discovery failed with status "))
+    .filter((line) => !line.includes("Main process exited, code=exited"))
+    .filter((line) => !line.includes("Failed with result 'exit-code'"));
+  const diagnostic = candidates.findLast((line) =>
+    /(error|exception|failed|timeout|timed out|killed|memory|keyboardinterrupt|permission|denied|not found|no space)/i.test(line),
+  );
+  return diagnostic?.replace(/^\[[^\]]+\]\s*/, "") ?? null;
+}
+
+function stoppedFailureReason(status: VpsScannerAgentStatus) {
+  const result = status.service.Result?.trim() || "unknown";
+  const exitStatus = serviceExitStatus(status);
+  const detail = latestFailureDetail(status);
+
+  if (exitStatus === 137) {
+    return `El VPS terminó el Date Scanner por falta de memoria o una señal de apagado (exit 137).${detail ? ` Último error: ${detail}` : ""}`;
+  }
+  if (exitStatus === 143 || exitStatus === 130) {
+    return `El Date Scanner fue detenido mientras estaba en curso (exit ${exitStatus}).${detail ? ` Último mensaje: ${detail}` : ""}`;
+  }
+  if (exitStatus === 203) {
+    return "systemd no pudo ejecutar el comando del Date Scanner (203/EXEC). Comprueba la ruta y los permisos del script.";
+  }
+
+  return `El servicio del VPS terminó con ${result}${exitStatus === null ? "" : ` (exit ${exitStatus})`}.${detail ? ` Último error: ${detail}` : ""}`;
+}
+
 function toRemoteLogLine(
   line: string,
   index: number,
@@ -167,8 +209,9 @@ function mergeStoppedVpsStatus(
     latestFinishedAt:
       result === "success" ? exitAt ?? persisted.latestFinishedAt : persisted.latestFinishedAt,
     latestFailedAt: failedAt ?? persisted.latestFailedAt,
+    failureReason: failedAt ? stoppedFailureReason(remote) : null,
     latestActivity: failedAt
-      ? `VPS discovery stopped with result ${remote.service.Result}.`
+      ? stoppedFailureReason(remote)
       : "VPS discovery is not running.",
     liveTotals: null,
   };

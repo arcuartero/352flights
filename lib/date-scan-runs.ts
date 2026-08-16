@@ -197,7 +197,7 @@ function finishStaleRun(
     error:
       run.error ??
       (failedDuringThisRun
-        ? "El servicio VPS terminó con un error antes de completar esta ejecución."
+        ? status.failureReason ?? "El servicio VPS terminó con un error antes de completar esta ejecución."
         : nextRunStartedAt
           ? "Otra ejecución del Date Scanner empezó después; esta entrada anterior se cerró automáticamente."
           : "El servicio VPS ya no está activo; esta ejecución quedó detenida."),
