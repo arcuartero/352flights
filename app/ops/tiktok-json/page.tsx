@@ -1,6 +1,7 @@
 import { OpsSubnav } from "@/components/ops-subnav";
 import { TikTokJsonGenerator } from "@/components/tiktok-json-generator";
-import { buildTikTokCarousel } from "@/lib/tiktok-carousel-data";
+import { generateTikTokCarousel, generateTikTokTravelOffers } from "@/lib/tiktok-carousel";
+import { loadTikTokCarouselSource } from "@/lib/tiktok-carousel-data";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +19,25 @@ function currentMonthKey() {
 export default async function OpsTikTokJsonPage() {
   const initialMonth = currentMonthKey();
   let initialData = null;
+  let initialTravelOfferData = null;
   let initialError: string | null = null;
   try {
-    initialData = await buildTikTokCarousel({
+    const options = {
       originAirport: "LUX",
       startMonth: initialMonth,
       slideCount: 5,
       offersPerSlide: 3,
-    });
+    };
+    const source = await loadTikTokCarouselSource(options);
+    if (!source.configured) throw new Error("Supabase no está configurado.");
+    initialData = {
+      ...generateTikTokCarousel(source.offers, source.photoUrls, options),
+      origins: source.origins,
+    };
+    initialTravelOfferData = {
+      ...generateTikTokTravelOffers(source.offers, options),
+      origins: source.origins,
+    };
   } catch (error) {
     initialError = error instanceof Error ? error.message : "No se pudieron cargar las ofertas.";
   }
@@ -40,7 +52,7 @@ export default async function OpsTikTokJsonPage() {
               <span className="ops-panel__eyebrow">Contenido social</span>
               <h1>TikTok JSON</h1>
               <p>
-                Genera carruseles mensuales con ofertas publicables y fotos reales de 352 Flights.
+                Elige un formato y genera JSON con las mejores ofertas publicables de 352 Flights.
               </p>
             </div>
           </div>
@@ -48,6 +60,7 @@ export default async function OpsTikTokJsonPage() {
             initialData={initialData}
             initialError={initialError}
             initialMonth={initialMonth}
+            initialTravelOfferData={initialTravelOfferData}
           />
         </section>
       </div>

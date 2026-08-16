@@ -5,10 +5,12 @@ import { hasSupabaseAdminEnv } from "@/lib/env";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import {
   generateTikTokCarousel,
+  generateTikTokTravelOffers,
   getTikTokCarouselDateRange,
   resolveTikTokOrigin,
   type TikTokGenerationOptions,
   type TikTokSourceOffer,
+  type TikTokTravelOfferOptions,
 } from "@/lib/tiktok-carousel";
 
 type RouteRow = {
@@ -25,10 +27,16 @@ type SnapshotRow = {
   currency: string;
   departure_date: string;
   return_date: string | null;
+  max_stops: string;
   scanned_at: string;
 };
 
 const PAGE_SIZE = 1000;
+
+type TikTokSourceOptions = Pick<
+  TikTokGenerationOptions,
+  "originAirport" | "startMonth" | "slideCount" | "now"
+>;
 
 async function fetchEligibleSnapshots(fromDate: string, toDateExclusive: string) {
   const supabase = getSupabaseAdminClient();
@@ -36,7 +44,7 @@ async function fetchEligibleSnapshots(fromDate: string, toDateExclusive: string)
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from("price_snapshots")
-      .select("id,route_id,price,currency,departure_date,return_date,scanned_at")
+      .select("id,route_id,price,currency,departure_date,return_date,max_stops,scanned_at")
       .eq("metadata->>public_fare_eligible", "true")
       .gte("departure_date", fromDate)
       .lt("departure_date", toDateExclusive)
@@ -51,7 +59,7 @@ async function fetchEligibleSnapshots(fromDate: string, toDateExclusive: string)
   return rows;
 }
 
-export async function loadTikTokCarouselSource(options: TikTokGenerationOptions) {
+export async function loadTikTokCarouselSource(options: TikTokSourceOptions) {
   if (!hasSupabaseAdminEnv()) {
     return { configured: false, origins: [], offers: [], photoUrls: {} };
   }
@@ -86,6 +94,7 @@ export async function loadTikTokCarouselSource(options: TikTokGenerationOptions)
       returnDate: snapshot.return_date,
       price: Number(snapshot.price),
       currency: snapshot.currency,
+      maxStops: snapshot.max_stops,
       scannedAt: snapshot.scanned_at,
     }];
   });
@@ -104,6 +113,17 @@ export async function buildTikTokCarousel(options: TikTokGenerationOptions) {
   }
   return {
     ...generateTikTokCarousel(source.offers, source.photoUrls, options),
+    origins: source.origins,
+  };
+}
+
+export async function buildTikTokTravelOffers(options: TikTokTravelOfferOptions) {
+  const source = await loadTikTokCarouselSource(options);
+  if (!source.configured) {
+    throw new Error("Supabase no está configurado.");
+  }
+  return {
+    ...generateTikTokTravelOffers(source.offers, options),
     origins: source.origins,
   };
 }
