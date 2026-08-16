@@ -26,6 +26,7 @@ export type LocalPatternDiscoveryStatus = {
   startedAt: string | null;
   latestFinishedAt: string | null;
   latestFailedAt: string | null;
+  failureReason: string | null;
   currentRouteLabel: string | null;
   latestActivity: string | null;
   recentLogLines: LocalPatternDiscoveryLogLine[];

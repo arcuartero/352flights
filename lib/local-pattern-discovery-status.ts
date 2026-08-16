@@ -65,6 +65,7 @@ function unavailableStatus(): LocalPatternDiscoveryStatus {
     startedAt: null,
     latestFinishedAt: null,
     latestFailedAt: null,
+    failureReason: null,
     currentRouteLabel: null,
     latestActivity: null,
     recentLogLines: [],
@@ -232,6 +233,7 @@ async function getSupabasePatternDiscoveryStatus() {
     startedAt: null,
     latestFinishedAt: hasLatestActivity ? new Date(latestActivityMs).toISOString() : null,
     latestFailedAt: null,
+    failureReason: null,
     currentRouteLabel: latestSummary
       ? remoteRouteLabel(routesById.get(latestSummary.routeId))
       : null,
@@ -659,6 +661,7 @@ export async function getLocalPatternDiscoveryStatus(): Promise<LocalPatternDisc
       startedAt: startEvent?.timestampIso ?? null,
       latestFinishedAt: finishEvent?.timestampIso ?? null,
       latestFailedAt: failedEvent?.timestampIso ?? null,
+      failureReason: failedEvent?.message ?? null,
       currentRouteLabel: null,
       latestActivity: finishEvent?.message ?? failedEvent?.message ?? startEvent?.message ?? null,
       recentLogLines: collectRecentLogLines(mergedEvents, 120),
@@ -710,6 +713,7 @@ export async function getLocalPatternDiscoveryStatus(): Promise<LocalPatternDisc
     startedAt: startEvent?.timestampIso ?? null,
     latestFinishedAt: finishEvent?.timestampIso ?? null,
     latestFailedAt: failedEvent?.timestampIso ?? null,
+    failureReason: null,
     currentRouteLabel: routeStarts.length
       ? extractCurrentRouteLabel(routeStarts.at(-1)!.message)
       : scopeEvent
