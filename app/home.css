@@ -824,6 +824,7 @@ body:has(.v2) .scroll-top-button {
 
 .v2-ticker__group {
   display: flex;
+  flex: 0 0 auto;
   margin: 0;
   padding: 0;
   list-style: none;

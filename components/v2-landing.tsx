@@ -56,6 +56,8 @@ const RHYTHMS = [
   },
 ];
 
+const MINIMUM_TICKER_ITEMS = 16;
+
 type Testimonial = {
   quote: string;
   name: string;
@@ -403,8 +405,15 @@ export function V2Landing({
   const { t } = useI18n();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const heroMediaRef = useRef<HTMLDivElement | null>(null);
+  const tickerRef = useRef<HTMLElement | null>(null);
+  const tickerGroupRef = useRef<HTMLUListElement | null>(null);
   const [filters, setFilters] = useState<DealSearchFilters>(DEFAULT_DEAL_SEARCH_FILTERS);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const [tickerRepeats, setTickerRepeats] = useState(() =>
+    recentDrops.length > 0
+      ? Math.max(1, Math.ceil(MINIMUM_TICKER_ITEMS / recentDrops.length))
+      : 1,
+  );
   const now = useMemo(() => new Date(), []);
 
   useReveal(rootRef);
@@ -503,6 +512,46 @@ export function V2Landing({
 
     setFilters((current) => ({ ...current, destinationFilter: "any" }));
   }, [destinationOptions, filters.destinationFilter]);
+
+  useEffect(() => {
+    setTickerRepeats(
+      recentDrops.length > 0
+        ? Math.max(1, Math.ceil(MINIMUM_TICKER_ITEMS / recentDrops.length))
+        : 1,
+    );
+  }, [recentDrops.length]);
+
+  const tickerFares = useMemo(
+    () =>
+      recentDrops.length > 0
+        ? Array.from(
+            { length: recentDrops.length * tickerRepeats },
+            (_, index) => recentDrops[index % recentDrops.length],
+          )
+        : [],
+    [recentDrops, tickerRepeats],
+  );
+
+  useEffect(() => {
+    const ticker = tickerRef.current;
+    const group = tickerGroupRef.current;
+    if (!ticker || !group || recentDrops.length === 0) return;
+
+    const ensureContinuousCoverage = () => {
+      const groupWidth = group.scrollWidth;
+      const requiredWidth = ticker.clientWidth * 1.25;
+      if (groupWidth <= 0 || groupWidth >= requiredWidth) return;
+
+      const multiplier = Math.ceil(requiredWidth / groupWidth);
+      setTickerRepeats((current) => current * Math.max(multiplier, 2));
+    };
+
+    ensureContinuousCoverage();
+    const observer = new ResizeObserver(ensureContinuousCoverage);
+    observer.observe(ticker);
+    observer.observe(group);
+    return () => observer.disconnect();
+  }, [recentDrops.length, tickerRepeats]);
 
   const selectedTripLabel =
     searchTripOptions.find((option) => option.value === filters.tripFilter)?.label ?? t("common.anyTrip");
@@ -679,12 +728,12 @@ export function V2Landing({
 
       {/* ---------- Section 2 of 8 · Departure board — infinite marquee strip ---------- */}
       {recentDrops.length > 0 ? (
-        <section className="v2-ticker" id="v2-board" aria-label={t("home.recentDrops")}>
+        <section className="v2-ticker" id="v2-board" aria-label={t("home.recentDrops")} ref={tickerRef}>
           <div className="v2-ticker__track" aria-hidden="true">
             {[0, 1].map((copy) => (
-              <ul className="v2-ticker__group" key={copy}>
-                {recentDrops.map((fare) => (
-                  <li key={`${copy}-${fare.route}`}>
+              <ul className="v2-ticker__group" key={copy} ref={copy === 0 ? tickerGroupRef : undefined}>
+                {tickerFares.map((fare, index) => (
+                  <li key={`${copy}-${index}-${fare.route}`}>
                     <span className="v2-ticker__route">{fare.route}</span>
                     <span className="v2-ticker__price">€{Math.round(fare.price)}</span>
                     <span className="v2-ticker__drop">−{fare.drop}%</span>
