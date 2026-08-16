@@ -470,7 +470,7 @@ body:has(.v2) .scroll-top-button {
     minmax(7.5rem, 1fr)
     minmax(10rem, 1.25fr)
     minmax(7.5rem, 1fr)
-    minmax(7.5rem, 1fr)
+    minmax(10rem, 1.15fr)
     minmax(11rem, auto)
     minmax(9rem, auto);
   gap: 0.9rem;
@@ -490,14 +490,21 @@ body:has(.v2) .scroll-top-button {
   min-width: 0;
 }
 
-.v2-search__field.deals-price-range {
+.v2-search__field.deals-price-range--histogram {
   align-self: stretch;
-  grid-template-rows: auto 1fr 1.35rem;
+  grid-template-areas:
+    "label"
+    "visual"
+    "values";
+  grid-template-rows: auto minmax(2rem, 1fr) auto;
   align-content: stretch;
-  gap: 0;
+  gap: 0.1rem;
+  padding-left: 1rem;
+  border-left: 1px solid #e1e6ec;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__label {
+.v2-search__field.deals-price-range--histogram .deals-price-range__label {
+  grid-area: label;
   color: var(--v2-ink-soft);
   font-size: 0.68rem;
   font-weight: 750;
@@ -505,40 +512,63 @@ body:has(.v2) .scroll-top-button {
   text-transform: uppercase;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__values {
-  align-self: center;
+.v2-search__field.deals-price-range--histogram .deals-price-range__values {
+  grid-area: values;
+  align-self: end;
   font-size: 0.78rem;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__slider {
-  height: 1.35rem;
+.v2-search__field.deals-price-range--histogram .deals-price-range__histogram {
+  grid-area: visual;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(18, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.16rem;
+  min-height: 2rem;
+  padding: 0.1rem 0.45rem 0.65rem;
+  pointer-events: none;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__track,
-.v2-search__field.deals-price-range .deals-price-range__fill {
+.v2-search__field.deals-price-range--histogram .deals-price-range__histogram > span {
+  height: var(--histogram-height);
+  min-height: 0.22rem;
+  border-radius: 0.16rem 0.16rem 0 0;
+  background: #e8ecf1;
+}
+
+.v2-search__field.deals-price-range--histogram .deals-price-range__slider {
+  grid-area: visual;
+  align-self: end;
+  height: 1.35rem;
+  z-index: 1;
+}
+
+.v2-search__field.deals-price-range--histogram .deals-price-range__track,
+.v2-search__field.deals-price-range--histogram .deals-price-range__fill {
   height: 0.25rem;
   border-radius: 999px;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__track {
+.v2-search__field.deals-price-range--histogram .deals-price-range__track {
   background: #dce3eb;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__fill {
+.v2-search__field.deals-price-range--histogram .deals-price-range__fill {
   background: var(--v2-accent);
 }
 
-.v2-search__field.deals-price-range .deals-price-range__slider input {
+.v2-search__field.deals-price-range--histogram .deals-price-range__slider input {
   height: 1.35rem;
 }
 
-.v2-search__field.deals-price-range
+.v2-search__field.deals-price-range--histogram
   .deals-price-range__slider
   input::-webkit-slider-runnable-track {
   height: 0.25rem;
 }
 
-.v2-search__field.deals-price-range
+.v2-search__field.deals-price-range--histogram
   .deals-price-range__slider
   input::-webkit-slider-thumb {
   width: 1rem;
@@ -546,11 +576,11 @@ body:has(.v2) .scroll-top-button {
   margin-top: -0.38rem;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__slider input::-moz-range-track {
+.v2-search__field.deals-price-range--histogram .deals-price-range__slider input::-moz-range-track {
   height: 0.25rem;
 }
 
-.v2-search__field.deals-price-range .deals-price-range__slider input::-moz-range-thumb {
+.v2-search__field.deals-price-range--histogram .deals-price-range__slider input::-moz-range-thumb {
   width: 1rem;
   height: 1rem;
 }
@@ -1740,6 +1770,20 @@ body:has(.v2) .scroll-top-button {
     gap: 0.35rem;
     min-height: 5.5rem;
     padding: 0.75rem 1rem;
+  }
+
+  .v2-search__field--budget.deals-price-range--histogram {
+    grid-template-areas:
+      "label"
+      "values"
+      "visual";
+    grid-template-rows: auto auto 1.35rem;
+    border-left: 0;
+  }
+
+  .v2-search__field--budget.deals-price-range--histogram
+    .deals-price-range__histogram {
+    display: none;
   }
 
   .v2-search__field--budget.deals-price-range .deals-price-range__label {

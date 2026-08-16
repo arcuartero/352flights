@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 type PublicDealsPriceRangeProps = {
   bounds: { min: number; max: number };
   className?: string;
+  showHistogram?: boolean;
   label: string;
   legacyMaximum?: number | null;
   onChange: (priceMin: number | null, priceMax: number | null) => void;
@@ -16,6 +17,7 @@ type PublicDealsPriceRangeProps = {
 export function PublicDealsPriceRange({
   bounds,
   className = "",
+  showHistogram = false,
   label,
   legacyMaximum = null,
   onChange,
@@ -39,11 +41,30 @@ export function PublicDealsPriceRange({
   };
 
   return (
-    <div className={`deals-price-range ${className}`.trim()}>
+    <div
+      className={`deals-price-range${
+        showHistogram ? " deals-price-range--histogram" : ""
+      } ${className}`.trim()}
+    >
       {showLabel ? <span className="deals-price-range__label">{label}</span> : null}
+      {showHistogram ? (
+        <span className="deals-price-range__histogram" aria-hidden="true">
+          {[28, 38, 50, 42, 62, 76, 54, 68, 47, 36, 57, 72, 48, 64, 82, 58, 44, 52].map(
+            (height, index) => (
+              <span
+                key={`${height}-${index}`}
+                style={{ "--histogram-height": `${height}%` } as CSSProperties}
+              />
+            ),
+          )}
+        </span>
+      ) : null}
       <div className="deals-price-range__values" aria-hidden="true">
         <strong>€{selectedMin}</strong>
-        <strong>€{selectedMax}</strong>
+        <strong>
+          €{selectedMax}
+          {showHistogram && selectedMax >= maximum ? "+" : ""}
+        </strong>
       </div>
       <div
         className="deals-price-range__slider"
