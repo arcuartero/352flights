@@ -491,8 +491,10 @@ body:has(.v2) .scroll-top-button {
 }
 
 .v2-search__field.deals-price-range {
-  align-self: end;
-  gap: 0.25rem;
+  align-self: stretch;
+  grid-template-rows: auto 1fr 1.35rem;
+  align-content: stretch;
+  gap: 0;
 }
 
 .v2-search__field.deals-price-range .deals-price-range__label {
@@ -504,6 +506,7 @@ body:has(.v2) .scroll-top-button {
 }
 
 .v2-search__field.deals-price-range .deals-price-range__values {
+  align-self: center;
   font-size: 0.78rem;
 }
 
