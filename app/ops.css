@@ -4733,6 +4733,17 @@ body.is-resizing-columns * {
   line-height: 1.35;
 }
 
+.destination-photo-card__meta a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.destination-photo-card__meta a:hover {
+  color: var(--text-strong);
+}
+
 .destination-photo-card input[type="file"] {
   width: 100%;
   color: var(--muted);

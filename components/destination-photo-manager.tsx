@@ -14,6 +14,10 @@ type DestinationPhoto = {
   updatedAt: string | null;
   size: number | null;
   contentType: string | null;
+  source: "upload" | "unsplash";
+  photographer: string | null;
+  photographerUrl: string | null;
+  photoUrl: string | null;
 };
 
 type DestinationPhotoPayload = {
@@ -108,7 +112,10 @@ export function DestinationPhotoManager({
     });
   }, [destinations, query]);
 
-  const uploadedCount = destinations.filter((destination) => photos[destination.slug]).length;
+  const photoCount = destinations.filter((destination) => photos[destination.slug]).length;
+  const downloadableCount = destinations.filter(
+    (destination) => photos[destination.slug]?.source === "upload",
+  ).length;
 
   async function refreshPhotos() {
     const response = await fetch("/api/destination-photos", {
@@ -218,7 +225,7 @@ export function DestinationPhotoManager({
 
   async function downloadAllPhotos() {
     const uploadedDestinations = destinations.filter(
-      (destination) => photos[destination.slug],
+      (destination) => photos[destination.slug]?.source === "upload",
     );
     if (uploadedDestinations.length === 0 || isDownloading) {
       return;
@@ -296,11 +303,11 @@ export function DestinationPhotoManager({
       <div className="destination-photo-manager__toolbar">
         <div className="destination-photo-manager__summary">
           <span className="ops-pill">
-            {uploadedCount}/{destinations.length} uploaded
+            {photoCount}/{destinations.length} photos
           </span>
           <button
             className="ops-button destination-photo-manager__download"
-            disabled={uploadedCount === 0 || isDownloading}
+            disabled={downloadableCount === 0 || isDownloading}
             onClick={downloadAllPhotos}
             title="Download every uploaded destination photo in one ZIP file"
             type="button"
@@ -357,11 +364,24 @@ export function DestinationPhotoManager({
                   <p>{destination.airports.join(", ")}</p>
                 </div>
                 <p className="destination-photo-card__meta">
-                  {photo
-                    ? [formatUpdatedAt(photo.updatedAt), sizeLabel, photo.contentType]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : "Using generic destination image"}
+                  {photo?.source === "unsplash" ? (
+                    <>
+                      Unsplash · Photo by{" "}
+                      <a
+                        href={photo.photographerUrl ?? photo.photoUrl ?? undefined}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {photo.photographer ?? "Unsplash contributor"}
+                      </a>
+                    </>
+                  ) : photo ? (
+                    [formatUpdatedAt(photo.updatedAt), sizeLabel, photo.contentType]
+                      .filter(Boolean)
+                      .join(" · ")
+                  ) : (
+                    "Using generic destination image"
+                  )}
                 </p>
                 <input
                   accept="image/avif,image/jpeg,image/png,image/webp"
@@ -379,7 +399,7 @@ export function DestinationPhotoManager({
                   >
                     {isPending ? "Uploading..." : photo ? "Replace photo" : "Upload photo"}
                   </button>
-                  {photo ? (
+                  {photo?.source === "upload" ? (
                     <button
                       className="ops-button ops-button--ghost"
                       disabled={isPending}

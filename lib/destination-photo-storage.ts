@@ -1,5 +1,6 @@
 import { revalidateTag, unstable_cache } from "next/cache";
 
+import unsplashDestinationPhotos from "@/data/unsplash-destination-photos.json";
 import { hasSupabaseAdminEnv } from "@/lib/env";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -19,6 +20,18 @@ export type DestinationPhotoEntry = {
   updatedAt: string | null;
   size: number | null;
   contentType: string | null;
+  source: "upload" | "unsplash";
+  photographer: string | null;
+  photographerUrl: string | null;
+  photoUrl: string | null;
+};
+
+type UnsplashDestinationPhoto = {
+  slug: string;
+  url: string;
+  photographer: string;
+  photographerUrl: string | null;
+  photoUrl: string;
 };
 
 type StorageListItem = {
@@ -76,8 +89,25 @@ async function ensureDestinationPhotoBucket() {
 }
 
 export async function listDestinationPhotos(): Promise<DestinationPhotoEntry[]> {
+  const photos = new Map<string, DestinationPhotoEntry>(
+    (unsplashDestinationPhotos as UnsplashDestinationPhoto[]).map((photo) => [
+      photo.slug,
+      {
+        slug: photo.slug,
+        url: photo.url,
+        updatedAt: null,
+        size: null,
+        contentType: "image/jpeg",
+        source: "unsplash",
+        photographer: photo.photographer,
+        photographerUrl: photo.photographerUrl,
+        photoUrl: photo.photoUrl,
+      },
+    ]),
+  );
+
   if (!hasSupabaseAdminEnv()) {
-    return [];
+    return [...photos.values()].sort((left, right) => left.slug.localeCompare(right.slug));
   }
 
   const supabase = getSupabaseAdminClient();
@@ -90,23 +120,31 @@ export async function listDestinationPhotos(): Promise<DestinationPhotoEntry[]> 
 
   if (error) {
     if (isMissingBucketError(error)) {
-      return [];
+      return [...photos.values()].sort((left, right) => left.slug.localeCompare(right.slug));
     }
     throw error;
   }
 
-  return ((data ?? []) as StorageListItem[])
-    .filter((item) => item.name && !item.name.includes("/"))
-    .map((item) => {
-      const updatedAt = item.updated_at ?? item.created_at ?? null;
-      return {
-        slug: item.name,
-        url: getDestinationPhotoUrl(item.name, updatedAt),
-        updatedAt,
-        size: item.metadata?.size ?? null,
-        contentType: item.metadata?.mimetype ?? item.metadata?.contentType ?? null,
-      };
+  for (const item of (data ?? []) as StorageListItem[]) {
+    if (!item.name || item.name.includes("/")) {
+      continue;
+    }
+
+    const updatedAt = item.updated_at ?? item.created_at ?? null;
+    photos.set(item.name, {
+      slug: item.name,
+      url: getDestinationPhotoUrl(item.name, updatedAt),
+      updatedAt,
+      size: item.metadata?.size ?? null,
+      contentType: item.metadata?.mimetype ?? item.metadata?.contentType ?? null,
+      source: "upload",
+      photographer: null,
+      photographerUrl: null,
+      photoUrl: null,
     });
+  }
+
+  return [...photos.values()].sort((left, right) => left.slug.localeCompare(right.slug));
 }
 
 async function getDestinationPhotoUrlMapUncached(): Promise<Record<string, string>> {
@@ -116,7 +154,7 @@ async function getDestinationPhotoUrlMapUncached(): Promise<Record<string, strin
 
 const getCachedDestinationPhotoUrlMap = unstable_cache(
   getDestinationPhotoUrlMapUncached,
-  ["destination-photo-url-map-v1"],
+  ["destination-photo-url-map-v2"],
   { revalidate: 3600, tags: ["destination-photos"] },
 );
 
@@ -168,6 +206,10 @@ export async function uploadDestinationPhoto(input: {
     updatedAt,
     size: input.bytes.byteLength,
     contentType: input.contentType,
+    source: "upload",
+    photographer: null,
+    photographerUrl: null,
+    photoUrl: null,
   } satisfies DestinationPhotoEntry;
 }
 
