@@ -3,11 +3,22 @@ import type {
   LocalPatternDiscoveryLogLine,
   LocalPatternDiscoveryStatus,
 } from "@/lib/local-pattern-discovery-status-shared";
+import { hasSupabaseAdminEnv } from "@/lib/env";
+import { getSupabaseAdminClient } from "@/lib/supabase";
 import {
   callVpsScannerAgent,
   hasVpsScannerAgentConfig,
   type VpsScannerAgentStatus,
 } from "@/lib/vps-scanner-agent";
+
+type PersistedDateScanProgress = {
+  scanner_source: string;
+  started_at: string;
+  routes_planned: number;
+  routes_completed: number;
+};
+
+const DATE_SCAN_START_TOLERANCE_MS = 120_000;
 
 function asIsoTimestamp(value: string | null | undefined) {
   if (!value || value === "n/a") {
@@ -40,6 +51,38 @@ function serviceExitStatus(status: VpsScannerAgentStatus) {
   if (!raw || raw === "n/a") return null;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function getPersistedRunningProgress(startedAt: string | null) {
+  if (!startedAt || !hasSupabaseAdminEnv()) {
+    return null;
+  }
+
+  const serviceStartedMs = new Date(startedAt).getTime();
+  if (!Number.isFinite(serviceStartedMs)) {
+    return null;
+  }
+
+  const { data, error } = await getSupabaseAdminClient()
+    .from("date_scan_runs")
+    .select("scanner_source, started_at, routes_planned, routes_completed")
+    .eq("status", "running")
+    .order("started_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    return null;
+  }
+
+  return ((data ?? []) as PersistedDateScanProgress[]).find((run) => {
+    const runStartedMs = new Date(run.started_at).getTime();
+    const isVpsRun = run.scanner_source === "vps" || run.scanner_source === "local";
+    return (
+      isVpsRun &&
+      Number.isFinite(runStartedMs) &&
+      Math.abs(runStartedMs - serviceStartedMs) <= DATE_SCAN_START_TOLERANCE_MS
+    );
+  }) ?? null;
 }
 
 function latestFailureDetail(status: VpsScannerAgentStatus) {
@@ -154,6 +197,7 @@ function toRemoteLogLine(
 function mergeRunningVpsStatus(
   persisted: LocalPatternDiscoveryStatus,
   remote: VpsScannerAgentStatus,
+  runProgress: PersistedDateScanProgress | null,
 ): LocalPatternDiscoveryStatus {
   const startedAt = asIsoTimestamp(remote.service.ExecMainStartTimestamp);
   const runJournal = latestRunJournal(remote);
@@ -167,8 +211,13 @@ function mergeRunningVpsStatus(
     routeStarts.map((route) => route.match(/^([A-Z0-9]{3}\s*->\s*[A-Z0-9]{3})/)?.[1] ?? route),
   );
   const currentRouteLabel = routeStarts.at(-1) ?? persisted.currentRouteLabel;
-  const totalRoutes = persisted.totalRoutes;
-  const startedRoutes = uniqueRoutes.size || null;
+  const journalStartedRoutes = uniqueRoutes.size || null;
+  const totalRoutes = runProgress?.routes_planned || persisted.totalRoutes;
+  // The agent returns a bounded journal tail. Its route count eventually drops
+  // behind the run, so use the matching Supabase checkpoint when available.
+  const startedRoutes = runProgress
+    ? Math.min(Math.max(runProgress.routes_completed, 0), totalRoutes ?? Number.MAX_SAFE_INTEGER)
+    : journalStartedRoutes;
   const recentLogLines = [...persisted.recentLogLines, ...remoteLogLines].slice(-120);
 
   return {
@@ -228,7 +277,9 @@ export async function getPatternDiscoveryStatus(): Promise<LocalPatternDiscovery
       "pattern-discovery/status",
     );
     if (remote.running) {
-      return mergeRunningVpsStatus(persisted, remote);
+      const startedAt = asIsoTimestamp(remote.service.ExecMainStartTimestamp);
+      const runProgress = await getPersistedRunningProgress(startedAt);
+      return mergeRunningVpsStatus(persisted, remote, runProgress);
     }
 
     // VPS is authoritative when configured. Do not let an old local PID/log
