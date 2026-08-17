@@ -4186,6 +4186,7 @@ export function PublicDealsExplorer({
                         onChange={updatePriceRange}
                         priceMax={draftFilters.priceMax}
                         priceMin={draftFilters.priceMin}
+                        showHistogram
                       />
                     </div>
 
@@ -4416,6 +4417,7 @@ export function PublicDealsExplorer({
                     onChange={updatePriceRange}
                     priceMax={draftFilters.priceMax}
                     priceMin={draftFilters.priceMin}
+                    showHistogram
                   />
                 </div>
 
