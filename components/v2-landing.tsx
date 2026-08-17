@@ -583,36 +583,6 @@ export function V2Landing({
           />
           <span className="v2-hero__overlay" aria-hidden="true" />
 
-          <div className="v2-hero__fare" aria-hidden="true">
-            <div className="v2-hero__fare-card">
-              <strong>LUX → FCO</strong>
-              <span>{t("home.fareSubline")}</span>
-              <em>€44</em>
-              <i className="v2-hero__fare-plane">
-                <svg fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M21.5 15.5v-2.2l-8.2-5V3.6a1.3 1.3 0 0 0-2.6 0v4.7l-8.2 5v2.2l8.2-2.6v5l-2.1 1.6v1.7l3.4-1 3.4 1v-1.7l-2.1-1.6v-5z" />
-                </svg>
-              </i>
-            </div>
-            <svg className="v2-hero__fare-arrow" viewBox="0 0 120 90">
-              <path
-                d="M8 84 C 34 72, 76 62, 100 26"
-                fill="none"
-                stroke="currentColor"
-                strokeDasharray="2 7"
-                strokeLinecap="round"
-                strokeWidth="3"
-              />
-              <path
-                d="M100 26l-10.5 1.5M100 26l-2.5 10.5"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeWidth="3"
-              />
-            </svg>
-          </div>
-
           <div className="v2-hero__copy">
             <p className="v2-hero__kicker" data-reveal style={{ "--d": "120ms" } as React.CSSProperties}>
               {t("home.kicker")}

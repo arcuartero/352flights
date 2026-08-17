@@ -387,76 +387,6 @@ body:has(.v2) .scroll-top-button {
   color: var(--v2-blue-strong);
 }
 
-/* Fare chip with plane button and dashed arrow, floating over the photo. */
-.v2-hero__fare {
-  position: absolute;
-  top: clamp(1.6rem, 4vw, 3.4rem);
-  right: clamp(1.6rem, 4vw, 3.6rem);
-  z-index: 1;
-}
-
-.v2-hero__fare-card {
-  position: relative;
-  display: grid;
-  gap: 0.12rem;
-  min-width: 11.5rem;
-  padding: 1rem 1.15rem 1.1rem;
-  border-radius: 0.95rem;
-  background: rgba(253, 253, 251, 0.96);
-  color: var(--v2-ink);
-  box-shadow: 0 20px 48px rgba(10, 16, 24, 0.35);
-}
-
-.v2-hero__fare-card strong {
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-}
-
-.v2-hero__fare-card span {
-  color: var(--v2-ink-soft);
-  font-size: 0.84rem;
-  font-weight: 600;
-}
-
-.v2-hero__fare-card em {
-  margin-top: 0.25rem;
-  color: var(--v2-accent);
-  font-style: normal;
-  font-size: 1.55rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.v2-hero__fare-plane {
-  position: absolute;
-  right: -0.7rem;
-  bottom: -0.7rem;
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 999px;
-  background: var(--v2-accent);
-  color: var(--v2-cream);
-  box-shadow: 0 10px 24px rgba(160, 58, 50, 0.45);
-}
-
-.v2-hero__fare-plane svg {
-  width: 1.15rem;
-  height: 1.15rem;
-  transform: rotate(38deg);
-}
-
-.v2-hero__fare-arrow {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  right: 1.6rem;
-  width: clamp(5.5rem, 8vw, 7.5rem);
-  color: rgba(253, 253, 251, 0.82);
-  transform: scaleY(-1);
-}
-
 /* ============================================================
    Search — the /deals finder, docked inside the hero card
    ============================================================ */
@@ -1453,15 +1383,6 @@ body:has(.v2) .scroll-top-button {
     opacity: 0.4;
   }
 
-  .v2-hero__fare {
-    top: 1.4rem;
-    right: 1.4rem;
-  }
-
-  .v2-hero__fare-arrow {
-    display: none;
-  }
-
   .v2-search__bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
@@ -1654,10 +1575,6 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-hero__overlay {
-    display: none;
-  }
-
-  .v2-hero__fare {
     display: none;
   }
 
