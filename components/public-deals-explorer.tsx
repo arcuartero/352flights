@@ -13,7 +13,7 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { Info, MapPin, Plane } from "lucide-react";
+import { ArrowUpDown, CalendarDays, Info, MapPin, Plane, SlidersHorizontal, X } from "lucide-react";
 
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { NewsletterForm } from "@/components/newsletter-form";
@@ -82,6 +82,8 @@ type QuickChip =
   | "beach"
   | "city"
   | "nature";
+
+type MobileResultsPanel = "sort" | "filters" | null;
 
 function getDestinationPhotoSrc(
   destinationPhotoUrls: DestinationPhotoUrlMap | undefined,
@@ -311,6 +313,15 @@ const DEAL_SORT_OPTIONS: SelectOption[] = [
   { value: "trip_shortest", label: "Trip length: shortest first" },
   { value: "trip_longest", label: "Trip length: longest first" },
 ];
+
+const DEAL_SORT_TRANSLATION_KEYS: Record<DealSearchSort, string> = {
+  price_asc: "deals.sort.priceAsc",
+  price_desc: "deals.sort.priceDesc",
+  departure_soonest: "deals.sort.departureSoonest",
+  departure_latest: "deals.sort.departureLatest",
+  trip_shortest: "deals.sort.tripShortest",
+  trip_longest: "deals.sort.tripLongest",
+};
 
 const QUICK_CHIP_OPTIONS: QuickChip[] = [
   "weekend",
@@ -3016,8 +3027,12 @@ export function PublicDealsExplorer({
   const [styleVisibleCount, setStyleVisibleCount] = useState(5);
   const [resultsPage, setResultsPage] = useState(1);
   const [resultsPageSize, setResultsPageSize] = useState<number>(DEFAULT_RESULTS_PAGE_SIZE);
+  const [mobileResultsPanel, setMobileResultsPanel] = useState<MobileResultsPanel>(null);
   const fullSidebarRef = useRef<HTMLDivElement | null>(null);
   const compactSidebarFrameRef = useRef<number | null>(null);
+  const mobileResultsPanelRef = useRef<HTMLDivElement | null>(null);
+  const mobileResultsReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const mobileResultsPanelTitleId = useId();
   const [showCompactSidebar, setShowCompactSidebar] = useState(false);
   const [compactSidebarPosition, setCompactSidebarPosition] = useState<{
     left: number;
@@ -3130,6 +3145,29 @@ export function PublicDealsExplorer({
       }
     };
   }, [mode]);
+
+  useEffect(() => {
+    if (!mobileResultsPanel) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => mobileResultsPanelRef.current?.focus());
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileResultsPanel(null);
+        window.requestAnimationFrame(() => mobileResultsReturnFocusRef.current?.focus());
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileResultsPanel]);
 
   const filterFacetDeals = useMemo(() => {
     const facetFilters = coerceFiltersForMode({
@@ -3405,6 +3443,14 @@ export function PublicDealsExplorer({
       })).map((option) => ({ ...option, label: t(`deals.budget.${option.value}`) })),
     [data.deals, draftFilters, now, t],
   );
+  const dealSortOptions = useMemo<SelectOption[]>(
+    () =>
+      DEAL_SORT_OPTIONS.map((option) => ({
+        ...option,
+        label: t(DEAL_SORT_TRANSLATION_KEYS[option.value as DealSearchSort]),
+      })),
+    [t],
+  );
   const activeFilterChips = useMemo(
     () => {
       const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
@@ -3554,6 +3600,31 @@ export function PublicDealsExplorer({
 
     setDraftFilters((current) => ({ ...current, durationFilter: "any" }));
   }, [draftFilters.durationFilter, resultsDurationOptions]);
+
+  const mobileDestinationLabel =
+    lockedDestinationCity ??
+    findOptionLabel(destinationOptions, effectiveFilters.destinationFilter);
+  const mobileDateLabel =
+    effectiveFilters.whenFilter === "custom"
+      ? formatPublicDealDateRange(effectiveFilters.dateFrom, effectiveFilters.dateTo, locale)
+      : findOptionLabel(resultsWhenOptions, effectiveFilters.whenFilter);
+  const mobileTripLabel = findOptionLabel(resultsTripOptions, effectiveFilters.tripFilter);
+
+  const openMobileResultsPanel = useCallback(
+    (panel: Exclude<MobileResultsPanel, null>, trigger: HTMLButtonElement) => {
+      mobileResultsReturnFocusRef.current = trigger;
+      setMobileResultsPanel(panel);
+    },
+    [],
+  );
+  const closeMobileResultsPanel = useCallback(() => {
+    setMobileResultsPanel(null);
+    window.requestAnimationFrame(() => mobileResultsReturnFocusRef.current?.focus());
+  }, []);
+  const resetMobileResults = useCallback(() => {
+    setDraftFilters(coerceFiltersForMode({ ...DEFAULT_DEAL_SEARCH_FILTERS }));
+    setSortOrder(DEFAULT_DEAL_SEARCH_SORT);
+  }, [coerceFiltersForMode]);
 
   const searchHref = buildDealsHrefForMode(draftFilters);
 
@@ -3726,6 +3797,284 @@ export function PublicDealsExplorer({
         SEARCH_QUICK_CHIPS.map((chip) => [chip, isQuickChipAvailable(chip, draftFilters, data.deals, now)]),
       ),
     [data.deals, draftFilters, now],
+  );
+
+  const renderMobileResultsControls = (includeDestination: boolean) => (
+    <>
+      <section
+        aria-label={t("deals.mobile.summaryLabel")}
+        className="deals-mobile-results-controls"
+      >
+        <button
+          className="deals-mobile-search-summary"
+          onClick={(event) => openMobileResultsPanel("filters", event.currentTarget)}
+          type="button"
+        >
+          <span className="deals-mobile-search-summary__destination">
+            <MapPin aria-hidden="true" />
+            <span>
+              <small>{t("common.destination")}</small>
+              <strong>{mobileDestinationLabel}</strong>
+            </span>
+          </span>
+          <span className="deals-mobile-search-summary__details">
+            <span>
+              <CalendarDays aria-hidden="true" />
+              <span>
+                <small>{t("common.when")}</small>
+                <strong>{mobileDateLabel}</strong>
+              </span>
+            </span>
+            <span>
+              <Plane aria-hidden="true" />
+              <span>
+                <small>{t("common.tripType")}</small>
+                <strong>{mobileTripLabel}</strong>
+              </span>
+            </span>
+          </span>
+        </button>
+
+        <div className="deals-mobile-results-bar">
+          <button
+            className="deals-mobile-results-bar__action"
+            onClick={(event) => openMobileResultsPanel("sort", event.currentTarget)}
+            type="button"
+          >
+            <ArrowUpDown aria-hidden="true" />
+            <span>{t("deals.mobile.sort")}</span>
+          </button>
+          <button
+            className="deals-mobile-results-bar__action"
+            onClick={(event) => openMobileResultsPanel("filters", event.currentTarget)}
+            type="button"
+          >
+            <SlidersHorizontal aria-hidden="true" />
+            <span>{t("deals.mobile.filter")}</span>
+            {activeFilterChips.length > 0 ? (
+              <b aria-label={t("deals.mobile.activeFilterCount", { count: activeFilterChips.length })}>
+                {activeFilterChips.length}
+              </b>
+            ) : null}
+          </button>
+          <PublicDealsMap
+            cities={groupedOpportunityDeals}
+            locale={locale}
+            presentation="toolbar"
+          />
+        </div>
+        <p className="deals-mobile-results-count">
+          {t("deals.mobile.resultsFound", { count: opportunityDeals.length })}
+        </p>
+      </section>
+
+      {mobileResultsPanel
+        ? createPortal(
+            <div
+              className="deals-redesign deals-mobile-results-sheet"
+              onMouseDown={closeMobileResultsPanel}
+            >
+              <div
+                aria-labelledby={mobileResultsPanelTitleId}
+                aria-modal="true"
+                className="deals-mobile-results-sheet__dialog"
+                onMouseDown={(event) => event.stopPropagation()}
+                ref={mobileResultsPanelRef}
+                role="dialog"
+                tabIndex={-1}
+              >
+                <header className="deals-mobile-results-sheet__header">
+                  <button
+                    aria-label={t("deals.mobile.close")}
+                    className="deals-mobile-results-sheet__close"
+                    onClick={closeMobileResultsPanel}
+                    type="button"
+                  >
+                    <X aria-hidden="true" />
+                  </button>
+                  <h2 id={mobileResultsPanelTitleId}>
+                    {mobileResultsPanel === "sort"
+                      ? t("deals.mobile.sort")
+                      : t("deals.mobile.filters")}
+                  </h2>
+                  <button
+                    className="deals-mobile-results-sheet__reset"
+                    onClick={resetMobileResults}
+                    type="button"
+                  >
+                    {t("deals.mobile.reset")}
+                  </button>
+                </header>
+
+                <div className="deals-mobile-results-sheet__body">
+                  {mobileResultsPanel === "sort" ? (
+                    <fieldset className="deals-mobile-sort-options">
+                      <legend>{t("deals.mobile.sortBy")}</legend>
+                      {dealSortOptions.map((option) => (
+                        <label key={option.value}>
+                          <input
+                            checked={sortOrder === option.value}
+                            name="mobile-deals-sort"
+                            onChange={() => setSortOrder(option.value as DealSearchSort)}
+                            type="radio"
+                            value={option.value}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </fieldset>
+                  ) : (
+                    <div className="deals-mobile-filter-groups">
+                      <section>
+                        <h3>{t("deals.mobile.routeAndDates")}</h3>
+                        <div className="deals-control deals-control--static deals-control--origin-fixed">
+                          <span className="deals-control__label-with-icon">
+                            <MapPin aria-hidden="true" />
+                            {t("deals.searchFrom")}
+                          </span>
+                          <strong>Luxembourg</strong>
+                        </div>
+                        {includeDestination ? (
+                          <DealsSelect
+                            label={t("common.destination")}
+                            onChange={(nextValue) =>
+                              setDraftFilters((current) => ({
+                                ...current,
+                                destinationFilter: nextValue,
+                              }))
+                            }
+                            options={destinationOptions}
+                            value={draftFilters.destinationFilter}
+                          />
+                        ) : (
+                          <div className="deals-control deals-control--static">
+                            <span>{t("common.destination")}</span>
+                            <strong>{mobileDestinationLabel}</strong>
+                          </div>
+                        )}
+                        <DealsSelect
+                          label={t("deals.departureDay")}
+                          onChange={(nextValue) =>
+                            setDraftFilters((current) => ({
+                              ...current,
+                              departureWeekdayFilter: nextValue as DepartureWeekdayFilter,
+                            }))
+                          }
+                          options={departureWeekdayOptions}
+                          value={draftFilters.departureWeekdayFilter}
+                        />
+                        <DealsDatePicker
+                          dateFrom={draftFilters.dateFrom}
+                          dateTo={draftFilters.dateTo}
+                          label={t("common.when")}
+                          onChange={(selection) =>
+                            setDraftFilters((current) => ({ ...current, ...selection }))
+                          }
+                          presetOptions={resultsWhenOptions}
+                          value={draftFilters.whenFilter}
+                        />
+                      </section>
+
+                      <section>
+                        <h3>{t("deals.mobile.tripPreferences")}</h3>
+                        <DealsSelect
+                          label={t("common.tripType")}
+                          onChange={(nextValue) =>
+                            setDraftFilters((current) => ({
+                              ...current,
+                              tripFilter: nextValue as TripFilter,
+                            }))
+                          }
+                          options={resultsTripOptions}
+                          value={draftFilters.tripFilter}
+                        />
+                        <DealsSelect
+                          label={t("deals.tripDuration")}
+                          onChange={(nextValue) =>
+                            setDraftFilters((current) => ({
+                              ...current,
+                              durationFilter: nextValue as DurationFilter,
+                            }))
+                          }
+                          options={resultsDurationOptions}
+                          value={draftFilters.durationFilter}
+                        />
+                        <PublicDealsPriceRange
+                          bounds={priceBounds}
+                          label={t("common.priceRange")}
+                          legacyMaximum={legacyPriceMaximum}
+                          onChange={updatePriceRange}
+                          priceMax={draftFilters.priceMax}
+                          priceMin={draftFilters.priceMin}
+                          showHistogram
+                        />
+                        <DealsAirlineFilter
+                          excludedAirlines={draftFilters.excludedAirlines}
+                          onChange={(excludedAirlines) =>
+                            setDraftFilters((current) => ({ ...current, excludedAirlines }))
+                          }
+                          options={airlineOptions}
+                          t={t}
+                        />
+                        <label
+                          className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
+                        >
+                          <input
+                            checked={draftFilters.directOnly}
+                            disabled={!directOnlyOptionAvailable && !draftFilters.directOnly}
+                            onChange={(event) =>
+                              setDraftFilters((current) => ({
+                                ...current,
+                                directOnly: event.target.checked,
+                              }))
+                            }
+                            type="checkbox"
+                          />
+                          <span>{t("common.directOnly")}</span>
+                        </label>
+                      </section>
+
+                      <section>
+                        <h3>{t("deals.quickFilters")}</h3>
+                        <div className="deals-search-sidebar__chips">
+                          {SEARCH_QUICK_CHIPS.map((chip) => (
+                            <button
+                              aria-pressed={draftQuickChips.has(chip)}
+                              className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
+                              disabled={!quickChipAvailability.get(chip)}
+                              key={chip}
+                              onClick={() => {
+                                if (!quickChipAvailability.get(chip)) {
+                                  return;
+                                }
+                                setDraftFilters((current) =>
+                                  draftQuickChips.has(chip)
+                                    ? resetQuickChip(chip, current)
+                                    : applyQuickChip(chip, current),
+                                );
+                              }}
+                              type="button"
+                            >
+                              {getChipTitle(chip, t)}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+                  )}
+                </div>
+
+                <footer className="deals-mobile-results-sheet__footer">
+                  <button onClick={closeMobileResultsPanel} type="button">
+                    {t("deals.mobile.showResults", { count: opportunityDeals.length })}
+                  </button>
+                </footer>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 
   const renderCompactSidebar = (includeDestination: boolean) => {
@@ -4100,6 +4449,8 @@ export function PublicDealsExplorer({
               </div>
             </section>
 
+            {renderMobileResultsControls(false)}
+
             <section className="deals-search-layout">
               <aside className="deals-search-layout__filters">
                 <div className="deals-search-sidebar" ref={fullSidebarRef}>
@@ -4264,9 +4615,9 @@ export function PublicDealsExplorer({
                     <div className="deals-explorer__section-actions">
                       <DealsSelect
                         className="deals-results-sort"
-                        label="Sort by"
+                        label={t("deals.mobile.sortBy")}
                         onChange={(nextValue) => setSortOrder(nextValue as DealSearchSort)}
-                        options={DEAL_SORT_OPTIONS}
+                        options={dealSortOptions}
                         value={sortOrder}
                       />
                       <span>{opportunityDeals.length} {opportunityDeals.length === 1 ? t("deals.fare") : t("deals.fares")}</span>
@@ -4329,6 +4680,7 @@ export function PublicDealsExplorer({
         </section>
       ) : (
         <div className="deals-search-page-card">
+          {renderMobileResultsControls(true)}
           <section className="deals-search-layout">
             <aside className="deals-search-layout__filters">
               <div className="deals-search-sidebar" ref={fullSidebarRef}>
@@ -4493,9 +4845,9 @@ export function PublicDealsExplorer({
                 <div className="deals-explorer__section-actions">
                   <DealsSelect
                     className="deals-results-sort"
-                    label="Sort by"
+                    label={t("deals.mobile.sortBy")}
                     onChange={(nextValue) => setSortOrder(nextValue as DealSearchSort)}
-                    options={DEAL_SORT_OPTIONS}
+                    options={dealSortOptions}
                     value={sortOrder}
                   />
                   <span>{opportunityDeals.length} {opportunityDeals.length === 1 ? t("deals.fare") : t("deals.fares")}</span>

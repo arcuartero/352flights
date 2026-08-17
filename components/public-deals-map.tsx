@@ -23,11 +23,13 @@ export type DealsMapCity = {
 type PublicDealsMapProps = {
   cities: DealsMapCity[];
   locale: Locale;
+  presentation?: "preview" | "toolbar";
 };
 
 type MapCopy = {
   sectionTitle: string;
   openMap: string;
+  mapLabel: string;
   modalTitle: string;
   modalDescription: (count: number) => string;
   close: string;
@@ -40,6 +42,7 @@ const COPY: Record<Locale, MapCopy> = {
   en: {
     sectionTitle: "Results map",
     openMap: "View on map",
+    mapLabel: "Map",
     modalTitle: "Destinations on the map",
     modalDescription: (count) => `${count} destinations with fares matching the current filters.`,
     close: "Close map",
@@ -50,6 +53,7 @@ const COPY: Record<Locale, MapCopy> = {
   fr: {
     sectionTitle: "Carte des resultats",
     openMap: "Voir sur la carte",
+    mapLabel: "Carte",
     modalTitle: "Destinations sur la carte",
     modalDescription: (count) => `${count} destinations avec des tarifs correspondant aux filtres actifs.`,
     close: "Fermer la carte",
@@ -60,6 +64,7 @@ const COPY: Record<Locale, MapCopy> = {
   de: {
     sectionTitle: "Ergebniskarte",
     openMap: "Auf der Karte ansehen",
+    mapLabel: "Karte",
     modalTitle: "Reiseziele auf der Karte",
     modalDescription: (count) => `${count} Reiseziele mit Tarifen passend zu den aktiven Filtern.`,
     close: "Karte schliessen",
@@ -70,6 +75,7 @@ const COPY: Record<Locale, MapCopy> = {
   pt: {
     sectionTitle: "Mapa de resultados",
     openMap: "Ver no mapa",
+    mapLabel: "Mapa",
     modalTitle: "Destinos no mapa",
     modalDescription: (count) => `${count} destinos com tarifas que correspondem aos filtros ativos.`,
     close: "Fechar mapa",
@@ -80,6 +86,7 @@ const COPY: Record<Locale, MapCopy> = {
   it: {
     sectionTitle: "Mappa dei risultati",
     openMap: "Vedi sulla mappa",
+    mapLabel: "Mappa",
     modalTitle: "Destinazioni sulla mappa",
     modalDescription: (count) => `${count} destinazioni con tariffe corrispondenti ai filtri attivi.`,
     close: "Chiudi mappa",
@@ -90,6 +97,7 @@ const COPY: Record<Locale, MapCopy> = {
   es: {
     sectionTitle: "Mapa de resultados",
     openMap: "Ver en el mapa",
+    mapLabel: "Mapa",
     modalTitle: "Destinos en el mapa",
     modalDescription: (count) => `${count} destinos con tarifas que coinciden con los filtros activos.`,
     close: "Cerrar mapa",
@@ -181,6 +189,16 @@ const markerIcon = divIcon({
   popupAnchor: [0, -32],
 });
 
+function createPriceMarkerIcon(price: number, locale: Locale) {
+  return divIcon({
+    className: "deals-results-map__price-marker-shell",
+    html: `<span class="deals-results-map__price-marker">${formatCurrency(price, locale)}</span>`,
+    iconAnchor: [38, 34],
+    iconSize: [76, 38],
+    popupAnchor: [0, -30],
+  });
+}
+
 function getIntlLocale(locale: Locale) {
   return locale === "en" ? "en-GB" : `${locale}-${locale.toUpperCase()}`;
 }
@@ -262,7 +280,7 @@ function DealsLeafletMap({ cities, compact, locale }: PublicDealsMapProps & { co
           eventHandlers={{
             mouseover: (event) => (event.target as LeafletMarker).openPopup(),
           }}
-          icon={markerIcon}
+          icon={compact ? markerIcon : createPriceMarkerIcon(city.lowestPrice, locale)}
           key={city.key}
           position={AIRPORT_COORDINATES[city.airport.toUpperCase()]}
         >
@@ -355,7 +373,7 @@ function DealsMapModal({ cities, locale, onClose }: PublicDealsMapProps & { onCl
   );
 }
 
-export function PublicDealsMap({ cities, locale }: PublicDealsMapProps) {
+export function PublicDealsMap({ cities, locale, presentation = "preview" }: PublicDealsMapProps) {
   const copy = COPY[locale];
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -371,28 +389,41 @@ export function PublicDealsMap({ cities, locale }: PublicDealsMapProps) {
 
   return (
     <>
-      <section className="deals-results-map" aria-label={copy.sectionTitle}>
-        <div className="deals-results-map__heading">
-          <span>{copy.sectionTitle}</span>
-          <strong>{mappedCities.length}</strong>
-        </div>
-        <div className="deals-results-map__preview">
-          {mappedCities.length > 0 ? (
-            <DealsLeafletMap cities={mappedCities} compact locale={locale} />
-          ) : (
-            <p className="deals-results-map__empty">{copy.noCoordinates}</p>
-          )}
-          <button
-            disabled={mappedCities.length === 0}
-            onClick={() => setIsOpen(true)}
-            ref={triggerRef}
-            type="button"
-          >
-            <MapPin aria-hidden="true" />
-            {copy.openMap}
-          </button>
-        </div>
-      </section>
+      {presentation === "toolbar" ? (
+        <button
+          className="deals-mobile-results-bar__action"
+          disabled={mappedCities.length === 0}
+          onClick={() => setIsOpen(true)}
+          ref={triggerRef}
+          type="button"
+        >
+          <MapPin aria-hidden="true" />
+          <span>{copy.mapLabel}</span>
+        </button>
+      ) : (
+        <section className="deals-results-map" aria-label={copy.sectionTitle}>
+          <div className="deals-results-map__heading">
+            <span>{copy.sectionTitle}</span>
+            <strong>{mappedCities.length}</strong>
+          </div>
+          <div className="deals-results-map__preview">
+            {mappedCities.length > 0 ? (
+              <DealsLeafletMap cities={mappedCities} compact locale={locale} />
+            ) : (
+              <p className="deals-results-map__empty">{copy.noCoordinates}</p>
+            )}
+            <button
+              disabled={mappedCities.length === 0}
+              onClick={() => setIsOpen(true)}
+              ref={triggerRef}
+              type="button"
+            >
+              <MapPin aria-hidden="true" />
+              {copy.openMap}
+            </button>
+          </div>
+        </section>
+      )}
       {isOpen ? <DealsMapModal cities={mappedCities} locale={locale} onClose={closeModal} /> : null}
     </>
   );
