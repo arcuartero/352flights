@@ -503,10 +503,45 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .deals-mobile-sort-options input {
+  display: grid;
   width: 1.35rem;
   height: 1.35rem;
   margin: 0;
-  accent-color: var(--v2-blue-strong);
+  place-items: center;
+  flex: 0 0 auto;
+  border: 2px solid rgba(29, 39, 51, 0.32);
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.deals-mobile-sort-options input::after {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #fff;
+  transform: scale(0);
+  transition: transform 0.18s ease;
+}
+
+.deals-mobile-sort-options input:checked {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent);
+}
+
+.deals-mobile-sort-options input:checked::after {
+  transform: scale(1);
+}
+
+.deals-mobile-sort-options input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--v2-accent) 45%, transparent);
+  outline-offset: 3px;
 }
 
 .deals-mobile-sort-options span {
