@@ -1514,14 +1514,14 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-metrics__grid div,
+  .v2-metrics__grid div + div,
   .v2-metrics__grid div:nth-child(even) {
-    border-left: 0;
+    border: 1px solid var(--v2-hairline);
   }
 
   .v2-metrics__grid div {
     justify-content: start;
     padding: 1rem 1.1rem;
-    border: 1px solid var(--v2-hairline);
     border-radius: 1.1rem;
     background: rgba(255, 255, 255, 0.72);
   }
