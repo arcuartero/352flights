@@ -2660,7 +2660,7 @@ body:has(.page-shell--deals-city)::before {
 
 .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration strong,
 .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration strong {
-  color: #ee5757;
+  color: #2f6683;
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.05;

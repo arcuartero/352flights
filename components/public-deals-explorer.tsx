@@ -740,14 +740,22 @@ function formatStayHours(value: number | null, nights: number, t?: Translate) {
   const hours = rounded % 24;
 
   if (days > 0 && hours > 0) {
-    return `${days}d ${hours}h`;
+    return t
+      ? t("deals.duration.daysHours", { days, hours })
+      : `${days}d and ${hours}h`;
   }
 
   if (days > 0) {
-    return `${days}d`;
+    return t ? t("deals.duration.days", { days }) : `${days}d`;
   }
 
-  return `${hours}h`;
+  return t ? t("deals.duration.hours", { hours }) : `${hours}h`;
+}
+
+function formatDestinationStay(value: number | null, nights: number, t: Translate) {
+  return t("deals.stayAtDestination", {
+    duration: formatStayHours(value, nights, t),
+  });
 }
 
 function formatVerifiedAge(value: string | null, t?: Translate, now: Date = new Date()) {
@@ -2153,7 +2161,7 @@ function PublicDealCard({
           <span>
             {formatDateWithWeekday(deal.departureDate, locale)} {t("common.to").toLowerCase()} {formatDateWithWeekday(deal.returnDate, locale)}
           </span>
-          <span>{formatStayHours(deal.destinationStayHours, deal.tripNights, t)} {t("deals.stay")}</span>
+          <span>{formatDestinationStay(deal.destinationStayHours, deal.tripNights, t)}</span>
         </div>
 
         <div className="deals-card__actions">
@@ -2208,7 +2216,7 @@ function FeaturedOpportunityCard({
           noun: moreDealsCount === 1 ? t("deals.fare") : t("deals.fares"),
         })
       : t("deals.card.seeFare");
-  const tripSnapshot = `${formatDateWithWeekday(deal.departureDate, locale)} · ${formatStayHours(deal.destinationStayHours, deal.tripNights, t)} ${t("deals.stay")}`;
+  const tripSnapshot = `${formatDateWithWeekday(deal.departureDate, locale)} · ${formatDestinationStay(deal.destinationStayHours, deal.tripNights, t)}`;
   const verifiedLabel = formatVerifiedAge(deal.verifiedAt, t);
 
   if (variant === "hero") {
@@ -2615,7 +2623,7 @@ function DealFlightCard({
 
         {showFacts ? (
           <div className="deals-search-card__facts">
-            <span>{formatStayHours(deal.destinationStayHours, deal.tripNights, t)} {t("deals.stay")}</span>
+            <span>{formatDestinationStay(deal.destinationStayHours, deal.tripNights, t)}</span>
             <span>{formatLocalizedStayBucket(deal.routeBucket, t)}</span>
             <span>{formatVerifiedAge(deal.verifiedAt, t)}</span>
             {holidayMatch ? <span>{t("deals.matches")} {holidayMatch.label}</span> : null}
