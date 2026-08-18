@@ -3845,7 +3845,11 @@ body:has(.page-shell--deals-city)::before {
 }
 
 @media (max-width: 700px) {
-  .page-shell--deals-search .deals-search-page-card {
+  .page-shell--deals-search .deals-search-page-card,
+  .page-shell--deals-city .deals-city-page .deals-search-layout {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -3853,7 +3857,8 @@ body:has(.page-shell--deals-city)::before {
     box-shadow: none;
   }
 
-  .page-shell--deals-search .deals-active-filters {
+  .page-shell--deals-search .deals-active-filters,
+  .page-shell--deals-city .deals-active-filters {
     display: none;
   }
 }
