@@ -1,6 +1,7 @@
 "use client";
 
-import { Heart, Mail, ShieldCheck, X, Zap } from "lucide-react";
+import { ArrowRight, Bell, LockKeyhole, Mail, X } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
@@ -8,17 +9,14 @@ import { useI18n } from "@/lib/i18n";
 export function V2AlertsModal({ onClose }: { onClose: () => void }) {
   const { locale, t } = useI18n();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<{ tone: "idle" | "success" | "error"; message: string }>(() => ({
+  const [status, setStatus] = useState<{
+    tone: "idle" | "pending" | "success" | "error";
+    message: string;
+  }>(() => ({
     tone: "idle",
-    message: t("alerts.initial"),
+    message: "",
   }));
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setStatus((current) =>
-      current.tone === "idle" ? { tone: "idle", message: t("alerts.initial") } : current,
-    );
-  }, [t]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -42,7 +40,7 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
       return;
     }
     startTransition(async () => {
-      setStatus({ tone: "idle", message: t("alerts.sendingLink") });
+      setStatus({ tone: "pending", message: t("alerts.sendingLink") });
       try {
         const response = await fetch("/api/subscribe", {
           method: "POST",
@@ -81,13 +79,19 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
         className="v2-modal__dialog"
         role="dialog"
       >
-        <button aria-label="Close" className="v2-modal__close" onClick={onClose} type="button">
+        <button aria-label={t("alerts.close")} className="v2-modal__close" onClick={onClose} type="button">
           <X strokeWidth={2} />
         </button>
 
         <div className="v2-modal__main">
-          <p className="v2-eyebrow">{t("common.alerts")}</p>
-          <h2 id="v2-alerts-title">{t("alerts.title")}</h2>
+          <span className="v2-modal__bell" aria-hidden="true">
+            <Bell strokeWidth={1.9} />
+            <i />
+          </span>
+          <p className="v2-modal__eyebrow">{t("alerts.eyebrow")}</p>
+          <h2 id="v2-alerts-title">
+            {t("alerts.titleBefore")} <em>{t("alerts.titleAccent")}</em>
+          </h2>
           <p className="v2-modal__lede">
             {t("alerts.lede")}
           </p>
@@ -100,11 +104,12 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
             }}
           >
             <label className="v2-modal__field" htmlFor="v2-alerts-email">
-              <span>{t("common.emailAddress")}</span>
+              <span className="sr-only">{t("common.emailAddress")}</span>
               <div className="v2-modal__input">
                 <Mail strokeWidth={1.8} />
                 <input
                   autoComplete="email"
+                  autoFocus
                   id="v2-alerts-email"
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder={t("common.emailPlaceholder")}
@@ -116,7 +121,10 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
 
             <div className="v2-modal__actions">
               <button className="v2-modal__primary" disabled={isPending} type="submit">
-                {isPending ? t("alerts.sending") : t("alerts.emailMe")}
+                <span>{isPending ? t("alerts.sending") : t("alerts.emailMe")}</span>
+                <i aria-hidden="true">
+                  <ArrowRight strokeWidth={2} />
+                </i>
               </button>
               <button
                 className="v2-modal__secondary"
@@ -129,26 +137,26 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
             </div>
           </form>
 
-          <p className={`v2-modal__status v2-modal__status--${status.tone}`}>{status.message}</p>
+          {status.message ? (
+            <p className={`v2-modal__status v2-modal__status--${status.tone}`} role="status">
+              {status.message}
+            </p>
+          ) : null}
+
+          <p className="v2-modal__privacy">
+            <LockKeyhole strokeWidth={1.8} aria-hidden="true" />
+            {t("alerts.privacy")}
+          </p>
         </div>
 
         <aside className="v2-modal__aside" aria-hidden="true">
-          <div className="v2-modal__aside-card">
-            <span className="v2-modal__aside-route">LUX → FCO</span>
-            <strong>€44</strong>
-            <em>−41% · this morning</em>
-          </div>
-          <ul className="v2-modal__benefits">
-            <li>
-              <ShieldCheck strokeWidth={1.8} /> {t("alerts.secure")}
-            </li>
-            <li>
-              <Zap strokeWidth={1.8} /> {t("alerts.instant")}
-            </li>
-            <li>
-              <Heart strokeWidth={1.8} /> {t("alerts.personal")}
-            </li>
-          </ul>
+          <Image
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 760px) 32rem, 25rem"
+            src="/alerts-airplane-window.webp"
+          />
         </aside>
       </section>
     </div>
