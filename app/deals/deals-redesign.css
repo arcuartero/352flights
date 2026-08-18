@@ -58,6 +58,9 @@ body:has(.page-shell--deals-city) .scroll-top-button {
 }
 
 .deals-redesign__topbar {
+  position: relative;
+  z-index: 100;
+  overflow: visible;
   border-bottom: 1px solid var(--v2-hairline);
 }
 
@@ -715,6 +718,10 @@ body:has(.page-shell--deals-city)::before {
 }
 
 @media (max-width: 700px) {
+  .page-shell--deals-search {
+    padding-top: 1rem;
+  }
+
   .page-shell--deals-search .deals-search-page-card,
   .page-shell--deals-city .deals-city-page .deals-search-layout {
     width: calc(100vw - 1rem);

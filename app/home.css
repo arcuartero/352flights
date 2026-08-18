@@ -1439,7 +1439,7 @@ body:has(.v2) .scroll-top-button {
   .v2-topbar {
     width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
     gap: 0.45rem;
     padding: 0.95rem 0.65rem;
   }
