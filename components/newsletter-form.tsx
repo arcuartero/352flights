@@ -88,7 +88,7 @@ export function NewsletterForm() {
           className="newsletter-form__input"
           id="email"
           name="email"
-          placeholder="Iwantcheapflights@gmail.com"
+          placeholder={t("common.emailPlaceholder")}
           required
           type="email"
         />
