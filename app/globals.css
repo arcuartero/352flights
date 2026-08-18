@@ -2219,7 +2219,7 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
 }
 
 .deals-search-card__duration strong {
-  color: color-mix(in srgb, var(--accent) 78%, white 12%);
+  color: #2f6683;
   font-size: 0.88rem;
   font-weight: 700;
 }
