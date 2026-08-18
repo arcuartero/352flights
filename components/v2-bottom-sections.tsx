@@ -122,7 +122,7 @@ export function V2BottomSections() {
           <span className="v2-footer__brand">
             +352 Flights <span aria-hidden="true">|</span> © 2026
           </span>
-          <nav aria-label="Legal">
+          <nav aria-label={t("common.legalNavigation")}>
             <Link href="/privacy">{t("common.privacy")}</Link>
             <Link href="/cookies">{t("common.cookies")}</Link>
             <Link href="/terms">{t("common.terms")}</Link>

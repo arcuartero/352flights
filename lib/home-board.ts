@@ -5,7 +5,7 @@ export type HomeBoardDestination = {
   landmark: string;
   price: number;
   drop: number | null;
-  nights: string;
+  tripNights: number;
 };
 
 export type HomeRecentDrop = {
@@ -74,10 +74,6 @@ function getDropPercent(deal: CampaignPreviewDeal) {
   }
 
   return Math.max(0, Math.round((1 - deal.dropRatio) * 100));
-}
-
-function formatNights(nights: number) {
-  return `${nights} ${nights === 1 ? "night" : "nights"}`;
 }
 
 function isNonstopDeal(deal: CampaignPreviewDeal) {
@@ -178,7 +174,7 @@ export function buildHomeBoardDestinations(
         landmark: LANDMARK_TITLE_BY_DESTINATION[key] ?? city,
         price: bestDeal.dealPrice,
         drop: getDropPercent(bestDeal),
-        nights: formatNights(bestDeal.tripNights),
+        tripNights: bestDeal.tripNights,
       };
     })
     .sort((left, right) => {

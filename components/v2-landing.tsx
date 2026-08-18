@@ -59,35 +59,32 @@ const RHYTHMS = [
 const MINIMUM_TICKER_ITEMS = 16;
 
 type Testimonial = {
-  quote: string;
+  quoteKey: string;
   name: string;
-  role: string;
+  location: string;
   photo: string;
   tone: "blue" | "red" | "sand";
 };
 
 const TESTIMONIALS_ROW_A: Testimonial[] = [
   {
-    quote:
-      "Lisbon for thirty-nine euros. I booked it from the bus before the email was even finished.",
+    quoteKey: "home.testimonial.claire",
     name: "Claire Muller",
-    role: "Subscriber · Luxembourg City",
+    location: "Luxembourg City",
     photo: "/v2-avatars/claire.jpg",
     tone: "blue",
   },
   {
-    quote:
-      "It's the only travel email I keep. One fare, the reason it's cheap, and the dates. Done.",
+    quoteKey: "home.testimonial.tomas",
     name: "Tomás Ferreira",
-    role: "Subscriber · Esch-sur-Alzette",
+    location: "Esch-sur-Alzette",
     photo: "/v2-avatars/tomas.jpg",
     tone: "red",
   },
   {
-    quote:
-      "Three trips this year I would never have caught myself. The school-holiday matches are gold.",
+    quoteKey: "home.testimonial.anne",
     name: "Anne Weber",
-    role: "Subscriber · Differdange",
+    location: "Differdange",
     photo: "/v2-avatars/anne.jpg",
     tone: "sand",
   },
@@ -95,26 +92,23 @@ const TESTIMONIALS_ROW_A: Testimonial[] = [
 
 const TESTIMONIALS_ROW_A_EXTRA: Testimonial[] = [
   {
-    quote:
-      "I stopped checking five apps every night. If something out of LUX is truly cheap, it lands in my inbox.",
+    quoteKey: "home.testimonial.marc",
     name: "Marc Hoffmann",
-    role: "Subscriber · Dudelange",
+    location: "Dudelange",
     photo: "/v2-avatars/marc.jpg",
     tone: "red",
   },
   {
-    quote:
-      "Milan for €31 on a direct flight. My colleagues didn't believe the screenshot.",
+    quoteKey: "home.testimonial.sofia",
     name: "Sofia Ricci",
-    role: "Subscriber · Kirchberg",
+    location: "Kirchberg",
     photo: "/v2-avatars/sofia.jpg",
     tone: "blue",
   },
   {
-    quote:
-      "Short, honest, and it respects my time. The price history line convinces me every time.",
+    quoteKey: "home.testimonial.ben",
     name: "Ben Kayser",
-    role: "Subscriber · Ettelbruck",
+    location: "Ettelbruck",
     photo: "/v2-avatars/ben.jpg",
     tone: "sand",
   },
@@ -122,50 +116,44 @@ const TESTIMONIALS_ROW_A_EXTRA: Testimonial[] = [
 
 const TESTIMONIALS_ROW_B: Testimonial[] = [
   {
-    quote:
-      "Porto in October for less than a dinner out. We walked the Ribeira wondering why it was so cheap.",
+    quoteKey: "home.testimonial.lena",
     name: "Lena Schmit",
-    role: "Subscriber · Mersch",
+    location: "Mersch",
     photo: "/v2-avatars/lena.jpg",
     tone: "blue",
   },
   {
-    quote:
-      "Two clicks from the email to the airline checkout. No portals, no tricks, the real fare.",
+    quoteKey: "home.testimonial.paul",
     name: "Paul Reuter",
-    role: "Subscriber · Bertrange",
+    location: "Bertrange",
     photo: "/v2-avatars/paul.jpg",
     tone: "sand",
   },
   {
-    quote:
-      "Budapest with the kids during the Toussaint break. The dates matched the school calendar exactly.",
+    quoteKey: "home.testimonial.marta",
     name: "Marta Silva",
-    role: "Subscriber · Bonnevoie",
+    location: "Bonnevoie",
     photo: "/v2-avatars/marta.jpg",
     tone: "red",
   },
   {
-    quote:
-      "I used to think LUX was always expensive. Turns out I was just looking on the wrong days.",
+    quoteKey: "home.testimonial.david",
     name: "David Klein",
-    role: "Subscriber · Strassen",
+    location: "Strassen",
     photo: "/v2-avatars/david.jpg",
     tone: "blue",
   },
   {
-    quote:
-      "Vienna for a long weekend, booked on a Tuesday over coffee. It felt almost too easy.",
+    quoteKey: "home.testimonial.julie",
     name: "Julie Thill",
-    role: "Subscriber · Remich",
+    location: "Remich",
     photo: "/v2-avatars/julie.jpg",
     tone: "red",
   },
   {
-    quote:
-      "The only newsletter I open within the minute. Cheap fares from here really do expire fast.",
+    quoteKey: "home.testimonial.nico",
     name: "Nico Wagner",
-    role: "Subscriber · Echternach",
+    location: "Echternach",
     photo: "/v2-avatars/nico.jpg",
     tone: "sand",
   },
@@ -574,10 +562,10 @@ export function V2Landing({
 
       {isAlertsOpen ? <V2AlertsModal onClose={() => setIsAlertsOpen(false)} /> : null}
 
-      <section className="v2-hero" aria-label="Introduction">
+      <section className="v2-hero" aria-label={t("home.a11y.introduction")}>
         <div className="v2-hero__canvas" data-reveal ref={heroMediaRef}>
           <img
-            alt="Traveler holding a passport in the airplane cabin"
+            alt={t("home.a11y.heroImage")}
             className="v2-hero__photo"
             src="/deals-hero-airplane-cabin-3.jpeg"
           />
@@ -723,7 +711,7 @@ export function V2Landing({
       ) : null}
 
       {boardDestinations.length > 0 ? (
-        <section className="v2-bento" aria-label="Destinations on the board">
+        <section className="v2-bento" aria-label={t("home.a11y.boardDestinations")}>
           <div className="v2-bento__head" data-reveal>
             <h2>{t("home.boardTitle")}</h2>
           </div>
@@ -737,7 +725,10 @@ export function V2Landing({
                 style={{ "--d": `${i * 90}ms` } as React.CSSProperties}
               >
                 <img
-                  alt={`${dest.city} — ${dest.landmark}`}
+                  alt={t("home.a11y.destinationImage", {
+                    destination: dest.city,
+                    landmark: dest.landmark,
+                  })}
                   loading="lazy"
                   onError={(event) => useLocalPhotoFallback(event)}
                   src={destinationPhotoUrls[toDestinationSlug(dest.city)] ?? landmarkSrc(dest.city, dest.landmark)}
@@ -746,7 +737,12 @@ export function V2Landing({
                 <span className="v2-bento__meta">
                   <strong>{dest.city}</strong>
                   <span>
-                    {t("home.fromPrice", { price: dest.price, nights: dest.nights })}
+                    {t("home.fromPrice", {
+                      price: dest.price,
+                      nights: `${dest.tripNights} ${
+                        dest.tripNights === 1 ? t("deals.night") : t("deals.nights")
+                      }`,
+                    })}
                   </span>
                 </span>
                 {dest.drop !== null ? <span className="v2-bento__drop">↓ {dest.drop}%</span> : null}
@@ -757,7 +753,7 @@ export function V2Landing({
       ) : null}
 
       {/* ---------- Section 5 of 8 · Travel rhythms — hover-accordion slices ---------- */}
-      <section className="v2-rhythms" aria-label="Trip styles">
+      <section className="v2-rhythms" aria-label={t("home.a11y.tripStyles")}>
         <div className="v2-rhythms__head" data-reveal>
           <p className="v2-eyebrow">{t("home.rhythmsKicker")}</p>
           <h2>{t("home.rhythmsTitle")}</h2>
@@ -766,7 +762,7 @@ export function V2Landing({
           {RHYTHMS.map((rhythm) => (
             <Link className="v2-rhythms__slice" href={buildRhythmSearchHref(rhythm.key)} key={rhythm.key}>
               <img
-                alt={rhythm.label}
+                alt={t(`home.rhythm.${rhythm.key === "week" ? "week" : rhythm.key}`)}
                 loading="lazy"
                 onError={(event) => useLocalPhotoFallback(event, rhythm.key === "beach")}
                 src={destinationPhotoUrls[toDestinationSlug(rhythm.city)] ?? landmarkSrc(rhythm.city, rhythm.landmark)}
@@ -811,14 +807,16 @@ export function V2Landing({
                       <span className="v2-tcard__mark" aria-hidden="true">
                         “
                       </span>
-                      <blockquote>{testimonial.quote}</blockquote>
+                      <blockquote>{t(testimonial.quoteKey)}</blockquote>
                       <figcaption>
                         <span className={`v2-tcard__avatar v2-tcard__avatar--${testimonial.tone}`}>
                           <img alt="" loading="lazy" src={testimonial.photo} />
                         </span>
                         <span className="v2-tcard__id">
                           <strong>{testimonial.name}</strong>
-                          <small>{testimonial.role}</small>
+                          <small>
+                            {t("home.testimonialRole", { location: testimonial.location })}
+                          </small>
                         </span>
                       </figcaption>
                     </figure>

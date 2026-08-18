@@ -27,10 +27,7 @@ import {
   formatPublicDealDateRange,
   PublicDealsDatePicker as DealsDatePicker,
 } from "@/components/public-deals-date-picker";
-import {
-  getDestinationHeroDescription as getSeoDestinationHeroDescription,
-  getDestinationTheme,
-} from "@/lib/destination-content";
+import { getDestinationTheme } from "@/lib/destination-content";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import { useI18n, type Locale } from "@/lib/i18n";
 import type { PublicDealsPageData } from "@/lib/ops";
@@ -52,7 +49,7 @@ import {
   type TripFilter,
   type WhenFilter,
 } from "@/lib/public-deals-search";
-import { formatStayBucketLabel } from "@/lib/stay-buckets";
+import { formatStayBucketLabel, normalizeStayBucket } from "@/lib/stay-buckets";
 
 const PublicDealsMap = dynamic(
   () => import("@/components/public-deals-map").then((module) => module.PublicDealsMap),
@@ -96,7 +93,6 @@ type TravelStyleCard = {
   key: string;
   label: string;
   description: string;
-  hint: string;
   fromPrice: number | null;
   matches: number;
   chip: QuickChip | null;
@@ -544,12 +540,12 @@ function formatCurrency(value: number, currency: string = "EUR") {
   }).format(value);
 }
 
-function formatDateWithWeekday(value: string | null) {
+function formatDateWithWeekday(value: string | null, locale: Locale) {
   if (!value) {
     return "n/a";
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
     weekday: "short",
     day: "2-digit",
     month: "short",
@@ -557,12 +553,12 @@ function formatDateWithWeekday(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatDateWithoutWeekday(value: string | null) {
+function formatDateWithoutWeekday(value: string | null, locale: Locale) {
   if (!value) {
     return "n/a";
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -732,9 +728,11 @@ function formatFlightDuration(
   return `${minutes}m`;
 }
 
-function formatStayHours(value: number | null, nights: number) {
+function formatStayHours(value: number | null, nights: number, t?: Translate) {
   if (value === null) {
-    return `${nights} nights`;
+    return `${nights} ${
+      nights === 1 ? (t ? t("deals.night") : "night") : (t ? t("deals.nights") : "nights")
+    }`;
   }
 
   const rounded = Math.max(0, Math.round(value));
@@ -776,12 +774,12 @@ function formatVerifiedAge(value: string | null, t?: Translate, now: Date = new 
   return t ? t("deals.verifiedDaysAgo", { count: diffDays }) : `Verified ${diffDays}d ago`;
 }
 
-function formatDepartureMonth(value: string | null) {
+function formatDepartureMonth(value: string | null, locale: Locale, t: Translate) {
   if (!value) {
-    return "flexible dates";
+    return t("deals.newsletter.flexibleDates");
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
     month: "short",
   }).format(new Date(value));
 }
@@ -905,32 +903,39 @@ function getDepartureWeekdayFilterValue(value: string | null): DepartureWeekdayF
   }
 }
 
-function formatDropLine(deal: CampaignPreviewDeal) {
+function formatDropLine(deal: CampaignPreviewDeal, t: Translate) {
   if (deal.baselinePrice === null || deal.dropRatio === null) {
-    return "Fresh Luxembourg fare, checked against the live market.";
+    return t("deals.modal.freshMarketFare");
   }
 
   if (deal.pricePosition === "above_usual") {
     const pct = Math.max(0, Math.round((deal.dropRatio - 1) * 100));
-    return `Usually around ${formatCurrency(deal.baselinePrice)} · currently ${pct}% above that level.`;
+    return t("deals.modal.aboveUsual", {
+      price: formatCurrency(deal.baselinePrice),
+      pct,
+    });
   }
 
   if (deal.pricePosition === "typical") {
-    return `This fare is close to its recent usual price of ${formatCurrency(deal.baselinePrice)}.`;
+    return t("deals.modal.typicalPrice", { price: formatCurrency(deal.baselinePrice) });
   }
 
   const saved = Math.max(0, deal.baselinePrice - deal.dealPrice);
   const pct = Math.max(0, Math.round((1 - deal.dropRatio) * 100));
-  return `Usually around ${formatCurrency(deal.baselinePrice)} · save ${formatCurrency(saved)} (${pct}% off).`;
+  return t("deals.modal.savings", {
+    price: formatCurrency(deal.baselinePrice),
+    saved: formatCurrency(saved),
+    pct,
+  });
 }
 
-function getFareBadgeLabel(deal: CampaignPreviewDeal) {
+function getFareBadgeLabel(deal: CampaignPreviewDeal, t: Translate) {
   if (deal.pricePosition === "new_price") {
-    return "New fare";
+    return t("deals.newFare");
   }
 
   if (deal.pricePosition === "typical") {
-    return "Typical";
+    return t("deals.typical");
   }
 
   if (deal.pricePosition === "above_usual") {
@@ -980,30 +985,30 @@ function getTravelStyleVisual(key: string) {
   }
 }
 
-function getPublicTripStyle(deal: CampaignPreviewDeal) {
+function getPublicTripStyle(deal: CampaignPreviewDeal, t: Translate) {
   const bucketKey = normalizeDestinationKey(deal.routeBucket);
 
   if (bucketKey.includes("weekend")) {
-    return "Weekend escape";
+    return t("deals.style.weekend");
   }
 
   if (deal.tripNights >= 5 && deal.tripNights <= 7) {
-    return "One-week trip";
+    return t("deals.style.weeklong");
   }
 
   if (bucketKey.includes("long")) {
-    return "Long stay";
+    return t("deals.style.longStay");
   }
 
-  return "Smart fare";
+  return t("deals.style.smartFare");
 }
 
-function getPublicAirlineLine(deal: CampaignPreviewDeal) {
+function getPublicAirlineLine(deal: CampaignPreviewDeal, t: Translate) {
   if (!deal.airlineSummary) {
-    return "From Luxembourg";
+    return t("deals.fromLuxembourg");
   }
 
-  return `From Luxembourg · ${deal.airlineSummary}`;
+  return `${t("deals.fromLuxembourg")} · ${deal.airlineSummary}`;
 }
 
 function formatLegStops(
@@ -1033,9 +1038,9 @@ function formatItineraryStops(deal: CampaignPreviewDeal, t: Translate) {
     : `${t("deals.outbound")}: ${outbound} · ${t("deals.return")}: ${returnLeg}`;
 }
 
-function getDisplayAirlineSummary(deal: CampaignPreviewDeal) {
+function getDisplayAirlineSummary(deal: CampaignPreviewDeal, t?: Translate) {
   if (!deal.airlineSummary) {
-    return "Airline pending";
+    return t ? t("deals.airlinePending") : "Airline pending";
   }
 
   if (deal.maxStops === "NON_STOP") {
@@ -1048,6 +1053,12 @@ function getDisplayAirlineSummary(deal: CampaignPreviewDeal) {
   }
 
   return deal.airlineSummary;
+}
+
+function formatLocalizedStayBucket(bucket: string, t: Translate) {
+  return normalizeStayBucket(bucket) === "long_stay"
+    ? t("deals.trip.long_stay")
+    : t("deals.trip.weekend");
 }
 
 function normalizeAirlineName(value: string) {
@@ -1095,6 +1106,7 @@ function AirlineLogo({
   airlineName: string;
   primaryAirlineCode: string | null;
 }) {
+  const { t } = useI18n();
   const logoCode = getAirlineLogoCode(airlineName, primaryAirlineCode);
   const [failedLogoCode, setFailedLogoCode] = useState<string | null>(null);
   const canShowAirlineLogo = logoCode !== null && failedLogoCode !== logoCode;
@@ -1103,13 +1115,13 @@ function AirlineLogo({
     <span className="deals-airline-logo" title={airlineName}>
       {canShowAirlineLogo ? (
         <img
-          alt={`${airlineName} logo`}
+          alt={t("deals.a11y.airlineLogo", { airline: airlineName })}
           loading="lazy"
           onError={() => setFailedLogoCode(logoCode)}
           src={`https://images.kiwi.com/airlines/64/${logoCode}.png`}
         />
       ) : (
-        <span aria-label={`${airlineName} logo`} className="deals-airline-logo__fallback" role="img">
+        <span aria-label={t("deals.a11y.airlineLogo", { airline: airlineName })} className="deals-airline-logo__fallback" role="img">
           <Plane aria-hidden="true" size={24} strokeWidth={2.15} />
         </span>
       )}
@@ -1624,8 +1636,12 @@ function getThemeForDestinationCity(city: string): Exclude<ThemeFilter, "any"> {
   return getDestinationTheme(city);
 }
 
-function getDestinationHeroDescription(city: string, _t?: Translate) {
-  return getSeoDestinationHeroDescription(city);
+function getDestinationHeroDescription(city: string, t: Translate) {
+  const theme = getThemeForDestinationCity(city);
+  return t("deals.cityHeroDesc", {
+    city,
+    escapeLabel: t(`deals.escape.${theme}`),
+  });
 }
 
 function isWeekendDeal(deal: CampaignPreviewDeal) {
@@ -2080,25 +2096,25 @@ function PublicDealCard({
   compact?: boolean;
   destinationPhotoUrls?: DestinationPhotoUrlMap;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const holidayMatch = getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate);
   const savingsLabel = formatSearchSavingsLabel(deal, t);
   const travelMeta = [
     formatItineraryStops(deal, t),
     `${deal.tripNights} ${deal.tripNights === 1 ? t("deals.night") : t("deals.nights")}`,
-    formatDepartureMonth(deal.departureDate).toLowerCase(),
+    formatDepartureMonth(deal.departureDate, locale, t).toLowerCase(),
   ].join(" · ");
   const moreDealsCount = Math.max(0, combinationsCount - 1);
   const ctaLabel =
     moreDealsCount > 0
-      ? `See this deal and ${moreDealsCount} more`
-      : "See this deal";
+      ? t("deals.card.seeDealAndMore", { count: moreDealsCount })
+      : t("deals.card.seeDeal");
 
   return (
     <article className={`deals-card${compact ? " deals-card--compact" : ""}`}>
       <figure className="deals-card__media">
         <LandmarkPhoto
-          alt={`${deal.destinationCity} landmark`}
+          alt={t("deals.a11y.destinationLandmark", { destination: deal.destinationCity })}
           destinationCity={deal.destinationCity}
           landmarkTitle={getLandmarkTitle(deal)}
           photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
@@ -2108,8 +2124,8 @@ function PublicDealCard({
 
       <div className="deals-card__body">
         <div className="deals-card__eyebrow">
-          <p>{getPublicTripStyle(deal)}</p>
-          <strong>from {formatCurrency(deal.dealPrice)}</strong>
+          <p>{getPublicTripStyle(deal, t)}</p>
+          <strong>{t("common.from").toLowerCase()} {formatCurrency(deal.dealPrice)}</strong>
         </div>
 
         <div className="deals-card__title">
@@ -2124,7 +2140,7 @@ function PublicDealCard({
         ) : null}
 
         <div className="deals-card__meta-line">
-          <span>{getPublicAirlineLine(deal)}</span>
+          <span>{getPublicAirlineLine(deal, t)}</span>
           <span>{formatItineraryStops(deal, t)}</span>
         </div>
 
@@ -2135,21 +2151,27 @@ function PublicDealCard({
 
         <div className="deals-card__detail-strip">
           <span>
-            {formatDateWithWeekday(deal.departureDate)} to {formatDateWithWeekday(deal.returnDate)}
+            {formatDateWithWeekday(deal.departureDate, locale)} {t("common.to").toLowerCase()} {formatDateWithWeekday(deal.returnDate, locale)}
           </span>
-          <span>{formatStayHours(deal.destinationStayHours, deal.tripNights)} {t("deals.stay")}</span>
+          <span>{formatStayHours(deal.destinationStayHours, deal.tripNights, t)} {t("deals.stay")}</span>
         </div>
 
         <div className="deals-card__actions">
           <span className="deals-card__matches">
-            {combinationsCount} {combinationsCount === 1 ? "combination" : "combinations"} good
+            {t("deals.card.goodCombinations", {
+              count: combinationsCount,
+              noun:
+                combinationsCount === 1
+                  ? t("deals.card.combination")
+                  : t("deals.card.combinations"),
+            })}
           </span>
           {deal.bookingUrl ? (
             <a className="deals-card__cta" href={deal.bookingUrl} rel="noreferrer" target="_blank">
-              View ↗
+              {t("deals.card.view")} ↗
             </a>
           ) : (
-            <span className="deals-card__cta deals-card__cta--ghost">Pending</span>
+            <span className="deals-card__cta deals-card__cta--ghost">{t("deals.card.pending")}</span>
           )}
         </div>
       </div>
@@ -2170,26 +2192,29 @@ function FeaturedOpportunityCard({
   onOpen: () => void;
   variant?: "default" | "hero";
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const savingsLabel = formatSearchSavingsLabel(deal, t);
-  const savingsBadgeLabel = getFareBadgeLabel(deal);
+  const savingsBadgeLabel = getFareBadgeLabel(deal, t);
   const travelMeta = [
     formatItineraryStops(deal, t),
     `${deal.tripNights} ${deal.tripNights === 1 ? t("deals.night") : t("deals.nights")}`,
-    formatDepartureMonth(deal.departureDate).toLowerCase(),
+    formatDepartureMonth(deal.departureDate, locale, t).toLowerCase(),
   ].join(" · ");
   const moreDealsCount = Math.max(0, combinationsCount - 1);
   const ctaLabel =
     moreDealsCount > 0
-      ? `See ${moreDealsCount} more ${moreDealsCount === 1 ? "fare" : "fares"}`
-      : "See fare";
-  const tripSnapshot = `${formatDateWithWeekday(deal.departureDate)} · ${formatStayHours(deal.destinationStayHours, deal.tripNights)} ${t("deals.stay")}`;
+      ? t("deals.card.seeMore", {
+          count: moreDealsCount,
+          noun: moreDealsCount === 1 ? t("deals.fare") : t("deals.fares"),
+        })
+      : t("deals.card.seeFare");
+  const tripSnapshot = `${formatDateWithWeekday(deal.departureDate, locale)} · ${formatStayHours(deal.destinationStayHours, deal.tripNights, t)} ${t("deals.stay")}`;
   const verifiedLabel = formatVerifiedAge(deal.verifiedAt, t);
 
   if (variant === "hero") {
     return (
       <button
-        aria-label={`Open details for ${deal.destinationCity}`}
+        aria-label={t("deals.a11y.openDestinationDetails", { destination: deal.destinationCity })}
         aria-haspopup="dialog"
         className="deals-opportunity-card deals-opportunity-card--hero"
         onClick={onOpen}
@@ -2197,7 +2222,7 @@ function FeaturedOpportunityCard({
       >
         <figure className="deals-opportunity-card__media">
           <LandmarkPhoto
-            alt={`${deal.destinationCity} landmark`}
+            alt={t("deals.a11y.destinationLandmark", { destination: deal.destinationCity })}
             destinationCity={deal.destinationCity}
             landmarkTitle={getLandmarkTitle(deal)}
             photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
@@ -2208,16 +2233,16 @@ function FeaturedOpportunityCard({
         <div className="deals-opportunity-card__hero-copy">
           <div className="deals-opportunity-card__hero-main">
             <span className="deals-opportunity-card__hero-kicker">
-              The strongest opportunities on the board right now.
+              {t("deals.results.defaultTitle")}
             </span>
             <strong className="deals-opportunity-card__hero-city">
               {deal.destinationCity.toUpperCase()}
             </strong>
             <p className="deals-opportunity-card__hero-price">
-              <small>From</small> {formatCurrency(deal.dealPrice)}
+              <small>{t("common.from")}</small> {formatCurrency(deal.dealPrice)}
             </p>
             <strong className="deals-opportunity-card__hero-savings">{savingsLabel}</strong>
-            <div className="deals-opportunity-card__hero-detail-list" aria-label="Deal summary">
+            <div className="deals-opportunity-card__hero-detail-list" aria-label={t("deals.a11y.dealSummary")}>
               <span className="deals-opportunity-card__hero-detail">
                 <i aria-hidden="true">
                   <OpportunityCalendarIcon />
@@ -2254,7 +2279,7 @@ function FeaturedOpportunityCard({
 
   return (
     <button
-      aria-label={`Open details for ${deal.destinationCity}`}
+      aria-label={t("deals.a11y.openDestinationDetails", { destination: deal.destinationCity })}
       aria-haspopup="dialog"
       className="deals-opportunity-card"
       onClick={onOpen}
@@ -2262,7 +2287,7 @@ function FeaturedOpportunityCard({
     >
       <figure className="deals-opportunity-card__media">
         <LandmarkPhoto
-          alt={`${deal.destinationCity} landmark`}
+          alt={t("deals.a11y.destinationLandmark", { destination: deal.destinationCity })}
           destinationCity={deal.destinationCity}
           landmarkTitle={getLandmarkTitle(deal)}
           photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
@@ -2276,7 +2301,7 @@ function FeaturedOpportunityCard({
       <div className="deals-opportunity-card__body">
         <div className="deals-opportunity-card__title-row">
           <strong>{deal.destinationCity}</strong>
-          <span>from {formatCurrency(deal.dealPrice)}</span>
+          <span>{t("common.from").toLowerCase()} {formatCurrency(deal.dealPrice)}</span>
         </div>
 
         <p className="deals-opportunity-card__meta">{travelMeta}</p>
@@ -2312,7 +2337,7 @@ function SearchCityGroupCard({
       >
         <figure className="deals-search-group__media" aria-hidden="true">
           <LandmarkPhoto
-            alt={`${group.city} landmark`}
+            alt={t("deals.a11y.destinationLandmark", { destination: group.city })}
             destinationCity={group.city}
             landmarkTitle={getLandmarkTitle(heroDeal)}
             photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, group.city)}
@@ -2425,7 +2450,7 @@ function DealFlightCard({
                   primaryAirlineCode={deal.primaryAirlineCode}
                 />
               ) : (
-                <span>{getDisplayAirlineSummary(deal)}</span>
+                <span>{getDisplayAirlineSummary(deal, t)}</span>
               )}
               {!routeLayout ? (
                 <small>{t("deals.outbound")}</small>
@@ -2454,8 +2479,8 @@ function DealFlightCard({
                   {!routeLayout ? (
                     <small className="deals-search-card__timepoint-date">
                       {showWeekdayInDate
-                        ? formatDateWithWeekday(deal.departureDate)
-                        : formatDateWithoutWeekday(deal.departureDate)}
+                        ? formatDateWithWeekday(deal.departureDate, locale)
+                        : formatDateWithoutWeekday(deal.departureDate, locale)}
                     </small>
                   ) : null}
                   <strong>
@@ -2478,8 +2503,8 @@ function DealFlightCard({
                   {!routeLayout && showArrivalDate ? (
                     <small className="deals-search-card__timepoint-date">
                       {showWeekdayInDate
-                        ? formatDateWithWeekday(deal.outboundArrivalAt)
-                        : formatDateWithoutWeekday(deal.outboundArrivalAt)}
+                        ? formatDateWithWeekday(deal.outboundArrivalAt, locale)
+                        : formatDateWithoutWeekday(deal.outboundArrivalAt, locale)}
                     </small>
                   ) : null}
                   <strong>
@@ -2510,7 +2535,7 @@ function DealFlightCard({
                   primaryAirlineCode={deal.primaryAirlineCode}
                 />
               ) : (
-                <span>{getDisplayAirlineSummary(deal)}</span>
+                <span>{getDisplayAirlineSummary(deal, t)}</span>
               )}
               {!routeLayout ? (
                 <small>{t("deals.return")}</small>
@@ -2539,8 +2564,8 @@ function DealFlightCard({
                   {!routeLayout ? (
                     <small className="deals-search-card__timepoint-date">
                       {showWeekdayInDate
-                        ? formatDateWithWeekday(deal.returnDate)
-                        : formatDateWithoutWeekday(deal.returnDate)}
+                        ? formatDateWithWeekday(deal.returnDate, locale)
+                        : formatDateWithoutWeekday(deal.returnDate, locale)}
                     </small>
                   ) : null}
                   <strong>
@@ -2553,7 +2578,7 @@ function DealFlightCard({
                 <div
                   className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
                 >
-                  <span>{returnDuration ?? formatStayHours(deal.destinationStayHours, deal.tripNights)}</span>
+                  <span>{returnDuration ?? formatStayHours(deal.destinationStayHours, deal.tripNights, t)}</span>
                   <strong>{returnStopsLabel}</strong>
                 </div>
                 <div
@@ -2563,8 +2588,8 @@ function DealFlightCard({
                   {!routeLayout && showArrivalDate ? (
                     <small className="deals-search-card__timepoint-date">
                       {showWeekdayInDate
-                        ? formatDateWithWeekday(deal.returnArrivalAt)
-                        : formatDateWithoutWeekday(deal.returnArrivalAt)}
+                        ? formatDateWithWeekday(deal.returnArrivalAt, locale)
+                        : formatDateWithoutWeekday(deal.returnArrivalAt, locale)}
                     </small>
                   ) : null}
                   <strong>
@@ -2590,8 +2615,8 @@ function DealFlightCard({
 
         {showFacts ? (
           <div className="deals-search-card__facts">
-            <span>{formatStayHours(deal.destinationStayHours, deal.tripNights)} {t("deals.stay")}</span>
-            <span>{formatStayBucketLabel(deal.routeBucket)}</span>
+            <span>{formatStayHours(deal.destinationStayHours, deal.tripNights, t)} {t("deals.stay")}</span>
+            <span>{formatLocalizedStayBucket(deal.routeBucket, t)}</span>
             <span>{formatVerifiedAge(deal.verifiedAt, t)}</span>
             {holidayMatch ? <span>{t("deals.matches")} {holidayMatch.label}</span> : null}
           </div>
@@ -2680,6 +2705,8 @@ function ResultsLoadMore({
   onLoadMore: () => void;
   onPageSizeChange: (pageSize: number) => void;
 }) {
+  const { t } = useI18n();
+
   if (total <= 0) {
     return null;
   }
@@ -2691,15 +2718,15 @@ function ResultsLoadMore({
   );
 
   return (
-    <div className="deals-results-pagination" aria-label="Fare results">
+    <div className="deals-results-pagination" aria-label={t("deals.a11y.fareResults")}>
       <p>
-        Mostrando {end} de {total}
+        {t("deals.pagination.showing", { end, total })}
       </p>
       <div className="deals-results-pagination__settings">
         <label className="deals-results-pagination__page-size">
-          <span>Mostrar</span>
+          <span>{t("deals.pagination.show")}</span>
           <select
-            aria-label="Número de tarifas visibles"
+            aria-label={t("deals.a11y.visibleFareCount")}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             value={pageSize}
           >
@@ -2716,7 +2743,7 @@ function ResultsLoadMore({
             onClick={onLoadMore}
             type="button"
           >
-            Mostrar más
+            {t("deals.pagination.showMore")}
           </button>
         ) : null}
       </div>
@@ -2794,12 +2821,15 @@ function FeaturedOpportunityModal({
 
   const otherOffersCount = Math.max(0, combinationsCount - 1);
   const destinationHref = buildDestinationDealsHref(deal.destinationCity);
-  const otherOffersNoun = otherOffersCount === 1 ? "fare" : "fares";
   const modalCtaLabel =
     otherOffersCount > 0
-      ? `Explore ${otherOffersCount} more ${deal.destinationCity} ${otherOffersNoun}`
-      : "View fare on Skyscanner";
-  const savingsLabel = formatDropLine(deal);
+      ? t("deals.modal.exploreMore", {
+          count: otherOffersCount,
+          destination: deal.destinationCity,
+          noun: otherOffersCount === 1 ? t("deals.fare") : t("deals.fares"),
+        })
+      : t("deals.modal.viewOnSkyscanner");
+  const savingsLabel = formatDropLine(deal, t);
 
   return createPortal(
     <div
@@ -2812,7 +2842,7 @@ function FeaturedOpportunityModal({
       }}
     >
       <button
-        aria-label="Previous opportunity"
+        aria-label={t("deals.a11y.previousOpportunity")}
         className="deals-opportunity-modal__side-button deals-opportunity-modal__side-button--prev"
         disabled={!canGoPrevious}
         onClick={onPrevious}
@@ -2828,7 +2858,7 @@ function FeaturedOpportunityModal({
         role="dialog"
       >
         <button
-          aria-label="Close opportunity detail"
+          aria-label={t("deals.a11y.closeOpportunity")}
           className="deals-opportunity-modal__close"
           onClick={onClose}
           ref={closeButtonRef}
@@ -2839,7 +2869,7 @@ function FeaturedOpportunityModal({
 
         <figure className="deals-opportunity-modal__media">
           <LandmarkPhoto
-            alt={`${deal.destinationCity} landmark`}
+            alt={t("deals.a11y.destinationLandmark", { destination: deal.destinationCity })}
             destinationCity={deal.destinationCity}
             landmarkTitle={getLandmarkTitle(deal)}
             photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, deal.destinationCity)}
@@ -2851,7 +2881,7 @@ function FeaturedOpportunityModal({
           <div className="deals-opportunity-modal__header">
             <div>
               <strong className="deals-opportunity-modal__price-headline">
-                {deal.destinationCity} <small>From</small> {formatCurrency(deal.dealPrice)}
+                {deal.destinationCity} <small>{t("common.from")}</small> {formatCurrency(deal.dealPrice)}
               </strong>
               <p className="deals-opportunity-modal__lead">{savingsLabel}</p>
             </div>
@@ -2868,20 +2898,20 @@ function FeaturedOpportunityModal({
 
           <dl className="deals-opportunity-modal__facts">
             <div>
-              <dt>Trip type</dt>
-              <dd>{formatStayBucketLabel(deal.routeBucket)}</dd>
+              <dt>{t("common.tripType")}</dt>
+              <dd>{formatLocalizedStayBucket(deal.routeBucket, t)}</dd>
             </div>
             <div>
-              <dt>{`Time in ${deal.destinationCity}`}</dt>
-              <dd>{formatStayHours(deal.destinationStayHours, deal.tripNights)}</dd>
+              <dt>{t("deals.modal.timeIn", { destination: deal.destinationCity })}</dt>
+              <dd>{formatStayHours(deal.destinationStayHours, deal.tripNights, t)}</dd>
             </div>
             <div>
-              <dt>Routing</dt>
+              <dt>{t("deals.modal.routing")}</dt>
               <dd>{formatItineraryStops(deal, t)}</dd>
             </div>
             <div>
-              <dt>Airline</dt>
-              <dd>{getDisplayAirlineSummary(deal)}</dd>
+              <dt>{t("deals.modal.airline")}</dt>
+              <dd>{getDisplayAirlineSummary(deal, t)}</dd>
             </div>
           </dl>
 
@@ -2905,7 +2935,7 @@ function FeaturedOpportunityModal({
       </section>
 
       <button
-        aria-label="Next opportunity"
+        aria-label={t("deals.a11y.nextOpportunity")}
         className="deals-opportunity-modal__side-button deals-opportunity-modal__side-button--next"
         disabled={!canGoNext}
         onClick={onNext}
@@ -2929,6 +2959,7 @@ export function PublicDealsDestinationPage({
   destinationPhotoUrls?: DestinationPhotoUrlMap;
   updatedAt: string | null;
 }) {
+  const { t } = useI18n();
   const destinationCounts = useMemo(() => countDealsPerDestination(deals), [deals]);
   const heroDeal = deals[0] ?? null;
   const lowestPrice = getLowestPrice(deals);
@@ -2938,27 +2969,26 @@ export function PublicDealsDestinationPage({
       <div className="deals-city-page__hero">
         <div className="deals-city-page__hero-copy">
           <Link className="deals-explorer__secondary-link" href="/">
-            ← Back to home
+            ← {t("common.home")}
           </Link>
-          <p className="deals-explorer__kicker">Destination board</p>
+          <p className="deals-explorer__kicker">{t("deals.destinationBoard")}</p>
           <h1>{cityName}</h1>
           <p>
-            All live fares currently found from Luxembourg for {cityName}, grouped as individual
-            opportunities you can compare one by one.
+            {t("deals.destinationBoardDesc", { destination: cityName })}
           </p>
         </div>
 
         <div className="deals-city-page__hero-summary">
-          <span>{deals.length} {deals.length === 1 ? "live fare" : "live fares"}</span>
-          <strong>from {formatCurrency(lowestPrice ?? deals[0]?.dealPrice ?? 0)}</strong>
-          <small>{updatedAt ? formatVerifiedAge(updatedAt) : "Updated as new fares land"}</small>
+          <span>{deals.length} {deals.length === 1 ? t("deals.fare") : t("deals.fares")}</span>
+          <strong>{t("common.from").toLowerCase()} {formatCurrency(lowestPrice ?? deals[0]?.dealPrice ?? 0)}</strong>
+          <small>{updatedAt ? formatVerifiedAge(updatedAt, t) : t("deals.updatedAsDealsLand")}</small>
         </div>
       </div>
 
       {heroDeal ? (
         <figure className="deals-city-page__media" aria-hidden="true">
           <LandmarkPhoto
-            alt={`${cityName} landmark`}
+            alt={t("deals.a11y.destinationLandmark", { destination: cityName })}
             destinationCity={cityName}
             landmarkTitle={getLandmarkTitle(heroDeal)}
             photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, cityName)}
@@ -3650,16 +3680,15 @@ export function PublicDealsExplorer({
         : "";
   const breadcrumbCurrentLabel =
     mode === "city"
-      ? lockedDestinationCity ?? selectedSearchGroup?.city ?? "Destination"
+      ? lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")
       : t("deals.searchResults");
 
   const travelStyles = useMemo<TravelStyleCard[]>(() => {
     const cards = [
       {
         key: "weekend",
-        label: "Weekend escapes",
-        description: "Thu-Sun, Fri-Sun and short breaks from Luxembourg.",
-        hint: "Thu-Sun, Fri-Sun and more",
+        label: t("deals.travelStyle.weekend.label"),
+        description: t("deals.travelStyle.weekend.description"),
         deals: filteredDeals.filter((deal) => isWeekendDeal(deal)),
         chip: "weekend" as QuickChip,
         icon: "✈️",
@@ -3667,9 +3696,8 @@ export function PublicDealsExplorer({
       },
       {
         key: "weeklong",
-        label: "Trips of 5 to 7 nights",
-        description: "Saturday-to-Saturday and one-week sweet spots.",
-        hint: "Sat-Sat, Sun-Sun and similar",
+        label: t("deals.travelStyle.weeklong.label"),
+        description: t("deals.travelStyle.weeklong.description"),
         deals: filteredDeals.filter((deal) => isWeeklongDeal(deal)),
         chip: "weeklong" as QuickChip,
         icon: "🗓️",
@@ -3677,9 +3705,8 @@ export function PublicDealsExplorer({
       },
       {
         key: "school",
-        label: "School-holiday friendly",
-        description: "Trips that already match Luxembourg school breaks.",
-        hint: "Families and calendar-friendly timing",
+        label: t("deals.travelStyle.school.label"),
+        description: t("deals.travelStyle.school.description"),
         deals: filteredDeals.filter((deal) =>
           Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate)),
         ),
@@ -3689,9 +3716,8 @@ export function PublicDealsExplorer({
       },
       {
         key: "cheap_direct",
-        label: "Direct under EUR 80",
-        description: "Fast, easy wins without stopovers.",
-        hint: "Direct, quick and low-friction",
+        label: t("deals.travelStyle.direct.label"),
+        description: t("deals.travelStyle.direct.description"),
         deals: filteredDeals.filter((deal) => deal.maxStops === "NON_STOP" && deal.dealPrice <= 80),
         chip: "cheap_direct" as QuickChip,
         icon: "🛫",
@@ -3699,9 +3725,8 @@ export function PublicDealsExplorer({
       },
       {
         key: "beach",
-        label: "Beach breaks",
-        description: "Sea, sun and warm-weather escapes.",
-        hint: "Beach and island ideas",
+        label: t("deals.travelStyle.beach.label"),
+        description: t("deals.travelStyle.beach.description"),
         deals: filteredDeals.filter((deal) => getDealTheme(deal) === "beach"),
         chip: "beach" as QuickChip,
         icon: "🌴",
@@ -3709,9 +3734,8 @@ export function PublicDealsExplorer({
       },
       {
         key: "city",
-        label: "City breaks",
-        description: "Culture, food, museums and classic weekends.",
-        hint: "Cities with iconic landmarks",
+        label: t("deals.travelStyle.city.label"),
+        description: t("deals.travelStyle.city.description"),
         deals: filteredDeals.filter((deal) => getDealTheme(deal) === "city"),
         chip: "city" as QuickChip,
         icon: "🏙️",
@@ -3725,7 +3749,6 @@ export function PublicDealsExplorer({
         key: card.key,
         label: card.label,
         description: card.description,
-        hint: card.hint,
         fromPrice: getLowestPrice(card.deals),
         matches: card.deals.length,
         chip: card.chip,
@@ -3733,7 +3756,7 @@ export function PublicDealsExplorer({
         accentClass: card.accentClass,
       }))
       .filter((card) => card.matches > 0);
-  }, [filteredDeals]);
+  }, [filteredDeals, t]);
   const styleNavigationHrefs = useMemo(() => {
     return new Map(
       travelStyles.map((style) => [
@@ -4200,7 +4223,7 @@ export function PublicDealsExplorer({
       ) : null}
 
       {mode === "results" ? (
-        <nav className="deals-breadcrumb" aria-label="Breadcrumb">
+        <nav className="deals-breadcrumb" aria-label={t("deals.a11y.breadcrumb")}>
           <Link href="/">{t("common.home")}</Link>
           <span aria-hidden="true">/</span>
           <span aria-current="page">{breadcrumbCurrentLabel}</span>
@@ -4311,19 +4334,21 @@ export function PublicDealsExplorer({
       ) : null}
 
       {mode === "landing" ? (
-        <section className="deals-explorer__signals deals-explorer__signals--below-search" aria-label="Live deal signals">
+        <section className="deals-explorer__signals deals-explorer__signals--below-search" aria-label={t("deals.a11y.liveDealSignals")}>
           <div>
             <span className="deals-explorer__signal-icon" aria-hidden="true">
               <SignalIcon kind="destinations" />
             </span>
             <div className="deals-explorer__signal-copy">
               <strong>
-                {destinationCount > 0 ? `${destinationCount} destinations` : "New destinations daily"}
+                {destinationCount > 0
+                  ? t("deals.signals.destinationCount", { count: destinationCount })
+                  : t("deals.signals.newDestinations")}
               </strong>
               <span>
                 {destinationCount > 0
-                  ? "Live from Luxembourg right now"
-                  : "Scanned live from Luxembourg"}
+                  ? t("deals.signals.liveFromLuxembourg")
+                  : t("deals.signals.scannedFromLuxembourg")}
               </span>
             </div>
           </div>
@@ -4332,7 +4357,7 @@ export function PublicDealsExplorer({
               <SignalIcon kind="checked" />
             </span>
             <div className="deals-explorer__signal-copy">
-              <strong>{data.updatedAt ? "Latest recorded scan" : "Fare board"}</strong>
+              <strong>{data.updatedAt ? t("deals.signals.latestScan") : t("deals.signals.fareBoard")}</strong>
               <span>
                 {data.updatedAt ? formatVerifiedAge(data.updatedAt, t) : t("deals.updatedAsDealsLand")}
               </span>
@@ -4343,8 +4368,12 @@ export function PublicDealsExplorer({
               <SignalIcon kind="discount" />
             </span>
             <div className="deals-explorer__signal-copy">
-              <strong>{maxDiscount !== null ? `Largest measured drop: ${maxDiscount}%` : "Historical price context"}</strong>
-              <span>based on recorded scanner history</span>
+              <strong>
+                {maxDiscount !== null
+                  ? t("deals.signals.largestDrop", { pct: maxDiscount })
+                  : t("deals.signals.priceContext")}
+              </strong>
+              <span>{t("deals.signals.historyBasis")}</span>
             </div>
           </div>
         </section>
@@ -4353,7 +4382,7 @@ export function PublicDealsExplorer({
           <div className="deals-city-page__content">
             <section className="deals-city-page__hero">
               <div className="deals-city-page__hero-copy">
-                <nav className="deals-breadcrumb deals-breadcrumb--city-hero" aria-label="Breadcrumb">
+                <nav className="deals-breadcrumb deals-breadcrumb--city-hero" aria-label={t("deals.a11y.breadcrumb")}>
                   <Link href="/">{t("common.home")}</Link>
                   <span aria-hidden="true">›</span>
                   <span aria-current="page">{cityHeroTitle}</span>
@@ -4374,8 +4403,8 @@ export function PublicDealsExplorer({
                       </svg>
                     </span>
                     <span className="deals-city-page__hero-trust-copy">
-                      <strong>Recently checked fares</strong>
-                      <small>{data.updatedAt ? formatVerifiedAge(data.updatedAt, t) : "No completed scan yet"}</small>
+                      <strong>{t("deals.hero.recentlyChecked")}</strong>
+                      <small>{data.updatedAt ? formatVerifiedAge(data.updatedAt, t) : t("deals.hero.noCompletedScan")}</small>
                     </span>
                   </li>
                   <li>
@@ -4399,8 +4428,8 @@ export function PublicDealsExplorer({
                       </svg>
                     </span>
                     <span className="deals-city-page__hero-trust-copy">
-                      <strong>Recorded fare details</strong>
-                      <small>Dates, routing and verification time</small>
+                      <strong>{t("deals.hero.recordedDetails")}</strong>
+                      <small>{t("deals.hero.recordedDetailsDesc")}</small>
                     </span>
                   </li>
                 </ul>
@@ -4410,7 +4439,9 @@ export function PublicDealsExplorer({
                 {cityHeroDeal ? (
                   <figure className="deals-city-page__media" aria-hidden="true">
                     <LandmarkPhoto
-                      alt={`${lockedDestinationCity ?? cityHeroDeal.destinationCity} landmark`}
+                      alt={t("deals.a11y.destinationLandmark", {
+                        destination: lockedDestinationCity ?? cityHeroDeal.destinationCity,
+                      })}
                       destinationCity={lockedDestinationCity ?? cityHeroDeal.destinationCity}
                       landmarkTitle={getLandmarkTitle(cityHeroDeal)}
                       photoSrc={getDestinationPhotoSrc(
@@ -4984,12 +5015,12 @@ export function PublicDealsExplorer({
           ) : (
             <div className="deals-explorer__opportunity-stage">
               {featuredPageCount > 1 ? (
-              <div className="deals-explorer__opportunity-hero-nav" aria-label="Featured destinations">
+              <div className="deals-explorer__opportunity-hero-nav" aria-label={t("deals.a11y.featuredDestinations")}>
                 <span className="deals-explorer__carousel-page">
                   {featuredCurrentPage}/{featuredPageCount}
                 </span>
                 <button
-                  aria-label="Previous featured destination"
+                  aria-label={t("deals.a11y.previousFeatured")}
                   className="deals-explorer__carousel-button deals-explorer__carousel-button--hero"
                   disabled={!canMoveFeaturedPrev}
                   onClick={() =>
@@ -5000,7 +5031,7 @@ export function PublicDealsExplorer({
                   <CarouselChevronIcon direction="previous" />
                 </button>
                 <button
-                  aria-label="Next featured destination"
+                  aria-label={t("deals.a11y.nextFeatured")}
                   className="deals-explorer__carousel-button deals-explorer__carousel-button--hero"
                   disabled={!canMoveFeaturedNext}
                   onClick={() =>
@@ -5044,11 +5075,11 @@ export function PublicDealsExplorer({
                 </div>
               </div>
               {featuredNow.length > 1 ? (
-              <div className="deals-explorer__carousel-dots" aria-label="Featured carousel slides">
+              <div className="deals-explorer__carousel-dots" aria-label={t("deals.a11y.featuredSlides")}>
                 {featuredNow.map((deal, index) => (
                   <button
                     aria-current={index === clampedFeaturedStartIndex ? "true" : undefined}
-                    aria-label={`Show featured destination ${index + 1}`}
+                    aria-label={t("deals.a11y.showFeatured", { number: index + 1 })}
                     className={`deals-explorer__carousel-dot${
                       index === clampedFeaturedStartIndex ? " is-active" : ""
                     }`}
@@ -5068,8 +5099,8 @@ export function PublicDealsExplorer({
         <section className="deals-explorer__styles">
         <div className="deals-explorer__section-head">
           <div>
-            <h2>Explore the board by travel rhythm.</h2>
-            <p>Each shortcut narrows the live board to a practical trip style.</p>
+            <h2>{t("deals.travelStylesTitle")}</h2>
+            <p>{t("deals.travelStylesDesc")}</p>
           </div>
           {stylePageCount > 1 ? (
           <div className="deals-explorer__carousel-nav">
@@ -5077,7 +5108,7 @@ export function PublicDealsExplorer({
               {styleCurrentPage}/{stylePageCount}
             </span>
             <button
-              aria-label="Show previous travel styles"
+              aria-label={t("deals.a11y.previousTravelStyles")}
               className="deals-explorer__carousel-button"
               disabled={!canMoveStylePrev}
               onClick={() =>
@@ -5088,7 +5119,7 @@ export function PublicDealsExplorer({
               <CarouselChevronIcon direction="previous" />
             </button>
             <button
-              aria-label="Show next travel styles"
+              aria-label={t("deals.a11y.nextTravelStyles")}
               className="deals-explorer__carousel-button"
               disabled={!canMoveStyleNext}
               onClick={() =>
@@ -5129,7 +5160,7 @@ export function PublicDealsExplorer({
               >
                 <div className="deals-style-card__media" aria-hidden="true">
                   <LandmarkPhoto
-                    alt={`${style.label} background`}
+                    alt={t("deals.a11y.styleBackground", { style: style.label })}
                     destinationCity={style.imageCity}
                     landmarkTitle={style.imageLandmarkTitle}
                     photoSrc={getDestinationPhotoSrc(destinationPhotoUrls, style.imageCity)}
@@ -5143,7 +5174,11 @@ export function PublicDealsExplorer({
                   <div className="deals-style-card__copy">
                     <strong>{style.label}</strong>
                     <p>{style.description}</p>
-                    <em>{style.fromPrice !== null ? `from ${formatCurrency(style.fromPrice)}` : "No live fare yet"}</em>
+                    <em>
+                      {style.fromPrice !== null
+                        ? `${t("common.from").toLowerCase()} ${formatCurrency(style.fromPrice)}`
+                        : t("deals.noLiveFareYet")}
+                    </em>
                   </div>
                 </div>
               </Link>
@@ -5155,36 +5190,36 @@ export function PublicDealsExplorer({
 
         <section className="deals-explorer__newsletter" id="deal-alerts">
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--top-left">
-            <strong>Price context</strong>
-            <span>Compared with history</span>
+            <strong>{t("deals.newsletter.priceContext")}</strong>
+            <span>{t("deals.newsletter.priceContextDesc")}</span>
           </div>
 
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--top-right">
-            <strong>Route alerts</strong>
-            <span>From Luxembourg</span>
+            <strong>{t("deals.newsletter.routeAlerts")}</strong>
+            <span>{t("deals.fromLuxembourg")}</span>
           </div>
 
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--bottom-left">
-            <strong>Flexible dates</strong>
-            <span>Useful trip patterns</span>
+            <strong>{t("deals.newsletter.flexibleDates")}</strong>
+            <span>{t("deals.newsletter.flexibleDatesDesc")}</span>
           </div>
 
           <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--bottom-right">
-            <strong>Clear choices</strong>
-            <span>Dates and routing shown</span>
+            <strong>{t("deals.newsletter.clearChoices")}</strong>
+            <span>{t("deals.newsletter.clearChoicesDesc")}</span>
           </div>
 
         <div className="deals-explorer__newsletter-content">
-          <h2>Get daily flight drops. Book before they disappear</h2>
+          <h2>{t("deals.newsletter.title")}</h2>
 
           <div className="deals-explorer__newsletter-panel">
             <NewsletterForm />
           </div>
 
-          <div className="deals-explorer__newsletter-signals" aria-label="Newsletter benefits">
-            <span>Price-drop alerts</span>
-            <span>Direct route picks</span>
-            <span>School-break matches</span>
+          <div className="deals-explorer__newsletter-signals" aria-label={t("deals.a11y.newsletterBenefits")}>
+            <span>{t("deals.newsletter.priceDropAlerts")}</span>
+            <span>{t("deals.newsletter.directRoutePicks")}</span>
+            <span>{t("deals.newsletter.schoolBreakMatches")}</span>
           </div>
         </div>
       </section>
@@ -5197,19 +5232,23 @@ export function PublicDealsExplorer({
             </div>
             <div>
               <strong>+352 Flights</strong>
-              <p>Cheap flights from Luxembourg, shaped around real trips.</p>
+              <p>{t("deals.footer.tagline")}</p>
             </div>
           </div>
 
           <div className="deals-explorer__footer-links">
             {DEALS_FOOTER_LINKS.map((link) => (
               <Link key={link.href} href={link.href}>
-                {link.label}
+                {link.href === "/privacy"
+                  ? t("common.privacy")
+                  : link.href === "/cookies"
+                    ? t("common.cookies")
+                    : t("common.terms")}
               </Link>
             ))}
           </div>
 
-          <div className="deals-explorer__footer-socials" aria-label="Social links">
+          <div className="deals-explorer__footer-socials" aria-label={t("deals.a11y.socialLinks")}>
             {DEALS_FOOTER_SOCIALS.map((social) => (
               <span
                 aria-label={social.label}
@@ -5225,18 +5264,18 @@ export function PublicDealsExplorer({
 
           <div className="deals-explorer__footer-meta">
             <span>© {new Date().getFullYear()} +352 Flights</span>
-            <span>Made in Luxembourg</span>
+            <span>{t("deals.footer.madeInLuxembourg")}</span>
           </div>
 
-          <div className="deals-explorer__footer-seal" aria-label="Made in Luxembourg">
+          <div className="deals-explorer__footer-seal" aria-label={t("deals.footer.madeInLuxembourg")}>
             <div className="deals-explorer__footer-seal-copy">
-              <strong>Made in Luxembourg</strong>
+              <strong>{t("deals.footer.madeInLuxembourg")}</strong>
               <span>
-                with
+                {t("deals.footer.with")}
                 <i aria-hidden="true">
                   <FooterSealHeartIcon />
                 </i>
-                for travelers
+                {t("deals.footer.forTravelers")}
               </span>
             </div>
             <div className="deals-explorer__footer-seal-map">
