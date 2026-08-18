@@ -32,6 +32,16 @@
   overflow-x: clip;
 }
 
+/* Match the browser canvas to the landing page during elastic overscroll. */
+html:has(.v2),
+body:has(.v2) {
+  background: #fbfbfa;
+}
+
+body:has(.v2)::before {
+  display: none;
+}
+
 /* This page carries its own chrome; hide the global one here only. */
 body:has(.v2) .site-chrome,
 body:has(.v2) .scroll-top-button {
