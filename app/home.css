@@ -2281,7 +2281,7 @@ body:has(.v2) .scroll-top-button {
   color: var(--v2-ink);
   font-family: var(--font-sans), sans-serif;
   font-size: clamp(2rem, 3.2vw, 2.8rem);
-  font-weight: 760;
+  font-weight: 700;
   line-height: 1.04;
   letter-spacing: -0.035em;
   text-wrap: balance;
