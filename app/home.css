@@ -794,7 +794,7 @@ body:has(.v2) .scroll-top-button {
 .v2-ticker__track {
   display: flex;
   width: max-content;
-  animation: v2-marquee 36s linear infinite;
+  animation: v2-marquee 64s linear infinite;
 }
 
 .v2-ticker:hover .v2-ticker__track {
@@ -1592,7 +1592,7 @@ body:has(.v2) .scroll-top-button {
     height: clamp(15rem, 74vw, 22rem);
     opacity: 1;
     object-position: 62% 18%;
-    border-radius: 0;
+    border-radius: 0 0 1.35rem 1.35rem;
     transform: none;
   }
 
