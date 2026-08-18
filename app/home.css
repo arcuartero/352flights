@@ -406,6 +406,23 @@ body:has(.v2) .scroll-top-button {
   color: var(--v2-blue-strong);
 }
 
+@media (min-width: 901px) {
+  .v2-hero__trust {
+    width: max-content;
+    max-width: none;
+    flex-wrap: nowrap;
+  }
+
+  .v2-hero__trust li {
+    font-size: clamp(0.82rem, 0.9vw, 0.95rem);
+  }
+
+  .v2-hero__trust li + li {
+    margin-left: 1rem;
+    padding-left: 1rem;
+  }
+}
+
 /* ============================================================
    Search — the /deals finder, docked inside the hero card
    ============================================================ */
