@@ -543,7 +543,6 @@ export function V2Landing({
 
   const selectedTripLabel =
     searchTripOptions.find((option) => option.value === filters.tripFilter)?.label ?? t("common.anyTrip");
-  const mobileTripLabel = filters.tripFilter === "any" ? t("common.tripType") : selectedTripLabel;
 
   return (
     <div className="v2" ref={rootRef}>
@@ -634,7 +633,7 @@ export function V2Landing({
             presetOptions={searchWhenOptions}
             value={filters.whenFilter}
           />
-          <label className="v2-search__field v2-search__field--trip" data-mobile-value={mobileTripLabel}>
+          <label className="v2-search__field v2-search__field--trip" data-mobile-value={selectedTripLabel}>
             <span>{t("common.tripType")}</span>
             <select
               onChange={(event) =>
