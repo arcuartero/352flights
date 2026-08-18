@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { hasSupabaseAdminEnv } from "@/lib/env";
@@ -11,6 +11,7 @@ const subscribeSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   const payload = subscribeSchema.safeParse(await request.json());
 
   if (!payload.success) {
@@ -31,11 +32,40 @@ export async function POST(request: Request) {
   }
   try {
     const result = await subscribeEmailAddress(payload.data.email, payload.data.locale);
+
+    if (result.sendWelcomeEmail) {
+      after(async () => {
+        const emailStartedAt = Date.now();
+
+        try {
+          await result.sendWelcomeEmail?.();
+          console.info("[api/subscribe] welcome email sent", {
+            durationMs: Date.now() - emailStartedAt,
+          });
+        } catch (error) {
+          console.error("[api/subscribe] welcome email failed", {
+            durationMs: Date.now() - emailStartedAt,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+    }
+
+    console.info("[api/subscribe] subscriber saved", {
+      durationMs: Date.now() - startedAt,
+      welcomeEmailScheduled: Boolean(result.sendWelcomeEmail),
+    });
+
     return NextResponse.json({
       message: result.message,
       requiresConfirmation: !result.alreadyConfirmed,
     });
   } catch (error) {
+    console.error("[api/subscribe] subscription failed", {
+      durationMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     const message =
       error instanceof Error && error.message.includes("schema cache")
         ? "The subscription database is not ready yet. Run the SQL setup in Supabase first."
