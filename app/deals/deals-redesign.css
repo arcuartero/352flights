@@ -3845,6 +3845,14 @@ body:has(.page-shell--deals-city)::before {
 }
 
 @media (max-width: 700px) {
+  .page-shell--deals-search .deals-search-page-card {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
   .page-shell--deals-search .deals-active-filters {
     display: none;
   }
