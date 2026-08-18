@@ -107,7 +107,7 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
                   autoComplete="email"
                   id="v2-alerts-email"
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="iwantcheapflights@gmail.com"
+                  placeholder={t("common.emailPlaceholder")}
                   type="email"
                   value={email}
                 />

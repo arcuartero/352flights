@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useI18n } from "@/lib/i18n";
 
 const SCAN_HOURS = [0, 12] as const;
 const LUX_TIME_ZONE = "Europe/Luxembourg";
@@ -458,6 +459,7 @@ type PreferencesAccessModalProps = {
 };
 
 function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState(
     "Enter your email and we will send either your sign-up email or your private preferences link.",
@@ -576,7 +578,7 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
                     autoComplete="email"
                     id="site-chrome-preferences-email"
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Iwantcheapflights@gmail.com"
+                    placeholder={t("common.emailPlaceholder")}
                     type="email"
                     value={email}
                   />

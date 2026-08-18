@@ -43,13 +43,16 @@ export function LanguageSelector() {
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        aria-label={t("language.label")}
+        aria-label={`${t("language.label")}: ${current.label}`}
         className="language-selector__trigger"
         onClick={() => setIsOpen((value) => !value)}
         title={current.label}
         type="button"
       >
-        {current.flag}
+        <span aria-hidden="true" className="language-selector__trigger-flag">
+          {current.flag}
+        </span>
+        <span className="language-selector__trigger-code">{current.shortLabel}</span>
       </button>
 
       {isOpen ? (
