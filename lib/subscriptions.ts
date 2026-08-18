@@ -120,39 +120,41 @@ export async function subscribeEmailAddress(email: string, locale?: EmailLocale)
     subscriber = insertQuery.data as SubscriberLookupRow;
   }
 
-  if (hasResendEnv()) {
-    const links = buildSubscriptionUrls(subscriber);
-    const welcome = renderWelcomeEmail({
-      email: subscriber.email,
-      confirmUrl: links.confirmUrl,
-      managePreferencesUrl: links.managePreferencesUrl,
-      unsubscribeUrl: links.unsubscribeUrl,
-      alreadyConfirmed: subscriber.email_confirmed,
-      onboardingCompleted: subscriber.onboarding_completed,
-      locale: normalizeEmailLocale(subscriber.preferred_locale),
-    });
+  const sendWelcomeEmail = hasResendEnv()
+    ? async () => {
+        const links = buildSubscriptionUrls(subscriber);
+        const welcome = renderWelcomeEmail({
+          email: subscriber.email,
+          confirmUrl: links.confirmUrl,
+          managePreferencesUrl: links.managePreferencesUrl,
+          unsubscribeUrl: links.unsubscribeUrl,
+          alreadyConfirmed: subscriber.email_confirmed,
+          onboardingCompleted: subscriber.onboarding_completed,
+          locale: normalizeEmailLocale(subscriber.preferred_locale),
+        });
 
-    await sendResendEmail({
-      to: subscriber.email,
-      subject: welcome.subject,
-      html: welcome.html,
-      text: welcome.text,
-      emailType: "welcome",
-      idempotencyKey: `lux-welcome-${subscriber.id}-${Date.now()}`,
-    });
+        await sendResendEmail({
+          to: subscriber.email,
+          subject: welcome.subject,
+          html: welcome.html,
+          text: welcome.text,
+          emailType: "welcome",
+          idempotencyKey: `lux-welcome-${subscriber.id}-${Date.now()}`,
+        });
 
-    const welcomeUpdate = await supabase
-      .from("newsletter_subscribers")
-      .update({
-        welcome_email_sent_at: nowIso,
-        updated_at: nowIso,
-      })
-      .eq("id", subscriber.id);
+        const welcomeUpdate = await supabase
+          .from("newsletter_subscribers")
+          .update({
+            welcome_email_sent_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscriber.id);
 
-    if (welcomeUpdate.error) {
-      throw new Error(formatError(welcomeUpdate.error));
-    }
-  }
+        if (welcomeUpdate.error) {
+          throw new Error(formatError(welcomeUpdate.error));
+        }
+      }
+    : null;
 
   return {
     alreadyConfirmed: subscriber.email_confirmed,
@@ -161,6 +163,7 @@ export async function subscribeEmailAddress(email: string, locale?: EmailLocale)
       : hasResendEnv()
         ? "Check your inbox to confirm your subscription and finish your preferences."
         : "We saved your email, but outbound email is not configured yet. Add Resend to complete double opt-in.",
+    sendWelcomeEmail,
   };
 }
 
