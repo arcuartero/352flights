@@ -4680,6 +4680,10 @@ export function PublicDealsExplorer({
         </section>
       ) : (
         <div className="deals-search-page-card">
+          <div className="deals-mobile-results-heading">
+            <h2>{searchResultsCopy.title}</h2>
+            <p>{searchResultsCopy.description}</p>
+          </div>
           {renderMobileResultsControls(true)}
           <section className="deals-search-layout">
             <aside className="deals-search-layout__filters">
@@ -4837,7 +4841,7 @@ export function PublicDealsExplorer({
 
           <div className="deals-search-layout__results">
             <section className="deals-explorer__featured">
-              <div className="deals-explorer__section-head">
+              <div className="deals-explorer__section-head deals-search-results-heading--desktop">
                 <div>
                   <h2>{searchResultsCopy.title}</h2>
                   <p>{searchResultsCopy.description}</p>
