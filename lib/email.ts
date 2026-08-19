@@ -233,8 +233,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Confirm your ${BRAND_NAME} subscription`,
       confirmedPreview: "Your private preferences link is ready.",
       pendingPreview: "Confirm your email and choose the alerts you want.",
-      confirmedHeadline: "Your flight alerts are already active.",
-      pendingHeadline: "Confirm your email to start receiving Luxembourg fare drops.",
+      confirmedHeadline: "Your alerts are ready for takeoff.",
+      pendingHeadline: "One more step before takeoff.",
       confirmedIntro: "We are sending your private access link again so you can update your alerts.",
       pendingIntro: "One quick confirmation finishes the double opt-in. Then you can tailor the feed to the trips you actually want.",
       linkedTo: "Linked to:",
@@ -244,7 +244,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       primaryConfirmed: "Edit preferences",
       primaryPending: "Confirm subscription",
       preferencesLink: "Edit my preferences",
-      notYouTitle: "Not you? Unsubscribe instantly.",
+      notYouTitle: "Unsubscribe instantly.",
       notYouBody: "If this was not you, you can unsubscribe instantly now.",
       unsubscribeNow: "Unsubscribe instantly",
       alreadyConfirmed: "Already confirmed?",
@@ -330,8 +330,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Confirmez votre inscription ${BRAND_NAME}`,
       confirmedPreview: "Votre lien prive de preferences est pret.",
       pendingPreview: "Confirmez votre email et choisissez les alertes souhaitees.",
-      confirmedHeadline: "Vos alertes de vols sont deja actives.",
-      pendingHeadline: "Confirmez votre email pour recevoir les baisses de prix depuis Luxembourg.",
+      confirmedHeadline: "Vos alertes sont prêtes à décoller.",
+      pendingHeadline: "Encore une étape avant le décollage.",
       confirmedIntro: "Nous vous renvoyons votre lien prive pour modifier vos alertes.",
       pendingIntro: "Une confirmation rapide termine le double opt-in. Vous pourrez ensuite regler le flux selon vos voyages.",
       linkedTo: "Associe a :",
@@ -341,7 +341,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       primaryConfirmed: "Modifier mes preferences",
       primaryPending: "Confirmer l'inscription",
       preferencesLink: "Modifier mes preferences",
-      notYouTitle: "Ce n'etait pas vous ? Desabonnement instantane.",
+      notYouTitle: "Désabonnement instantané.",
       notYouBody: "Si ce n'etait pas vous, vous pouvez vous desabonner immediatement.",
       unsubscribeNow: "Me desabonner",
       alreadyConfirmed: "Deja confirme ?",
@@ -427,8 +427,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Bestaetige dein ${BRAND_NAME}-Abo`,
       confirmedPreview: "Dein privater Praeferenz-Link ist bereit.",
       pendingPreview: "Bestaetige deine E-Mail und waehle deine gewuenschten Alerts.",
-      confirmedHeadline: "Deine Flugalerts sind bereits aktiv.",
-      pendingHeadline: "Bestaetige deine E-Mail, um Preisrueckgaenge ab Luxemburg zu erhalten.",
+      confirmedHeadline: "Deine Flugalarme sind startklar.",
+      pendingHeadline: "Noch ein Schritt bis zum Abflug.",
       confirmedIntro: "Wir senden dir deinen privaten Link erneut, damit du deine Alerts anpassen kannst.",
       pendingIntro: "Eine kurze Bestaetigung schliesst den Double-Opt-in ab. Danach passt du den Feed an deine Reisen an.",
       linkedTo: "Verknuepft mit:",
@@ -438,7 +438,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       primaryConfirmed: "Praeferenzen bearbeiten",
       primaryPending: "Abo bestaetigen",
       preferencesLink: "Meine Praeferenzen bearbeiten",
-      notYouTitle: "Nicht du? Sofort abmelden.",
+      notYouTitle: "Sofort abbestellen.",
       notYouBody: "Wenn du das nicht warst, kannst du dich sofort abmelden.",
       unsubscribeNow: "Sofort abmelden",
       alreadyConfirmed: "Bereits bestaetigt?",
@@ -524,8 +524,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Confirme a sua subscricao ${BRAND_NAME}`,
       confirmedPreview: "O seu link privado de preferencias esta pronto.",
       pendingPreview: "Confirme o email e escolha os alertas que pretende.",
-      confirmedHeadline: "Os seus alertas de voos ja estao ativos.",
-      pendingHeadline: "Confirme o email para receber quedas de preco a partir do Luxemburgo.",
+      confirmedHeadline: "Os seus alertas estão prontos para descolar.",
+      pendingHeadline: "Só falta um passo para descolar.",
       confirmedIntro: "Enviamos novamente o seu link privado para poder atualizar os alertas.",
       pendingIntro: "Uma confirmacao rapida conclui o double opt-in. Depois podera ajustar o feed as suas viagens.",
       linkedTo: "Associado a:",
@@ -535,7 +535,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       primaryConfirmed: "Editar preferencias",
       primaryPending: "Confirmar subscricao",
       preferencesLink: "Editar as minhas preferencias",
-      notYouTitle: "Nao foi voce? Cancele de imediato.",
+      notYouTitle: "Cancelamento imediato.",
       notYouBody: "Se nao foi voce, pode cancelar a subscricao imediatamente.",
       unsubscribeNow: "Cancelar agora",
       alreadyConfirmed: "Ja confirmado?",
@@ -621,8 +621,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Conferma la tua iscrizione a ${BRAND_NAME}`,
       confirmedPreview: "Il tuo link privato alle preferenze e pronto.",
       pendingPreview: "Conferma l'email e scegli gli alert che vuoi.",
-      confirmedHeadline: "I tuoi alert voli sono gia attivi.",
-      pendingHeadline: "Conferma l'email per ricevere cali di prezzo dal Lussemburgo.",
+      confirmedHeadline: "I tuoi avvisi sono pronti al decollo.",
+      pendingHeadline: "Ancora un passo prima del decollo.",
       confirmedIntro: "Ti inviamo di nuovo il link privato per aggiornare gli alert.",
       pendingIntro: "Una rapida conferma completa il double opt-in. Poi potrai adattare il feed ai tuoi viaggi.",
       linkedTo: "Collegato a:",
@@ -632,7 +632,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       primaryConfirmed: "Modifica preferenze",
       primaryPending: "Conferma iscrizione",
       preferencesLink: "Modifica le mie preferenze",
-      notYouTitle: "Non eri tu? Annulla subito.",
+      notYouTitle: "Disiscrizione immediata.",
       notYouBody: "Se non eri tu, puoi annullare subito l'iscrizione.",
       unsubscribeNow: "Annulla ora",
       alreadyConfirmed: "Gia confermato?",
@@ -718,8 +718,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Confirma tu suscripcion a ${BRAND_NAME}`,
       confirmedPreview: "Tu enlace privado para editar preferencias esta listo.",
       pendingPreview: "Confirma tu email y elige las alertas que quieres recibir.",
-      confirmedHeadline: "Tus alertas de vuelos ya estan activas.",
-      pendingHeadline: "Confirma tu email para recibir bajadas de precio desde Luxemburgo.",
+      confirmedHeadline: "Tus alertas están listas para despegar.",
+      pendingHeadline: "Solo falta un paso para despegar.",
       confirmedIntro: "Te enviamos otra vez tu enlace privado para que puedas actualizar tus alertas.",
       pendingIntro: "Una confirmacion rapida completa el double opt-in. Despues podras ajustar el feed a los viajes que realmente quieres.",
       linkedTo: "Vinculado a:",
@@ -729,7 +729,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       primaryConfirmed: "Editar preferencias",
       primaryPending: "Confirmar suscripcion",
       preferencesLink: "Editar mis preferencias",
-      notYouTitle: "No has sido tu? Baja inmediata.",
+      notYouTitle: "Baja inmediata.",
       notYouBody: "Si no has sido tu, puedes darte de baja inmediatamente.",
       unsubscribeNow: "Darme de baja",
       alreadyConfirmed: "Ya confirmado?",
@@ -1131,28 +1131,92 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
   const intro = input.alreadyConfirmed ? welcome.confirmedIntro : welcome.pendingIntro;
   const primaryLabel = input.alreadyConfirmed ? welcome.primaryConfirmed : welcome.primaryPending;
   const primaryUrl = input.alreadyConfirmed ? input.managePreferencesUrl : input.confirmUrl;
+  const heroImageUrl = `${siteUrl}/email-airplane-window.jpg`;
+  const logoUrl = `${siteUrl}/v2-logo.png`;
 
   const html = `<!doctype html>
 <html lang="${copy.htmlLang}">
   <head>
     <meta charSet="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
     <title>${escapeHtml(subject)}</title>
+    <style>
+      :root { color-scheme: light dark; supported-color-schemes: light dark; }
+      .email-body, .email-canvas { background-color: #eef4ff !important; }
+      .email-card { background-color: #ffffff !important; }
+      .email-card-soft, .email-icon { background-color: #f3f6fc !important; }
+      .email-text { color: #091a3a !important; }
+      .email-muted { color: #52627b !important; }
+      .email-link { color: #174ed6 !important; }
+      .email-divider { border-color: #dce4f1 !important; }
+      .email-logo-plate { background-color: #ffffff !important; }
+
+      @media only screen and (max-width: 620px) {
+        .email-body { padding: 16px 10px !important; }
+        .email-shell { width: 100% !important; max-width: 100% !important; }
+        .hero-copy-cell { width: 100% !important; padding: 38px 26px 40px !important; }
+        .hero-image-cell, .hero-image {
+          display: none !important;
+          width: 0 !important;
+          max-width: 0 !important;
+          height: 0 !important;
+          max-height: 0 !important;
+          overflow: hidden !important;
+          mso-hide: all !important;
+        }
+        .hero-title { font-size: 38px !important; line-height: 1.08 !important; }
+        .card-pad { padding: 25px 22px !important; }
+        .feature-icon-cell { width: 52px !important; padding-right: 14px !important; }
+        .feature-icon { width: 46px !important; height: 46px !important; line-height: 46px !important; }
+        .account-email { font-size: 17px !important; word-break: break-word !important; }
+        .footer-links a { display: inline-block !important; margin: 4px 5px !important; }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .email-body, .email-canvas { background-color: #081321 !important; }
+        .email-card { background-color: #111e31 !important; }
+        .email-card-soft, .email-icon { background-color: #17263d !important; }
+        .email-text { color: #f5f8ff !important; }
+        .email-muted { color: #bac6d8 !important; }
+        .email-link { color: #8eafff !important; }
+        .email-divider { border-color: #2c3c55 !important; }
+        .email-logo-plate { background-color: #ffffff !important; }
+      }
+
+      [data-ogsc] .email-body, [data-ogsc] .email-canvas { background-color: #081321 !important; }
+      [data-ogsc] .email-card { background-color: #111e31 !important; }
+      [data-ogsc] .email-card-soft, [data-ogsc] .email-icon { background-color: #17263d !important; }
+      [data-ogsc] .email-text { color: #f5f8ff !important; }
+      [data-ogsc] .email-muted { color: #bac6d8 !important; }
+      [data-ogsc] .email-link { color: #8eafff !important; }
+      [data-ogsc] .email-divider { border-color: #2c3c55 !important; }
+      [data-ogsc] .email-logo-plate { background-color: #ffffff !important; }
+    </style>
   </head>
-  <body style="margin: 0; padding: 32px 16px; background: ${EMAIL_BG}; color: ${EMAIL_TEXT}; font-family: Avenir Next, Segoe UI, Helvetica Neue, sans-serif;">
+  <body class="email-body" style="margin: 0; padding: 34px 16px; background-color: #eef4ff; color: #091a3a; font-family: Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif; -webkit-text-size-adjust: 100%;">
     <div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">${escapeHtml(previewText)}</div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <table class="email-canvas" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#eef4ff" style="background-color: #eef4ff;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 640px;">
+          <table class="email-shell" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 700px;">
             <tr>
               <td style="padding: 0 0 18px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f7fbff 0%, #edf4ff 100%); border: 1px solid ${EMAIL_BORDER}; border-radius: 24px;">
+                <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color: #ffffff; border: 1px solid #dce4f1; border-radius: 22px; border-collapse: separate; overflow: hidden;">
                   <tr>
-                    <td style="padding: 32px 30px 28px;">
-                      <p style="margin: 0; color: ${EMAIL_ACCENT}; font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;">${BRAND_NAME}</p>
-                      <h1 style="margin: 14px 0 10px; color: ${EMAIL_TEXT}; font-size: 38px; line-height: 1.02; font-weight: 800; letter-spacing: -0.04em;">${escapeHtml(headline)}</h1>
-                      <p style="margin: 0; color: ${EMAIL_MUTED}; font-size: 16px; line-height: 1.7;">${escapeHtml(intro)}</p>
+                    <td class="hero-copy-cell" valign="middle" width="62%" style="width: 62%; padding: 54px 38px 52px;">
+                      <h1 class="hero-title email-text" style="margin: 0 0 34px; color: #091a3a; font-size: 46px; line-height: 1.08; font-weight: 500; letter-spacing: -0.035em; mso-line-height-rule: exactly;">${escapeHtml(headline)}</h1>
+                      <table role="presentation" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" bgcolor="#ee312c" style="background-color: #ee312c; border-radius: 9px;">
+                            <a href="${escapeHtml(primaryUrl)}" style="display: inline-block; padding: 16px 25px; color: #ffffff; font-size: 16px; line-height: 20px; font-weight: 700; text-decoration: none;">${escapeHtml(primaryLabel)}</a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td class="hero-image-cell" valign="middle" width="38%" style="width: 38%; padding: 0; background-color: #dce8f8;">
+                      <img class="hero-image" src="${escapeHtml(heroImageUrl)}" width="266" height="356" alt="" style="display: block; width: 100%; max-width: 266px; height: 356px; border: 0; border-radius: 0 21px 21px 0; object-fit: cover;" />
                     </td>
                   </tr>
                 </table>
@@ -1160,32 +1224,29 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
             </tr>
             <tr>
               <td style="padding: 0 0 18px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${EMAIL_PANEL}; border: 1px solid ${EMAIL_BORDER}; border-radius: 22px;">
+                <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color: #ffffff; border: 1px solid #dce4f1; border-radius: 22px; border-collapse: separate;">
                   <tr>
-                    <td style="padding: 28px 30px 30px;">
+                    <td class="card-pad" style="padding: 30px 38px;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                         <tr>
-                          <td valign="top" width="44" style="padding-right: 16px;">
-                            <div style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid ${EMAIL_BORDER}; background: ${EMAIL_ACCENT_SOFT}; color: ${EMAIL_ACCENT}; font-size: 20px; line-height: 44px; text-align: center;">+</div>
+                          <td class="feature-icon-cell" valign="middle" width="64" style="width: 64px; padding-right: 18px;">
+                            <div class="feature-icon email-icon email-link" style="width: 52px; height: 52px; border-radius: 16px; background-color: #f3f6fc; color: #174ed6; font-size: 21px; line-height: 52px; font-weight: 700; text-align: center;">@</div>
                           </td>
-                          <td valign="top">
-                            <p style="margin: 0; color: ${EMAIL_MUTED}; font-size: 14px; line-height: 1.4;">${escapeHtml(welcome.linkedTo)}</p>
-                            <p style="margin: 4px 0 0; color: ${EMAIL_TEXT}; font-size: 18px; line-height: 1.35; font-weight: 700;">${escapeHtml(input.email)}</p>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td valign="top" width="44" style="padding: 22px 16px 0 0;">
-                            <div style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid ${EMAIL_BORDER}; background: ${EMAIL_ACCENT_SOFT}; color: ${EMAIL_ACCENT}; font-size: 20px; line-height: 44px; text-align: center;">↗</div>
-                          </td>
-                          <td valign="top" style="padding-top: 22px;">
-                            <p style="margin: 0; color: ${EMAIL_TEXT}; font-size: 18px; line-height: 1.35; font-weight: 700;">${escapeHtml(welcome.alertSetupTitle)}</p>
-                            <p style="margin: 6px 0 0; color: ${EMAIL_MUTED}; font-size: 15px; line-height: 1.65;">${escapeHtml(input.alreadyConfirmed ? welcome.alertSetupBody : welcome.confirmBody)}</p>
+                          <td valign="middle">
+                            <p class="email-muted" style="margin: 0; color: #52627b; font-size: 14px; line-height: 1.4;">${escapeHtml(welcome.linkedTo)}</p>
+                            <p class="account-email email-text" style="margin: 5px 0 0; color: #091a3a; font-size: 19px; line-height: 1.35; font-weight: 800;">${escapeHtml(input.email)}</p>
                           </td>
                         </tr>
                         <tr>
-                          <td colspan="2" style="padding-top: 24px;">
-                            <a href="${escapeHtml(primaryUrl)}" style="display: inline-block; padding: 14px 22px; border-radius: 999px; background: ${EMAIL_CTA}; color: ${EMAIL_CTA_TEXT}; font-size: 15px; font-weight: 650; text-decoration: none;">${escapeHtml(primaryLabel)}</a>
-                            <a href="${escapeHtml(input.managePreferencesUrl)}" style="display: inline-block; margin-left: 10px; padding: 13px 18px; border-radius: 999px; border: 1px solid ${EMAIL_BORDER}; color: ${EMAIL_ACCENT}; font-size: 14px; font-weight: 650; text-decoration: none;">${escapeHtml(welcome.preferencesLink)}</a>
+                          <td colspan="2" class="email-divider" style="height: 25px; border-bottom: 1px solid #dce4f1; font-size: 0; line-height: 0;">&nbsp;</td>
+                        </tr>
+                        <tr>
+                          <td class="feature-icon-cell" valign="middle" width="64" style="width: 64px; padding: 25px 18px 0 0;">
+                            <div class="feature-icon email-icon email-link" style="width: 52px; height: 52px; border-radius: 16px; background-color: #f3f6fc; color: #174ed6; font-size: 21px; line-height: 52px; font-weight: 700; text-align: center;">!</div>
+                          </td>
+                          <td valign="middle" style="padding-top: 25px;">
+                            <p class="email-text" style="margin: 0; color: #091a3a; font-size: 18px; line-height: 1.35; font-weight: 800;">${escapeHtml(welcome.alertSetupTitle)}</p>
+                            <p class="email-muted" style="margin: 6px 0 0; color: #52627b; font-size: 15px; line-height: 1.55;">${escapeHtml(input.alreadyConfirmed ? welcome.alertSetupBody : welcome.confirmBody)}</p>
                           </td>
                         </tr>
                       </table>
@@ -1196,24 +1257,40 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
             </tr>
             <tr>
               <td style="padding: 0 0 18px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${EMAIL_PANEL_ALT}; border: 1px solid ${EMAIL_BORDER}; border-radius: 22px;">
+                <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color: #ffffff; border: 1px solid #dce4f1; border-radius: 22px; border-collapse: separate;">
                   <tr>
-                    <td style="padding: 26px 30px;">
-                      <p style="margin: 0; color: ${EMAIL_TEXT}; font-size: 27px; line-height: 1.15; font-family: Iowan Old Style, Palatino Linotype, Book Antiqua, serif;">${escapeHtml(welcome.notYouTitle)}</p>
-                      <p style="margin: 10px 0 0; color: ${EMAIL_MUTED}; font-size: 14px; line-height: 1.7;">${escapeHtml(welcome.notYouBody)} <a href="${escapeHtml(input.unsubscribeUrl)}" style="color: ${EMAIL_ACCENT}; font-weight: 700; text-decoration: none;">${escapeHtml(welcome.unsubscribeNow)}</a>.</p>
+                    <td class="card-pad" style="padding: 27px 38px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td class="feature-icon-cell" valign="middle" width="64" style="width: 64px; padding-right: 18px;">
+                            <div class="feature-icon email-icon email-link" style="width: 52px; height: 52px; border-radius: 16px; background-color: #f3f6fc; color: #174ed6; font-size: 20px; line-height: 52px; font-weight: 700; text-align: center;">×</div>
+                          </td>
+                          <td valign="middle">
+                            <p class="email-text" style="margin: 0; color: #091a3a; font-size: 19px; line-height: 1.35; font-weight: 800;">${escapeHtml(welcome.notYouTitle)}</p>
+                            <p class="email-muted" style="margin: 7px 0 0; color: #52627b; font-size: 14px; line-height: 1.55;">${escapeHtml(welcome.notYouBody)} <a class="email-link" href="${escapeHtml(input.unsubscribeUrl)}" style="color: #174ed6; font-weight: 700; text-decoration: none;">${escapeHtml(welcome.unsubscribeNow)}</a></p>
+                          </td>
+                        </tr>
+                      </table>
                     </td>
                   </tr>
                 </table>
               </td>
             </tr>
             <tr>
-              <td style="padding: 8px 0 0; border-top: 1px solid rgba(44, 95, 214, 0.12);">
-                <p style="margin: 18px 0 0; color: ${EMAIL_TEXT}; font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase;">${BRAND_NAME}</p>
-                <p style="margin: 12px 0 0; color: ${EMAIL_MUTED}; font-size: 14px; line-height: 1.7;">${escapeHtml(copy.tagline)}</p>
-                <p style="margin: 14px 0 0; color: ${EMAIL_MUTED}; font-size: 12px; line-height: 1.7;">
-                  <a href="${escapeHtml(input.managePreferencesUrl)}" style="color: ${EMAIL_ACCENT}; font-weight: 700; text-decoration: none;">${escapeHtml(copy.managePreferences)}</a>
-                  · <a href="${escapeHtml(input.unsubscribeUrl)}" style="color: ${EMAIL_ACCENT}; font-weight: 700; text-decoration: none;">${escapeHtml(copy.unsubscribe)}</a>
-                  · <a href="${escapeHtml(siteUrl)}" style="color: ${EMAIL_ACCENT}; font-weight: 700; text-decoration: none;">${BRAND_NAME}</a>
+              <td align="center" class="email-divider" style="padding: 24px 16px 4px; border-top: 1px solid #dce4f1;">
+                <table class="email-logo-plate" role="presentation" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color: #ffffff; border-radius: 12px;">
+                  <tr>
+                    <td style="padding: 8px 12px;">
+                      <a href="${escapeHtml(siteUrl)}" style="text-decoration: none;">
+                        <img src="${escapeHtml(logoUrl)}" width="174" alt="${BRAND_NAME}" style="display: block; width: 174px; max-width: 100%; height: auto; border: 0;" />
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p class="footer-links email-muted" style="margin: 16px 0 0; color: #52627b; font-size: 12px; line-height: 1.8;">
+                  <a class="email-link" href="${escapeHtml(input.managePreferencesUrl)}" style="color: #174ed6; font-weight: 700; text-decoration: none;">${escapeHtml(copy.managePreferences)}</a>
+                  &nbsp;·&nbsp; <a class="email-link" href="${escapeHtml(input.unsubscribeUrl)}" style="color: #174ed6; font-weight: 700; text-decoration: none;">${escapeHtml(copy.unsubscribe)}</a>
+                  &nbsp;·&nbsp; <a class="email-link" href="${escapeHtml(siteUrl)}" style="color: #174ed6; font-weight: 700; text-decoration: none;">${BRAND_NAME}</a>
                 </p>
               </td>
             </tr>
