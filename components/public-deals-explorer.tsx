@@ -3154,12 +3154,16 @@ export function PublicDealsExplorer({
       const bounds = sidebar.getBoundingClientRect();
       const boundaryBounds = boundary.getBoundingClientRect();
       const headerClearance = 92;
+      const boundaryClearance = 24;
       const compactHeight = compactSidebarRef.current?.getBoundingClientRect().height ?? 0;
       const nextPosition = {
         left: Math.round(bounds.left),
         top:
           compactHeight > 0
-            ? Math.min(headerClearance, Math.round(boundaryBounds.bottom - compactHeight))
+            ? Math.min(
+                headerClearance,
+                Math.round(boundaryBounds.bottom - compactHeight - boundaryClearance),
+              )
             : headerClearance,
         width: Math.round(bounds.width),
       };
