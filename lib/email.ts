@@ -330,7 +330,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Confirmez votre inscription ${BRAND_NAME}`,
       confirmedPreview: "Votre lien prive de preferences est pret.",
       pendingPreview: "Confirmez votre email et choisissez les alertes souhaitees.",
-      confirmedHeadline: "Vos alertes sont prêtes à décoller.",
+      confirmedHeadline: "Ajustez vos alertes de voyages à vos envies.",
       pendingHeadline: "Encore une étape avant le décollage.",
       confirmedIntro: "Nous vous renvoyons votre lien prive pour modifier vos alertes.",
       pendingIntro: "Une confirmation rapide termine le double opt-in. Vous pourrez ensuite regler le flux selon vos voyages.",
