@@ -868,6 +868,20 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#39;");
 }
 
+function renderPlainEmailAddress(value: string) {
+  const separatorIndex = value.lastIndexOf("@");
+
+  if (separatorIndex <= 0 || separatorIndex === value.length - 1) {
+    return escapeHtml(value);
+  }
+
+  return [
+    `<span>${escapeHtml(value.slice(0, separatorIndex))}</span>`,
+    `<span>&#64;</span>`,
+    `<span>${escapeHtml(value.slice(separatorIndex + 1))}</span>`,
+  ].join("");
+}
+
 function buildDealHeadline(sendType: CampaignSendType, deals: RenderableDeal[], locale?: EmailLocale | null) {
   const copy = getCopy(locale);
   if (sendType === "flash") {
@@ -1152,6 +1166,12 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
       .email-link { color: #174ed6 !important; }
       .email-divider { border-color: #dce4f1 !important; }
       .email-logo-plate { background-color: #ffffff !important; }
+      .account-email a, .account-email [x-apple-data-detectors] {
+        color: inherit !important;
+        text-decoration: none !important;
+        pointer-events: none !important;
+        cursor: text !important;
+      }
 
       @media only screen and (max-width: 620px) {
         .email-body { padding: 16px 10px !important; }
@@ -1171,6 +1191,7 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
         .feature-icon-cell { width: 52px !important; padding-right: 14px !important; }
         .feature-icon { width: 46px !important; height: 46px !important; line-height: 46px !important; }
         .account-email { font-size: 17px !important; word-break: break-word !important; }
+        .email-logo { width: 122px !important; max-width: 122px !important; }
         .footer-links a { display: inline-block !important; margin: 4px 5px !important; }
       }
 
@@ -1201,6 +1222,19 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
       <tr>
         <td align="center">
           <table class="email-shell" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 700px;">
+            <tr>
+              <td align="center" style="padding: 0 0 18px;">
+                <table class="email-logo-plate" role="presentation" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color: #ffffff; border-radius: 12px;">
+                  <tr>
+                    <td style="padding: 8px 12px;">
+                      <a href="${escapeHtml(siteUrl)}" style="text-decoration: none;">
+                        <img class="email-logo" src="${escapeHtml(logoUrl)}" width="174" alt="${BRAND_NAME}" style="display: block; width: 174px; max-width: 100%; height: auto; border: 0;" />
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
             <tr>
               <td style="padding: 0 0 18px;">
                 <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color: #ffffff; border: 1px solid #dce4f1; border-radius: 22px; border-collapse: separate; overflow: hidden;">
@@ -1234,7 +1268,7 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
                           </td>
                           <td valign="middle">
                             <p class="email-muted" style="margin: 0; color: #52627b; font-size: 14px; line-height: 1.4;">${escapeHtml(welcome.linkedTo)}</p>
-                            <p class="account-email email-text" style="margin: 5px 0 0; color: #091a3a; font-size: 19px; line-height: 1.35; font-weight: 800;">${escapeHtml(input.email)}</p>
+                            <p class="account-email email-text" style="margin: 5px 0 0; color: #091a3a; font-size: 19px; line-height: 1.35; font-weight: 800;">${renderPlainEmailAddress(input.email)}</p>
                           </td>
                         </tr>
                         <tr>
@@ -1242,7 +1276,7 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
                         </tr>
                         <tr>
                           <td class="feature-icon-cell" valign="middle" width="64" style="width: 64px; padding: 25px 18px 0 0;">
-                            <div class="feature-icon email-icon email-link" style="width: 52px; height: 52px; border-radius: 16px; background-color: #f3f6fc; color: #174ed6; font-size: 21px; line-height: 52px; font-weight: 700; text-align: center;">!</div>
+                            <div class="feature-icon email-icon" style="width: 52px; height: 52px; border-radius: 16px; background-color: #f3f6fc; color: #174ed6; font-family: Apple Color Emoji, Segoe UI Emoji, sans-serif; font-size: 22px; line-height: 52px; font-weight: 700; text-align: center;">&#128276;</div>
                           </td>
                           <td valign="middle" style="padding-top: 25px;">
                             <p class="email-text" style="margin: 0; color: #091a3a; font-size: 18px; line-height: 1.35; font-weight: 800;">${escapeHtml(welcome.alertSetupTitle)}</p>
@@ -1278,16 +1312,7 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
             </tr>
             <tr>
               <td align="center" class="email-divider" style="padding: 24px 16px 4px; border-top: 1px solid #dce4f1;">
-                <table class="email-logo-plate" role="presentation" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color: #ffffff; border-radius: 12px;">
-                  <tr>
-                    <td style="padding: 8px 12px;">
-                      <a href="${escapeHtml(siteUrl)}" style="text-decoration: none;">
-                        <img src="${escapeHtml(logoUrl)}" width="174" alt="${BRAND_NAME}" style="display: block; width: 174px; max-width: 100%; height: auto; border: 0;" />
-                      </a>
-                    </td>
-                  </tr>
-                </table>
-                <p class="footer-links email-muted" style="margin: 16px 0 0; color: #52627b; font-size: 12px; line-height: 1.8;">
+                <p class="footer-links email-muted" style="margin: 0; color: #52627b; font-size: 12px; line-height: 1.8;">
                   <a class="email-link" href="${escapeHtml(input.managePreferencesUrl)}" style="color: #174ed6; font-weight: 700; text-decoration: none;">${escapeHtml(copy.managePreferences)}</a>
                   &nbsp;·&nbsp; <a class="email-link" href="${escapeHtml(input.unsubscribeUrl)}" style="color: #174ed6; font-weight: 700; text-decoration: none;">${escapeHtml(copy.unsubscribe)}</a>
                   &nbsp;·&nbsp; <a class="email-link" href="${escapeHtml(siteUrl)}" style="color: #174ed6; font-weight: 700; text-decoration: none;">${BRAND_NAME}</a>
