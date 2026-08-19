@@ -3070,10 +3070,13 @@ export function PublicDealsExplorer({
   const compactSidebarFrameRef = useRef<number | null>(null);
   const mobileResultsPanelRef = useRef<HTMLDivElement | null>(null);
   const mobileResultsReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const compactSidebarRef = useRef<HTMLDivElement | null>(null);
+  const resultsBoundaryRef = useRef<HTMLElement | null>(null);
   const mobileResultsPanelTitleId = useId();
   const [showCompactSidebar, setShowCompactSidebar] = useState(false);
   const [compactSidebarPosition, setCompactSidebarPosition] = useState<{
     left: number;
+    top: number;
     width: number;
   } | null>(null);
   const now = useMemo(() => new Date(), []);
@@ -3141,25 +3144,34 @@ export function PublicDealsExplorer({
     const syncCompactSidebar = () => {
       compactSidebarFrameRef.current = null;
       const sidebar = fullSidebarRef.current;
+      const boundary = resultsBoundaryRef.current;
 
-      if (!sidebar || window.innerWidth <= 980) {
+      if (!sidebar || !boundary || window.innerWidth <= 980) {
         setShowCompactSidebar(false);
         return;
       }
 
       const bounds = sidebar.getBoundingClientRect();
+      const boundaryBounds = boundary.getBoundingClientRect();
       const headerClearance = 92;
+      const compactHeight = compactSidebarRef.current?.getBoundingClientRect().height ?? 0;
       const nextPosition = {
         left: Math.round(bounds.left),
+        top:
+          compactHeight > 0
+            ? Math.min(headerClearance, Math.round(boundaryBounds.bottom - compactHeight))
+            : headerClearance,
         width: Math.round(bounds.width),
       };
 
       setCompactSidebarPosition((current) =>
-        current?.left === nextPosition.left && current.width === nextPosition.width
+        current?.left === nextPosition.left &&
+        current.top === nextPosition.top &&
+        current.width === nextPosition.width
           ? current
           : nextPosition,
       );
-      setShowCompactSidebar(bounds.bottom <= headerClearance);
+      setShowCompactSidebar(bounds.bottom <= headerClearance && boundaryBounds.bottom > 0);
     };
 
     const scheduleCompactSidebarSync = () => {
@@ -3173,16 +3185,29 @@ export function PublicDealsExplorer({
     syncCompactSidebar();
     window.addEventListener("scroll", scheduleCompactSidebarSync, { passive: true });
     window.addEventListener("resize", scheduleCompactSidebarSync);
+    const resizeObserver = new ResizeObserver(scheduleCompactSidebarSync);
+    const observedSidebar = fullSidebarRef.current;
+    const observedBoundary = resultsBoundaryRef.current;
+    if (observedSidebar) {
+      resizeObserver.observe(observedSidebar);
+    }
+    if (observedBoundary) {
+      resizeObserver.observe(observedBoundary);
+    }
+    if (compactSidebarRef.current) {
+      resizeObserver.observe(compactSidebarRef.current);
+    }
 
     return () => {
       window.removeEventListener("scroll", scheduleCompactSidebarSync);
       window.removeEventListener("resize", scheduleCompactSidebarSync);
+      resizeObserver.disconnect();
       if (compactSidebarFrameRef.current !== null) {
         window.cancelAnimationFrame(compactSidebarFrameRef.current);
         compactSidebarFrameRef.current = null;
       }
     };
-  }, [mode]);
+  }, [mode, showCompactSidebar]);
 
   useEffect(() => {
     if (!mobileResultsPanel) {
@@ -4116,9 +4141,11 @@ export function PublicDealsExplorer({
     return createPortal(
       <div
         className="deals-search-compact-filters"
+        ref={compactSidebarRef}
         style={
           {
             "--compact-filter-left": `${compactSidebarPosition.left}px`,
+            "--compact-filter-top": `${compactSidebarPosition.top}px`,
             "--compact-filter-width": `${compactSidebarPosition.width}px`,
           } as CSSProperties
         }
@@ -4490,7 +4517,7 @@ export function PublicDealsExplorer({
 
             {renderMobileResultsControls(false)}
 
-            <section className="deals-search-layout">
+            <section className="deals-search-layout" ref={resultsBoundaryRef}>
               <aside className="deals-search-layout__filters">
                 <div className="deals-search-sidebar" ref={fullSidebarRef}>
                   <MonthlyPriceCard
@@ -4724,7 +4751,7 @@ export function PublicDealsExplorer({
             <p>{searchResultsCopy.description}</p>
           </div>
           {renderMobileResultsControls(true)}
-          <section className="deals-search-layout">
+          <section className="deals-search-layout" ref={resultsBoundaryRef}>
             <aside className="deals-search-layout__filters">
               <div className="deals-search-sidebar" ref={fullSidebarRef}>
               <div className="deals-search-sidebar__section">
