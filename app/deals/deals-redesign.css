@@ -1516,7 +1516,7 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .deals-search-compact-filters {
-  position: fixed;
+  position: var(--compact-filter-placement, fixed);
   top: var(--compact-filter-top, 5.75rem);
   left: var(--compact-filter-left);
   z-index: 45;

@@ -3078,6 +3078,7 @@ export function PublicDealsExplorer({
     left: number;
     top: number;
     width: number;
+    placement: "fixed" | "absolute";
   } | null>(null);
   const now = useMemo(() => new Date(), []);
   const effectiveFilters =
@@ -3156,22 +3157,24 @@ export function PublicDealsExplorer({
       const headerClearance = 92;
       const boundaryClearance = 24;
       const compactHeight = compactSidebarRef.current?.getBoundingClientRect().height ?? 0;
+      const stoppedViewportTop = boundaryBounds.bottom - compactHeight - boundaryClearance;
+      const placement: "fixed" | "absolute" =
+        compactHeight > 0 && stoppedViewportTop < headerClearance ? "absolute" : "fixed";
       const nextPosition = {
-        left: Math.round(bounds.left),
+        left: Math.round(bounds.left + (placement === "absolute" ? window.scrollX : 0)),
         top:
-          compactHeight > 0
-            ? Math.min(
-                headerClearance,
-                Math.round(boundaryBounds.bottom - compactHeight - boundaryClearance),
-              )
+          placement === "absolute"
+            ? Math.round(window.scrollY + stoppedViewportTop)
             : headerClearance,
         width: Math.round(bounds.width),
+        placement,
       };
 
       setCompactSidebarPosition((current) =>
         current?.left === nextPosition.left &&
         current.top === nextPosition.top &&
-        current.width === nextPosition.width
+        current.width === nextPosition.width &&
+        current.placement === nextPosition.placement
           ? current
           : nextPosition,
       );
@@ -4149,6 +4152,7 @@ export function PublicDealsExplorer({
         style={
           {
             "--compact-filter-left": `${compactSidebarPosition.left}px`,
+            "--compact-filter-placement": compactSidebarPosition.placement,
             "--compact-filter-top": `${compactSidebarPosition.top}px`,
             "--compact-filter-width": `${compactSidebarPosition.width}px`,
           } as CSSProperties
