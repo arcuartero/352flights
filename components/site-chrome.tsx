@@ -6,6 +6,11 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/lib/i18n";
+import {
+  subscriptionErrorMessage,
+  subscriptionSuccessMessage,
+  type SubscriptionApiPayload,
+} from "@/lib/subscription-response";
 
 const SCAN_HOURS = [0, 12] as const;
 const LUX_TIME_ZONE = "Europe/Luxembourg";
@@ -459,7 +464,7 @@ type PreferencesAccessModalProps = {
 };
 
 function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState(
     "Enter your email and we will send either your sign-up email or your private preferences link.",
@@ -521,22 +526,19 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
 
             <form
               className="site-chrome__preferences-form"
+              data-route-loader="off"
               onSubmit={(event) => {
                 event.preventDefault();
 
                 const trimmedEmail = email.trim();
                 if (!trimmedEmail) {
                   setMessageTone("error");
-                  setMessage("Please enter the email you used for +352 Flights.");
+                  setMessage(t("alerts.enterEmail"));
                   return;
                 }
 
                 startTransition(async () => {
                   try {
-                    const locale =
-                      window.localStorage.getItem("luxflightdeals-locale") ??
-                      document.documentElement.lang ??
-                      "en";
                     const response = await fetch("/api/subscribe", {
                       method: "POST",
                       headers: {
@@ -545,24 +547,30 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
                       body: JSON.stringify({ email: trimmedEmail, locale }),
                     });
 
-                    const payload = (await response.json()) as { message?: string; error?: string };
+                    const payload = (await response.json()) as SubscriptionApiPayload;
 
                     if (!response.ok) {
-                      throw new Error(payload.error ?? "We could not send your email right now.");
+                      setMessageTone("error");
+                      setMessage(
+                        subscriptionErrorMessage(payload, {
+                          generic: t("alerts.sendError"),
+                          invalidEmail: t("alerts.enterEmail"),
+                        }),
+                      );
+                      return;
                     }
 
                     setMessageTone("success");
                     setMessage(
-                      payload.message ??
-                        "Check your inbox and spam folder for your subscription or preferences email.",
+                      subscriptionSuccessMessage(payload, {
+                        accessLinkSent: t("alerts.accessLinkSent"),
+                        confirmationRequired: t("alerts.checkInbox"),
+                        savedWithoutEmail: t("alerts.savedWithoutEmail"),
+                      }),
                     );
-                  } catch (error) {
+                  } catch {
                     setMessageTone("error");
-                    setMessage(
-                      error instanceof Error
-                        ? error.message
-                        : "We could not send your email right now.",
-                    );
+                    setMessage(t("alerts.sendError"));
                   }
                 });
               }}

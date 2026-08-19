@@ -5,6 +5,11 @@ import Image from "next/image";
 import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
+import {
+  subscriptionErrorMessage,
+  subscriptionSuccessMessage,
+  type SubscriptionApiPayload,
+} from "@/lib/subscription-response";
 
 export function V2AlertsModal({ onClose }: { onClose: () => void }) {
   const { locale, t } = useI18n();
@@ -47,18 +52,29 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: trimmed, locale }),
         });
-        const payload = (await response.json()) as { message?: string; error?: string };
+        const payload = (await response.json()) as SubscriptionApiPayload;
         if (!response.ok) {
-          throw new Error(payload.error ?? t("alerts.sendError"));
+          setStatus({
+            tone: "error",
+            message: subscriptionErrorMessage(payload, {
+              generic: t("alerts.sendError"),
+              invalidEmail: t("alerts.enterEmail"),
+            }),
+          });
+          return;
         }
         setStatus({
           tone: "success",
-          message: payload.message ?? t("alerts.checkInbox"),
+          message: subscriptionSuccessMessage(payload, {
+            accessLinkSent: t("alerts.accessLinkSent"),
+            confirmationRequired: t("alerts.checkInbox"),
+            savedWithoutEmail: t("alerts.savedWithoutEmail"),
+          }),
         });
-      } catch (error) {
+      } catch {
         setStatus({
           tone: "error",
-          message: error instanceof Error ? error.message : t("alerts.sendError"),
+          message: t("alerts.sendError"),
         });
       }
     });
@@ -98,6 +114,7 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
 
           <form
             className="v2-modal__form"
+            data-route-loader="off"
             onSubmit={(event) => {
               event.preventDefault();
               submit();

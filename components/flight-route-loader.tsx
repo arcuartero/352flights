@@ -148,7 +148,11 @@ export function GlobalFlightRouteLoader() {
 
     const showForForm = (event: SubmitEvent) => {
       const form = event.target;
-      if (!(form instanceof HTMLFormElement) || event.defaultPrevented) {
+      if (
+        !(form instanceof HTMLFormElement) ||
+        event.defaultPrevented ||
+        form.dataset.routeLoader === "off"
+      ) {
         return;
       }
 
@@ -161,11 +165,13 @@ export function GlobalFlightRouteLoader() {
     };
 
     document.addEventListener("click", showForLink, true);
-    document.addEventListener("submit", showForForm, true);
+    // Let client-side submit handlers call preventDefault() before deciding
+    // whether this submission will actually navigate to another route.
+    document.addEventListener("submit", showForForm);
 
     return () => {
       document.removeEventListener("click", showForLink, true);
-      document.removeEventListener("submit", showForForm, true);
+      document.removeEventListener("submit", showForForm);
     };
   }, [show]);
 
