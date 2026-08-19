@@ -27,29 +27,10 @@ export default async function ConfirmPage({ searchParams }: ConfirmPageProps) {
     );
   }
 
+  let result: Awaited<ReturnType<typeof confirmSubscriberByToken>>;
+
   try {
-    const result = await confirmSubscriberByToken(token);
-
-    if (result.status === "unsubscribed") {
-      return (
-        <V2Status
-          eyebrow="Subscription confirmed"
-          title="This address is currently unsubscribed."
-          body={<p>{`If you want back in for ${result.email}, subscribe again from the homepage.`}</p>}
-          notes={[
-            { label: "Status", value: result.status },
-            { label: "Profile", value: result.onboardingCompleted ? "Saved" : "Needs setup" },
-          ]}
-          actions={[{ href: "/", label: "Back to homepage", variant: "ghost" }]}
-        />
-      );
-    }
-
-    if (result.status === "active") {
-      redirect(result.preferencePath);
-    }
-
-    return null;
+    result = await confirmSubscriberByToken(token);
   } catch (error) {
     return (
       <V2Status
@@ -67,4 +48,21 @@ export default async function ConfirmPage({ searchParams }: ConfirmPageProps) {
       />
     );
   }
+
+  if (result.status === "unsubscribed") {
+    return (
+      <V2Status
+        eyebrow="Subscription confirmed"
+        title="This address is currently unsubscribed."
+        body={<p>{`If you want back in for ${result.email}, subscribe again from the homepage.`}</p>}
+        notes={[
+          { label: "Status", value: result.status },
+          { label: "Profile", value: result.onboardingCompleted ? "Saved" : "Needs setup" },
+        ]}
+        actions={[{ href: "/", label: "Back to homepage", variant: "ghost" }]}
+      />
+    );
+  }
+
+  redirect(result.preferencePath);
 }
