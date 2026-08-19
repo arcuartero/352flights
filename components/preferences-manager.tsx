@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
+import { useI18n } from "@/lib/i18n";
+
 import {
   bucketOptionMap,
   bucketValues,
@@ -21,6 +23,11 @@ import {
   type PreferencesBundle,
   type WeekdayValue,
 } from "@/lib/preferences-shared";
+import {
+  subscriptionErrorMessage,
+  subscriptionSuccessMessage,
+  type SubscriptionApiPayload,
+} from "@/lib/subscription-response";
 
 type ScreenState =
   | {
@@ -107,6 +114,7 @@ function buildSimpleFormState(bundle: PreferencesBundle): PreferenceFormState {
 }
 
 export function PreferencesManager() {
+  const { locale, t } = useI18n();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -203,6 +211,7 @@ export function PreferencesManager() {
             </p>
             <form
               className="preferences-access-form"
+              data-route-loader="off"
               onSubmit={(event) => {
                 event.preventDefault();
 
@@ -210,17 +219,13 @@ export function PreferencesManager() {
                 if (!email) {
                   setAccessMessage({
                     phase: "error",
-                    message: "Please enter the email you used for +352 Flights.",
+                    message: t("alerts.enterEmail"),
                   });
                   return;
                 }
 
                 startAccessTransition(async () => {
                   try {
-                    const locale =
-                      window.localStorage.getItem("luxflightdeals-locale") ??
-                      document.documentElement.lang ??
-                      "en";
                     const response = await fetch("/api/subscribe", {
                       method: "POST",
                       headers: {
@@ -229,25 +234,31 @@ export function PreferencesManager() {
                       body: JSON.stringify({ email, locale }),
                     });
 
-                    const payload = (await response.json()) as { message?: string; error?: string };
+                    const payload = (await response.json()) as SubscriptionApiPayload;
 
                     if (!response.ok) {
-                      throw new Error(payload.error ?? "We could not resend your access link.");
+                      setAccessMessage({
+                        phase: "error",
+                        message: subscriptionErrorMessage(payload, {
+                          generic: t("alerts.sendError"),
+                          invalidEmail: t("alerts.enterEmail"),
+                        }),
+                      });
+                      return;
                     }
 
                     setAccessMessage({
                       phase: "success",
-                      message:
-                        payload.message ??
-                        "We emailed your access link again. Check your inbox and spam folder.",
+                      message: subscriptionSuccessMessage(payload, {
+                        accessLinkSent: t("alerts.accessLinkSent"),
+                        confirmationRequired: t("alerts.checkInbox"),
+                        savedWithoutEmail: t("alerts.savedWithoutEmail"),
+                      }),
                     });
-                  } catch (error) {
+                  } catch {
                     setAccessMessage({
                       phase: "error",
-                      message:
-                        error instanceof Error
-                          ? error.message
-                          : "We could not resend your access link.",
+                      message: t("alerts.sendError"),
                     });
                   }
                 });

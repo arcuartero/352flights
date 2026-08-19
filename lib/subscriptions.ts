@@ -158,6 +158,11 @@ export async function subscribeEmailAddress(email: string, locale?: EmailLocale)
 
   return {
     alreadyConfirmed: subscriber.email_confirmed,
+    code: subscriber.email_confirmed
+      ? ("access_link_sent" as const)
+      : hasResendEnv()
+        ? ("confirmation_required" as const)
+        : ("saved_without_email" as const),
     message: subscriber.email_confirmed
       ? "You were already subscribed, so we emailed your access links again."
       : hasResendEnv()

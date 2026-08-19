@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   if (!payload.success) {
     return NextResponse.json(
-      { error: "Please enter a valid email address." },
+      { code: "invalid_email", error: "Please enter a valid email address." },
       { status: 400 },
     );
   }
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
   if (!hasSupabaseAdminEnv()) {
     return NextResponse.json(
       {
+        code: "storage_unavailable",
         error:
           "Subscription storage is not configured yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to activate captures.",
       },
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
+      code: result.code,
       message: result.message,
       requiresConfirmation: !result.alreadyConfirmed,
     });
@@ -73,6 +75,15 @@ export async function POST(request: Request) {
           ? error.message
           : "We could not save your subscription right now.";
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        code:
+          error instanceof Error && error.message.includes("schema cache")
+            ? "database_not_ready"
+            : "subscription_failed",
+        error: message,
+      },
+      { status: 500 },
+    );
   }
 }

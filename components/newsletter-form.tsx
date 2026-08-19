@@ -3,6 +3,11 @@
 import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
+import {
+  subscriptionErrorMessage,
+  subscriptionSuccessMessage,
+  type SubscriptionApiPayload,
+} from "@/lib/subscription-response";
 
 type FormStatus =
   | { tone: "idle"; message: string }
@@ -26,6 +31,7 @@ export function NewsletterForm() {
   return (
     <form
       className="newsletter-form"
+      data-route-loader="off"
       onSubmit={(event) => {
         event.preventDefault();
 
@@ -48,32 +54,32 @@ export function NewsletterForm() {
               body: JSON.stringify({ email, locale }),
             });
 
-            const payload = (await response.json()) as {
-              message?: string;
-              error?: string;
-              requiresConfirmation?: boolean;
-            };
+            const payload = (await response.json()) as SubscriptionApiPayload;
 
             if (!response.ok) {
-              throw new Error(payload.error ?? "Subscription failed.");
+              setStatus({
+                tone: "error",
+                message: subscriptionErrorMessage(payload, {
+                  generic: t("newsletter.error"),
+                  invalidEmail: t("newsletter.invalidEmail"),
+                }),
+              });
+              return;
             }
 
             form.reset();
             setStatus({
               tone: "success",
-              message:
-                payload.message ??
-                (payload.requiresConfirmation
-                  ? t("newsletter.confirm")
-                  : t("newsletter.success")),
+              message: subscriptionSuccessMessage(payload, {
+                accessLinkSent: t("newsletter.accessLinkSent"),
+                confirmationRequired: t("newsletter.confirm"),
+                savedWithoutEmail: t("newsletter.savedWithoutEmail"),
+              }),
             });
-          } catch (error) {
+          } catch {
             setStatus({
               tone: "error",
-              message:
-                error instanceof Error
-                  ? error.message
-                  : t("newsletter.error"),
+              message: t("newsletter.error"),
             });
           }
         });
