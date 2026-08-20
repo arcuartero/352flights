@@ -8,6 +8,10 @@ import type {
   LocalScannerStatus,
 } from "@/lib/local-scanner-status-shared";
 import {
+  getLatestRunningPriceScanProgress,
+  type PriceScanLiveProgress,
+} from "@/lib/price-scan-runs";
+import {
   callVpsScannerAgent,
   hasVpsScannerAgentConfig,
   type VpsScannerAgentStatus,
@@ -474,6 +478,63 @@ function summarizeNoResults(logLines: LocalScannerLogLine[]): LocalScannerBreakd
   return [...counts.values()].sort((left, right) => right.count - left.count);
 }
 
+function breakdownFromProgress(progress: PriceScanLiveProgress) {
+  return Object.entries(progress.noResultBreakdown)
+    .map(([code, count]) => ({
+      code,
+      label: code.replaceAll("_", " "),
+      count,
+    }))
+    .sort((left, right) => right.count - left.count);
+}
+
+function isProgressForActiveService(
+  progress: PriceScanLiveProgress,
+  serviceStartedAt: string | null,
+) {
+  if (!serviceStartedAt) return true;
+  const differenceMs = Math.abs(
+    new Date(progress.startedAt).getTime() - new Date(serviceStartedAt).getTime(),
+  );
+  return Number.isFinite(differenceMs) && differenceMs <= 5 * 60_000;
+}
+
+function mergePersistedProgress(
+  status: LocalScannerStatus,
+  progress: PriceScanLiveProgress | null,
+  serviceStartedAt: string | null,
+) {
+  if (!status.running || !progress || !isProgressForActiveService(progress, serviceStartedAt)) {
+    return status;
+  }
+
+  const totalRoutes = progress.routesPlanned || status.totalRoutes;
+  const startedRoutes = progress.routesStarted;
+  const remainingRoutes = totalRoutes === null
+    ? null
+    : Math.max(totalRoutes - startedRoutes, 0);
+
+  return {
+    ...status,
+    totalRoutes,
+    startedRoutes,
+    remainingRoutes,
+    startedAt: progress.startedAt,
+    currentRouteLabel: progress.currentRouteLabel ?? status.currentRouteLabel,
+    liveTotals: {
+      routesStarted: progress.routesStarted,
+      patternsStarted: progress.patternsScanned,
+      found: progress.foundPrices,
+      noResults: progress.noResults,
+      timedOut: progress.timedOut,
+      networkOutages: progress.networkOutages,
+      hardErrors: progress.hardErrors,
+      retries: progress.retries,
+    },
+    noResultBreakdown: breakdownFromProgress(progress),
+  } satisfies LocalScannerStatus;
+}
+
 function routeProgressFromMessage(message: string | null) {
   const match = message?.match(/Route start:\s*(\d+)\/(\d+)\s*.\s*(.*)$/);
   if (!match) return { startedRoutes: null, totalRoutes: null, currentRouteLabel: null };
@@ -509,7 +570,7 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
   const lastScannerLine = logLines.at(-1) ?? null;
   const liveTotals = summarizeLogLines(logLines);
   const noResultBreakdown = summarizeNoResults(logLines);
-  const runStartTimestamp = logLines[0]?.timestamp ?? startTimestamp;
+  const runStartTimestamp = startTimestamp ?? logLines[0]?.timestamp ?? null;
   const runExitTimestamp = status.running ? null : (logLines.at(-1)?.timestamp ?? exitTimestamp);
 
   return {
@@ -562,8 +623,17 @@ export async function GET(request: Request) {
 
   try {
     if (hasVpsScannerAgentConfig()) {
-      const status = await callVpsScannerAgent<VpsScannerAgentStatus>("status");
-      return NextResponse.json(vpsStatusToLocalScannerStatus(status), {
+      const [status, persistedProgress] = await Promise.all([
+        callVpsScannerAgent<VpsScannerAgentStatus>("status"),
+        getLatestRunningPriceScanProgress(),
+      ]);
+      const serviceStartedAt = parseSystemdTimestamp(status.service.ExecMainStartTimestamp);
+      const scannerStatus = mergePersistedProgress(
+        vpsStatusToLocalScannerStatus(status),
+        persistedProgress.progress,
+        serviceStartedAt,
+      );
+      return NextResponse.json(scannerStatus, {
         headers: {
           "Cache-Control": "no-store, max-age=0",
         },

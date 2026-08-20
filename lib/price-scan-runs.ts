@@ -114,6 +114,23 @@ export type PriceScanRun = {
   syncSummary: Record<string, unknown>;
 };
 
+export type PriceScanLiveProgress = {
+  runKey: string;
+  startedAt: string;
+  updatedAt: string;
+  routesPlanned: number;
+  routesStarted: number;
+  currentRouteLabel: string | null;
+  patternsScanned: number;
+  foundPrices: number;
+  noResults: number;
+  timedOut: number;
+  networkOutages: number;
+  hardErrors: number;
+  retries: number;
+  noResultBreakdown: Record<string, number>;
+};
+
 type PriceScanRunRow = {
   id: string;
   run_key: string;
@@ -154,6 +171,23 @@ type PriceScanRunRow = {
   error_breakdown: unknown;
   sync_status: string;
   sync_summary: unknown;
+};
+
+type PriceScanLiveProgressRow = {
+  run_key: string;
+  started_at: string;
+  updated_at: string;
+  routes_planned: number;
+  routes_started: number;
+  patterns_scanned: number;
+  found_prices: number;
+  no_results: number;
+  timed_out: number;
+  network_outages: number;
+  hard_errors: number;
+  retries: number;
+  routes: unknown;
+  no_result_breakdown: unknown;
 };
 
 const baseSelect = [
@@ -233,6 +267,14 @@ function countRecord(value: unknown) {
 
 function nullableString(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function currentRouteLabel(value: unknown) {
+  const routes = arrayValue<Record<string, unknown>>(value);
+  const currentRoute = [...routes]
+    .reverse()
+    .find((route) => route.started === true && route.completed !== true);
+  return nullableString(currentRoute?.route_label);
 }
 
 function patternItineraryKey(pattern: PriceScanPatternSummary) {
@@ -392,6 +434,65 @@ export async function getPriceScanRunHistory(limit = 100) {
     };
   } catch (error) {
     return { runs: [] as PriceScanRun[], error: formatError(error) };
+  }
+}
+
+export async function getLatestRunningPriceScanProgress() {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { data, error } = await supabase
+      .from("price_scan_runs")
+      .select([
+        "run_key",
+        "started_at",
+        "updated_at",
+        "routes_planned",
+        "routes_started",
+        "patterns_scanned",
+        "found_prices",
+        "no_results",
+        "timed_out",
+        "network_outages",
+        "hard_errors",
+        "retries",
+        "routes",
+        "no_result_breakdown",
+      ].join(","))
+      .eq("status", "running")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return { progress: null as PriceScanLiveProgress | null, error: formatError(error) };
+    }
+
+    if (!data) {
+      return { progress: null as PriceScanLiveProgress | null, error: null as string | null };
+    }
+
+    const row = data as unknown as PriceScanLiveProgressRow;
+    return {
+      progress: {
+        runKey: row.run_key,
+        startedAt: row.started_at,
+        updatedAt: row.updated_at,
+        routesPlanned: numberValue(row.routes_planned),
+        routesStarted: numberValue(row.routes_started),
+        currentRouteLabel: currentRouteLabel(row.routes),
+        patternsScanned: numberValue(row.patterns_scanned),
+        foundPrices: numberValue(row.found_prices),
+        noResults: numberValue(row.no_results),
+        timedOut: numberValue(row.timed_out),
+        networkOutages: numberValue(row.network_outages),
+        hardErrors: numberValue(row.hard_errors),
+        retries: numberValue(row.retries),
+        noResultBreakdown: countRecord(row.no_result_breakdown),
+      },
+      error: null as string | null,
+    };
+  } catch (error) {
+    return { progress: null as PriceScanLiveProgress | null, error: formatError(error) };
   }
 }
 
