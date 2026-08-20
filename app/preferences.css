@@ -653,6 +653,7 @@
 
 @media (min-width: 821px) {
   .preferences-concept__panel {
+    height: clamp(30rem, 42vw, 42rem);
     grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   }
 
@@ -670,6 +671,9 @@
 
   .preferences-concept__panel > .preferences-concept__answers {
     grid-row: 4;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
   }
 
   .preferences-concept__panel > .preferences-concept__actions {
