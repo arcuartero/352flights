@@ -785,10 +785,10 @@ export function PreferencesTypeformConcept() {
         const response = await fetch(`/api/preferences?token=${encodeURIComponent(token)}`, {
           cache: "no-store",
         });
-        const payload = (await response.json()) as PreferencesBundle & { error?: string };
+        const payload = (await response.json()) as PreferencesBundle;
 
         if (!response.ok) {
-          throw new Error(payload.error ?? copy.loadErrorMessage);
+          throw new Error(copy.loadErrorMessage);
         }
 
         if (!isActive) {
@@ -797,17 +797,14 @@ export function PreferencesTypeformConcept() {
 
         setBundle(payload);
         setForm(buildConceptFormState(payload));
-      } catch (error) {
+      } catch {
         if (!isActive) {
           return;
         }
 
         setScreen({
           phase: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : copy.loadErrorMessage,
+          message: copy.loadErrorMessage,
         });
       } finally {
         if (isActive) {
@@ -893,21 +890,18 @@ export function PreferencesTypeformConcept() {
           }),
         });
 
-        const payload = (await response.json()) as { message?: string; error?: string };
         if (!response.ok) {
-          throw new Error(payload.error ?? copy.saveErrorMessage);
+          throw new Error(copy.saveErrorMessage);
         }
 
         setScreen({
           phase: "success",
-          message:
-                  payload.message ?? copy.savedMessage,
+          message: copy.savedMessage,
         });
-      } catch (error) {
+      } catch {
         setScreen({
           phase: "error",
-          message:
-            error instanceof Error ? error.message : copy.loadErrorMessage,
+          message: copy.saveErrorMessage,
         });
       }
     });
