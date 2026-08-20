@@ -1145,7 +1145,7 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
   const intro = input.alreadyConfirmed ? welcome.confirmedIntro : welcome.pendingIntro;
   const primaryLabel = input.alreadyConfirmed ? welcome.primaryConfirmed : welcome.primaryPending;
   const primaryUrl = input.alreadyConfirmed ? input.managePreferencesUrl : input.confirmUrl;
-  const heroImageUrl = `${siteUrl}/email-airplane-window.jpg`;
+  const heroImageUrl = `${siteUrl}/${input.alreadyConfirmed ? "email-alerts-airport.jpg" : "email-airplane-window.jpg"}`;
   const logoUrl = `${siteUrl}/v2-logo.png`;
 
   const html = `<!doctype html>
