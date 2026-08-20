@@ -745,7 +745,7 @@ export function LocalScannerStatusWidget({
           ) : null}
           <div className="ops-scanner-status__progress">
             <strong>
-              {status.startedRoutes ?? 0}
+              {status.startedRoutes ?? "—"}
               {status.totalRoutes !== null ? `/${status.totalRoutes}` : ""}
             </strong>
             <span>routes started</span>
@@ -757,13 +757,13 @@ export function LocalScannerStatusWidget({
             <span style={{ width: `${progressRatio * 100}%` }} />
           </div>
           <p className="ops-scanner-status__meta">
-            {status.remainingRoutes !== null ? `${status.remainingRoutes} left` : "Counting routes"}
+            {status.remainingRoutes !== null ? `${status.remainingRoutes} left` : "Route progress unavailable"}
             {status.startedAt ? ` · started ${formatRelativeTime(status.startedAt)}` : ""}
           </p>
             <dl className="ops-scanner-status__details">
               <div>
                 <dt>Current route</dt>
-                <dd>{status.currentRouteLabel ?? "Preparing first route..."}</dd>
+                <dd>{status.currentRouteLabel ?? "Waiting for route checkpoint..."}</dd>
               </div>
               <div>
                 <dt>Pattern</dt>
