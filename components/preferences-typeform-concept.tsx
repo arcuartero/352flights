@@ -57,8 +57,70 @@ const conceptStepVisuals: Record<StepId, { city: string; landmarkTitle: string }
   review: { city: "Porto", landmarkTitle: "Ribeira" },
 };
 
+type ConceptStepVisual = (typeof conceptStepVisuals)[StepId];
+
+function TransitioningLandmarkPhoto({ visual, alt }: { visual: ConceptStepVisual; alt: string }) {
+  const [currentVisual, setCurrentVisual] = useState(visual);
+  const [incomingVisual, setIncomingVisual] = useState<ConceptStepVisual | null>(null);
+  const [incomingVisible, setIncomingVisible] = useState(false);
+  const visualKey = `${visual.city}:${visual.landmarkTitle}`;
+  const currentKey = `${currentVisual.city}:${currentVisual.landmarkTitle}`;
+
+  useEffect(() => {
+    if (visualKey === currentKey) {
+      return;
+    }
+
+    setIncomingVisible(false);
+    setIncomingVisual(visual);
+  }, [currentKey, visual, visualKey]);
+
+  useEffect(() => {
+    if (!incomingVisual || !incomingVisible) {
+      return;
+    }
+
+    const transitionTimer = window.setTimeout(() => {
+      setCurrentVisual(incomingVisual);
+      setIncomingVisual(null);
+      setIncomingVisible(false);
+    }, 760);
+
+    return () => window.clearTimeout(transitionTimer);
+  }, [incomingVisual, incomingVisible]);
+
+  return (
+    <>
+      <div
+        className={`preferences-concept__image-layer ${incomingVisible ? "is-leaving" : "is-active"}`}
+        key={currentKey}
+      >
+        <LandmarkPhoto
+          alt={alt}
+          destinationCity={currentVisual.city}
+          landmarkTitle={currentVisual.landmarkTitle}
+          loading="eager"
+        />
+      </div>
+      {incomingVisual ? (
+        <div
+          className={`preferences-concept__image-layer ${incomingVisible ? "is-active" : ""}`}
+          key={`${incomingVisual.city}:${incomingVisual.landmarkTitle}`}
+        >
+          <LandmarkPhoto
+            alt=""
+            destinationCity={incomingVisual.city}
+            landmarkTitle={incomingVisual.landmarkTitle}
+            loading="eager"
+            onLoad={() => setIncomingVisible(true)}
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 type ConceptCopy = {
-  initialMessage: string;
   missingTokenMessage: string;
   loadErrorMessage: string;
   saveErrorMessage: string;
@@ -113,7 +175,6 @@ type ConceptCopy = {
 
 const conceptCopyByLocale: Record<Locale, ConceptCopy> = {
   en: {
-    initialMessage: "Answer a few focused questions and we will shape a much cleaner Luxembourg flight feed for you.",
     missingTokenMessage: "This page still needs a valid preference token from the signup flow.",
     loadErrorMessage: "We could not load your preferences.",
     saveErrorMessage: "We could not save your preferences.",
@@ -193,7 +254,6 @@ const conceptCopyByLocale: Record<Locale, ConceptCopy> = {
     ],
   },
   fr: {
-    initialMessage: "Répondez à quelques questions ciblées et nous construirons un flux de vols depuis le Luxembourg beaucoup plus propre pour vous.",
     missingTokenMessage: "Cette page a encore besoin d’un lien de préférences valide issu de l’inscription.",
     loadErrorMessage: "Nous n’avons pas pu charger vos préférences.",
     saveErrorMessage: "Nous n’avons pas pu enregistrer vos préférences.",
@@ -265,7 +325,6 @@ const conceptCopyByLocale: Record<Locale, ConceptCopy> = {
     ],
   },
   de: {
-    initialMessage: "Beantworte ein paar gezielte Fragen und wir formen daraus einen deutlich saubereren Flug-Feed ab Luxemburg.",
     missingTokenMessage: "Diese Seite benötigt noch einen gültigen Präferenz-Link aus dem Anmeldefluss.",
     loadErrorMessage: "Deine Präferenzen konnten nicht geladen werden.",
     saveErrorMessage: "Deine Präferenzen konnten nicht gespeichert werden.",
@@ -337,7 +396,6 @@ const conceptCopyByLocale: Record<Locale, ConceptCopy> = {
     ],
   },
   pt: {
-    initialMessage: "Responda a algumas perguntas objetivas e criaremos um feed de voos do Luxemburgo muito mais limpo para si.",
     missingTokenMessage: "Esta página ainda precisa de um link de preferências válido vindo do fluxo de registo.",
     loadErrorMessage: "Não foi possível carregar as suas preferências.",
     saveErrorMessage: "Não foi possível guardar as suas preferências.",
@@ -409,7 +467,6 @@ const conceptCopyByLocale: Record<Locale, ConceptCopy> = {
     ],
   },
   it: {
-    initialMessage: "Rispondi a poche domande mirate e costruiremo un feed di voli dal Lussemburgo molto più pulito per te.",
     missingTokenMessage: "Questa pagina ha ancora bisogno di un link preferenze valido dal flusso di iscrizione.",
     loadErrorMessage: "Non siamo riusciti a caricare le tue preferenze.",
     saveErrorMessage: "Non siamo riusciti a salvare le tue preferenze.",
@@ -481,7 +538,6 @@ const conceptCopyByLocale: Record<Locale, ConceptCopy> = {
     ],
   },
   es: {
-    initialMessage: "Responde unas pocas preguntas concretas y te dejaremos un feed de vuelos desde Luxemburgo mucho más limpio.",
     missingTokenMessage: "Esta página todavía necesita un enlace de preferencias válido del flujo de alta.",
     loadErrorMessage: "No hemos podido cargar tus preferencias.",
     saveErrorMessage: "No hemos podido guardar tus preferencias.",
@@ -700,7 +756,7 @@ export function PreferencesTypeformConcept() {
   const [form, setForm] = useState<PreferenceFormState>(defaultPreferenceValues);
   const [screen, setScreen] = useState<ScreenState>({
     phase: "idle",
-    message: copy.initialMessage,
+    message: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -723,7 +779,7 @@ export function PreferencesTypeformConcept() {
       }
 
       setIsLoading(true);
-      setScreen({ phase: "idle", message: copy.initialMessage });
+      setScreen({ phase: "idle", message: "" });
 
       try {
         const response = await fetch(`/api/preferences?token=${encodeURIComponent(token)}`, {
@@ -765,7 +821,7 @@ export function PreferencesTypeformConcept() {
     return () => {
       isActive = false;
     };
-  }, [copy.initialMessage, copy.loadErrorMessage, copy.missingTokenMessage, token]);
+  }, [copy.loadErrorMessage, copy.missingTokenMessage, token]);
 
   const currentStep = conceptSteps[currentStepIndex];
   const currentStepVisual = conceptStepVisuals[currentStep.id];
@@ -798,7 +854,7 @@ export function PreferencesTypeformConcept() {
       return;
     }
 
-    setScreen({ phase: "idle", message: copy.initialMessage });
+    setScreen({ phase: "idle", message: "" });
     setIsEditing(true);
     moveToStep(currentStepIndex + 1);
   }
@@ -1248,9 +1304,11 @@ export function PreferencesTypeformConcept() {
             <p>{currentStep.description}</p>
           </div>
 
-          <div className={`preferences-status preferences-status--${screen.phase}`}>
-            {screen.message}
-          </div>
+          {screen.message ? (
+            <div className={`preferences-status preferences-status--${screen.phase}`}>
+              {screen.message}
+            </div>
+          ) : null}
 
           {renderStepBody()}
 
@@ -1270,7 +1328,7 @@ export function PreferencesTypeformConcept() {
                   className="preferences-submit"
                   disabled={isPending}
                   onClick={() => {
-                    setScreen({ phase: "idle", message: copy.initialMessage });
+                    setScreen({ phase: "idle", message: "" });
                     setIsEditing(true);
                     moveToStep(1);
                   }}
@@ -1303,10 +1361,9 @@ export function PreferencesTypeformConcept() {
 
         <aside className="preferences-concept__visual">
           <div className="preferences-concept__image-frame">
-            <LandmarkPhoto
+            <TransitioningLandmarkPhoto
               alt={copy.visualAlt}
-              destinationCity={currentStepVisual.city}
-              landmarkTitle={currentStepVisual.landmarkTitle}
+              visual={currentStepVisual}
             />
             <div className="preferences-concept__image-overlay" />
           </div>

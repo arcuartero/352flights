@@ -2,9 +2,17 @@ type LandmarkPhotoProps = {
   destinationCity: string;
   landmarkTitle: string;
   alt: string;
+  loading?: "eager" | "lazy";
+  onLoad?: () => void;
 };
 
-export function LandmarkPhoto({ destinationCity, landmarkTitle, alt }: LandmarkPhotoProps) {
+export function LandmarkPhoto({
+  destinationCity,
+  landmarkTitle,
+  alt,
+  loading = "lazy",
+  onLoad,
+}: LandmarkPhotoProps) {
   const params = new URLSearchParams({
     city: destinationCity,
     landmark: landmarkTitle,
@@ -14,7 +22,8 @@ export function LandmarkPhoto({ destinationCity, landmarkTitle, alt }: LandmarkP
     <img
       alt={alt}
       decoding="async"
-      loading="lazy"
+      loading={loading}
+      onLoad={onLoad}
       src={`/api/landmark-photo?${params.toString()}`}
     />
   );
