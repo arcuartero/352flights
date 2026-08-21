@@ -423,6 +423,11 @@ body:has(.preferences-concept-shell) .scroll-top-button {
   margin-left: -1px;
 }
 
+.preferences-wizard__segmented button.is-selected {
+  z-index: 1;
+  border-radius: 0.75rem;
+}
+
 .preferences-wizard__segmented .preferences-wizard__selection-mark,
 .preferences-wizard__budget-grid .preferences-wizard__selection-mark {
   position: absolute;
