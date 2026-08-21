@@ -670,8 +670,19 @@ export function SiteChrome() {
         className={`site-chrome${isScrolled ? " is-scrolled" : ""}${isDealsLanding ? " site-chrome--deals-landing" : ""}${isOpsRoute ? " site-chrome--ops" : ""}`}
       >
         <Link className="site-chrome__brand" href="/">
-          <span className="site-chrome__mark">LFD</span>
-          <span className="site-chrome__wordmark">+352 Flights</span>
+          {isOpsRoute ? (
+            <>
+              <span className="site-chrome__ops-logo">
+                <img alt="352 Flights" src="/v2-logo.png" />
+              </span>
+              <span className="site-chrome__ops-label">Operations</span>
+            </>
+          ) : (
+            <>
+              <span className="site-chrome__mark">LFD</span>
+              <span className="site-chrome__wordmark">+352 Flights</span>
+            </>
+          )}
         </Link>
         <div className="site-chrome__center">
           {isOpsRoute ? (

@@ -51,7 +51,7 @@ export default function OpsDestinationsPage() {
         <section className="ops-panel ops-panel--wide">
           <div className="ops-panel__header">
             <div>
-              <h1>Destination photos</h1>
+              <h2>Image library</h2>
               <p>
                 Upload one manual image per destination. Public destination cards will
                 use it automatically and fall back to the generic image when no upload

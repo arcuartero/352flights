@@ -7,11 +7,11 @@ export default function OpsLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <>
+    <div className="ops-app">
       {children}
       <div className="ops-scanner-status-stack">
         <OpsScannerStatusHub />
       </div>
-    </>
+    </div>
   );
 }
