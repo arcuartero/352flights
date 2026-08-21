@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 
 import { LandmarkPhoto } from "@/components/landmark-photo";
 import { useI18n, type Locale } from "@/lib/i18n";
@@ -40,8 +40,6 @@ type PhaseId = "travel" | "preferences" | "alerts";
 type WizardCopy = {
   setupTitle: string;
   phases: Record<PhaseId, { label: string; title: string; description: string }>;
-  tripQuestion: string;
-  tripHint: string;
   weekdayQuestion: string;
   stops: string;
   comfort: string;
@@ -82,8 +80,6 @@ const copyByLocale: Record<Locale, WizardCopy> = {
       preferences: { label: "Flight preferences", title: "Which flights are worth alerting you about?", description: "Set your limits once. We’ll filter out the rest." },
       alerts: { label: "Alerts", title: "How often should we send your best deals?", description: "Choose one or more. You can change this at any time." },
     },
-    tripQuestion: "Trip style",
-    tripHint: "Select every kind of getaway that fits you.",
     weekdayQuestion: "When can you usually leave?",
     stops: "Stops",
     comfort: "Comfort",
@@ -129,8 +125,6 @@ const copyByLocale: Record<Locale, WizardCopy> = {
       preferences: { label: "Préférences de vol", title: "Quels vols méritent une alerte ?", description: "Définissez vos limites une fois. Nous filtrons le reste." },
       alerts: { label: "Alertes", title: "À quelle fréquence envoyer nos meilleures offres ?", description: "Choisissez une ou plusieurs options. Vous pourrez les modifier à tout moment." },
     },
-    tripQuestion: "Style de voyage",
-    tripHint: "Sélectionnez tous les séjours qui vous correspondent.",
     weekdayQuestion: "Quels jours pouvez-vous généralement partir ?",
     stops: "Escales",
     comfort: "Confort",
@@ -176,8 +170,6 @@ const copyByLocale: Record<Locale, WizardCopy> = {
       preferences: { label: "Flugpräferenzen", title: "Für welche Flüge lohnt sich eine Benachrichtigung?", description: "Legen Sie Ihre Grenzen einmal fest. Wir filtern den Rest." },
       alerts: { label: "Benachrichtigungen", title: "Wie oft sollen wir die besten Angebote senden?", description: "Wählen Sie eine oder mehrere Optionen. Änderungen sind jederzeit möglich." },
     },
-    tripQuestion: "Reisestil",
-    tripHint: "Wählen Sie alle Kurzurlaube, die zu Ihnen passen.",
     weekdayQuestion: "An welchen Tagen können Sie normalerweise abreisen?",
     stops: "Stopps",
     comfort: "Komfort",
@@ -223,8 +215,6 @@ const copyByLocale: Record<Locale, WizardCopy> = {
       preferences: { label: "Preferências de voo", title: "Que voos merecem um alerta?", description: "Defina os seus limites uma vez. Nós filtramos o resto." },
       alerts: { label: "Alertas", title: "Com que frequência enviamos as melhores ofertas?", description: "Escolha uma ou mais opções. Pode alterar tudo a qualquer momento." },
     },
-    tripQuestion: "Estilo de viagem",
-    tripHint: "Selecione todos os tipos de escapadinha que combinam consigo.",
     weekdayQuestion: "Em que dias pode normalmente partir?",
     stops: "Escalas",
     comfort: "Conforto",
@@ -270,8 +260,6 @@ const copyByLocale: Record<Locale, WizardCopy> = {
       preferences: { label: "Preferenze di volo", title: "Per quali voli vale la pena avvisarti?", description: "Imposta i limiti una volta. Al resto pensiamo noi." },
       alerts: { label: "Avvisi", title: "Con quale frequenza dobbiamo inviare le offerte migliori?", description: "Scegli una o più opzioni. Potrai modificarle in qualsiasi momento." },
     },
-    tripQuestion: "Stile di viaggio",
-    tripHint: "Seleziona tutti i tipi di viaggio adatti a te.",
     weekdayQuestion: "In quali giorni puoi partire di solito?",
     stops: "Scali",
     comfort: "Comfort",
@@ -317,8 +305,6 @@ const copyByLocale: Record<Locale, WizardCopy> = {
       preferences: { label: "Preferencias de vuelo", title: "¿Sobre qué vuelos merece la pena avisarte?", description: "Define tus límites una vez. Nosotros filtraremos el resto." },
       alerts: { label: "Alertas", title: "¿Con qué frecuencia quieres recibir las mejores ofertas?", description: "Elige una o varias opciones. Podrás cambiarlo cuando quieras." },
     },
-    tripQuestion: "Tipo de viaje",
-    tripHint: "Selecciona todos los tipos de escapada que encajen contigo.",
     weekdayQuestion: "¿Qué días puedes salir normalmente?",
     stops: "Escalas",
     comfort: "Comodidad",
@@ -592,10 +578,6 @@ export function PreferencesTypeformConcept() {
     if (phase === "travel") {
       return (
         <div className="preferences-wizard__phase-body">
-          <div className="preferences-wizard__section-heading">
-            <h3>{copy.tripQuestion}</h3>
-            <p>{copy.tripHint}</p>
-          </div>
           <div className="preferences-wizard__trip-grid">
             {bucketValues.map((bucket) => {
               const selected = form.preferredBuckets.includes(bucket);
@@ -769,12 +751,17 @@ export function PreferencesTypeformConcept() {
               const complete = index < phaseIndex;
               const current = index === phaseIndex;
               return (
-                <li className={`${current ? "is-current" : ""} ${complete ? "is-complete" : ""}`} key={item}>
-                  <button aria-current={current ? "step" : undefined} disabled={index > furthestPhase} onClick={() => moveTo(index)} type="button">
-                    <span>{complete ? <Check size={17} strokeWidth={3} /> : index + 1}</span>
-                    <strong>{copy.phases[item].label}</strong>
-                  </button>
-                </li>
+                <Fragment key={item}>
+                  <li className={`${current ? "is-current" : ""} ${complete ? "is-complete" : ""}`}>
+                    <button aria-current={current ? "step" : undefined} disabled={index > furthestPhase} onClick={() => moveTo(index)} type="button">
+                      <span>{complete ? <Check size={17} strokeWidth={3} /> : index + 1}</span>
+                      <strong>{copy.phases[item].label}</strong>
+                    </button>
+                  </li>
+                  {index < phaseOrder.length - 1 ? (
+                    <li aria-hidden="true" className="preferences-wizard__step-connector" />
+                  ) : null}
+                </Fragment>
               );
             })}
           </ol>

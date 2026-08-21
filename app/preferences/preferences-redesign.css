@@ -154,8 +154,8 @@ body:has(.preferences-concept-shell) .scroll-top-button {
 
 .preferences-wizard__steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
+  grid-template-columns: max-content minmax(2rem, 1fr) max-content minmax(2rem, 1fr) max-content;
+  align-items: center;
   margin: 1.75rem 0 2.55rem;
   padding: 0;
   list-style: none;
@@ -166,14 +166,9 @@ body:has(.preferences-concept-shell) .scroll-top-button {
   min-width: 0;
 }
 
-.preferences-wizard__steps li:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: 1.22rem;
-  left: calc(50% + 2.8rem);
-  right: 0.75rem;
+.preferences-wizard__step-connector {
   height: 1px;
+  margin-inline: 0.9rem;
   background: #d6dbe5;
 }
 
@@ -729,9 +724,6 @@ body:has(.preferences-concept-shell) .scroll-top-button {
     font-size: 0.86rem;
   }
 
-  .preferences-wizard__steps li:not(:last-child)::after {
-    left: calc(50% + 2.15rem);
-  }
 }
 
 @media (max-width: 820px) {
@@ -781,7 +773,12 @@ body:has(.preferences-concept-shell) .scroll-top-button {
   }
 
   .preferences-wizard__steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     margin: 1.2rem 0 1.65rem;
+  }
+
+  .preferences-wizard__step-connector {
+    display: none;
   }
 
   .preferences-wizard__steps button {
@@ -795,12 +792,6 @@ body:has(.preferences-concept-shell) .scroll-top-button {
     width: 100%;
     font-size: 0.72rem;
     white-space: normal;
-  }
-
-  .preferences-wizard__steps li:not(:last-child)::after {
-    top: 1.2rem;
-    left: calc(50% + 1.45rem);
-    right: calc(-50% + 1.45rem);
   }
 
   .preferences-wizard__trip-grid,
