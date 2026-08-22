@@ -3288,7 +3288,8 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       .eq("status", "new")
       .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO)
       .order("score", { ascending: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(50),
     supabase
       .from("deal_candidates")
       .select(
@@ -3297,7 +3298,8 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       .eq("status", "reviewed")
       .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO)
       .order("score", { ascending: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase
       .from("price_snapshots")
       .select("id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at")
@@ -3400,21 +3402,20 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
           .from("price_snapshots")
           .select("route_id,metadata,scanned_at")
           .in("route_id", dealRouteIds)
-          .order("scanned_at", { ascending: true });
+          .order("scanned_at", { ascending: false })
+          .limit(5000);
 
   const newDealSeriesSnapshotsQuery =
     dealRouteIds.length === 0
       ? { data: [] as SnapshotRow[], error: null }
-      : await fetchPagedSnapshots<SnapshotRow>((from, to) =>
-          supabase
-            .from("price_snapshots")
-            .select(
-              "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
-            )
-            .in("route_id", dealRouteIds)
-            .order("scanned_at", { ascending: false })
-            .range(from, to),
-        );
+      : await supabase
+          .from("price_snapshots")
+          .select(
+            "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
+          )
+          .in("route_id", dealRouteIds)
+          .order("scanned_at", { ascending: false })
+          .limit(1200);
 
   if (dealSnapshotsQuery.error) {
     const message = formatError(dealSnapshotsQuery.error);
@@ -3615,9 +3616,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     }
 
     const seriesKey = buildSeriesKey(snapshot.route_id, patternKey);
-    if (!baselineSeriesStartMap.has(seriesKey)) {
-      baselineSeriesStartMap.set(seriesKey, snapshot.scanned_at);
-    }
+    baselineSeriesStartMap.set(seriesKey, snapshot.scanned_at);
   }
   const subscriberSummaries = buildSubscriberSummaries(
     (subscribersQuery.data ?? []) as SubscriberRow[],
