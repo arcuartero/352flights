@@ -673,7 +673,7 @@ export function SiteChrome() {
           {isOpsRoute ? (
             <>
               <span className="site-chrome__ops-logo">
-                <img alt="352 Flights" src="/v2-logo.png" />
+                <img alt="352 Flights" height={48} src="/v2-logo.png" width={148} />
               </span>
               <span className="site-chrome__ops-label">Operations</span>
             </>
