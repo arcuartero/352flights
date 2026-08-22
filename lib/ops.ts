@@ -611,6 +611,23 @@ export type OpsScannerData = {
   automatedAlerts: OpsAutomatedAlertsSummary;
 };
 
+export type OpsRecentSnapshotsData = {
+  configured: boolean;
+  schemaReady: boolean;
+  onboardingMessage: string | null;
+  snapshots: SnapshotSummary[];
+};
+
+export type OpsEmailCampaignsData = {
+  configured: boolean;
+  schemaReady: boolean;
+  onboardingMessage: string | null;
+  digestAutomation: DigestAutomationSummary;
+  sendQueue: CampaignPreview[];
+  subscribers: SubscriberSummary[];
+  recentCampaigns: RecentCampaignSummary[];
+};
+
 export type OpsReviewQueueData = {
   configured: boolean;
   schemaReady: boolean;
@@ -3789,6 +3806,267 @@ export async function getOpsDealPriceSeries(
     buildRouteMap([route]),
   ).find((item) => item.seriesKey === seriesKey);
   return { series: series ?? null, error: null };
+}
+
+export async function getOpsRecentSnapshotsData(
+  requestedLimit: number = 10,
+): Promise<OpsRecentSnapshotsData> {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      configured: false,
+      schemaReady: false,
+      onboardingMessage: opsConfigurationMessage(),
+      snapshots: [],
+    };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const limit = Math.min(50, Math.max(1, Math.floor(requestedLimit)));
+  const snapshotsQuery = await supabase
+    .from("price_snapshots")
+    .select(
+      "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
+    )
+    .gt("price", 0)
+    .order("scanned_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit);
+
+  if (snapshotsQuery.error) {
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: opsQueryMessage(formatError(snapshotsQuery.error)),
+      snapshots: [],
+    };
+  }
+
+  const snapshotRows = (snapshotsQuery.data ?? []) as SnapshotRow[];
+  const routeIds = unique(snapshotRows.map((snapshot) => snapshot.route_id));
+  const routesQuery =
+    routeIds.length === 0
+      ? { data: [] as RouteRow[], error: null }
+      : await supabase
+          .from("scanned_routes")
+          .select(
+            "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
+          )
+          .in("id", routeIds);
+
+  if (routesQuery.error) {
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: opsQueryMessage(formatError(routesQuery.error)),
+      snapshots: [],
+    };
+  }
+
+  return {
+    configured: true,
+    schemaReady: true,
+    onboardingMessage: null,
+    snapshots: enrichSnapshots(snapshotRows, buildRouteMap((routesQuery.data ?? []) as RouteRow[])),
+  };
+}
+
+export async function getOpsEmailCampaignsData(): Promise<OpsEmailCampaignsData> {
+  const fallback = (input: {
+    configured: boolean;
+    onboardingMessage: string;
+  }): OpsEmailCampaignsData => ({
+    configured: input.configured,
+    schemaReady: false,
+    onboardingMessage: input.onboardingMessage,
+    digestAutomation: defaultDigestAutomationSummary(),
+    sendQueue: [],
+    subscribers: [],
+    recentCampaigns: [],
+  });
+
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return fallback({ configured: false, onboardingMessage: opsConfigurationMessage() });
+  }
+
+  try {
+    const supabase = getSupabaseAdminClient();
+    const [
+      subscribersQuery,
+      preferencesQuery,
+      routePreferencesQuery,
+      customAlertRulesQuery,
+      routesQuery,
+      reviewedDealsQuery,
+      recentCampaignsQuery,
+      automationQuery,
+    ] = await Promise.all([
+      supabase
+        .from("newsletter_subscribers")
+        .select(
+          "id,email,source,status,created_at,home_airport,onboarding_completed,preference_token,unsubscribe_token,email_confirmed,preferred_locale",
+        )
+        .order("created_at", { ascending: false }),
+      supabase.from("subscriber_preferences").select("*"),
+      supabase
+        .from("subscriber_route_preferences")
+        .select("subscriber_id,destination_airport,destination_city,bucket,is_enabled"),
+      supabase.from("subscriber_custom_alerts").select("*").order("sort_order", { ascending: true }),
+      supabase
+        .from("scanned_routes")
+        .select(
+          "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
+        ),
+      supabase
+        .from("deal_candidates")
+        .select(
+          "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
+        )
+        .eq("status", "reviewed")
+        .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO)
+        .order("score", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("email_campaigns")
+        .select(
+          "id,send_type,subject,status,recipient_count,sent_count,failed_count,route_labels,created_at,sent_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(8),
+      supabase
+        .from("ops_automation_settings")
+        .select(
+          "id,daily_digest_enabled,daily_digest_hour,daily_digest_minute,test_email,last_digest_sent_on",
+        )
+        .eq("id", "default")
+        .maybeSingle(),
+    ]);
+
+    const firstError =
+      subscribersQuery.error ??
+      preferencesQuery.error ??
+      routePreferencesQuery.error ??
+      customAlertRulesQuery.error ??
+      routesQuery.error ??
+      reviewedDealsQuery.error ??
+      recentCampaignsQuery.error ??
+      automationQuery.error;
+    if (firstError) {
+      return fallback({
+        configured: true,
+        onboardingMessage: opsQueryMessage(formatError(firstError)),
+      });
+    }
+
+    const subscriberSummaries = buildSubscriberSummaries(
+      (subscribersQuery.data ?? []) as SubscriberRow[],
+      (preferencesQuery.data ?? []) as SubscriberPreferenceRow[],
+      (routePreferencesQuery.data ?? []) as SubscriberRoutePreferenceRow[],
+      (customAlertRulesQuery.data ?? []) as SubscriberCustomAlertRow[],
+    );
+    const activeAudience = subscriberSummaries.filter(
+      (subscriber) =>
+        subscriber.status === "active" &&
+        subscriber.onboardingCompleted &&
+        subscriber.emailConfirmed,
+    );
+    const reviewedDealRows = ((reviewedDealsQuery.data ?? []) as DealRow[]).filter(
+      (deal) => deal.deal_price > 0,
+    );
+    const snapshotIds = unique(reviewedDealRows.map((deal) => deal.snapshot_id));
+    const snapshotsQuery =
+      snapshotIds.length === 0
+        ? { data: [] as SnapshotRow[], error: null }
+        : await supabase
+            .from("price_snapshots")
+            .select(
+              "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
+            )
+            .in("id", snapshotIds);
+    if (snapshotsQuery.error) {
+      return fallback({
+        configured: true,
+        onboardingMessage: opsQueryMessage(formatError(snapshotsQuery.error)),
+      });
+    }
+
+    const snapshotRows = (snapshotsQuery.data ?? []) as SnapshotRow[];
+    const snapshotMap = new Map(snapshotRows.map((snapshot) => [snapshot.id, snapshot]));
+    const baselineSeriesStartMap = new Map<string, string>();
+    for (const snapshot of snapshotRows) {
+      const patternKey = extractPatternKey(snapshot.metadata);
+      if (patternKey) {
+        baselineSeriesStartMap.set(
+          buildSeriesKey(snapshot.route_id, patternKey),
+          snapshot.scanned_at,
+        );
+      }
+    }
+    const reviewedDeals = enrichDeals(
+      reviewedDealRows,
+      buildRouteMap((routesQuery.data ?? []) as RouteRow[]),
+      snapshotMap,
+      baselineSeriesStartMap,
+    );
+
+    const automationSettings = (automationQuery.data as AutomationSettingsRow | null) ?? null;
+    const siteUrl = getSiteUrl();
+    const digestAutomation: DigestAutomationSummary = automationSettings
+      ? {
+          enabled: automationSettings.daily_digest_enabled,
+          localTime: formatTimeParts(
+            automationSettings.daily_digest_hour,
+            automationSettings.daily_digest_minute,
+          ),
+          testEmail: automationSettings.test_email ?? process.env.RESEND_REPLY_TO_EMAIL ?? null,
+          lastDigestSentOn: automationSettings.last_digest_sent_on,
+          endpointReady: hasCronSecret() && !siteUrl.includes("localhost"),
+          blockedReason: !hasCronSecret()
+            ? "Add CRON_SECRET to the deployed app and GitHub Actions before automatic digests can run."
+            : siteUrl.includes("localhost")
+              ? "NEXT_PUBLIC_SITE_URL still points to localhost, so the GitHub workflow has nowhere public to call."
+              : null,
+        }
+      : defaultDigestAutomationSummary();
+
+    const sendQueue = campaignSendTypes.map((sendType) =>
+      buildCampaignPreview(
+        sendType,
+        reviewedDeals.filter((deal) => deal.sendType === sendType),
+        activeAudience,
+        digestAutomation.testEmail,
+      ),
+    );
+    const recentCampaigns = ((recentCampaignsQuery.data ?? []) as EmailCampaignRow[]).map(
+      (campaign) => ({
+        id: campaign.id,
+        sendType: campaign.send_type,
+        status: campaign.status,
+        subject: campaign.subject,
+        recipientCount: campaign.recipient_count,
+        sentCount: campaign.sent_count,
+        failedCount: campaign.failed_count,
+        createdAt: campaign.created_at,
+        sentAt: campaign.sent_at,
+        routeLabels: campaign.route_labels ?? [],
+      }),
+    );
+
+    return {
+      configured: true,
+      schemaReady: true,
+      onboardingMessage: null,
+      digestAutomation,
+      sendQueue,
+      subscribers: subscriberSummaries,
+      recentCampaigns,
+    };
+  } catch (error) {
+    return fallback({
+      configured: true,
+      onboardingMessage: opsQueryMessage(formatError(error)),
+    });
+  }
 }
 
 export async function getOpsDashboardData(): Promise<OpsDashboardData> {

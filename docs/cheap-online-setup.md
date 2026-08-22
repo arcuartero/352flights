@@ -225,10 +225,15 @@ En Vercel, añade estas variables de entorno a la app:
 ```text
 VPS_SCANNER_AGENT_URL=https://scanner-control.tudominio.com
 VPS_SCANNER_AGENT_TOKEN=el_token_del_vps
+VPS_SCANNER_AGENT_IP=203.0.113.10
 ```
 
 Después redepliega la web. En `/ops/scanner-live` aparecerá una tarjeta `VPS Scanner`
 con botones para lanzar, parar, refrescar y ver logs.
+
+`VPS_SCANNER_AGENT_IP` es un respaldo opcional y debe contener la IP pública real del VPS.
+Si el DNS deja de resolver, la app conectará a esa IP manteniendo el nombre original para
+SNI y validando normalmente el certificado HTTPS. Así no se desactiva la seguridad TLS.
 
 No publiques el token. Ese endpoint solo acepta tres acciones fijas: consultar estado,
 arrancar el servicio y pararlo. No acepta comandos arbitrarios. La app rechazará

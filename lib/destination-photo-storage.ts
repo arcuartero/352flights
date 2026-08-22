@@ -159,7 +159,16 @@ const getCachedDestinationPhotoUrlMap = unstable_cache(
 );
 
 export async function getDestinationPhotoUrlMap(): Promise<Record<string, string>> {
-  return getCachedDestinationPhotoUrlMap();
+  try {
+    return await getCachedDestinationPhotoUrlMap();
+  } catch {
+    return Object.fromEntries(
+      (unsplashDestinationPhotos as UnsplashDestinationPhoto[]).map((photo) => [
+        photo.slug,
+        photo.url,
+      ]),
+    );
+  }
 }
 
 export async function uploadDestinationPhoto(input: {

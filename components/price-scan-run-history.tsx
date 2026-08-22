@@ -571,6 +571,7 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
 export function PriceScanRunHistory({ error, runs }: Props) {
   const [liveRuns, setLiveRuns] = useState(runs);
   const [liveError, setLiveError] = useState(error);
+  const [isInitialLoading, setIsInitialLoading] = useState(runs.length === 0 && !error);
   const [runLimit, setRunLimit] = useState(Math.min(10, Math.max(runs.length, 1)));
   const [loadedPatterns, setLoadedPatterns] = useState<
     Record<string, PriceScanPatternSummary[]>
@@ -598,12 +599,13 @@ export function PriceScanRunHistory({ error, runs }: Props) {
 
     async function refreshRuns() {
       if (document.visibilityState === "hidden") return;
-      controller?.abort();
+      if (controller) return;
       controller = new AbortController();
+      const activeController = controller;
       try {
         const response = await fetch("/api/ops/price-scan-runs", {
           cache: "no-store",
-          signal: controller.signal,
+          signal: activeController.signal,
         });
         const payload = (await response.json()) as RunHistoryResponse;
         if (!response.ok || !payload.ok) {
@@ -612,6 +614,11 @@ export function PriceScanRunHistory({ error, runs }: Props) {
         if (!disposed) {
           setLiveRuns(payload.runs);
           setLiveError(null);
+          setRunLimit((current) =>
+            runs.length === 0
+              ? Math.min(10, Math.max(payload.runs.length, 1))
+              : Math.min(current, Math.max(payload.runs.length, 1)),
+          );
         }
         const runningLoadedIds = payload.runs
           .filter((run) => {
@@ -655,10 +662,14 @@ export function PriceScanRunHistory({ error, runs }: Props) {
             requestError instanceof Error ? requestError.message : "Scan history refresh failed.",
           );
         }
+      } finally {
+        if (controller === activeController) controller = null;
+        if (!disposed) setIsInitialLoading(false);
       }
     }
 
-    const interval = window.setInterval(() => void refreshRuns(), 4_000);
+    void refreshRuns();
+    const interval = window.setInterval(() => void refreshRuns(), 15_000);
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") void refreshRuns();
     };
@@ -830,7 +841,17 @@ export function PriceScanRunHistory({ error, runs }: Props) {
         </p>
       ) : null}
 
-      {liveRuns.length === 0 && !liveError ? (
+      {isInitialLoading ? (
+        <div className="price-scan-history__empty" role="status">
+          <RefreshCw aria-hidden="true" className="is-spinning" size={22} />
+          <div>
+            <strong>Loading scan history</strong>
+            <p>The page is ready while the stored runs load independently.</p>
+          </div>
+        </div>
+      ) : null}
+
+      {liveRuns.length === 0 && !liveError && !isInitialLoading ? (
         <div className="price-scan-history__empty">
           <Database aria-hidden="true" size={22} />
           <div>
