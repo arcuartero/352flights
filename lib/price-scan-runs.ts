@@ -2,6 +2,8 @@ import "server-only";
 
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
+export const PRICE_SCAN_STALE_AFTER_SECONDS = 30 * 60;
+
 export type PriceScanDestinationSummary = {
   destination_city: string;
   destination_airports: string[];
@@ -112,12 +114,16 @@ export type PriceScanRun = {
   errorBreakdown: Record<string, number>;
   syncStatus: string;
   syncSummary: Record<string, unknown>;
+  heartbeatAt: string | null;
+  lastProgressAt: string | null;
 };
 
 export type PriceScanLiveProgress = {
   runKey: string;
   startedAt: string;
   updatedAt: string;
+  heartbeatAt: string | null;
+  lastProgressAt: string | null;
   routesPlanned: number;
   routesStarted: number;
   currentRouteLabel: string | null;
@@ -171,12 +177,16 @@ type PriceScanRunRow = {
   error_breakdown: unknown;
   sync_status: string;
   sync_summary: unknown;
+  heartbeat_at: string | null;
+  last_progress_at: string | null;
 };
 
 type PriceScanLiveProgressRow = {
   run_key: string;
   started_at: string;
   updated_at: string;
+  heartbeat_at: string | null;
+  last_progress_at: string | null;
   routes_planned: number;
   routes_started: number;
   patterns_scanned: number;
@@ -229,6 +239,8 @@ const baseSelect = [
   "error_breakdown",
   "sync_status",
   "sync_summary",
+  "heartbeat_at",
+  "last_progress_at",
 ].join(",");
 
 function numberValue(value: unknown) {
@@ -292,28 +304,41 @@ async function enrichPatternItineraries(run: PriceScanRun) {
   if (patterns.length === 0 || patterns.every((pattern) => pattern.airline)) return run;
 
   const supabase = getSupabaseAdminClient();
-  const rows: Array<{
+  type SnapshotItineraryRow = {
     price: number;
     departure_date: string;
     return_date: string | null;
     metadata: unknown;
-  }> = [];
+  };
   const pageSize = 1_000;
 
-  for (let from = 0; ; from += pageSize) {
-    let query = supabase
-      .from("price_snapshots")
-      .select("price,departure_date,return_date,metadata")
-      .gte("scanned_at", run.startedAt)
-      .order("scanned_at", { ascending: true })
-      .range(from, from + pageSize - 1);
-    if (run.completedAt) query = query.lte("scanned_at", run.completedAt);
-    const page = await query;
-    if (page.error) throw new Error(page.error.message);
-    const pageRows = (page.data ?? []) as typeof rows;
-    rows.push(...pageRows);
-    if (pageRows.length < pageSize) break;
-  }
+  const loadRows = async (linkByRunId: boolean) => {
+    const loadedRows: SnapshotItineraryRow[] = [];
+    for (let from = 0; ; from += pageSize) {
+      let query = supabase
+        .from("price_snapshots")
+        .select("price,departure_date,return_date,metadata")
+        .order("scanned_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (linkByRunId) {
+        query = query.eq("scan_run_id", run.id);
+      } else {
+        query = query.gte("scanned_at", run.startedAt);
+        if (run.completedAt) query = query.lte("scanned_at", run.completedAt);
+      }
+      const page = await query;
+      if (page.error) throw new Error(page.error.message);
+      const pageRows = (page.data ?? []) as SnapshotItineraryRow[];
+      loadedRows.push(...pageRows);
+      if (pageRows.length < pageSize) break;
+    }
+    return loadedRows;
+  };
+
+  // New snapshots have an exact relationship. The timestamp fallback only
+  // preserves details for historical runs created before that relationship.
+  let rows = await loadRows(true);
+  if (rows.length === 0) rows = await loadRows(false);
 
   const itineraries = new Map<string, Array<Record<string, unknown>>>();
   for (const row of rows) {
@@ -402,6 +427,8 @@ function mapRun(row: PriceScanRunRow): PriceScanRun {
     errorBreakdown: countRecord(row.error_breakdown),
     syncStatus: row.sync_status,
     syncSummary: recordValue(row.sync_summary),
+    heartbeatAt: row.heartbeat_at,
+    lastProgressAt: row.last_progress_at,
   };
 }
 
@@ -415,8 +442,26 @@ function formatError(error: unknown) {
   return String(error);
 }
 
+export async function reconcileStalePriceScanRuns(
+  staleAfterSeconds: number = PRICE_SCAN_STALE_AFTER_SECONDS,
+) {
+  try {
+    const supabase = getSupabaseAdminClient();
+    const { data, error } = await supabase.rpc("reconcile_stale_price_scan_runs", {
+      stale_after_seconds: Math.max(60, Math.floor(staleAfterSeconds)),
+    });
+    if (error) {
+      return { closed: 0, error: formatError(error) };
+    }
+    return { closed: numberValue(data), error: null as string | null };
+  } catch (error) {
+    return { closed: 0, error: formatError(error) };
+  }
+}
+
 export async function getPriceScanRunHistory(limit = 100) {
   try {
+    await reconcileStalePriceScanRuns();
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("price_scan_runs")
@@ -439,6 +484,7 @@ export async function getPriceScanRunHistory(limit = 100) {
 
 export async function getLatestRunningPriceScanProgress() {
   try {
+    await reconcileStalePriceScanRuns();
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("price_scan_runs")
@@ -446,6 +492,8 @@ export async function getLatestRunningPriceScanProgress() {
         "run_key",
         "started_at",
         "updated_at",
+        "heartbeat_at",
+        "last_progress_at",
         "routes_planned",
         "routes_started",
         "patterns_scanned",
@@ -477,6 +525,8 @@ export async function getLatestRunningPriceScanProgress() {
         runKey: row.run_key,
         startedAt: row.started_at,
         updatedAt: row.updated_at,
+        heartbeatAt: row.heartbeat_at,
+        lastProgressAt: row.last_progress_at,
         routesPlanned: numberValue(row.routes_planned),
         routesStarted: numberValue(row.routes_started),
         currentRouteLabel: currentRouteLabel(row.routes),

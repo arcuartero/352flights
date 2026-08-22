@@ -109,6 +109,10 @@ class PriceScanRunSummaryTests(unittest.TestCase):
         self.assertEqual(summary["patterns"][0]["airline"], "Luxair")
         self.assertEqual(summary["patterns"][0]["airline_code"], "LG")
         self.assertEqual(
+            summary["heartbeat_at"],
+            (started_at + timedelta(minutes=5)).isoformat(),
+        )
+        self.assertEqual(
             summary["patterns"][0]["outbound_departure_at"],
             "2026-09-04T18:20",
         )

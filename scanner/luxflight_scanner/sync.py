@@ -55,9 +55,12 @@ class LocalSupabaseSync:
         self.config = config
         self.state_path = config.state_path
         self.supabase = SupabaseStore(config)
-        self.routes_by_key = {
-            route.key: route
-            for route in load_routes(config)
+        routes = load_routes(config)
+        self.routes_by_key = {route.key: route for route in routes}
+        self.routes_by_legacy_key = {
+            f"{route.origin_airport}:{route.destination_airport}:{bucket}": route
+            for route in routes
+            for bucket in route.supported_buckets
         }
         self.remote_route_ids: dict[str, str] = {}
 
@@ -140,7 +143,7 @@ class LocalSupabaseSync:
             destination = metadata.get("destination_airport")
             bucket = metadata.get("bucket")
             if isinstance(origin, str) and isinstance(destination, str) and isinstance(bucket, str):
-                route = self.routes_by_key.get(f"{origin}:{destination}:{bucket}")
+                route = self.routes_by_legacy_key.get(f"{origin}:{destination}:{bucket}")
                 if route is not None:
                     return route
 
@@ -210,6 +213,34 @@ class LocalSupabaseSync:
         }
         processed = 0
 
+        # Create or refresh the run records before uploading their snapshots so
+        # every new remote price can carry a real foreign-key relationship.
+        pending_snapshot_run_keys = {
+            str(snapshot.get("scan_run_key"))
+            for snapshot in state["snapshots"]
+            if snapshot.get("scan_run_key") and not _is_synced(snapshot)
+        }
+        for scan_run in state["price_scan_runs"]:
+            run_key = str(scan_run.get("run_key") or "")
+            if not run_key or run_key not in pending_snapshot_run_keys:
+                continue
+            try:
+                self.supabase.save_scan_run(
+                    {
+                        **scan_run,
+                        "sync_status": "pending",
+                        "sync_summary": {},
+                    }
+                )
+            except Exception as error:  # pragma: no cover - depends on live Supabase
+                report["errors"].append(
+                    {
+                        "type": "price_scan_run_prepare",
+                        "run_key": run_key,
+                        "error": str(error),
+                    }
+                )
+
         for snapshot in state["snapshots"]:
             local_snapshot_id = str(snapshot.get("id"))
             sync = snapshot.get("sync")
@@ -224,9 +255,11 @@ class LocalSupabaseSync:
             try:
                 route = self._route_for_snapshot(snapshot)
                 remote_route_id = self._remote_route_id(route)
+                scan_run_key = str(snapshot.get("scan_run_key") or "") or None
                 existing_snapshot_id = self.supabase.find_synced_snapshot(
                     remote_route_id,
                     local_snapshot_id,
+                    scan_run_key=scan_run_key,
                 )
                 if existing_snapshot_id is not None:
                     remote_snapshot_id = existing_snapshot_id
@@ -235,6 +268,7 @@ class LocalSupabaseSync:
                         remote_route_id,
                         self._snapshot_record(snapshot),
                         scanned_at=snapshot.get("scanned_at"),
+                        scan_run_key=scan_run_key,
                     )
 
                 snapshot["sync"] = {
