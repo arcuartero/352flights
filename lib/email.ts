@@ -5,6 +5,11 @@ import { getResendEnv, getSiteUrl } from "@/lib/env";
 import { type CampaignSendType } from "@/lib/ops-shared";
 
 const BRAND_NAME = "+352 Flights";
+const EMAIL_ASSET_REVISION = "20260822-1";
+
+function versionEmailAsset(url: string) {
+  return `${url}?v=${EMAIL_ASSET_REVISION}`;
+}
 
 export const emailLocales = ["en", "fr", "de", "pt", "it", "es"] as const;
 export type EmailLocale = (typeof emailLocales)[number];
@@ -1191,8 +1196,9 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
     input.sendType === "flash" ? copy.introFlash(dealCount) : copy.introDigest(dealCount);
   const skyscannerNote = copy.skyscannerNote(dealCount);
   const logoUrl = `${siteUrl}/v2-logo.png`;
-  const heroImageUrl = `${siteUrl}/email-airplane-window.jpg`;
-  const iconUrl = (name: string) => `${siteUrl}/email-icons/${name}.png`;
+  const heroImageUrl = versionEmailAsset(`${siteUrl}/email-airplane-window.jpg`);
+  const iconUrl = (name: string) =>
+    versionEmailAsset(`${siteUrl}/email-icons/${name}.png`);
 
   const renderDealCard = (deal: RenderableDeal) => {
     const routeLabel = formatCampaignRouteLabel(deal);
@@ -1489,7 +1495,9 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
   const intro = input.alreadyConfirmed ? welcome.confirmedIntro : welcome.pendingIntro;
   const primaryLabel = input.alreadyConfirmed ? welcome.primaryConfirmed : welcome.primaryPending;
   const primaryUrl = input.alreadyConfirmed ? input.managePreferencesUrl : input.confirmUrl;
-  const heroImageUrl = `${siteUrl}/${input.alreadyConfirmed ? "email-alerts-airport.jpg" : "email-airplane-window.jpg"}`;
+  const heroImageUrl = versionEmailAsset(
+    `${siteUrl}/${input.alreadyConfirmed ? "email-alerts-airport.jpg" : "email-airplane-window.jpg"}`,
+  );
   const logoUrl = `${siteUrl}/v2-logo.png`;
 
   const html = `<!doctype html>
