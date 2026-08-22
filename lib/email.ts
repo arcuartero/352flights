@@ -91,8 +91,8 @@ type EmailCopy = {
   headlineFlash: string;
   headlineSingle: string;
   headlineDigest: string;
-  introFlash: string;
-  introDigest: string;
+  introFlash: (dealCount: number) => string;
+  introDigest: (dealCount: number) => string;
   emptyFlashSubject: string;
   emptyDigestSubject: string;
   emptyFlashPreview: string;
@@ -118,7 +118,7 @@ type EmailCopy = {
   timing: (label: string, departure: string, arrival: string) => string;
   tripShape: (nights: number, stops: string) => string;
   nights: (nights: number) => string;
-  skyscannerNote: string;
+  skyscannerNote: (dealCount: number) => string;
   openInSkyscanner: string;
   searchInSkyscanner: string;
   editPreferences: string;
@@ -183,8 +183,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     headlineFlash: "New reasons to pack your bags !",
     headlineSingle: "New reasons to pack your bags !",
     headlineDigest: "New reasons to pack your bags !",
-    introFlash: "This fare crossed the strong alert threshold, so we are sending it immediately.",
-    introDigest: "These are the strongest fares currently sitting inside your route profile.",
+    introFlash: (dealCount) =>
+      dealCount === 1
+        ? "The price has dropped enough to be worth letting you know now."
+        : "The prices have dropped enough to be worth letting you know now.",
+    introDigest: (dealCount) =>
+      dealCount === 1
+        ? "The price has dropped enough to be worth letting you know now."
+        : "The prices have dropped enough to be worth letting you know now.",
     emptyFlashSubject: `${BRAND_NAME} flash alert`,
     emptyDigestSubject: `${BRAND_NAME} daily digest`,
     emptyFlashPreview: "Urgent Luxembourg flight alert.",
@@ -210,8 +216,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} nights · ${stops}`,
     nights: (nights) => `${nights} nights`,
-    skyscannerNote:
-      "Open this search in Skyscanner or your preferred booking flow while the fare is still visible.",
+    skyscannerNote: (dealCount) =>
+      dealCount === 1
+        ? "Take a look now, because this price can change at any time."
+        : "Take a look now, because these prices can change at any time.",
     openInSkyscanner: "Open in Skyscanner",
     searchInSkyscanner: "Search in Skyscanner",
     editPreferences: "Edit preferences",
@@ -291,8 +299,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     headlineFlash: "Des nouvelles raisons de faire vos valises !",
     headlineSingle: "Des nouvelles raisons de faire vos valises !",
     headlineDigest: "Des nouvelles raisons de faire vos valises !",
-    introFlash: "Ce tarif a franchi le seuil d'alerte forte, nous vous l'envoyons donc immédiatement.",
-    introDigest: "Voici les meilleurs tarifs actuellement dans votre profil de routes.",
+    introFlash: (dealCount) =>
+      dealCount === 1
+        ? "Le prix a suffisamment baissé pour que cela vaille la peine de vous prévenir maintenant."
+        : "Les prix ont suffisamment baissé pour que cela vaille la peine de vous prévenir maintenant.",
+    introDigest: (dealCount) =>
+      dealCount === 1
+        ? "Le prix a suffisamment baissé pour que cela vaille la peine de vous prévenir maintenant."
+        : "Les prix ont suffisamment baissé pour que cela vaille la peine de vous prévenir maintenant.",
     emptyFlashSubject: `Alerte urgente ${BRAND_NAME}`,
     emptyDigestSubject: `Resume quotidien ${BRAND_NAME}`,
     emptyFlashPreview: "Alerte urgente de vols depuis Luxembourg.",
@@ -318,8 +332,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     timing: (label, departure, arrival) => `${label} : ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} nuits · ${stops}`,
     nights: (nights) => `${nights} nuits`,
-    skyscannerNote:
-      "Ouvrez cette recherche dans Skyscanner ou dans votre parcours de reservation prefere tant que le tarif est visible.",
+    skyscannerNote: (dealCount) =>
+      dealCount === 1
+        ? "Jetez-y un œil maintenant, car ce prix peut changer à tout moment."
+        : "Jetez-y un œil maintenant, car ces prix peuvent changer à tout moment.",
     openInSkyscanner: "Ouvrir dans Skyscanner",
     searchInSkyscanner: "Rechercher dans Skyscanner",
     editPreferences: "Modifier mes preferences",
@@ -399,8 +415,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     headlineFlash: "Neue Gründe gefunden, die Koffer zu packen.",
     headlineSingle: "Neue Gründe gefunden, die Koffer zu packen.",
     headlineDigest: "Neue Gründe gefunden, die Koffer zu packen.",
-    introFlash: "Dieser Tarif hat die starke Alarmschwelle unterschritten, deshalb senden wir ihn sofort.",
-    introDigest: "Das sind die staerksten Tarife, die gerade zu deinem Routenprofil passen.",
+    introFlash: (dealCount) =>
+      dealCount === 1
+        ? "Der Preis ist weit genug gesunken, dass es sich lohnt, dich jetzt zu informieren."
+        : "Die Preise sind weit genug gesunken, dass es sich lohnt, dich jetzt zu informieren.",
+    introDigest: (dealCount) =>
+      dealCount === 1
+        ? "Der Preis ist weit genug gesunken, dass es sich lohnt, dich jetzt zu informieren."
+        : "Die Preise sind weit genug gesunken, dass es sich lohnt, dich jetzt zu informieren.",
     emptyFlashSubject: `${BRAND_NAME} Eilalarm`,
     emptyDigestSubject: `${BRAND_NAME} Tagesuebersicht`,
     emptyFlashPreview: "Dringender Flugdeal ab Luxemburg.",
@@ -426,8 +448,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} Naechte · ${stops}`,
     nights: (nights) => `${nights} Naechte`,
-    skyscannerNote:
-      "Oeffne diese Suche in Skyscanner oder in deinem bevorzugten Buchungsablauf, solange der Tarif sichtbar ist.",
+    skyscannerNote: (dealCount) =>
+      dealCount === 1
+        ? "Schau jetzt nach, denn dieser Preis kann sich jederzeit ändern."
+        : "Schau jetzt nach, denn diese Preise können sich jederzeit ändern.",
     openInSkyscanner: "In Skyscanner oeffnen",
     searchInSkyscanner: "In Skyscanner suchen",
     editPreferences: "Praeferenzen bearbeiten",
@@ -507,8 +531,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     headlineFlash: "Novos motivos para fazer as malas !",
     headlineSingle: "Novos motivos para fazer as malas !",
     headlineDigest: "Novos motivos para fazer as malas !",
-    introFlash: "Esta tarifa ultrapassou o limiar de alerta forte, por isso enviamo-la de imediato.",
-    introDigest: "Estas sao as tarifas mais fortes atualmente dentro do seu perfil de rotas.",
+    introFlash: (dealCount) =>
+      dealCount === 1
+        ? "O preço baixou o suficiente para valer a pena avisar agora."
+        : "Os preços baixaram o suficiente para valer a pena avisar agora.",
+    introDigest: (dealCount) =>
+      dealCount === 1
+        ? "O preço baixou o suficiente para valer a pena avisar agora."
+        : "Os preços baixaram o suficiente para valer a pena avisar agora.",
     emptyFlashSubject: `Alerta imediato ${BRAND_NAME}`,
     emptyDigestSubject: `Resumo diario ${BRAND_NAME}`,
     emptyFlashPreview: "Alerta urgente de voos a partir do Luxemburgo.",
@@ -534,8 +564,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} noites · ${stops}`,
     nights: (nights) => `${nights} noites`,
-    skyscannerNote:
-      "Abra esta pesquisa no Skyscanner ou no seu fluxo de reserva preferido enquanto a tarifa ainda estiver visivel.",
+    skyscannerNote: (dealCount) =>
+      dealCount === 1
+        ? "Veja agora, porque este preço pode mudar a qualquer momento."
+        : "Veja agora, porque estes preços podem mudar a qualquer momento.",
     openInSkyscanner: "Abrir no Skyscanner",
     searchInSkyscanner: "Pesquisar no Skyscanner",
     editPreferences: "Editar preferencias",
@@ -615,8 +647,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     headlineFlash: "Nuovi motivi per fare le valigie !",
     headlineSingle: "Nuovi motivi per fare le valigie !",
     headlineDigest: "Nuovi motivi per fare le valigie !",
-    introFlash: "Questa tariffa ha superato la soglia di allerta forte, quindi te la inviamo subito.",
-    introDigest: "Queste sono le tariffe piu forti attualmente nel tuo profilo rotte.",
+    introFlash: (dealCount) =>
+      dealCount === 1
+        ? "Il prezzo è sceso abbastanza da valere la pena avvisarti ora."
+        : "I prezzi sono scesi abbastanza da valere la pena avvisarti ora.",
+    introDigest: (dealCount) =>
+      dealCount === 1
+        ? "Il prezzo è sceso abbastanza da valere la pena avvisarti ora."
+        : "I prezzi sono scesi abbastanza da valere la pena avvisarti ora.",
     emptyFlashSubject: `Allerta immediata ${BRAND_NAME}`,
     emptyDigestSubject: `Riepilogo giornaliero ${BRAND_NAME}`,
     emptyFlashPreview: "Allerta urgente voli dal Lussemburgo.",
@@ -642,8 +680,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} notti · ${stops}`,
     nights: (nights) => `${nights} notti`,
-    skyscannerNote:
-      "Apri questa ricerca su Skyscanner o nel tuo percorso di prenotazione preferito finche la tariffa e visibile.",
+    skyscannerNote: (dealCount) =>
+      dealCount === 1
+        ? "Dai un'occhiata ora, perché questo prezzo può cambiare in qualsiasi momento."
+        : "Dai un'occhiata ora, perché questi prezzi possono cambiare in qualsiasi momento.",
     openInSkyscanner: "Apri su Skyscanner",
     searchInSkyscanner: "Cerca su Skyscanner",
     editPreferences: "Modifica preferenze",
@@ -723,8 +763,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     headlineFlash: "Nuevas razones para hacer tus maletas !",
     headlineSingle: "Nuevas razones para hacer tus maletas !",
     headlineDigest: "Nuevas razones para hacer tus maletas !",
-    introFlash: "Esta tarifa ha cruzado el umbral de alerta fuerte, por eso te la enviamos al momento.",
-    introDigest: "Estas son las tarifas mas fuertes que ahora mismo encajan con tu perfil de rutas.",
+    introFlash: (dealCount) =>
+      dealCount === 1
+        ? "El precio ha bajado lo suficiente como para que merezca la pena avisarte ahora."
+        : "Los precios han bajado lo suficiente como para que merezca la pena avisarte ahora.",
+    introDigest: (dealCount) =>
+      dealCount === 1
+        ? "El precio ha bajado lo suficiente como para que merezca la pena avisarte ahora."
+        : "Los precios han bajado lo suficiente como para que merezca la pena avisarte ahora.",
     emptyFlashSubject: `Alerta inmediata ${BRAND_NAME}`,
     emptyDigestSubject: `Resumen diario ${BRAND_NAME}`,
     emptyFlashPreview: "Alerta urgente de vuelos desde Luxemburgo.",
@@ -750,8 +796,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} noches · ${stops}`,
     nights: (nights) => `${nights} noches`,
-    skyscannerNote:
-      "Abre esta busqueda en Skyscanner o en tu flujo de reserva preferido mientras la tarifa siga visible.",
+    skyscannerNote: (dealCount) =>
+      dealCount === 1
+        ? "Échale un vistazo ahora, porque este precio puede cambiar en cualquier momento."
+        : "Échales un vistazo ahora, porque estos precios pueden cambiar en cualquier momento.",
     openInSkyscanner: "Abrir en Skyscanner",
     searchInSkyscanner: "Buscar en Skyscanner",
     editPreferences: "Editar preferencias",
@@ -1138,7 +1186,10 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
   const copy = getCopy(locale);
   const siteUrl = getSiteUrl();
   const headline = buildDealHeadline(input.sendType, input.deals, locale);
-  const intro = input.sendType === "flash" ? copy.introFlash : copy.introDigest;
+  const dealCount = input.deals.length;
+  const intro =
+    input.sendType === "flash" ? copy.introFlash(dealCount) : copy.introDigest(dealCount);
+  const skyscannerNote = copy.skyscannerNote(dealCount);
   const logoUrl = `${siteUrl}/v2-logo.png`;
   const heroImageUrl = `${siteUrl}/email-airplane-window.jpg`;
   const iconUrl = (name: string) => `${siteUrl}/email-icons/${name}.png`;
@@ -1323,7 +1374,7 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                           </td>
                           <td class="summary-copy-cell" valign="middle" style="word-break: break-word;">
                             <p class="email-text" style="margin: 0; color: #091a3a; font-size: 15px; line-height: 1.5; font-weight: 800;">${escapeHtml(input.previewText)}</p>
-                            <p class="email-muted" style="margin: 5px 0 0; color: #52627b; font-size: 14px; line-height: 1.55;">${escapeHtml(copy.skyscannerNote)}</p>
+                            <p class="email-muted" style="margin: 5px 0 0; color: #52627b; font-size: 14px; line-height: 1.55;">${escapeHtml(skyscannerNote)}</p>
                           </td>
                         </tr>
                       </table>
@@ -1380,6 +1431,7 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
     intro,
     "",
     input.previewText,
+    skyscannerNote,
     `${copy.campaign.editAction}: ${input.managePreferencesUrl}`,
     "",
     ...input.deals.flatMap((deal) => [
