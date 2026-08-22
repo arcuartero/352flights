@@ -2960,6 +2960,7 @@ function buildPreviewRender(
     sendType,
     subject,
     previewText,
+    subscriberEmail: subscriber?.email ?? null,
     managePreferencesUrl: subscriber
       ? `${siteUrl}/preferences?token=${subscriber.preferenceToken}`
       : `${siteUrl}/preferences`,
@@ -4331,6 +4332,7 @@ export async function sendApprovedDealCampaign(input: { sendType: CampaignSendTy
             sendType: input.sendType,
             subject,
             previewText: preview,
+            subscriberEmail: subscriber.email,
             managePreferencesUrl: `${siteUrl}/preferences?token=${subscriber.preferenceToken}`,
             unsubscribeUrl: `${siteUrl}/unsubscribe?token=${subscriber.unsubscribeToken}`,
             deals: matchedDeals.map(toRenderableDeal),

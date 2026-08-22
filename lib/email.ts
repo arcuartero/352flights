@@ -5,16 +5,6 @@ import { getResendEnv, getSiteUrl } from "@/lib/env";
 import { type CampaignSendType } from "@/lib/ops-shared";
 
 const BRAND_NAME = "+352 Flights";
-const EMAIL_BG = "#eef5ff";
-const EMAIL_PANEL = "#ffffff";
-const EMAIL_PANEL_ALT = "#f7fbff";
-const EMAIL_BORDER = "rgba(44, 95, 214, 0.14)";
-const EMAIL_TEXT = "#10233f";
-const EMAIL_MUTED = "#5e6f86";
-const EMAIL_ACCENT = "#2f5fd6";
-const EMAIL_ACCENT_SOFT = "#dfeaff";
-const EMAIL_CTA = "#e5473b";
-const EMAIL_CTA_TEXT = "#fff8f4";
 
 export const emailLocales = ["en", "fr", "de", "pt", "it", "es"] as const;
 export type EmailLocale = (typeof emailLocales)[number];
@@ -48,6 +38,7 @@ type RenderCampaignEmailInput = {
   sendType: CampaignSendType;
   subject: string;
   previewText: string;
+  subscriberEmail?: string | null;
   managePreferencesUrl: string;
   unsubscribeUrl: string;
   deals: RenderableDeal[];
@@ -172,10 +163,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       percent === null ? "below the recent baseline" : `${percent}% below the recent baseline`,
     baselineStillForming: "Baseline still forming",
     multipleCarriers: "Multiple carriers",
-    headlineFlash: "A fare just moved sharply below the normal range.",
+    headlineFlash: "A fare just dropped far below its usual price.",
     headlineSingle: "One route in your Luxembourg profile is standing out today.",
     headlineDigest: "Here are the best Luxembourg fares that match your filters.",
-    introFlash: "This fare crossed the stronger alert threshold, so we are sending it immediately.",
+    introFlash: "This fare crossed the strong alert threshold, so we are sending it immediately.",
     introDigest: "These are the strongest fares currently sitting inside your route profile.",
     emptyFlashSubject: `${BRAND_NAME} flash alert`,
     emptyDigestSubject: `${BRAND_NAME} daily digest`,
@@ -269,10 +260,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       percent === null ? "sous la reference recente" : `${percent} % sous la reference recente`,
     baselineStillForming: "Reference encore en construction",
     multipleCarriers: "Plusieurs compagnies",
-    headlineFlash: "Un tarif vient de passer nettement sous sa zone habituelle.",
+    headlineFlash: "Un tarif vient de tomber bien en dessous de son prix habituel.",
     headlineSingle: "Une route de votre profil Luxembourg ressort aujourd'hui.",
     headlineDigest: "Voici les meilleurs tarifs depuis Luxembourg qui correspondent a vos filtres.",
-    introFlash: "Ce tarif a franchi le seuil d'alerte fort, donc nous l'envoyons immediatement.",
+    introFlash: "Ce tarif a franchi le seuil d'alerte forte, nous vous l'envoyons donc immédiatement.",
     introDigest: "Voici les meilleurs tarifs actuellement dans votre profil de routes.",
     emptyFlashSubject: `Alerte urgente ${BRAND_NAME}`,
     emptyDigestSubject: `Resume quotidien ${BRAND_NAME}`,
@@ -366,10 +357,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       percent === null ? "unter dem aktuellen Vergleichswert" : `${percent} % unter dem aktuellen Vergleichswert`,
     baselineStillForming: "Vergleichswert wird noch gebildet",
     multipleCarriers: "Mehrere Airlines",
-    headlineFlash: "Ein Tarif liegt deutlich unter dem normalen Bereich.",
+    headlineFlash: "Ein Flugpreis ist gerade weit unter den üblichen Preis gefallen.",
     headlineSingle: "Eine Route in deinem Luxemburg-Profil faellt heute auf.",
     headlineDigest: "Das sind die besten Luxemburg-Tarife passend zu deinen Filtern.",
-    introFlash: "Dieser Tarif hat die starke Alarmschwelle erreicht, deshalb senden wir ihn sofort.",
+    introFlash: "Dieser Tarif hat die starke Alarmschwelle unterschritten, deshalb senden wir ihn sofort.",
     introDigest: "Das sind die staerksten Tarife, die gerade zu deinem Routenprofil passen.",
     emptyFlashSubject: `${BRAND_NAME} Eilalarm`,
     emptyDigestSubject: `${BRAND_NAME} Tagesuebersicht`,
@@ -463,10 +454,10 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       percent === null ? "abaixo da referencia recente" : `${percent}% abaixo da referencia recente`,
     baselineStillForming: "Referencia ainda em formacao",
     multipleCarriers: "Varias companhias",
-    headlineFlash: "Uma tarifa acabou de cair muito abaixo do normal.",
+    headlineFlash: "Uma tarifa acabou de cair muito abaixo do preço habitual.",
     headlineSingle: "Uma rota do seu perfil do Luxemburgo destaca-se hoje.",
     headlineDigest: "Estas sao as melhores tarifas do Luxemburgo que correspondem aos seus filtros.",
-    introFlash: "Esta tarifa passou o limiar de alerta forte, por isso enviamo-la de imediato.",
+    introFlash: "Esta tarifa ultrapassou o limiar de alerta forte, por isso enviamo-la de imediato.",
     introDigest: "Estas sao as tarifas mais fortes atualmente dentro do seu perfil de rotas.",
     emptyFlashSubject: `Alerta imediato ${BRAND_NAME}`,
     emptyDigestSubject: `Resumo diario ${BRAND_NAME}`,
@@ -560,7 +551,7 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       percent === null ? "sotto il riferimento recente" : `${percent}% sotto il riferimento recente`,
     baselineStillForming: "Riferimento ancora in formazione",
     multipleCarriers: "Piu compagnie",
-    headlineFlash: "Una tariffa e appena scesa molto sotto il normale.",
+    headlineFlash: "Una tariffa è appena scesa molto sotto il prezzo abituale.",
     headlineSingle: "Una rotta del tuo profilo Lussemburgo spicca oggi.",
     headlineDigest: "Ecco le migliori tariffe dal Lussemburgo che corrispondono ai tuoi filtri.",
     introFlash: "Questa tariffa ha superato la soglia di allerta forte, quindi te la inviamo subito.",
@@ -934,22 +925,23 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
   const siteUrl = getSiteUrl();
   const headline = buildDealHeadline(input.sendType, input.deals, locale);
   const intro = input.sendType === "flash" ? copy.introFlash : copy.introDigest;
+  const logoUrl = `${siteUrl}/v2-logo.png`;
+  const heroImageUrl = `${siteUrl}/email-airplane-window.jpg`;
 
   const renderDealCard = (deal: RenderableDeal) => {
     const baseline =
       deal.baselinePrice === null
         ? copy.baselineStillForming
         : formatCurrency(deal.baselinePrice, locale);
-    const verifiedLabel = formatVerifiedAge(deal.verifiedAt, locale);
     const travelDates = copy.travelDateRange(
-      formatDateWithWeekday(deal.departureDate, locale),
-      formatDateWithWeekday(deal.returnDate, locale),
+      formatDate(deal.departureDate, locale),
+      formatDate(deal.returnDate, locale),
     );
     const outboundTiming =
       deal.outboundDepartureAt && deal.outboundArrivalAt
         ? copy.timing(
             copy.labels.outbound,
-            formatFlightWeekdayClock(deal.outboundDepartureAt, locale),
+            formatFlightClock(deal.outboundDepartureAt, locale),
             formatFlightClock(deal.outboundArrivalAt, locale),
           )
         : null;
@@ -957,43 +949,56 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
       deal.returnDepartureAt && deal.returnArrivalAt
         ? copy.timing(
             copy.labels.return,
-            formatFlightWeekdayClock(deal.returnDepartureAt, locale),
+            formatFlightClock(deal.returnDepartureAt, locale),
             formatFlightClock(deal.returnArrivalAt, locale),
           )
         : null;
-    const stayLabel = formatStayHours(deal.destinationStayHours, locale);
+    const dropPercent =
+      deal.dropRatio === null ? null : Math.max(0, Math.round((1 - deal.dropRatio) * 100));
+    const discountPill =
+      dropPercent && dropPercent > 0
+        ? `<span style="display: inline-block; margin-left: 8px; padding: 5px 9px; border-radius: 7px; background-color: #d8f5df; color: #15853d; font-size: 13px; line-height: 16px; font-weight: 800; vertical-align: middle;">&#9660;&nbsp;${dropPercent}%</span>`
+        : "";
 
     return `
       <tr>
-        <td style="padding: 0 0 18px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid ${EMAIL_BORDER}; border-radius: 18px; background: ${EMAIL_PANEL_ALT};">
+        <td style="padding: 0 0 16px;">
+          <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width: 100%; background-color: #ffffff; border: 1px solid #dce7f6; border-radius: 20px; border-collapse: separate;">
             <tr>
-              <td style="padding: 20px 22px;">
-                <p style="margin: 0; color: ${EMAIL_ACCENT}; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">${escapeHtml(deal.routeLabel)}</p>
-                <h2 style="margin: 12px 0 8px; color: ${EMAIL_TEXT}; font-size: 24px; line-height: 1.1;">${escapeHtml(deal.title)}</h2>
-                <p style="margin: 0; color: ${EMAIL_MUTED}; font-size: 15px; line-height: 1.6;">${escapeHtml(deal.summary)}</p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 16px;">
+              <td class="deal-card-pad" style="padding: 27px 30px 24px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="padding: 0 12px 8px 0; color: ${EMAIL_MUTED}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">${escapeHtml(copy.labels.price)}</td>
-                    <td style="padding: 0 12px 8px 0; color: ${EMAIL_MUTED}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">${escapeHtml(copy.labels.travelDates)}</td>
-                    <td style="padding: 0 0 8px; color: ${EMAIL_MUTED}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">${escapeHtml(copy.labels.tripShape)}</td>
-                    <td style="padding: 0 0 8px 12px; color: ${EMAIL_MUTED}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;">${escapeHtml(copy.labels.airline)}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 0 12px 0 0; color: ${EMAIL_TEXT}; font-size: 16px; font-weight: 700;">${escapeHtml(formatCurrency(deal.dealPrice, locale))}<br /><span style="color: ${EMAIL_MUTED}; font-size: 12px; font-weight: 500;">${escapeHtml(verifiedLabel)}</span></td>
-                    <td style="padding: 0 12px 0 0; color: ${EMAIL_TEXT}; font-size: 15px;">${escapeHtml(travelDates)}${outboundTiming ? `<br /><span style="color: ${EMAIL_MUTED}; font-size: 13px;">${escapeHtml(outboundTiming)}</span>` : ""}${returnTiming ? `<br /><span style="color: ${EMAIL_MUTED}; font-size: 13px;">${escapeHtml(returnTiming)}</span>` : ""}${stayLabel ? `<br /><span style="color: ${EMAIL_MUTED}; font-size: 13px;">${escapeHtml(stayLabel)}</span>` : ""}</td>
-                    <td style="padding: 0; color: ${EMAIL_TEXT}; font-size: 15px;">${escapeHtml(copy.tripShape(deal.tripNights, formatStops(deal.maxStops, locale)))}</td>
-                    <td style="padding: 0 0 0 12px; color: ${EMAIL_TEXT}; font-size: 15px;">${escapeHtml(deal.airlineSummary ?? copy.multipleCarriers)}</td>
+                    <td class="deal-head-left" valign="top" style="padding: 0 18px 17px 0;">
+                      <p style="margin: 0 0 10px; color: #1263e9; font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;">${escapeHtml(deal.routeLabel)}</p>
+                      <h2 class="email-text" style="margin: 0; color: #091a3a; font-size: 25px; line-height: 1.18; font-weight: 800; letter-spacing: -0.025em;">${escapeHtml(deal.title)}</h2>
+                    </td>
+                    <td class="deal-head-right" valign="top" align="right" width="230" style="width: 230px; padding: 0 0 17px;">
+                      <p class="email-text" style="margin: 0; color: #091a3a; font-size: 31px; line-height: 1; font-weight: 850; white-space: nowrap;">${escapeHtml(formatCurrency(deal.dealPrice, locale))}${discountPill}</p>
+                      <p class="email-muted" style="margin: 8px 0 0; color: #52627b; font-size: 13px; line-height: 1.4;">${escapeHtml(formatDrop(deal.dropRatio, locale))}</p>
+                    </td>
                   </tr>
                 </table>
-                <p style="margin: 14px 0 0; color: ${EMAIL_MUTED}; font-size: 14px; line-height: 1.6;">
-                  ${escapeHtml(copy.labels.recentBaseline)}: ${escapeHtml(baseline)}. ${escapeHtml(formatDrop(deal.dropRatio, locale))}.
-                </p>
-                ${
-                  deal.bookingUrl
-                    ? `<p style="margin: 18px 0 0;"><a href="${escapeHtml(deal.bookingUrl)}" style="display: inline-block; padding: 12px 16px; border-radius: 999px; background: ${EMAIL_CTA}; color: ${EMAIL_CTA_TEXT}; font-size: 14px; font-weight: 650; text-decoration: none;">${escapeHtml(copy.openInSkyscanner)}</a></p>`
-                    : ""
-                }
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #dce7f6;">
+                  <tr>
+                    <td class="meta-cell" valign="top" width="34%" style="width: 34%; padding: 17px 14px 17px 0;">
+                      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="top" style="padding-right: 10px; color: #1263e9; font-size: 21px; line-height: 24px;">&#9635;</td><td class="email-text" style="color: #091a3a; font-size: 13px; line-height: 1.55;">${escapeHtml(travelDates)}</td></tr></table>
+                    </td>
+                    <td class="meta-cell" valign="top" width="35%" style="width: 35%; padding: 17px 14px; border-left: 1px solid #dce7f6;">
+                      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="top" style="padding-right: 10px; color: #1263e9; font-size: 21px; line-height: 24px;">&#9716;</td><td class="email-text" style="color: #091a3a; font-size: 13px; line-height: 1.55;">${outboundTiming ? escapeHtml(outboundTiming) : escapeHtml(copy.notAvailable)}${returnTiming ? `<br />${escapeHtml(returnTiming)}` : ""}</td></tr></table>
+                    </td>
+                    <td class="meta-cell" valign="top" width="31%" style="width: 31%; padding: 17px 0 17px 14px; border-left: 1px solid #dce7f6;">
+                      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td valign="top" style="padding-right: 10px; color: #1263e9; font-size: 21px; line-height: 24px;">&#9992;</td><td class="email-text" style="color: #091a3a; font-size: 13px; line-height: 1.55;">${escapeHtml(copy.nights(deal.tripNights))}<br />${escapeHtml(deal.airlineSummary ?? copy.multipleCarriers)}</td></tr></table>
+                    </td>
+                  </tr>
+                </table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td class="action-cell" valign="middle" style="padding-top: 3px;">
+                      ${deal.bookingUrl ? `<a href="${escapeHtml(deal.bookingUrl)}" style="display: inline-block; padding: 12px 19px; border-radius: 8px; background-color: #ed241f; color: #ffffff; font-size: 14px; line-height: 18px; font-weight: 800; text-decoration: none;">${escapeHtml(copy.openInSkyscanner)}</a>` : ""}
+                    </td>
+                    <td class="baseline-cell" valign="middle" align="right" style="padding-top: 3px; color: #52627b; font-size: 12px; line-height: 1.5;">${escapeHtml(copy.labels.recentBaseline)}: ${escapeHtml(baseline)}</td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
@@ -1014,9 +1019,8 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
       const sectionCopy = copy.editorial[section.key];
       return `
         <tr>
-          <td style="padding: 0 0 12px;">
-            <p style="margin: 0; color: ${EMAIL_ACCENT}; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;">${escapeHtml(sectionCopy.label)}</p>
-            <p style="margin: 8px 0 0; color: ${EMAIL_MUTED}; font-size: 14px; line-height: 1.6;">${escapeHtml(sectionCopy.description)}</p>
+          <td style="padding: 16px 0 13px;">
+            <p style="margin: 0; color: #1263e9; font-size: 14px; line-height: 18px; font-weight: 850; letter-spacing: 0.03em; text-transform: uppercase;">${escapeHtml(sectionCopy.label)}</p>
           </td>
         </tr>
         ${section.items.map(renderDealCard).join("")}
@@ -1029,23 +1033,62 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
   <head>
     <meta charSet="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="supported-color-schemes" content="light only" />
     <title>${escapeHtml(input.subject)}</title>
+    <style>
+      .email-body, .email-canvas { background-color: #eef5ff !important; }
+      .email-card { background-color: #ffffff !important; }
+      .email-text { color: #091a3a !important; }
+      .email-muted { color: #52627b !important; }
+      .account-email a, .account-email [x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+      @media only screen and (max-width: 620px) {
+        .email-body { padding: 18px 10px !important; }
+        .email-shell { width: 100% !important; max-width: 100% !important; }
+        .email-logo { width: 142px !important; max-width: 142px !important; }
+        .email-shell, .email-card, .hero-copy-cell, .hero-image-cell, .summary-pad, .manage-pad, .deal-card-pad, .deal-head-left, .deal-head-right { box-sizing: border-box !important; }
+        .hero-copy-cell, .hero-image-cell { display: block !important; width: 100% !important; max-width: 100% !important; }
+        .hero-copy-cell { padding: 34px 25px 32px !important; }
+        .hero-image { width: 100% !important; max-width: none !important; height: 230px !important; border-radius: 0 0 19px 19px !important; object-fit: cover !important; }
+        .hero-title { font-size: 30px !important; line-height: 1.12 !important; }
+        .summary-pad, .manage-pad { padding: 22px 21px !important; }
+        .deal-card-pad { padding: 23px 21px 21px !important; }
+        .deal-head-left, .deal-head-right, .action-cell, .baseline-cell { display: block !important; width: 100% !important; max-width: 100% !important; text-align: left !important; }
+        .deal-head-left { padding-right: 0 !important; }
+        .deal-head-right { padding: 0 0 18px !important; }
+        .meta-cell { display: block !important; width: 100% !important; padding: 14px 0 !important; border-left: 0 !important; border-bottom: 1px solid #dce7f6 !important; }
+        .action-cell { padding-top: 17px !important; }
+        .baseline-cell { padding-top: 14px !important; }
+        .manage-action { display: block !important; width: 100% !important; padding: 14px 0 0 !important; text-align: left !important; }
+        .manage-action a { display: block !important; text-align: center !important; }
+        .account-email { word-break: break-word !important; }
+        .footer-links a { display: inline-block !important; margin: 4px 5px !important; }
+      }
+    </style>
   </head>
-  <body style="margin: 0; padding: 32px 16px; background: ${EMAIL_BG}; color: ${EMAIL_TEXT}; font-family: Avenir Next, Segoe UI, Helvetica Neue, sans-serif;">
+  <body class="email-body" style="margin: 0; padding: 32px 16px; background-color: #eef5ff; color: #091a3a; font-family: Avenir Next, Segoe UI, Helvetica Neue, Arial, sans-serif; -webkit-text-size-adjust: 100%;">
     <div style="display: none; max-height: 0; overflow: hidden; opacity: 0;">${escapeHtml(input.previewText)}</div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <table class="email-canvas" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#eef5ff" style="background-color: #eef5ff;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 680px;">
+          <table class="email-shell" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 760px;">
+            <tr>
+              <td align="center" style="padding: 0 0 24px;">
+                <a href="${escapeHtml(siteUrl)}" style="text-decoration: none;">
+                  <img class="email-logo" src="${escapeHtml(logoUrl)}" width="178" alt="${BRAND_NAME}" style="display: block; width: 178px; max-width: 100%; height: auto; border: 0;" />
+                </a>
+              </td>
+            </tr>
             <tr>
               <td style="padding: 0 0 18px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f7fbff 0%, #edf4ff 100%); border: 1px solid ${EMAIL_BORDER}; border-radius: 24px;">
+                <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width: 100%; background-color: #ffffff; border: 1px solid #dce7f6; border-radius: 22px; border-collapse: separate; overflow: hidden;">
                   <tr>
-                    <td style="padding: 32px 30px 28px;">
-                      <p style="margin: 0; color: ${EMAIL_ACCENT}; font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;">${BRAND_NAME}</p>
-                      <h1 style="margin: 14px 0 10px; color: ${EMAIL_TEXT}; font-size: 38px; line-height: 1.02; font-weight: 800; letter-spacing: -0.04em;">${escapeHtml(headline)}</h1>
-                      <p style="margin: 0; color: ${EMAIL_MUTED}; font-size: 16px; line-height: 1.7;">${escapeHtml(intro)}</p>
-                      <p style="margin: 18px 0 0;"><a href="${escapeHtml(input.managePreferencesUrl)}" style="display: inline-block; padding: 12px 16px; border-radius: 999px; background: ${EMAIL_ACCENT}; color: #ffffff; font-size: 14px; font-weight: 650; text-decoration: none;">${escapeHtml(copy.editPreferences)}</a></p>
+                    <td class="hero-copy-cell" valign="middle" width="60%" style="width: 60%; padding: 50px 38px;">
+                      <h1 class="hero-title email-text" style="margin: 0 0 16px; color: #091a3a; font-size: 40px; line-height: 1.12; font-weight: 750; letter-spacing: -0.035em;">${escapeHtml(headline)}</h1>
+                      <p class="email-muted" style="margin: 0; color: #52627b; font-size: 16px; line-height: 1.65;">${escapeHtml(intro)}</p>
+                    </td>
+                    <td class="hero-image-cell" valign="middle" width="40%" style="width: 40%; padding: 0; background-color: #e5e8ee;">
+                      <img class="hero-image" src="${escapeHtml(heroImageUrl)}" width="304" height="330" alt="" style="display: block; width: 100%; max-width: 304px; height: 330px; border: 0; border-radius: 0 21px 21px 0; object-fit: cover;" />
                     </td>
                   </tr>
                 </table>
@@ -1053,13 +1096,44 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
             </tr>
             <tr>
               <td style="padding: 0 0 18px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${EMAIL_PANEL}; border: 1px solid ${EMAIL_BORDER}; border-radius: 22px;">
+                <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width: 100%; background-color: #ffffff; border: 1px solid #dce7f6; border-radius: 20px; border-collapse: separate;">
                   <tr>
-                    <td style="padding: 28px 30px 10px;">
-                      <p style="margin: 0 0 18px; color: ${EMAIL_MUTED}; font-size: 16px; line-height: 1.7;">${escapeHtml(input.previewText)}</p>
-                      <p style="margin: 0 0 22px; color: ${EMAIL_MUTED}; font-size: 15px; line-height: 1.7;">${escapeHtml(copy.skyscannerNote)}</p>
+                    <td class="summary-pad" style="padding: 24px 30px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; table-layout: fixed;">
+                        <tr>
+                          <td class="summary-icon-cell" valign="middle" width="62" style="width: 62px; padding-right: 17px;">
+                            <div style="width: 54px; height: 54px; border-radius: 14px; background-color: #edf4ff; color: #1263e9; font-family: Apple Color Emoji, Segoe UI Emoji, Arial, sans-serif; font-size: 23px; line-height: 54px; text-align: center;">&#128276;</div>
+                          </td>
+                          <td class="summary-copy-cell" valign="middle" style="word-break: break-word;">
+                            <p class="email-text" style="margin: 0; color: #091a3a; font-size: 15px; line-height: 1.5; font-weight: 800;">${escapeHtml(input.previewText)}</p>
+                            <p class="email-muted" style="margin: 5px 0 0; color: #52627b; font-size: 14px; line-height: 1.55;">${escapeHtml(copy.skyscannerNote)}</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${htmlDeals}</table></td></tr>
+            <tr>
+              <td style="padding: 0 0 18px;">
+                <table class="email-card" role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width: 100%; background-color: #ffffff; border: 1px solid #dce7f6; border-radius: 20px; border-collapse: separate;">
+                  <tr>
+                    <td class="manage-pad" style="padding: 25px 30px;">
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                        ${htmlDeals}
+                        ${input.subscriberEmail ? `<tr><td valign="middle" width="58" style="width: 58px; padding-right: 16px;"><div style="width: 48px; height: 48px; border-radius: 13px; background-color: #edf4ff; color: #1263e9; font-size: 24px; line-height: 48px; font-weight: 800; text-align: center;">@</div></td><td colspan="2" valign="middle"><p class="email-muted" style="margin: 0; color: #52627b; font-size: 13px; line-height: 1.4;">${escapeHtml(copy.welcome.linkedTo)}</p><p class="account-email email-text" style="margin: 4px 0 0; color: #091a3a; font-size: 17px; line-height: 1.4; font-weight: 800;">${renderPlainEmailAddress(input.subscriberEmail)}</p></td></tr><tr><td colspan="3" style="height: 20px; border-bottom: 1px solid #dce7f6; font-size: 0; line-height: 0;">&nbsp;</td></tr>` : ""}
+                        <tr>
+                          <td valign="middle" width="58" style="width: 58px; padding: 20px 16px 0 0;"><div style="width: 48px; height: 48px; border-radius: 13px; background-color: #edf4ff; color: #1263e9; font-size: 22px; line-height: 48px; text-align: center;">&#9776;</div></td>
+                          <td valign="middle" style="padding-top: 20px;"><p class="email-text" style="margin: 0; color: #091a3a; font-size: 16px; line-height: 1.35; font-weight: 800;">${escapeHtml(copy.managePreferences)}</p><p class="email-muted" style="margin: 4px 0 0; color: #52627b; font-size: 13px; line-height: 1.5;">${escapeHtml(copy.welcome.alertSetupBody)}</p></td>
+                          <td class="manage-action" valign="middle" align="right" style="padding: 20px 0 0 16px;"><a href="${escapeHtml(input.managePreferencesUrl)}" style="display: inline-block; padding: 11px 16px; border-radius: 8px; background-color: #edf4ff; color: #1263e9; font-size: 13px; line-height: 17px; font-weight: 800; text-decoration: none; white-space: nowrap;">${escapeHtml(copy.editPreferences)}</a></td>
+                        </tr>
+                        <tr><td colspan="3" style="height: 20px; border-bottom: 1px solid #dce7f6; font-size: 0; line-height: 0;">&nbsp;</td></tr>
+                        <tr>
+                          <td valign="middle" width="58" style="width: 58px; padding: 20px 16px 0 0;"><div style="width: 48px; height: 48px; border-radius: 13px; background-color: #edf4ff; color: #1263e9; font-size: 24px; line-height: 48px; text-align: center;">&times;</div></td>
+                          <td valign="middle" style="padding-top: 20px;"><p class="email-text" style="margin: 0; color: #091a3a; font-size: 16px; line-height: 1.35; font-weight: 800;">${escapeHtml(copy.welcome.notYouTitle)}</p><p class="email-muted" style="margin: 4px 0 0; color: #52627b; font-size: 13px; line-height: 1.5;">${escapeHtml(copy.welcome.notYouBody)}</p></td>
+                          <td class="manage-action" valign="middle" align="right" style="padding: 20px 0 0 16px;"><a href="${escapeHtml(input.unsubscribeUrl)}" style="display: inline-block; padding: 11px 16px; border-radius: 8px; background-color: #edf4ff; color: #1263e9; font-size: 13px; line-height: 17px; font-weight: 800; text-decoration: none; white-space: nowrap;">${escapeHtml(copy.unsubscribe)}</a></td>
+                        </tr>
                       </table>
                     </td>
                   </tr>
@@ -1067,12 +1141,11 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
               </td>
             </tr>
             <tr>
-              <td style="padding: 8px 0 0; border-top: 1px solid rgba(44, 95, 214, 0.12);">
-                <p style="margin: 20px 0 0; color: ${EMAIL_MUTED}; font-size: 13px; line-height: 1.7;">
-                  ${escapeHtml(copy.footerReason)}
-                  <a href="${escapeHtml(input.managePreferencesUrl)}" style="color: ${EMAIL_ACCENT}; font-weight: 700; text-decoration: none;">${escapeHtml(copy.managePreferences)}</a>
-                  · <a href="${escapeHtml(input.unsubscribeUrl)}" style="color: ${EMAIL_ACCENT}; font-weight: 700; text-decoration: none;">${escapeHtml(copy.unsubscribe)}</a>
-                  · <a href="${escapeHtml(siteUrl)}" style="color: ${EMAIL_ACCENT}; font-weight: 700; text-decoration: none;">${BRAND_NAME}</a>
+              <td align="center" style="padding: 2px 12px 0;">
+                <p class="footer-links email-muted" style="margin: 0; color: #52627b; font-size: 12px; line-height: 1.8;">
+                  <a href="${escapeHtml(input.managePreferencesUrl)}" style="color: #1263e9; font-weight: 700; text-decoration: none;">${escapeHtml(copy.managePreferences)}</a>
+                  &nbsp;·&nbsp; <a href="${escapeHtml(input.unsubscribeUrl)}" style="color: #1263e9; font-weight: 700; text-decoration: none;">${escapeHtml(copy.unsubscribe)}</a>
+                  &nbsp;·&nbsp; <a href="${escapeHtml(siteUrl)}" style="color: #1263e9; font-weight: 700; text-decoration: none;">${BRAND_NAME}</a>
                 </p>
               </td>
             </tr>
