@@ -35,7 +35,7 @@ type RenderableDeal = {
 };
 
 type CampaignRouteCopy = {
-  title: (destinationCity: string, pattern: string | null) => string;
+  title: (destinationCity: string) => string;
   weekdays: Record<string, string>;
   nextPattern: (departure: string, arrival: string) => string;
 };
@@ -814,41 +814,49 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
 
 const campaignRouteCopy: Record<EmailLocale, CampaignRouteCopy> = {
   en: {
-    title: (destinationCity, pattern) =>
-      `Luxembourg to ${destinationCity}${pattern ? ` (${pattern})` : ""}`,
-    weekdays: { Mon: "Mon", Tue: "Tue", Wed: "Wed", Thu: "Thu", Fri: "Fri", Sat: "Sat", Sun: "Sun" },
-    nextPattern: (departure, arrival) => `${departure} -> next ${arrival}`,
+    title: (destinationCity) => `Luxembourg to ${destinationCity}`,
+    weekdays: { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" },
+    nextPattern: (departure, arrival) => `${departure} -> ${arrival} next week`,
   },
   fr: {
-    title: (destinationCity, pattern) =>
-      `Luxembourg vers ${destinationCity}${pattern ? ` (${pattern})` : ""}`,
-    weekdays: { Mon: "lun.", Tue: "mar.", Wed: "mer.", Thu: "jeu.", Fri: "ven.", Sat: "sam.", Sun: "dim." },
-    nextPattern: (departure, arrival) => `${departure} -> ${arrival} suivant`,
+    title: (destinationCity) => `Luxembourg vers ${destinationCity}`,
+    weekdays: { Mon: "lundi", Tue: "mardi", Wed: "mercredi", Thu: "jeudi", Fri: "vendredi", Sat: "samedi", Sun: "dimanche" },
+    nextPattern: (departure, arrival) => `${departure} -> ${arrival} semaine prochaine`,
   },
   de: {
-    title: (destinationCity, pattern) =>
-      `Luxemburg nach ${destinationCity}${pattern ? ` (${pattern})` : ""}`,
-    weekdays: { Mon: "Mo.", Tue: "Di.", Wed: "Mi.", Thu: "Do.", Fri: "Fr.", Sat: "Sa.", Sun: "So." },
-    nextPattern: (departure, arrival) => `${departure} -> nächsten ${arrival}`,
+    title: (destinationCity) => `Luxemburg nach ${destinationCity}`,
+    weekdays: { Mon: "Montag", Tue: "Dienstag", Wed: "Mittwoch", Thu: "Donnerstag", Fri: "Freitag", Sat: "Samstag", Sun: "Sonntag" },
+    nextPattern: (departure, arrival) => `${departure} -> ${arrival} nächste Woche`,
   },
   pt: {
-    title: (destinationCity, pattern) =>
-      `Luxemburgo para ${destinationCity}${pattern ? ` (${pattern})` : ""}`,
-    weekdays: { Mon: "seg.", Tue: "ter.", Wed: "qua.", Thu: "qui.", Fri: "sex.", Sat: "sáb.", Sun: "dom." },
-    nextPattern: (departure, arrival) => `${departure} -> próximo ${arrival}`,
+    title: (destinationCity) => `Luxemburgo para ${destinationCity}`,
+    weekdays: { Mon: "segunda-feira", Tue: "terça-feira", Wed: "quarta-feira", Thu: "quinta-feira", Fri: "sexta-feira", Sat: "sábado", Sun: "domingo" },
+    nextPattern: (departure, arrival) => `${departure} -> ${arrival} na próxima semana`,
   },
   it: {
-    title: (destinationCity, pattern) =>
-      `Da Lussemburgo a ${destinationCity}${pattern ? ` (${pattern})` : ""}`,
-    weekdays: { Mon: "lun.", Tue: "mar.", Wed: "mer.", Thu: "gio.", Fri: "ven.", Sat: "sab.", Sun: "dom." },
-    nextPattern: (departure, arrival) => `${departure} -> ${arrival} successiva`,
+    title: (destinationCity) => `Da Lussemburgo a ${destinationCity}`,
+    weekdays: { Mon: "lunedì", Tue: "martedì", Wed: "mercoledì", Thu: "giovedì", Fri: "venerdì", Sat: "sabato", Sun: "domenica" },
+    nextPattern: (departure, arrival) => `${departure} -> ${arrival} della prossima settimana`,
   },
   es: {
-    title: (destinationCity, pattern) =>
-      `Luxemburgo a ${destinationCity}${pattern ? ` (${pattern})` : ""}`,
-    weekdays: { Mon: "lun.", Tue: "mar.", Wed: "mié.", Thu: "jue.", Fri: "vie.", Sat: "sáb.", Sun: "dom." },
-    nextPattern: (departure, arrival) => `${departure} -> próximo ${arrival}`,
+    title: (destinationCity) => `Luxemburgo a ${destinationCity}`,
+    weekdays: { Mon: "lunes", Tue: "martes", Wed: "miércoles", Thu: "jueves", Fri: "viernes", Sat: "sábado", Sun: "domingo" },
+    nextPattern: (departure, arrival) => `${departure} -> ${arrival} semana próxima`,
   },
+};
+
+const multiCityAirportNames: Record<string, string> = {
+  BGY: "Bergamo",
+  DWC: "Al Maktoum International",
+  DXB: "Dubai International",
+  EWR: "Newark Liberty",
+  JFK: "John F. Kennedy",
+  LCY: "London City",
+  LGW: "Gatwick",
+  LHR: "Heathrow",
+  LIN: "Linate",
+  MXP: "Malpensa",
+  STN: "Stansted",
 };
 
 export function normalizeEmailLocale(value: unknown): EmailLocale {
@@ -876,6 +884,20 @@ function splitCampaignRouteLabel(routeLabel: string) {
     routeLabel: routeLabel.slice(0, dividerIndex).trim(),
     patternLabel: routeLabel.slice(dividerIndex + divider.length).trim() || null,
   };
+}
+
+function formatCampaignRouteLabel(deal: RenderableDeal) {
+  const { routeLabel } = splitCampaignRouteLabel(deal.routeLabel);
+  const airportName = multiCityAirportNames[deal.destinationAirport.toUpperCase()];
+
+  if (!airportName) {
+    return routeLabel;
+  }
+
+  const cityAndAirport = `${deal.destinationCity} · ${airportName}`;
+  return /\([^)]*\)\s*$/.test(routeLabel)
+    ? routeLabel.replace(/\([^)]*\)\s*$/, `(${cityAndAirport})`)
+    : `${routeLabel} (${cityAndAirport})`;
 }
 
 function localizeCampaignPattern(patternLabel: string | null, locale?: EmailLocale | null) {
@@ -907,9 +929,13 @@ function localizeCampaignPattern(patternLabel: string | null, locale?: EmailLoca
 
 function formatCampaignDealTitle(deal: RenderableDeal, locale?: EmailLocale | null) {
   const normalizedLocale = normalizeEmailLocale(locale);
+  return campaignRouteCopy[normalizedLocale].title(deal.destinationCity);
+}
+
+function formatCampaignDealPattern(deal: RenderableDeal, locale?: EmailLocale | null) {
+  const normalizedLocale = normalizeEmailLocale(locale);
   const { patternLabel } = splitCampaignRouteLabel(deal.routeLabel);
-  const localizedPattern = localizeCampaignPattern(patternLabel, normalizedLocale);
-  return campaignRouteCopy[normalizedLocale].title(deal.destinationCity, localizedPattern);
+  return localizeCampaignPattern(patternLabel, normalizedLocale);
 }
 
 function formatCurrency(value: number, locale?: EmailLocale | null, currency: string = "EUR") {
@@ -1101,7 +1127,7 @@ export function buildCampaignPreviewText(
   }
 
   const price = formatCurrency(topDeal.dealPrice, locale);
-  const { routeLabel } = splitCampaignRouteLabel(topDeal.routeLabel);
+  const routeLabel = formatCampaignRouteLabel(topDeal);
   return deals.length === 1
     ? copy.singlePreview(routeLabel, price)
     : copy.multiPreview(deals.length, topDeal.destinationCity, price);
@@ -1118,12 +1144,9 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
   const iconUrl = (name: string) => `${siteUrl}/email-icons/${name}.png`;
 
   const renderDealCard = (deal: RenderableDeal) => {
-    const { routeLabel } = splitCampaignRouteLabel(deal.routeLabel);
+    const routeLabel = formatCampaignRouteLabel(deal);
     const localizedTitle = formatCampaignDealTitle(deal, locale);
-    const baseline =
-      deal.baselinePrice === null
-        ? copy.baselineStillForming
-        : formatCurrency(deal.baselinePrice, locale);
+    const localizedPattern = formatCampaignDealPattern(deal, locale);
     const travelDates = formatCampaignDateRange(deal.departureDate, deal.returnDate, locale);
     const outboundTiming =
       deal.outboundDepartureAt && deal.outboundArrivalAt
@@ -1159,6 +1182,7 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                     <td class="deal-head-left" valign="top" style="padding: 0 18px 17px 0;">
                       <p style="margin: 0 0 10px; color: #1263e9; font-size: 12px; line-height: 16px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;">${escapeHtml(routeLabel)}</p>
                       <h2 class="email-text" style="margin: 0; color: #091a3a; font-size: 25px; line-height: 1.18; font-weight: 400; letter-spacing: -0.025em;">${escapeHtml(localizedTitle)}</h2>
+                      ${localizedPattern ? `<p class="email-muted" style="margin: 7px 0 0; color: #52627b; font-size: 16px; line-height: 1.4; font-weight: 400;">${escapeHtml(localizedPattern)}</p>` : ""}
                     </td>
                     <td class="deal-head-right" valign="top" align="right" width="230" style="width: 230px; padding: 0 0 17px;">
                       <p class="email-text" style="margin: 0; color: #091a3a; font-size: 33px; line-height: 1; font-weight: 850; white-space: nowrap;">${escapeHtml(formatCurrency(deal.dealPrice, locale))}${discountPill}</p>
@@ -1181,10 +1205,9 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
                 </table>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td class="action-cell" valign="middle" style="padding-top: 3px;">
+                    <td class="action-cell" valign="middle" align="right" style="padding-top: 3px; text-align: right;">
                       ${deal.bookingUrl ? `<a href="${escapeHtml(deal.bookingUrl)}" style="display: inline-block; padding: 13px 22px; border-radius: 8px; background-color: #ed241f; color: #ffffff; font-size: 14px; line-height: 18px; font-weight: 800; text-decoration: none; box-shadow: 0 7px 18px rgba(237, 36, 31, 0.2);">${escapeHtml(copy.campaign.viewFlight)}</a>` : ""}
                     </td>
-                    <td class="baseline-cell" valign="middle" align="right" style="padding-top: 3px; color: #52627b; font-size: 12px; line-height: 1.5;">${escapeHtml(copy.labels.recentBaseline)}: ${escapeHtml(baseline)}</td>
                   </tr>
                 </table>
               </td>
@@ -1244,13 +1267,12 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
         .hero-title { font-size: 30px !important; line-height: 1.12 !important; }
         .summary-pad, .manage-pad { padding: 22px 21px !important; }
         .deal-card-pad { padding: 23px 21px 21px !important; }
-        .deal-head-left, .deal-head-right, .action-cell, .baseline-cell { display: block !important; width: 100% !important; max-width: 100% !important; text-align: left !important; }
+        .deal-head-left, .deal-head-right, .action-cell { display: block !important; width: 100% !important; max-width: 100% !important; }
         .deal-head-left { padding-right: 0 !important; }
         .deal-head-right { padding: 0 0 18px !important; }
         .meta-cell { display: block !important; width: 100% !important; padding: 14px 0 !important; border-left: 0 !important; border-bottom: 1px solid #dce7f6 !important; }
         .trip-meta { white-space: normal !important; }
-        .action-cell { padding-top: 17px !important; }
-        .baseline-cell { padding-top: 14px !important; }
+        .action-cell { padding-top: 17px !important; text-align: right !important; }
         .manage-icon, .manage-copy, .manage-action { display: block !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; text-align: left !important; }
         .manage-icon { padding: 16px 0 10px !important; }
         .manage-copy { padding: 0 !important; }
@@ -1361,8 +1383,11 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
     `${copy.campaign.editAction}: ${input.managePreferencesUrl}`,
     "",
     ...input.deals.flatMap((deal) => [
-      splitCampaignRouteLabel(deal.routeLabel).routeLabel,
+      formatCampaignRouteLabel(deal),
       formatCampaignDealTitle(deal, locale),
+      ...(formatCampaignDealPattern(deal, locale)
+        ? [formatCampaignDealPattern(deal, locale) as string]
+        : []),
       `${copy.labels.price}: ${formatCurrency(deal.dealPrice, locale)} · ${formatVerifiedAge(deal.verifiedAt, locale)}`,
       `${copy.labels.travelDates}: ${copy.travelDateRange(formatDateWithWeekday(deal.departureDate, locale), formatDateWithWeekday(deal.returnDate, locale))}`,
       ...(deal.outboundDepartureAt && deal.outboundArrivalAt
@@ -1389,7 +1414,6 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
       `${copy.labels.tripShape}: ${copy.tripShape(deal.tripNights, formatStops(deal.maxStops, locale))}`,
       `${copy.labels.airline}: ${deal.airlineSummary ?? copy.multipleCarriers}`,
       ...(deal.bookingUrl ? [`${copy.campaign.viewFlight}: ${deal.bookingUrl}`] : []),
-      `${copy.labels.baseline}: ${deal.baselinePrice === null ? copy.baselineStillForming : formatCurrency(deal.baselinePrice, locale)}`,
       `${copy.labels.discount}: ${formatDrop(deal.dropRatio, locale)}`,
       "",
     ]),
