@@ -186,6 +186,11 @@ create table if not exists public.subscriber_route_preferences (
   destination_city text not null,
   bucket text not null
     check (bucket in ('weekend_europe', 'sun_breaks', 'long_haul')),
+  buckets text[] not null default array['weekend_europe']::text[]
+    check (
+      cardinality(buckets) > 0
+      and buckets <@ array['weekend_europe', 'sun_breaks', 'long_haul']::text[]
+    ),
   is_enabled boolean not null default true,
   created_at timestamptz not null default timezone('utc', now()),
   unique (subscriber_id, destination_airport, bucket)
@@ -207,12 +212,13 @@ create table if not exists public.scanned_routes (
   max_stops text not null,
   is_active boolean not null default true,
   created_at timestamptz not null default timezone('utc', now()),
-  unique (origin_airport, destination_airport, bucket)
+  unique (origin_airport, destination_airport, max_stops)
 );
 
 alter table public.scanned_routes
   add column if not exists min_trip_nights integer,
-  add column if not exists max_trip_nights integer;
+  add column if not exists max_trip_nights integer,
+  add column if not exists buckets text[] not null default array['weekend_europe']::text[];
 
 alter table public.scanned_routes
   drop constraint if exists scanned_routes_min_trip_nights_check,
@@ -456,9 +462,50 @@ create table if not exists public.price_scan_runs (
   sync_status text not null default 'pending'
     check (sync_status in ('pending', 'completed', 'partial', 'failed', 'skipped')),
   sync_summary jsonb not null default '{}'::jsonb,
+  heartbeat_at timestamptz,
+  last_progress_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.price_snapshots
+  add column if not exists scan_run_id uuid;
+
+alter table public.price_snapshots
+  drop constraint if exists price_snapshots_scan_run_id_fkey;
+
+alter table public.price_snapshots
+  add constraint price_snapshots_scan_run_id_fkey
+  foreign key (scan_run_id)
+  references public.price_scan_runs(id)
+  on delete set null;
+
+create or replace view public.ops_latest_price_snapshots
+with (security_invoker = true)
+as
+select distinct on (snapshot.route_id)
+  snapshot.id,
+  snapshot.route_id,
+  snapshot.scan_run_id,
+  snapshot.price,
+  snapshot.currency,
+  snapshot.departure_date,
+  snapshot.return_date,
+  snapshot.trip_nights,
+  snapshot.max_stops,
+  snapshot.metadata,
+  snapshot.scanned_at
+from public.price_snapshots as snapshot
+where snapshot.price > 0
+  and case
+    when (snapshot.metadata ->> 'destination_stay_hours') ~ '^[0-9]+([.][0-9]+)?$'
+      then (snapshot.metadata ->> 'destination_stay_hours')::numeric >= 24
+    else true
+  end
+order by snapshot.route_id, snapshot.scanned_at desc, snapshot.id desc;
+
+revoke all on public.ops_latest_price_snapshots from anon, authenticated;
+grant select on public.ops_latest_price_snapshots to service_role;
 
 create table if not exists public.date_scan_runs (
   id uuid primary key default gen_random_uuid(),
@@ -498,6 +545,9 @@ on conflict (id) do nothing;
 create index if not exists price_snapshots_route_scanned_at_idx
   on public.price_snapshots (route_id, scanned_at desc);
 
+create index if not exists price_snapshots_scan_run_route_idx
+  on public.price_snapshots (scan_run_id, route_id);
+
 create index if not exists route_pattern_overrides_route_idx
   on public.route_pattern_overrides (route_id, sort_order);
 
@@ -533,6 +583,146 @@ create index if not exists price_scan_runs_started_at_idx
 
 create index if not exists price_scan_runs_status_started_at_idx
   on public.price_scan_runs (status, started_at desc);
+
+create index if not exists price_scan_runs_running_liveness_idx
+  on public.price_scan_runs (
+    greatest(
+      coalesce(heartbeat_at, started_at),
+      coalesce(last_progress_at, started_at)
+    )
+  )
+  where status = 'running';
+
+create or replace function public.guard_price_scan_run_liveness()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    new.last_progress_at := coalesce(new.last_progress_at, new.heartbeat_at, new.started_at);
+    return new;
+  end if;
+
+  if old.status <> 'running' and new.status = 'running' then
+    return old;
+  end if;
+
+  if
+    new.routes_started is distinct from old.routes_started
+    or new.routes_completed is distinct from old.routes_completed
+    or new.destinations_scanned is distinct from old.destinations_scanned
+    or new.patterns_scanned is distinct from old.patterns_scanned
+    or new.rules_scanned is distinct from old.rules_scanned
+    or new.found_prices is distinct from old.found_prices
+    or new.deal_candidates is distinct from old.deal_candidates
+    or new.no_results is distinct from old.no_results
+    or new.timed_out is distinct from old.timed_out
+    or new.network_outages is distinct from old.network_outages
+    or new.hard_errors is distinct from old.hard_errors
+    or new.retries is distinct from old.retries
+  then
+    new.last_progress_at := greatest(
+      coalesce(old.last_progress_at, old.started_at),
+      coalesce(new.heartbeat_at, timezone('utc', now()))
+    );
+  else
+    new.last_progress_at := coalesce(old.last_progress_at, new.last_progress_at, old.started_at);
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists price_scan_runs_guard_liveness on public.price_scan_runs;
+create trigger price_scan_runs_guard_liveness
+before insert or update on public.price_scan_runs
+for each row execute function public.guard_price_scan_run_liveness();
+
+create or replace function public.close_superseded_price_scan_runs()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.price_scan_runs
+  set
+    status = 'stopped',
+    completed_at = coalesce(heartbeat_at, last_progress_at, timezone('utc', now())),
+    duration_ms = greatest(round(extract(epoch from (coalesce(heartbeat_at, last_progress_at, timezone('utc', now())) - started_at)) * 1000), 0),
+    stopped_reason = 'Scanner stopped before completion because a newer scanner execution started.',
+    stopped_reason_code = 'superseded_by_new_run',
+    sync_status = case when sync_status = 'completed' then sync_status else 'partial' end,
+    sync_summary = coalesce(sync_summary, '{}'::jsonb) || jsonb_build_object(
+      'automatically_closed', true,
+      'superseded_by_run_key', new.run_key,
+      'closed_at', timezone('utc', now())
+    ),
+    updated_at = timezone('utc', now())
+  where status = 'running'
+    and run_key <> new.run_key
+    and started_at < new.started_at;
+  return new;
+end;
+$$;
+
+drop trigger if exists price_scan_runs_close_superseded on public.price_scan_runs;
+create trigger price_scan_runs_close_superseded
+after insert or update of status, started_at on public.price_scan_runs
+for each row when (new.status = 'running')
+execute function public.close_superseded_price_scan_runs();
+
+create or replace function public.reconcile_stale_price_scan_runs(stale_after_seconds integer default 1800)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  closed_count integer;
+begin
+  update public.price_scan_runs
+  set
+    status = 'stopped',
+    completed_at = case
+      when heartbeat_at is not null or last_progress_at is not null
+        then greatest(coalesce(heartbeat_at, started_at), coalesce(last_progress_at, started_at))
+      else timezone('utc', now())
+    end,
+    duration_ms = case
+      when heartbeat_at is null and last_progress_at is null then null
+      else greatest(
+        round(extract(epoch from (
+          greatest(coalesce(heartbeat_at, started_at), coalesce(last_progress_at, started_at)) - started_at
+        )) * 1000),
+        0
+      )
+    end,
+    stopped_reason = 'No real scanner activity was recorded before the liveness deadline. The saved partial results were preserved.',
+    stopped_reason_code = 'heartbeat_expired',
+    sync_status = case when sync_status = 'completed' then sync_status else 'partial' end,
+    sync_summary = coalesce(sync_summary, '{}'::jsonb) || jsonb_build_object(
+      'automatically_closed', true,
+      'liveness_timeout_seconds', greatest(stale_after_seconds, 60),
+      'last_heartbeat_at', heartbeat_at,
+      'last_progress_at', last_progress_at,
+      'closed_at', timezone('utc', now())
+    ),
+    updated_at = timezone('utc', now())
+  where status = 'running'
+    and greatest(
+      coalesce(heartbeat_at, started_at),
+      coalesce(last_progress_at, started_at)
+    ) < timezone('utc', now()) - make_interval(secs => greatest(stale_after_seconds, 60));
+
+  get diagnostics closed_count = row_count;
+  return closed_count;
+end;
+$$;
+
+revoke all on function public.reconcile_stale_price_scan_runs(integer) from public;
+grant execute on function public.reconcile_stale_price_scan_runs(integer) to service_role;
 
 alter table public.newsletter_subscribers enable row level security;
 alter table public.subscriber_preferences enable row level security;

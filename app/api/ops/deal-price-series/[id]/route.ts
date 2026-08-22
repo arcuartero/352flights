@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { getOpsDealPriceSeries } from "@/lib/ops";
 import { ensureOpsAuthorized } from "@/lib/ops-auth";
-import { getPriceScanRun } from "@/lib/price-scan-runs";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,21 +14,17 @@ export async function GET(
   if (unauthorized) return unauthorized;
 
   const { id } = await context.params;
-  const result = await getPriceScanRun(id);
-
+  const result = await getOpsDealPriceSeries(id);
   if (result.error) {
+    const status = result.error === "Deal not found." ? 404 : 500;
     return NextResponse.json(
-      { ok: false, reason: "price_scan_run_read_failed", detail: result.error },
-      { status: 500 },
+      { ok: false, reason: "deal_price_series_read_failed", detail: result.error },
+      { status, headers: { "Cache-Control": "no-store" } },
     );
   }
 
-  if (!result.run) {
-    return NextResponse.json(
-      { ok: false, reason: "price_scan_run_not_found" },
-      { status: 404 },
-    );
-  }
-
-  return NextResponse.json({ ok: true, run: result.run });
+  return NextResponse.json(
+    { ok: true, series: result.series },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

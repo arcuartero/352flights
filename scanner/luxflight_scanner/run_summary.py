@@ -16,7 +16,7 @@ def _route_key(route: dict[str, Any]) -> str:
     return (
         f"{route.get('origin_airport', 'unknown')}:"
         f"{route.get('destination_airport', 'unknown')}:"
-        f"{route.get('bucket', 'unknown')}"
+        f"{route.get('max_stops', route.get('bucket', 'unknown'))}"
     )
 
 
@@ -198,6 +198,7 @@ def build_price_scan_run_summary(
             "destination_airport": route.destination_airport,
             "destination_city": route.destination_city,
             "bucket": route.bucket,
+            "buckets": list(route.supported_buckets),
             "routing": route.max_stops,
             "started": route.key in started_route_keys,
             "completed": route.key in completed_route_keys,
@@ -285,5 +286,9 @@ def build_price_scan_run_summary(
         "error_breakdown": dict(error_counts),
         "sync_status": "pending",
         "sync_summary": {},
+        # This timestamp is produced only by the active scanner process. A
+        # later sync retry reuses the saved value instead of manufacturing a
+        # new heartbeat, so it cannot make an abandoned run look alive.
+        "heartbeat_at": completed.isoformat(),
         "updated_at": completed.isoformat(),
     }

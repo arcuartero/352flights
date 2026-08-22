@@ -45,8 +45,9 @@ type ReviewDeal = {
 
 type OpsReviewQueueProps = {
   deals: ReviewDeal[];
-  priceSeries: OpsPriceSeries[];
-  totalNewDeals: number;
+  totalNewDeals: number | null;
+  page: number;
+  pageSize: number;
   bulkReviewDealAction: (formData: FormData) => void | Promise<void>;
   reviewDealAction: (formData: FormData) => void | Promise<void>;
 };
@@ -697,8 +698,9 @@ function applySortCriterion(
 
 export function OpsReviewQueue({
   deals,
-  priceSeries,
   totalNewDeals,
+  page,
+  pageSize,
   bulkReviewDealAction,
   reviewDealAction,
 }: OpsReviewQueueProps) {
@@ -710,6 +712,11 @@ export function OpsReviewQueue({
   const [sortBy, setSortBy] = useState<string[]>(["freshness"]);
   const [selectedDealIds, setSelectedDealIds] = useState<string[]>([]);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
+  const [seriesByDealId, setSeriesByDealId] = useState<
+    Record<string, OpsPriceSeries | null>
+  >({});
+  const [seriesLoading, setSeriesLoading] = useState(false);
+  const [seriesError, setSeriesError] = useState<string | null>(null);
 
   const deferredSearch = useDeferredValue(searchValue);
   const deferredMaxPrice = useDeferredValue(maxPriceFilter);
@@ -853,23 +860,64 @@ export function OpsReviewQueue({
     [filteredDeals],
   );
 
-  const priceSeriesMap = useMemo(
-    () => new Map(priceSeries.map((series) => [series.seriesKey, series])),
-    [priceSeries],
-  );
-
   const selectedDeal = useMemo(
     () => deals.find((deal) => deal.id === selectedDealId) ?? null,
     [deals, selectedDealId],
   );
 
-  const selectedSeries = useMemo(() => {
-    if (!selectedDeal?.patternKey) {
-      return null;
+  const selectedSeries = selectedDealId ? seriesByDealId[selectedDealId] ?? null : null;
+
+  useEffect(() => {
+    if (!selectedDealId || !selectedDeal?.patternKey) {
+      setSeriesLoading(false);
+      setSeriesError(null);
+      return;
     }
 
-    return priceSeriesMap.get(buildSeriesKey(selectedDeal.routeId, selectedDeal.patternKey)) ?? null;
-  }, [priceSeriesMap, selectedDeal]);
+    if (Object.prototype.hasOwnProperty.call(seriesByDealId, selectedDealId)) {
+      setSeriesLoading(false);
+      setSeriesError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSeriesLoading(true);
+    setSeriesError(null);
+
+    fetch(`/api/ops/deal-price-series/${encodeURIComponent(selectedDealId)}`, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          series?: OpsPriceSeries | null;
+          detail?: string;
+        };
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.detail ?? "Price history could not be loaded.");
+        }
+        return payload.series ?? null;
+      })
+      .then((series) => {
+        setSeriesByDealId((current) => ({ ...current, [selectedDealId]: series }));
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setSeriesError(
+            error instanceof Error ? error.message : "Price history could not be loaded.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setSeriesLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedDeal, selectedDealId, seriesByDealId]);
 
   const selectedDisplaySeries = useMemo(() => {
     if (!selectedDeal) {
@@ -880,12 +928,16 @@ export function OpsReviewQueue({
   }, [selectedDeal, selectedSeries]);
 
   const selectedSeriesMonthlyLows = useMemo(() => {
-    if (!selectedDisplaySeries) {
+    if (!selectedSeries) {
       return [];
     }
 
-    return buildMonthlyLows(selectedDisplaySeries);
-  }, [selectedDisplaySeries]);
+    return buildMonthlyLows(selectedSeries);
+  }, [selectedSeries]);
+
+  const totalPages =
+    totalNewDeals === null ? null : Math.max(1, Math.ceil(totalNewDeals / pageSize));
+  const hasNextPage = totalPages === null ? deals.length === pageSize : page < totalPages;
 
   useEffect(() => {
     const visibleIds = new Set(filteredDeals.map((deal) => deal.id));
@@ -918,7 +970,8 @@ export function OpsReviewQueue({
           <h2>New deals</h2>
         </div>
         <p>
-          {filteredDeals.length} visible now · {totalNewDeals} total new
+          {filteredDeals.length} visible now ·{" "}
+          {totalNewDeals === null ? "total could not be verified" : `${totalNewDeals} total new`}
         </p>
       </div>
 
@@ -1360,9 +1413,17 @@ export function OpsReviewQueue({
               </div>
             </div>
 
-            {selectedDisplaySeries ? (
+            {seriesLoading ? (
+              <div className="ops-empty" role="status">
+                <p>Loading this offer's price history…</p>
+              </div>
+            ) : seriesError ? (
+              <div className="ops-banner" role="alert">
+                <p>{seriesError}</p>
+              </div>
+            ) : selectedSeries ? (
               <>
-                <ReviewTrendChart series={selectedDisplaySeries} />
+                <ReviewTrendChart series={selectedSeries} />
 
                 <section className="price-monthly-lows">
                   <div className="price-monthly-lows__header">
@@ -1403,9 +1464,39 @@ export function OpsReviewQueue({
                   </div>
                 </section>
               </>
-            ) : null}
+            ) : (
+              <div className="ops-empty">
+                <p>No historical prices are available for this exact route and rule yet.</p>
+              </div>
+            )}
           </section>
         </div>
+      ) : null}
+
+      {page > 1 || hasNextPage ? (
+        <nav aria-label="New deals pages" className="ops-review-pagination">
+          {page > 1 ? (
+            <a className="ops-button ops-button--ghost" href={`/ops?dealsPage=${page - 1}`}>
+              Previous 50
+            </a>
+          ) : (
+            <span aria-disabled="true" className="ops-button ops-button--ghost is-disabled">
+              Previous 50
+            </span>
+          )}
+          <span>
+            {totalPages === null ? `Page ${page} · total unverified` : `Page ${page} of ${totalPages}`}
+          </span>
+          {hasNextPage ? (
+            <a className="ops-button ops-button--ghost" href={`/ops?dealsPage=${page + 1}`}>
+              Next 50
+            </a>
+          ) : (
+            <span aria-disabled="true" className="ops-button ops-button--ghost is-disabled">
+              Next 50
+            </span>
+          )}
+        </nav>
       ) : null}
     </section>
   );

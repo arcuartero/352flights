@@ -78,21 +78,12 @@ values
   ('LUX', 'CHQ', 'Chania', 'weekend_europe', 'Crete route with broad holiday demand and larger direct swings.', 6, 1, 7, 35, 180, 'NON_STOP'),
   ('LUX', 'HER', 'Heraklion', 'weekend_europe', 'Main Crete gateway with strong holiday demand and useful price movement.', 6, 1, 7, 35, 180, 'NON_STOP'),
   ('LUX', 'RHO', 'Rhodes', 'weekend_europe', 'Greek island route that can anchor bigger summer drops.', 6, 1, 7, 35, 180, 'NON_STOP'),
-  ('LUX', 'IST', 'Istanbul', 'long_haul', 'Longer European-edge city break with strong headline potential.', 5, 1, 7, 30, 150, 'NON_STOP'),
-  ('LUX', 'RAK', 'Marrakech', 'long_haul', 'North Africa route that routinely creates sharp leisure fare narratives.', 5, 1, 7, 30, 160, 'NON_STOP'),
-  ('LUX', 'AGA', 'Agadir', 'long_haul', 'Sun-focused route that can anchor beach-heavy sends.', 5, 1, 7, 30, 160, 'NON_STOP'),
-  ('LUX', 'TUN', 'Tunis', 'long_haul', 'Useful North Africa capital route with direct leisure appeal.', 5, 1, 7, 30, 160, 'NON_STOP'),
-  ('LUX', 'KGS', 'Kos', 'long_haul', 'Greek island route with clear package-holiday pricing patterns.', 6, 1, 7, 35, 180, 'NON_STOP'),
-  ('LUX', 'CFU', 'Corfu', 'long_haul', 'Greek island route that works well for summer-leisure alerts.', 6, 1, 7, 35, 180, 'NON_STOP'),
-  ('LUX', 'CHQ', 'Chania', 'long_haul', 'Crete route with broad holiday demand and larger direct swings.', 6, 1, 7, 35, 180, 'NON_STOP'),
-  ('LUX', 'HER', 'Heraklion', 'long_haul', 'Main Crete gateway with strong holiday demand and useful price movement.', 6, 1, 7, 35, 180, 'NON_STOP'),
-  ('LUX', 'RHO', 'Rhodes', 'long_haul', 'Greek island route that can anchor bigger summer drops.', 6, 1, 7, 35, 180, 'NON_STOP'),
   ('LUX', 'JFK', 'New York', 'long_haul', 'Flagship long-haul route that justifies premium tiers later.', 7, null, null, 45, 220, 'ONE_STOP_OR_FEWER'),
   ('LUX', 'EWR', 'New York', 'long_haul', 'Alternative New York inventory to avoid single-airport blind spots.', 7, null, null, 45, 220, 'ONE_STOP_OR_FEWER'),
   ('LUX', 'DXB', 'Dubai', 'long_haul', 'Sun-seeking Gulf route with strong promotional copy potential.', 6, null, null, 40, 200, 'ONE_STOP_OR_FEWER'),
   ('LUX', 'AUH', 'Abu Dhabi', 'long_haul', 'Gulf alternative with premium-leaning long-haul demand.', 6, null, null, 40, 200, 'ONE_STOP_OR_FEWER'),
   ('LUX', 'NRT', 'Tokyo', 'long_haul', 'The aspirational route that drives shares even when sends are less frequent.', 8, null, null, 60, 260, 'ONE_STOP_OR_FEWER')
-on conflict (origin_airport, destination_airport, bucket) do update
+on conflict (origin_airport, destination_airport, max_stops) do update
 set
   destination_city = excluded.destination_city,
   teaser = excluded.teaser,
@@ -162,8 +153,17 @@ values
   ('LUX', 'NBE', 'Enfidha', 'long_haul', 'Tunisian resort gateway serving Enfidha.', 7, 1, 14, 3, 250, 'NON_STOP'),
   ('LUX', 'MIR', 'Monastir', 'long_haul', 'Tunisian coast route serving Monastir.', 7, 1, 14, 3, 250, 'NON_STOP'),
   ('LUX', 'ADB', 'Izmir', 'weekend_europe', 'Aegean Turkey route serving Izmir and the coast.', 4, 1, 7, 3, 250, 'NON_STOP')
-on conflict (origin_airport, destination_airport, bucket) do update
+on conflict (origin_airport, destination_airport, max_stops) do update
 set destination_city = excluded.destination_city, teaser = excluded.teaser,
   trip_nights = excluded.trip_nights, min_trip_nights = excluded.min_trip_nights,
   max_trip_nights = excluded.max_trip_nights, lookahead_start_days = excluded.lookahead_start_days,
   lookahead_end_days = excluded.lookahead_end_days, max_stops = excluded.max_stops, is_active = true;
+
+update public.scanned_routes
+set buckets = array[bucket]::text[];
+
+update public.scanned_routes
+set buckets = array['weekend_europe', 'long_haul']::text[]
+where origin_airport = 'LUX'
+  and destination_airport in ('IST', 'RAK', 'AGA', 'TUN', 'KGS', 'CFU', 'CHQ', 'HER', 'RHO')
+  and max_stops = 'NON_STOP';

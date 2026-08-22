@@ -128,7 +128,13 @@ class LocalStore:
         ]
         return list(reversed(snapshots[-limit:]))
 
-    def save_snapshot(self, route_id: str, snapshot: SnapshotRecord) -> str:
+    def save_snapshot(
+        self,
+        route_id: str,
+        snapshot: SnapshotRecord,
+        *,
+        scan_run_key: str | None = None,
+    ) -> str:
         if has_non_positive_price(snapshot.price):
             raise ValueError(f"Refusing to save non-positive snapshot price for route_id={route_id}.")
 
@@ -146,6 +152,7 @@ class LocalStore:
                 "price": snapshot.price,
                 "currency": snapshot.currency,
                 "metadata": snapshot.metadata,
+                "scan_run_key": scan_run_key,
             }
         )
         self._persist()
@@ -212,7 +219,7 @@ class LocalStore:
             self._persist()
             return
 
-    def save_scan_run(self, summary: dict[str, Any]) -> None:
+    def save_scan_run(self, summary: dict[str, Any]) -> str:
         run_key = str(summary["run_key"])
         payload = dict(summary)
         payload.pop("sync", None)
@@ -222,10 +229,11 @@ class LocalStore:
                 continue
             self._state["price_scan_runs"][index] = payload
             self._persist()
-            return
+            return run_key
 
         self._state["price_scan_runs"].append(payload)
         self._persist()
+        return run_key
 
     def save_date_scan_run(self, summary: dict[str, Any]) -> None:
         run_key = str(summary["run_key"])
@@ -409,6 +417,7 @@ class SupabaseStore:
             },
             timeout=30.0,
         )
+        self.price_scan_run_ids: dict[str, str] = {}
 
     def _route_payload(self, route: RouteSeed) -> dict[str, Any]:
         return {
@@ -416,6 +425,7 @@ class SupabaseStore:
             "destination_airport": route.destination_airport,
             "destination_city": route.destination_city,
             "bucket": route.bucket,
+            "buckets": list(route.supported_buckets),
             "teaser": route.teaser,
             "trip_nights": route.trip_nights,
             "min_trip_nights": route.search_min_trip_nights,
@@ -470,7 +480,7 @@ class SupabaseStore:
             params={
                 "origin_airport": f"eq.{route.origin_airport}",
                 "destination_airport": f"eq.{route.destination_airport}",
-                "bucket": f"eq.{route.bucket}",
+                "max_stops": f"eq.{route.max_stops}",
                 "select": "id",
                 "limit": "1",
             },
@@ -530,15 +540,49 @@ class SupabaseStore:
         ]
         return prices[:limit]
 
-    def find_synced_snapshot(self, route_id: str, local_snapshot_id: str) -> str | None:
-        response = self.client.get(
-            "/rest/v1/price_snapshots",
+    def _price_scan_run_id(self, scan_run_key: str) -> str:
+        scan_run_id = self.price_scan_run_ids.get(scan_run_key)
+        if scan_run_id is not None:
+            return scan_run_id
+
+        run_response = self.client.get(
+            "/rest/v1/price_scan_runs",
             params={
-                "route_id": f"eq.{route_id}",
-                "metadata->>local_snapshot_id": f"eq.{local_snapshot_id}",
+                "run_key": f"eq.{scan_run_key}",
                 "select": "id",
                 "limit": "1",
             },
+        )
+        run_response.raise_for_status()
+        run_rows = run_response.json()
+        if not run_rows:
+            raise RuntimeError(
+                f"Cannot link snapshot to missing price scan run {scan_run_key!r}."
+            )
+
+        scan_run_id = str(run_rows[0]["id"])
+        self.price_scan_run_ids[scan_run_key] = scan_run_id
+        return scan_run_id
+
+    def find_synced_snapshot(
+        self,
+        route_id: str,
+        local_snapshot_id: str,
+        *,
+        scan_run_key: str | None = None,
+    ) -> str | None:
+        params = {
+            "route_id": f"eq.{route_id}",
+            "metadata->>local_snapshot_id": f"eq.{local_snapshot_id}",
+            "select": "id",
+            "limit": "1",
+        }
+        if scan_run_key:
+            params["scan_run_id"] = f"eq.{self._price_scan_run_id(scan_run_key)}"
+
+        response = self.client.get(
+            "/rest/v1/price_snapshots",
+            params=params,
         )
         response.raise_for_status()
         data = response.json()
@@ -552,6 +596,7 @@ class SupabaseStore:
         snapshot: SnapshotRecord,
         *,
         scanned_at: str | None = None,
+        scan_run_key: str | None = None,
     ) -> str:
         if has_non_positive_price(snapshot.price):
             raise ValueError(f"Refusing to save non-positive snapshot price for route_id={route_id}.")
@@ -568,6 +613,8 @@ class SupabaseStore:
         }
         if scanned_at:
             payload["scanned_at"] = scanned_at
+        if scan_run_key:
+            payload["scan_run_id"] = self._price_scan_run_id(scan_run_key)
 
         response = self._post_with_retry(
             "/rest/v1/price_snapshots",
@@ -611,7 +658,9 @@ class SupabaseStore:
         )
         response.raise_for_status()
         data = response.json()
-        return str(data[0]["id"]) if data else str(summary["run_key"])
+        run_id = str(data[0]["id"]) if data else str(summary["run_key"])
+        self.price_scan_run_ids[str(summary["run_key"])] = run_id
+        return run_id
 
     def save_date_scan_run(self, summary: dict[str, Any]) -> str:
         payload = {

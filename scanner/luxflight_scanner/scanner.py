@@ -116,6 +116,9 @@ def load_routes(config: ScannerConfig) -> list[RouteSeed]:
                 SearchPattern(**pattern)
                 for pattern in raw_patterns
             )
+        raw_buckets = route_payload.get("buckets")
+        if isinstance(raw_buckets, list):
+            route_payload["buckets"] = tuple(str(bucket) for bucket in raw_buckets)
 
         route = replace(
             RouteSeed(**route_payload),
@@ -146,6 +149,7 @@ def load_routes(config: ScannerConfig) -> list[RouteSeed]:
             lookahead_start_days=GLOBAL_LOOKAHEAD_START_DAYS,
             lookahead_end_days=GLOBAL_LOOKAHEAD_END_DAYS,
             patterns=merged_patterns,
+            buckets=tuple(dict.fromkeys((*existing.supported_buckets, *route.supported_buckets))),
         )
 
     return list(grouped_routes.values())
@@ -443,6 +447,7 @@ class LuxFlightScanner:
         local_snapshot_id: str,
         snapshot: SnapshotRecord,
         candidate: DealCandidate | None,
+        scan_run_key: str,
     ) -> None:
         should_sync_snapshot = self.config.sync_snapshots_live or (
             candidate is not None and self.config.sync_deals_live
@@ -466,6 +471,7 @@ class LuxFlightScanner:
             remote_snapshot_id = self.live_sync_store.find_synced_snapshot(
                 remote_route_id,
                 local_snapshot_id,
+                scan_run_key=scan_run_key,
             )
             if remote_snapshot_id is None:
                 remote_snapshot_id = self.live_sync_store.save_snapshot(
@@ -477,6 +483,7 @@ class LuxFlightScanner:
                         snapshot,
                     ),
                     scanned_at=local_snapshot.get("scanned_at"),
+                    scan_run_key=scan_run_key,
                 )
 
             self.store.mark_snapshot_synced(local_snapshot_id, remote_snapshot_id)
@@ -933,6 +940,7 @@ class LuxFlightScanner:
                 "destination_airport": route.destination_airport,
                 "destination_city": route.destination_city,
                 "bucket": route.bucket,
+                "buckets": list(route.supported_buckets),
                 "search_min_trip_nights": route.search_min_trip_nights,
                 "search_max_trip_nights": route.search_max_trip_nights,
                 **LuxFlightScanner._pattern_metadata(pattern),
@@ -960,6 +968,7 @@ class LuxFlightScanner:
             "destination_airport": route.destination_airport,
             "destination_city": route.destination_city,
             "bucket": route.bucket,
+            "buckets": list(route.supported_buckets),
             "search_min_trip_nights": route.search_min_trip_nights,
             "search_max_trip_nights": route.search_max_trip_nights,
             "airline_names": airline_names,
@@ -1044,6 +1053,7 @@ class LuxFlightScanner:
             "route_label": f"{route.origin_airport} -> {route.destination_airport}",
             "destination_city": route.destination_city,
             "bucket": route.bucket,
+            "buckets": list(route.supported_buckets),
             "routing": self._routing_label(effective_max_stops),
             "pattern_label": pattern.label,
             "trip_nights": pattern.trip_nights,
@@ -1838,7 +1848,7 @@ class LuxFlightScanner:
                 bucket["count"] = int(bucket["count"]) + 1
                 bucket["best_price"] = min(float(bucket["best_price"]), float(result.price))
 
-        defaults = {pattern.key for pattern in self._default_patterns_for_bucket(route.bucket)}
+        defaults = {pattern.key for pattern in self._default_patterns_for_route_seed(route)}
         if any(pattern_key in defaults for pattern_key in observed):
             return [], "uses_defaults"
 
@@ -2342,6 +2352,7 @@ class LuxFlightScanner:
                         "destination_airport": route.destination_airport,
                         "destination_city": route.destination_city,
                         "bucket": route.bucket,
+                        "buckets": list(route.supported_buckets),
                         "search_min_trip_nights": route.search_min_trip_nights,
                         "search_max_trip_nights": route.search_max_trip_nights,
                         **self._pattern_metadata(pattern),
@@ -2791,6 +2802,7 @@ class LuxFlightScanner:
             "route_label": f"{route.origin_airport} -> {route.destination_airport}",
             "destination_city": route.destination_city,
             "bucket": route.bucket,
+            "buckets": list(route.supported_buckets),
             "routing": self._routing_label(snapshot.max_stops),
             "configured_routing": self._routing_label(route.max_stops),
             "pattern_label": pattern_label if isinstance(pattern_label, str) else "Unknown pattern",
@@ -3050,7 +3062,11 @@ class LuxFlightScanner:
                             batch_prices,
                         )
                         try:
-                            snapshot_id = self.store.save_snapshot(route_id, snapshot)
+                            snapshot_id = self.store.save_snapshot(
+                                route_id,
+                                snapshot,
+                                scan_run_key=run_key,
+                            )
                             if candidate is not None:
                                 self.store.save_deal(route_id, snapshot_id, candidate)
                             self._sync_snapshot_live(
@@ -3059,6 +3075,7 @@ class LuxFlightScanner:
                                 snapshot_id,
                                 snapshot,
                                 candidate,
+                                run_key,
                             )
                         except Exception as error:  # pragma: no cover - depends on live network behavior
                             error_type = self._classify_error_type(error)

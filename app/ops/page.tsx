@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import {
   bulkReviewDealAction,
   deleteSubscriberAction,
@@ -10,7 +12,12 @@ import {
 } from "@/components/ops-health-never-snapshot-card";
 import { OpsReviewQueue } from "@/components/ops-review-queue";
 import { OpsSubnav } from "@/components/ops-subnav";
-import { getOpsDashboardData } from "@/lib/ops";
+import {
+  getOpsReviewQueueData,
+  getOpsScannerData,
+  getOpsSubscribersData,
+  getOpsSummaryData,
+} from "@/lib/ops";
 import { formatStayBucketLabel } from "@/lib/stay-buckets";
 
 export const dynamic = "force-dynamic";
@@ -200,8 +207,20 @@ function explainScannerHealthAlert(alert: {
   return `This warning exists because the route has missed ${alert.missedScanRuns} recent runs, but not long enough to call it fully broken yet. It usually means the current schedule, exact weekday rule${alert.activeRuleCount === 1 ? "" : "s"}, or live price availability are starting to drift apart.`;
 }
 
-export default async function OpsPage() {
-  const dashboard = await getOpsDashboardData();
+async function OpsDeferredDetails() {
+  const [subscribersData, scannerData] = await Promise.all([
+    getOpsSubscribersData(50),
+    getOpsScannerData(),
+  ]);
+  const dashboard = {
+    subscribers: subscribersData.subscribers,
+    subscribersVerified: subscribersData.schemaReady && !subscribersData.onboardingMessage,
+    subscribersError: subscribersData.onboardingMessage,
+    scannerHealth: scannerData.scannerHealth,
+    automatedAlerts: scannerData.automatedAlerts,
+    scannerVerified: scannerData.schemaReady && !scannerData.onboardingMessage,
+    scannerError: scannerData.onboardingMessage,
+  };
   const buildHealthRouteDetail = (
     route: (typeof dashboard.scannerHealth.neverSnapshotRoutes)[number],
   ): OpsHealthDetailItem => ({
@@ -386,18 +405,12 @@ export default async function OpsPage() {
     .sort((left, right) => left.title.localeCompare(right.title));
 
   return (
-    <main className="ops-shell">
-      {dashboard.onboardingMessage ? (
-        <section className="ops-banner" role="status">
-          <p>{dashboard.onboardingMessage}</p>
-        </section>
-      ) : null}
-
-      <OpsSubnav />
-
+    <>
       <section
         className={`ops-panel ops-automated-alerts ${
-          dashboard.automatedAlerts.critical > 0
+          !dashboard.scannerVerified
+            ? "is-unverified"
+            : dashboard.automatedAlerts.critical > 0
             ? "is-critical"
             : dashboard.automatedAlerts.warning > 0
               ? "is-warning"
@@ -411,13 +424,26 @@ export default async function OpsPage() {
             <h2>Scanner watch</h2>
           </div>
           <p>
-            {dashboard.automatedAlerts.total === 0
+            {!dashboard.scannerVerified
+              ? "Could not verify scanner status."
+              : dashboard.automatedAlerts.total === 0
               ? "No active operational alerts."
               : `${dashboard.automatedAlerts.critical} critical · ${dashboard.automatedAlerts.warning} warning`}
           </p>
         </div>
 
-        {dashboard.automatedAlerts.items.length === 0 ? (
+        {!dashboard.scannerVerified ? (
+          <div className="ops-alert-empty" role="status">
+            <span className="ops-send-badge is-unverified">Unverified</span>
+            <p>
+              Scanner health is temporarily unavailable. This does not mean the scanner is healthy
+              or unhealthy; the check could not be completed.
+            </p>
+            {dashboard.scannerError ? (
+              <small className="ops-verification-error">{dashboard.scannerError}</small>
+            ) : null}
+          </div>
+        ) : dashboard.automatedAlerts.items.length === 0 ? (
           <div className="ops-alert-empty">
             <span className="ops-send-badge is-live">Healthy</span>
             <p>Scanner runs, route freshness, and recent Supabase sync signals look normal.</p>
@@ -450,44 +476,6 @@ export default async function OpsPage() {
         )}
       </section>
 
-      <section className="ops-metrics" aria-label="Operational metrics">
-        <article>
-          <span>Subscribers</span>
-          <strong>{dashboard.metrics.subscribers}</strong>
-        </article>
-        <article>
-          <span>Active routes</span>
-          <strong>{dashboard.metrics.activeRoutes}</strong>
-        </article>
-        <article>
-          <span>New deals</span>
-          <strong>{dashboard.metrics.newDeals}</strong>
-        </article>
-        <article>
-          <span>Snapshots in 24h</span>
-          <strong>{dashboard.metrics.snapshots24h}</strong>
-        </article>
-      </section>
-
-      <section className="ops-state-strip" aria-label="Deal lifecycle states">
-        <article>
-          <span>New</span>
-          <strong>{dashboard.dealStateCounts.new}</strong>
-        </article>
-        <article>
-          <span>Reviewed</span>
-          <strong>{dashboard.dealStateCounts.reviewed}</strong>
-        </article>
-        <article>
-          <span>Sent</span>
-          <strong>{dashboard.dealStateCounts.sent}</strong>
-        </article>
-        <article>
-          <span>Expired</span>
-          <strong>{dashboard.dealStateCounts.expired}</strong>
-        </article>
-      </section>
-
       <section className="ops-panel ops-panel--wide">
         <div className="ops-panel__header">
           <div>
@@ -497,7 +485,14 @@ export default async function OpsPage() {
           <p>Edit core subscriber fields here, or open the saved preference page for the full profile.</p>
         </div>
 
-        {dashboard.subscribers.length === 0 ? (
+        {!dashboard.subscribersVerified ? (
+          <div className="ops-empty" role="status">
+            <p>Subscribers are temporarily unavailable. Could not verify this section.</p>
+            {dashboard.subscribersError ? (
+              <small className="ops-verification-error">{dashboard.subscribersError}</small>
+            ) : null}
+          </div>
+        ) : dashboard.subscribers.length === 0 ? (
           <div className="ops-empty">
             <p>No subscribers found yet.</p>
           </div>
@@ -632,30 +627,76 @@ export default async function OpsPage() {
       </section>
 
       <section className="ops-grid">
-        <section className="ops-panel ops-panel--wide">
+        {!dashboard.scannerVerified ? (
+          <section className="ops-panel ops-panel--wide is-unverified" role="status">
+            <div className="ops-panel__header">
+              <div>
+                <p className="ops-panel__eyebrow">Health</p>
+                <h2>Scanner health</h2>
+              </div>
+              <p>Could not verify.</p>
+            </div>
+            <div className="ops-empty">
+              <p>
+                Scanner runs, route coverage, and missing-price alerts are temporarily unavailable.
+                Other sections of /ops can still be used.
+              </p>
+              {dashboard.scannerError ? (
+                <small className="ops-verification-error">{dashboard.scannerError}</small>
+              ) : null}
+            </div>
+          </section>
+        ) : (
+          <section className="ops-panel ops-panel--wide">
           <div className="ops-panel__header">
             <div>
               <p className="ops-panel__eyebrow">Health</p>
               <h2>Scanner health</h2>
             </div>
             <p>
-              Flags routes that missed fresh prices in 3 or more recent snapshot-writing runs.
+              Uses the scanner&apos;s recorded executions directly; it no longer guesses runs from
+              gaps between saved prices.
             </p>
           </div>
 
           <dl className="ops-send-stats">
             <div>
-              <dt>Latest snapshot run</dt>
+              <dt>Latest recorded run</dt>
               <dd>{formatDateTime(dashboard.scannerHealth.latestRunAt)}</dd>
             </div>
             <div>
-              <dt>Previous snapshot run</dt>
+              <dt>Previous recorded run</dt>
               <dd>{formatDateTime(dashboard.scannerHealth.previousRunAt)}</dd>
             </div>
             <div>
-              <dt>Latest snapshot coverage</dt>
+              <dt>Latest run status</dt>
               <dd>
-                {dashboard.scannerHealth.routesSeenInLatestRun}/{dashboard.scannerHealth.activeRoutes}
+                {dashboard.scannerHealth.latestRun
+                  ? dashboard.scannerHealth.latestRun.status.replaceAll("_", " ")
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>Latest run progress</dt>
+              <dd>
+                {dashboard.scannerHealth.latestRun
+                  ? `${dashboard.scannerHealth.latestRun.routesCompleted}/${dashboard.scannerHealth.latestRun.routesPlanned}`
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>Prices / errors</dt>
+              <dd>
+                {dashboard.scannerHealth.latestRun
+                  ? `${dashboard.scannerHealth.latestRun.foundPrices}/${dashboard.scannerHealth.latestRun.errors}`
+                  : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>Latest run price coverage</dt>
+              <dd>
+                {dashboard.scannerHealth.routesSeenInLatestRun}/
+                {dashboard.scannerHealth.routesPlannedInLatestRun}
               </dd>
             </div>
             <div>
@@ -668,8 +709,8 @@ export default async function OpsPage() {
                 dashboard.scannerHealth.latestRunAt
                   ? `${dashboard.scannerHealth.routesMissingLatestRun} active ${
                       dashboard.scannerHealth.routesMissingLatestRun === 1 ? "route was" : "routes were"
-                    } missing a fresh price in the latest snapshot-writing run.`
-                  : "No completed snapshot-writing run is visible yet."
+                    } included in the latest recorded execution but did not produce a price.`
+                  : "No completed scanner execution is visible yet."
               }
               dialogTitle="Routes without a fresh price in the latest run"
               hintLabel="Open details"
@@ -724,8 +765,8 @@ export default async function OpsPage() {
           ) : dashboard.scannerHealth.alerts.length === 0 ? (
             <div className="ops-empty">
               <p>
-                Healthy right now. Across the last {dashboard.scannerHealth.recentRunCount} tracked
-                scan runs, every active route has written at least one fresh price recently.
+                Healthy right now. Across the last {dashboard.scannerHealth.recentRunCount} recorded
+                scanner executions, every attempted route has produced a fresh price recently.
               </p>
             </div>
           ) : (
@@ -835,16 +876,139 @@ export default async function OpsPage() {
               </div>
             </details>
           )}
-        </section>
-        <OpsReviewQueue
-          bulkReviewDealAction={bulkReviewDealAction}
-          deals={dashboard.newDeals}
-          priceSeries={dashboard.newDealSeries}
-          reviewDealAction={reviewDealAction}
-          totalNewDeals={dashboard.metrics.newDeals}
-        />
-
+          </section>
+        )}
       </section>
+    </>
+  );
+}
+
+async function OpsSummarySection() {
+  const summary = await getOpsSummaryData();
+
+  const metric = (value: number, error: string | null) => (
+    <>
+      <strong>{error ? "—" : value}</strong>
+      {error ? (
+        <small className="ops-verification-error" title={error}>
+          Could not verify
+        </small>
+      ) : null}
+    </>
+  );
+
+  return (
+    <>
+      <section className="ops-metrics" aria-label="Operational metrics">
+        <article className={summary.verificationErrors.subscribers ? "is-unverified" : undefined}>
+          <span>Subscribers</span>
+          {metric(summary.metrics.subscribers, summary.verificationErrors.subscribers)}
+        </article>
+        <article className={summary.verificationErrors.activeRoutes ? "is-unverified" : undefined}>
+          <span>Active routes</span>
+          {metric(summary.metrics.activeRoutes, summary.verificationErrors.activeRoutes)}
+        </article>
+        <article className={summary.verificationErrors.newDeals ? "is-unverified" : undefined}>
+          <span>New deals</span>
+          {metric(summary.metrics.newDeals, summary.verificationErrors.newDeals)}
+        </article>
+        <article className={summary.verificationErrors.snapshots24h ? "is-unverified" : undefined}>
+          <span>Snapshots in 24h</span>
+          {metric(summary.metrics.snapshots24h, summary.verificationErrors.snapshots24h)}
+        </article>
+      </section>
+
+      <section className="ops-state-strip" aria-label="Deal lifecycle states">
+        <article className={summary.verificationErrors.newDeals ? "is-unverified" : undefined}>
+          <span>New</span>
+          {metric(summary.dealStateCounts.new, summary.verificationErrors.newDeals)}
+        </article>
+        <article className={summary.verificationErrors.reviewedDeals ? "is-unverified" : undefined}>
+          <span>Reviewed</span>
+          {metric(summary.dealStateCounts.reviewed, summary.verificationErrors.reviewedDeals)}
+        </article>
+        <article className={summary.verificationErrors.sentDeals ? "is-unverified" : undefined}>
+          <span>Sent</span>
+          {metric(summary.dealStateCounts.sent, summary.verificationErrors.sentDeals)}
+        </article>
+        <article className={summary.verificationErrors.expiredDeals ? "is-unverified" : undefined}>
+          <span>Expired</span>
+          {metric(summary.dealStateCounts.expired, summary.verificationErrors.expiredDeals)}
+        </article>
+      </section>
+    </>
+  );
+}
+
+async function OpsReviewQueueSection({ page }: { page: number }) {
+  const queue = await getOpsReviewQueueData(page, 50);
+
+  if (!queue.schemaReady || queue.onboardingMessage) {
+    return (
+      <section className="ops-panel ops-panel--wide is-unverified" role="status">
+        <div className="ops-panel__header">
+          <div>
+            <p className="ops-panel__eyebrow">Review queue</p>
+            <h2>New deals</h2>
+          </div>
+          <p>Could not verify.</p>
+        </div>
+        <div className="ops-empty">
+          <p>
+            Deals are temporarily unavailable. Metrics, scanner status, and subscribers remain
+            independent from this error.
+          </p>
+          {queue.onboardingMessage ? (
+            <small className="ops-verification-error">{queue.onboardingMessage}</small>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <OpsReviewQueue
+      bulkReviewDealAction={bulkReviewDealAction}
+      deals={queue.deals}
+      page={queue.page}
+      pageSize={queue.pageSize}
+      reviewDealAction={reviewDealAction}
+      totalNewDeals={queue.totalDeals}
+    />
+  );
+}
+
+function OpsSectionFallback({ label }: { label: string }) {
+  return (
+    <section aria-busy="true" className="ops-panel ops-panel--wide">
+      <div className="ops-empty">
+        <p>{label}</p>
+      </div>
+    </section>
+  );
+}
+
+export default async function OpsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dealsPage?: string }>;
+}) {
+  const params = await searchParams;
+  const parsedPage = Number.parseInt(params.dealsPage ?? "1", 10);
+  const dealsPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  return (
+    <main className="ops-shell">
+      <OpsSubnav />
+      <Suspense fallback={<OpsSectionFallback label="Loading quick summary…" />}>
+        <OpsSummarySection />
+      </Suspense>
+      <Suspense fallback={<OpsSectionFallback label="Loading scanner and subscribers…" />}>
+        <OpsDeferredDetails />
+      </Suspense>
+      <Suspense fallback={<OpsSectionFallback label="Loading the latest 50 deals…" />}>
+        <OpsReviewQueueSection page={dealsPage} />
+      </Suspense>
     </main>
   );
 }

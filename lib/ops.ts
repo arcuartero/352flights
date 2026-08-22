@@ -47,6 +47,7 @@ import {
 } from "@/lib/stay-buckets";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
+import { reconcileStalePriceScanRuns } from "@/lib/price-scan-runs";
 
 const DEAL_AUTO_EXPIRE_DAYS = 4;
 // Keep the last successful scan visible through short scanner outages.
@@ -136,6 +137,7 @@ type RouteRow = {
 type SnapshotRow = {
   id: number;
   route_id: string;
+  scan_run_id?: string | null;
   price: number;
   currency: string;
   departure_date: string;
@@ -386,10 +388,22 @@ type ScannerHealthAlert = {
 };
 
 type ScannerHealthSummary = {
+  latestRun: {
+    id: string;
+    status: string;
+    startedAt: string;
+    completedAt: string | null;
+    routesPlanned: number;
+    routesStarted: number;
+    routesCompleted: number;
+    foundPrices: number;
+    errors: number;
+  } | null;
   latestRunAt: string | null;
   previousRunAt: string | null;
   recentRunCount: number;
   activeRoutes: number;
+  routesPlannedInLatestRun: number;
   routesSeenInLatestRun: number;
   routesMissingLatestRun: number;
   latestRunMissingRoutes: ScannerHealthAlert[];
@@ -438,6 +452,21 @@ type ScannerHealthRuleRow = {
   max_stops: string;
   sort_order: number;
   is_active: boolean;
+};
+
+type ScannerHealthRunRow = {
+  id: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  routes_planned: number;
+  routes_started: number;
+  routes_completed: number;
+  found_prices: number;
+  timed_out: number;
+  network_outages: number;
+  hard_errors: number;
+  routes: unknown;
 };
 
 type ScannerHealthLoggedIssue = {
@@ -550,6 +579,54 @@ export type OpsDashboardData = {
   recentCampaigns: RecentCampaignSummary[];
 };
 
+export type OpsSummaryData = {
+  configured: boolean;
+  schemaReady: boolean;
+  onboardingMessage: string | null;
+  metrics: OpsDashboardData["metrics"];
+  dealStateCounts: OpsDashboardData["dealStateCounts"];
+  verificationErrors: {
+    subscribers: string | null;
+    activeRoutes: string | null;
+    newDeals: string | null;
+    reviewedDeals: string | null;
+    sentDeals: string | null;
+    expiredDeals: string | null;
+    snapshots24h: string | null;
+  };
+};
+
+export type OpsSubscribersData = {
+  configured: boolean;
+  schemaReady: boolean;
+  onboardingMessage: string | null;
+  subscribers: SubscriberSummary[];
+};
+
+export type OpsScannerData = {
+  configured: boolean;
+  schemaReady: boolean;
+  onboardingMessage: string | null;
+  scannerHealth: ScannerHealthSummary;
+  automatedAlerts: OpsAutomatedAlertsSummary;
+};
+
+export type OpsReviewQueueData = {
+  configured: boolean;
+  schemaReady: boolean;
+  onboardingMessage: string | null;
+  deals: DealSummary[];
+  totalDeals: number | null;
+  totalDealsError: string | null;
+  page: number;
+  pageSize: number;
+};
+
+export type OpsDealPriceSeriesData = {
+  series: OpsPriceSeries | null;
+  error: string | null;
+};
+
 export type PublicDealsPageData = {
   configured: boolean;
   schemaReady: boolean;
@@ -645,8 +722,24 @@ export type OpsPriceIntelligenceData = {
 };
 
 type ScannerHealthRun = {
+  id: string;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
   latestAt: string;
-  routeIds: Set<string>;
+  routesPlanned: number;
+  routesStarted: number;
+  routesCompleted: number;
+  foundPrices: number;
+  errors: number;
+  routeOutcomes: Map<
+    string,
+    {
+      started: boolean;
+      completed: boolean;
+      foundPrices: number;
+    }
+  >;
 };
 
 function formatError(error: unknown) {
@@ -814,10 +907,12 @@ function defaultDigestAutomationSummary(): DigestAutomationSummary {
 
 function defaultScannerHealthSummary(): ScannerHealthSummary {
   return {
+    latestRun: null,
     latestRunAt: null,
     previousRunAt: null,
     recentRunCount: 0,
     activeRoutes: 0,
+    routesPlannedInLatestRun: 0,
     routesSeenInLatestRun: 0,
     routesMissingLatestRun: 0,
     latestRunMissingRoutes: [],
@@ -1388,6 +1483,7 @@ function summarizeDetectedDepartureMonths(rows: ScannerHealthServiceMonthRow[]) 
 function buildScannerHealthSummary(
   routes: RouteRow[],
   snapshots: SnapshotRow[],
+  scanRunRows: ScannerHealthRunRow[],
   routeMap: ReturnType<typeof buildRouteMap>,
   serviceMonths: ScannerHealthServiceMonthRow[],
   routeRules: ScannerHealthRuleRow[],
@@ -1409,30 +1505,46 @@ function buildScannerHealthSummary(
         new Date(right.scanned_at).getTime() - new Date(left.scanned_at).getTime(),
     );
 
-  const recentRuns: ScannerHealthRun[] = [];
-  const runGapMs = 90 * 60 * 1000;
-  let previousTimestamp: number | null = null;
-
-  for (const snapshot of filteredSnapshots) {
-    const currentTimestamp = new Date(snapshot.scanned_at).getTime();
-    if (!Number.isFinite(currentTimestamp)) {
-      continue;
-    }
-
-    const currentRun = recentRuns.at(-1);
-    if (!currentRun || (previousTimestamp !== null && previousTimestamp - currentTimestamp > runGapMs)) {
-      recentRuns.push({
-        latestAt: snapshot.scanned_at,
-        routeIds: new Set([snapshot.route_id]),
+  const runs: ScannerHealthRun[] = scanRunRows.slice(0, 6).map((row) => {
+    const routeOutcomes = new Map<
+      string,
+      { started: boolean; completed: boolean; foundPrices: number }
+    >();
+    const storedRoutes = Array.isArray(row.routes) ? row.routes : [];
+    for (const storedRoute of storedRoutes) {
+      if (!storedRoute || typeof storedRoute !== "object") {
+        continue;
+      }
+      const route = storedRoute as Record<string, unknown>;
+      const routeKey = typeof route.route_key === "string" ? route.route_key : null;
+      if (!routeKey) {
+        continue;
+      }
+      const foundPrices = Number(route.found_prices ?? 0);
+      routeOutcomes.set(routeKey, {
+        started: route.started === true,
+        completed: route.completed === true,
+        foundPrices: Number.isFinite(foundPrices) ? Math.max(0, foundPrices) : 0,
       });
-    } else {
-      currentRun.routeIds.add(snapshot.route_id);
     }
 
-    previousTimestamp = currentTimestamp;
-  }
-
-  const runs = recentRuns.slice(0, 6);
+    return {
+      id: row.id,
+      status: row.status,
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
+      latestAt: row.completed_at ?? row.started_at,
+      routesPlanned: Number(row.routes_planned) || 0,
+      routesStarted: Number(row.routes_started) || 0,
+      routesCompleted: Number(row.routes_completed) || 0,
+      foundPrices: Number(row.found_prices) || 0,
+      errors:
+        (Number(row.timed_out) || 0) +
+        (Number(row.network_outages) || 0) +
+        (Number(row.hard_errors) || 0),
+      routeOutcomes,
+    };
+  });
   const latestSnapshotByRoute = new Map<string, SnapshotRow>();
   for (const snapshot of filteredSnapshots) {
     if (!latestSnapshotByRoute.has(snapshot.route_id)) {
@@ -1496,10 +1608,22 @@ function buildScannerHealthSummary(
     return left.routeLabel.localeCompare(right.routeLabel);
   };
 
+  const scannerRouteKeyById = new Map(
+    activeRoutes.map((route) => [
+      route.id,
+      `${route.origin_airport}:${route.destination_airport}:${route.max_stops}`,
+    ]),
+  );
+
   const routeDiagnostics = activeRoutes.map((route) => {
     const latestSnapshot = latestSnapshotByRoute.get(route.id) ?? null;
-    const firstSeenRunIndex = runs.findIndex((run) => run.routeIds.has(route.id));
-    const missedScanRuns = firstSeenRunIndex === -1 ? runs.length : firstSeenRunIndex;
+    const routeKey = scannerRouteKeyById.get(route.id) ?? "";
+    const attemptedRuns = runs.filter((run) => run.routeOutcomes.get(routeKey)?.started === true);
+    const firstSuccessfulRunIndex = attemptedRuns.findIndex(
+      (run) => (run.routeOutcomes.get(routeKey)?.foundPrices ?? 0) > 0,
+    );
+    const missedScanRuns =
+      firstSuccessfulRunIndex === -1 ? attemptedRuns.length : firstSuccessfulRunIndex;
 
     const routeServiceMonths = (serviceMonthsByRoute.get(route.id) ?? [])
       .filter((row) => row.routing === route.max_stops)
@@ -1609,8 +1733,15 @@ function buildScannerHealthSummary(
   const alerts = routeDiagnostics.filter((route) => route.missedScanRuns >= 3);
   alerts.sort(compareScannerHealthRoutes);
 
-  const latestRunMissingRoutes = runs[0]
-    ? routeDiagnostics.filter((route) => !runs[0].routeIds.has(route.routeId))
+  const latestRun = runs[0] ?? null;
+  const latestRunRouteKeys = new Set(latestRun?.routeOutcomes.keys() ?? []);
+  const latestRunMissingRoutes = latestRun
+    ? routeDiagnostics.filter((route) => {
+        const routeKey = scannerRouteKeyById.get(route.routeId);
+        if (!routeKey) return false;
+        const outcome = latestRun.routeOutcomes.get(routeKey);
+        return outcome ? outcome.foundPrices === 0 : false;
+      })
     : [];
   latestRunMissingRoutes.sort(compareScannerHealthRoutes);
 
@@ -1618,11 +1749,27 @@ function buildScannerHealthSummary(
   neverSnapshotRoutes.sort(compareScannerHealthRoutes);
 
   return {
-    latestRunAt: runs[0]?.latestAt ?? null,
+    latestRun: latestRun
+      ? {
+          id: latestRun.id,
+          status: latestRun.status,
+          startedAt: latestRun.startedAt,
+          completedAt: latestRun.completedAt,
+          routesPlanned: latestRun.routesPlanned,
+          routesStarted: latestRun.routesStarted,
+          routesCompleted: latestRun.routesCompleted,
+          foundPrices: latestRun.foundPrices,
+          errors: latestRun.errors,
+        }
+      : null,
+    latestRunAt: latestRun?.latestAt ?? null,
     previousRunAt: runs[1]?.latestAt ?? null,
     recentRunCount: runs.length,
     activeRoutes: activeRoutes.length,
-    routesSeenInLatestRun: runs[0]?.routeIds.size ?? 0,
+    routesPlannedInLatestRun: latestRunRouteKeys.size,
+    routesSeenInLatestRun: latestRun
+      ? [...latestRun.routeOutcomes.values()].filter((outcome) => outcome.foundPrices > 0).length
+      : 0,
     routesMissingLatestRun: latestRunMissingRoutes.length,
     latestRunMissingRoutes,
     routesWithoutAnySnapshot,
@@ -1647,9 +1794,9 @@ function buildOpsAutomatedAlertsSummary(
       kind: "scanner_not_running",
       severity: "critical",
       title: "Scanner has no completed price run",
-      summary: "No snapshot-writing run is visible yet.",
+      summary: "No recorded scanner execution is visible yet.",
       detail:
-        "The ops dashboard cannot see any completed scanner run in Supabase. Check the scheduler, service status, and scanner logs before relying on route health.",
+        "The ops dashboard cannot see a completed execution record in Supabase. Check the scheduler, service status, and scanner logs before relying on route health.",
       detectedAt: null,
     });
   } else if (
@@ -1663,8 +1810,8 @@ function buildOpsAutomatedAlertsSummary(
       kind: "scanner_not_running",
       severity,
       title: severity === "critical" ? "Scanner is overdue" : "Scanner may be late",
-      summary: `Latest snapshot run was ${formatAlertAge(latestRunAgeHours)}.`,
-      detail: `The scanner should be writing fresh price snapshots regularly. The latest visible run was at ${scannerHealth.latestRunAt}.`,
+      summary: `Latest recorded run was ${formatAlertAge(latestRunAgeHours)}.`,
+      detail: `The scanner should create execution records regularly. The latest completed run was at ${scannerHealth.latestRunAt}.`,
       detectedAt: scannerHealth.latestRunAt,
     });
   }
@@ -3190,6 +3337,460 @@ async function loadCampaignModel(sendType: CampaignSendType) {
   };
 }
 
+function opsConfigurationMessage() {
+  return "Supabase is not configured yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env first.";
+}
+
+function opsQueryMessage(message: string) {
+  return isMissingTableError(message)
+    ? "Supabase is reachable, but the latest tables are not created yet. Re-run supabase/schema.sql and then supabase/seed.sql in the SQL Editor."
+    : `Supabase responded with an error: ${message}`;
+}
+
+export async function getOpsSummaryData(): Promise<OpsSummaryData> {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const configurationError = opsConfigurationMessage();
+    return {
+      configured: false,
+      schemaReady: false,
+      onboardingMessage: configurationError,
+      metrics: { subscribers: 0, activeRoutes: 0, newDeals: 0, snapshots24h: 0 },
+      dealStateCounts: { new: 0, reviewed: 0, sent: 0, expired: 0 },
+      verificationErrors: {
+        subscribers: configurationError,
+        activeRoutes: configurationError,
+        newDeals: configurationError,
+        reviewedDeals: configurationError,
+        sentDeals: configurationError,
+        expiredDeals: configurationError,
+        snapshots24h: configurationError,
+      },
+    };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const [
+    subscriberCount,
+    routeCount,
+    newDealCount,
+    reviewedDealCount,
+    sentDealCount,
+    expiredDealCount,
+    snapshotCountQuery,
+  ] = await Promise.all([
+    countTable("newsletter_subscribers"),
+    countTable("scanned_routes", { column: "is_active", value: true }),
+    countEditorialDeals("new"),
+    countEditorialDeals("reviewed"),
+    countTable("deal_candidates", { column: "status", value: "sent" }),
+    countTable("deal_candidates", { column: "status", value: "expired" }),
+    supabase
+      .from("price_snapshots")
+      .select("*", { count: "exact", head: true })
+      .gte("scanned_at", twentyFourHoursAgo),
+  ]);
+
+  const snapshotCountError = snapshotCountQuery.error
+    ? formatError(snapshotCountQuery.error)
+    : null;
+  const errors = [
+    subscriberCount.error,
+    routeCount.error,
+    newDealCount.error,
+    reviewedDealCount.error,
+    sentDealCount.error,
+    expiredDealCount.error,
+    snapshotCountError,
+  ].filter(Boolean) as string[];
+
+  return {
+    configured: true,
+    schemaReady: errors.length === 0,
+    onboardingMessage: errors[0] ? opsQueryMessage(errors[0]) : null,
+    metrics: {
+      subscribers: subscriberCount.count,
+      activeRoutes: routeCount.count,
+      newDeals: newDealCount.count,
+      snapshots24h: snapshotCountQuery.count ?? 0,
+    },
+    dealStateCounts: {
+      new: newDealCount.count,
+      reviewed: reviewedDealCount.count,
+      sent: sentDealCount.count,
+      expired: expiredDealCount.count,
+    },
+    verificationErrors: {
+      subscribers: subscriberCount.error,
+      activeRoutes: routeCount.error,
+      newDeals: newDealCount.error,
+      reviewedDeals: reviewedDealCount.error,
+      sentDeals: sentDealCount.error,
+      expiredDeals: expiredDealCount.error,
+      snapshots24h: snapshotCountError,
+    },
+  };
+}
+
+export async function getOpsSubscribersData(limit: number = 50): Promise<OpsSubscribersData> {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      configured: false,
+      schemaReady: false,
+      onboardingMessage: opsConfigurationMessage(),
+      subscribers: [],
+    };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const subscribersQuery = await supabase
+    .from("newsletter_subscribers")
+    .select(
+      "id,email,source,status,created_at,home_airport,onboarding_completed,preference_token,unsubscribe_token,email_confirmed,preferred_locale",
+    )
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 50));
+
+  if (subscribersQuery.error) {
+    const message = formatError(subscribersQuery.error);
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: opsQueryMessage(message),
+      subscribers: [],
+    };
+  }
+
+  const subscribers = (subscribersQuery.data ?? []) as SubscriberRow[];
+  const subscriberIds = subscribers.map((subscriber) => subscriber.id);
+  const empty = { data: [], error: null };
+  const [preferencesQuery, routePreferencesQuery, customAlertRulesQuery] =
+    subscriberIds.length === 0
+      ? [empty, empty, empty]
+      : await Promise.all([
+          supabase.from("subscriber_preferences").select("*").in("subscriber_id", subscriberIds),
+          supabase
+            .from("subscriber_route_preferences")
+            .select("subscriber_id,destination_airport,destination_city,bucket,is_enabled")
+            .in("subscriber_id", subscriberIds),
+          supabase
+            .from("subscriber_custom_alerts")
+            .select("*")
+            .in("subscriber_id", subscriberIds)
+            .order("sort_order", { ascending: true }),
+        ]);
+  const errors = [
+    preferencesQuery.error ? formatError(preferencesQuery.error) : null,
+    routePreferencesQuery.error ? formatError(routePreferencesQuery.error) : null,
+    customAlertRulesQuery.error ? formatError(customAlertRulesQuery.error) : null,
+  ].filter(Boolean) as string[];
+
+  return {
+    configured: true,
+    schemaReady: errors.length === 0,
+    onboardingMessage: errors[0] ? opsQueryMessage(errors[0]) : null,
+    subscribers: errors.length
+      ? []
+      : buildSubscriberSummaries(
+          subscribers,
+          (preferencesQuery.data ?? []) as SubscriberPreferenceRow[],
+          (routePreferencesQuery.data ?? []) as SubscriberRoutePreferenceRow[],
+          (customAlertRulesQuery.data ?? []) as SubscriberCustomAlertRow[],
+        ),
+  };
+}
+
+export async function getOpsScannerData(): Promise<OpsScannerData> {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      configured: false,
+      schemaReady: false,
+      onboardingMessage: opsConfigurationMessage(),
+      scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
+    };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const [routesQuery, snapshotsQuery, scanRunsQuery] = await Promise.all([
+    supabase
+      .from("scanned_routes")
+      .select(
+        "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
+      )
+      .order("bucket")
+      .order("destination_city"),
+    supabase
+      .from("ops_latest_price_snapshots")
+      .select(
+        "id,route_id,scan_run_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
+      )
+      .order("scanned_at", { ascending: false }),
+    supabase
+      .from("price_scan_runs")
+      .select(
+        "id,status,started_at,completed_at,routes_planned,routes_started,routes_completed,found_prices,timed_out,network_outages,hard_errors,routes",
+      )
+      .neq("status", "running")
+      .order("started_at", { ascending: false })
+      .limit(6),
+  ]);
+  const firstError = routesQuery.error ?? snapshotsQuery.error ?? scanRunsQuery.error;
+  if (firstError) {
+    const message = formatError(firstError);
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: opsQueryMessage(message),
+      scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
+    };
+  }
+
+  const routes = (routesQuery.data ?? []) as RouteRow[];
+  const activeRouteIds = routes.filter((route) => route.is_active).map((route) => route.id);
+  const today = new Date();
+  const windowStart = new Date(today);
+  windowStart.setDate(windowStart.getDate() + SCANNER_HEALTH_LOOKAHEAD_START_DAYS);
+  const windowEnd = new Date(today);
+  windowEnd.setDate(windowEnd.getDate() + SCANNER_HEALTH_LOOKAHEAD_END_DAYS);
+  const monthFrom = new Date(windowStart.getFullYear(), windowStart.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+  const monthTo = new Date(windowEnd.getFullYear(), windowEnd.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+  const noRows = { data: [], error: null };
+  const [serviceMonthsQuery, rulesQuery] =
+    activeRouteIds.length === 0
+      ? [noRows, noRows]
+      : await Promise.all([
+          supabase
+            .from("route_service_months")
+            .select("route_id,month_start,routing,departure_dates,departure_weekdays,last_checked_at")
+            .in("route_id", activeRouteIds)
+            .gte("month_start", monthFrom)
+            .lte("month_start", monthTo)
+            .order("month_start"),
+          supabase
+            .from("route_search_rules")
+            .select(
+              "route_id,month_start,pattern_label,departure_weekday,return_weekday,trip_nights,max_stops,sort_order,is_active",
+            )
+            .in("route_id", activeRouteIds)
+            .gte("month_start", monthFrom)
+            .lte("month_start", monthTo)
+            .order("month_start")
+            .order("sort_order"),
+        ]);
+  const contextError = serviceMonthsQuery.error ?? rulesQuery.error;
+  if (contextError) {
+    const message = formatError(contextError);
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: opsQueryMessage(message),
+      scannerHealth: defaultScannerHealthSummary(),
+      automatedAlerts: defaultOpsAutomatedAlertsSummary(),
+    };
+  }
+
+  const routeMap = buildRouteMap(routes);
+  const latestIssues = await readLatestScannerIssuesByRoute();
+  const scannerHealth = buildScannerHealthSummary(
+    routes,
+    (snapshotsQuery.data ?? []) as SnapshotRow[],
+    (scanRunsQuery.data ?? []) as ScannerHealthRunRow[],
+    routeMap,
+    (serviceMonthsQuery.data ?? []) as ScannerHealthServiceMonthRow[],
+    (rulesQuery.data ?? []) as ScannerHealthRuleRow[],
+    latestIssues,
+  );
+
+  return {
+    configured: true,
+    schemaReady: true,
+    onboardingMessage: null,
+    scannerHealth,
+    automatedAlerts: buildOpsAutomatedAlertsSummary(scannerHealth, latestIssues.syncFailures),
+  };
+}
+
+export async function getOpsReviewQueueData(
+  requestedPage: number = 1,
+  requestedPageSize: number = 50,
+): Promise<OpsReviewQueueData> {
+  const page = Math.max(1, Math.floor(requestedPage));
+  const pageSize = Math.min(50, Math.max(1, Math.floor(requestedPageSize)));
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      configured: false,
+      schemaReady: false,
+      onboardingMessage: opsConfigurationMessage(),
+      deals: [],
+      totalDeals: null,
+      totalDealsError: opsConfigurationMessage(),
+      page,
+      pageSize,
+    };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const [countResult, dealsQuery] = await Promise.all([
+    countEditorialDeals("new"),
+    supabase
+      .from("deal_candidates")
+      .select(
+        "id,route_id,snapshot_id,title,summary,deal_price,baseline_price,drop_ratio,score,send_type,status,created_at",
+      )
+      .eq("status", "new")
+      .lte("drop_ratio", EDITORIAL_DEAL_MAX_DROP_RATIO)
+      .order("score", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(from, to),
+  ]);
+  const dealsError = dealsQuery.error ? formatError(dealsQuery.error) : null;
+  if (dealsError) {
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: opsQueryMessage(dealsError),
+      deals: [],
+      totalDeals: countResult.error ? null : countResult.count,
+      totalDealsError: countResult.error,
+      page,
+      pageSize,
+    };
+  }
+
+  const dealRows = (dealsQuery.data ?? []) as DealRow[];
+  const routeIds = unique(dealRows.map((deal) => deal.route_id));
+  const snapshotIds = unique(dealRows.map((deal) => deal.snapshot_id));
+  const noRows = { data: [], error: null };
+  const [routesQuery, snapshotsQuery] = await Promise.all([
+    routeIds.length === 0
+      ? noRows
+      : supabase
+          .from("scanned_routes")
+          .select(
+            "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
+          )
+          .in("id", routeIds),
+    snapshotIds.length === 0
+      ? noRows
+      : supabase
+          .from("price_snapshots")
+          .select(
+            "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
+          )
+          .in("id", snapshotIds),
+  ]);
+  const relatedError = routesQuery.error ?? snapshotsQuery.error;
+  if (relatedError) {
+    return {
+      configured: true,
+      schemaReady: false,
+      onboardingMessage: opsQueryMessage(formatError(relatedError)),
+      deals: [],
+      totalDeals: countResult.error ? null : countResult.count,
+      totalDealsError: countResult.error,
+      page,
+      pageSize,
+    };
+  }
+
+  const routes = (routesQuery.data ?? []) as RouteRow[];
+  const snapshotMap = new Map(
+    ((snapshotsQuery.data ?? []) as SnapshotRow[]).map((snapshot) => [snapshot.id, snapshot]),
+  );
+
+  return {
+    configured: true,
+    schemaReady: true,
+    onboardingMessage: null,
+    deals: enrichDeals(dealRows, buildRouteMap(routes), snapshotMap, new Map()),
+    totalDeals: countResult.error ? null : countResult.count,
+    totalDealsError: countResult.error,
+    page,
+    pageSize,
+  };
+}
+
+export async function getOpsDealPriceSeries(
+  dealId: string,
+  limit: number = 180,
+): Promise<OpsDealPriceSeriesData> {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { series: null, error: opsConfigurationMessage() };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const dealQuery = await supabase
+    .from("deal_candidates")
+    .select("route_id,snapshot_id")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (dealQuery.error) {
+    return { series: null, error: formatError(dealQuery.error) };
+  }
+  if (!dealQuery.data) {
+    return { series: null, error: "Deal not found." };
+  }
+
+  const [routeQuery, selectedSnapshotQuery] = await Promise.all([
+    supabase
+      .from("scanned_routes")
+      .select(
+        "id,origin_airport,destination_airport,destination_city,bucket,trip_nights,min_trip_nights,max_trip_nights,max_stops,is_active",
+      )
+      .eq("id", dealQuery.data.route_id)
+      .maybeSingle(),
+    supabase
+      .from("price_snapshots")
+      .select("metadata")
+      .eq("id", dealQuery.data.snapshot_id)
+      .maybeSingle(),
+  ]);
+  const setupError = routeQuery.error ?? selectedSnapshotQuery.error;
+  if (setupError) {
+    return { series: null, error: formatError(setupError) };
+  }
+  if (!routeQuery.data) {
+    return { series: null, error: "Route not found." };
+  }
+
+  const patternKey = extractPatternKey(
+    (selectedSnapshotQuery.data?.metadata as Record<string, unknown> | null) ?? null,
+  );
+  if (!patternKey) {
+    return { series: null, error: null };
+  }
+
+  const historyQuery = await supabase
+    .from("price_snapshots")
+    .select(
+      "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
+    )
+    .eq("route_id", dealQuery.data.route_id)
+    .eq("metadata->>pattern_key", patternKey)
+    .order("scanned_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(Math.min(365, Math.max(1, limit)));
+  if (historyQuery.error) {
+    return { series: null, error: formatError(historyQuery.error) };
+  }
+
+  const route = routeQuery.data as RouteRow;
+  const seriesKey = buildSeriesKey(route.id, patternKey);
+  const series = buildPriceSeries(
+    (historyQuery.data ?? []) as SnapshotRow[],
+    buildRouteMap([route]),
+  ).find((item) => item.seriesKey === seriesKey);
+  return { series: series ?? null, error: null };
+}
+
 export async function getOpsDashboardData(): Promise<OpsDashboardData> {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return {
@@ -3244,6 +3845,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     reviewedDealsQuery,
     recentSnapshotsQuery,
     scannerHealthSnapshotsQuery,
+    scannerHealthRunsQuery,
     recentCampaignsQuery,
     automationQuery,
   ] = await Promise.all([
@@ -3306,10 +3908,17 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
       .order("scanned_at", { ascending: false })
       .limit(10),
     supabase
-      .from("price_snapshots")
-      .select("id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at")
-      .order("scanned_at", { ascending: false })
-      .limit(1200),
+      .from("ops_latest_price_snapshots")
+      .select("id,route_id,scan_run_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at")
+      .order("scanned_at", { ascending: false }),
+    supabase
+      .from("price_scan_runs")
+      .select(
+        "id,status,started_at,completed_at,routes_planned,routes_started,routes_completed,found_prices,timed_out,network_outages,hard_errors,routes",
+      )
+      .neq("status", "running")
+      .order("started_at", { ascending: false })
+      .limit(6),
     supabase
       .from("email_campaigns")
       .select(
@@ -3341,6 +3950,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
     reviewedDealsQuery.error ? formatError(reviewedDealsQuery.error) : null,
     recentSnapshotsQuery.error ? formatError(recentSnapshotsQuery.error) : null,
     scannerHealthSnapshotsQuery.error ? formatError(scannerHealthSnapshotsQuery.error) : null,
+    scannerHealthRunsQuery.error ? formatError(scannerHealthRunsQuery.error) : null,
     recentCampaignsQuery.error ? formatError(recentCampaignsQuery.error) : null,
     automationQuery.error ? formatError(automationQuery.error) : null,
   ].filter(Boolean) as string[];
@@ -3385,7 +3995,6 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
   const snapshotIds = unique(
     [...newDealRows, ...reviewedDealRows].map((deal) => deal.snapshot_id),
   );
-  const dealRouteIds = unique([...newDealRows, ...reviewedDealRows].map((deal) => deal.route_id));
 
   const dealSnapshotsQuery =
     snapshotIds.length === 0
@@ -3395,27 +4004,14 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
           .select("id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at")
           .in("id", snapshotIds);
 
-  const dealHistorySnapshotsQuery =
-    dealRouteIds.length === 0
-      ? { data: [] as Array<Pick<SnapshotRow, "route_id" | "metadata" | "scanned_at">>, error: null }
-      : await supabase
-          .from("price_snapshots")
-          .select("route_id,metadata,scanned_at")
-          .in("route_id", dealRouteIds)
-          .order("scanned_at", { ascending: false })
-          .limit(5000);
-
-  const newDealSeriesSnapshotsQuery =
-    dealRouteIds.length === 0
-      ? { data: [] as SnapshotRow[], error: null }
-      : await supabase
-          .from("price_snapshots")
-          .select(
-            "id,route_id,price,currency,departure_date,return_date,trip_nights,max_stops,metadata,scanned_at",
-          )
-          .in("route_id", dealRouteIds)
-          .order("scanned_at", { ascending: false })
-          .limit(1200);
+  // Historical series are intentionally not fetched for the dashboard. The
+  // exact route + pattern history is loaded through the authenticated API only
+  // when an operator opens a deal.
+  const dealHistorySnapshotsQuery = {
+    data: [] as Array<Pick<SnapshotRow, "route_id" | "metadata" | "scanned_at">>,
+    error: null,
+  };
+  const newDealSeriesSnapshotsQuery = { data: [] as SnapshotRow[], error: null };
 
   if (dealSnapshotsQuery.error) {
     const message = formatError(dealSnapshotsQuery.error);
@@ -3685,6 +4281,7 @@ export async function getOpsDashboardData(): Promise<OpsDashboardData> {
   const scannerHealth = buildScannerHealthSummary(
     routes,
     (scannerHealthSnapshotsQuery.data ?? []) as SnapshotRow[],
+    (scannerHealthRunsQuery.data ?? []) as ScannerHealthRunRow[],
     routeMap,
     (scannerHealthServiceMonthsQuery.data ?? []) as ScannerHealthServiceMonthRow[],
     (scannerHealthRulesQuery.data ?? []) as ScannerHealthRuleRow[],
@@ -4588,6 +5185,9 @@ export async function updateDigestAutomation(input: {
 }
 
 export async function runScheduledDigest(input: { force?: boolean } = {}) {
+  // The existing GitHub schedule calls this endpoint every 15 minutes. Keep
+  // scanner liveness reconciliation independent from whether a digest is due.
+  await reconcileStalePriceScanRuns();
   const opsAlerts = await sendOpsAutomatedAlertsEmail({ force: input.force }).catch((error) => ({
     status: "failed" as const,
     email: OPS_ALERT_RECIPIENT_EMAIL,

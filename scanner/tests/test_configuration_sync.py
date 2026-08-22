@@ -74,7 +74,7 @@ class ConfigurationSyncTests(unittest.TestCase):
 
             state = json.loads(state_path.read_text(encoding="utf-8"))
 
-        local_route_id = "LUX:STN:weekend_europe"
+        local_route_id = "LUX:STN:NON_STOP"
         self.assertEqual(report["search_rules_pulled"], 1)
         self.assertEqual(state["route_search_rules"][0]["route_id"], local_route_id)
         self.assertEqual(state["route_service_months"][0]["route_id"], local_route_id)

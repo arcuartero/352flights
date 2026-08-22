@@ -32,6 +32,37 @@ class ScannerWindowTests(unittest.TestCase):
         self.assertEqual(routes[0].lookahead_start_days, 3)
         self.assertEqual(routes[0].lookahead_end_days, 250)
 
+    def test_duplicate_categories_become_one_physical_route(self) -> None:
+        base_route = {
+            "origin_airport": "LUX",
+            "destination_airport": "RAK",
+            "destination_city": "Marrakech",
+            "trip_nights": 5,
+            "min_trip_nights": 1,
+            "max_trip_nights": 7,
+            "lookahead_start_days": 30,
+            "lookahead_end_days": 160,
+            "max_stops": "NON_STOP",
+            "teaser": "Marrakech",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            routes_path = Path(directory) / "routes.json"
+            routes_path.write_text(
+                json.dumps(
+                    [
+                        {**base_route, "bucket": "weekend_europe"},
+                        {**base_route, "bucket": "long_haul"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            routes = load_routes(ScannerConfig(routes_path=routes_path))
+
+        self.assertEqual(len(routes), 1)
+        self.assertEqual(routes[0].key, "LUX:RAK:NON_STOP")
+        self.assertEqual(routes[0].supported_buckets, ("weekend_europe", "long_haul"))
+
 
 if __name__ == "__main__":
     unittest.main()

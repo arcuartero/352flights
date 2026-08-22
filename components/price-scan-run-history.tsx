@@ -77,8 +77,8 @@ function formatDate(value: string | null) {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function formatDuration(value: number | null) {
-  if (value === null) return "In progress";
+function formatDuration(value: number | null, status: string) {
+  if (value === null) return status === "running" ? "In progress" : "Duration unavailable";
   const totalMinutes = Math.max(Math.round(value / 60_000), 0);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -128,20 +128,23 @@ function ItineraryDetail({ pattern }: { pattern: PriceScanPatternSummary }) {
   );
 }
 
-function statusLabel(status: string) {
-  if (status === "completed") return "Completed";
-  if (status === "completed_with_errors") return "Completed with errors";
-  if (status === "partial") return "Partial";
-  if (status === "failed") return "Failed";
-  if (status === "stopped") return "Stopped";
-  if (status === "running") return "Running";
-  return status;
+function statusLabel(run: PriceScanRun) {
+  if (run.stoppedReasonCode === "heartbeat_expired") return "Stale / unverified";
+  if (run.stoppedReasonCode === "superseded_by_new_run") return "Stopped automatically";
+  if (run.status === "completed") return "Completed";
+  if (run.status === "completed_with_errors") return "Completed with errors";
+  if (run.status === "partial") return "Partial";
+  if (run.status === "failed") return "Failed";
+  if (run.status === "stopped") return "Stopped";
+  if (run.status === "running") return "Running";
+  return run.status;
 }
 
-function statusTone(status: string) {
-  if (status === "completed") return "is-success";
-  if (status === "running") return "is-live";
-  if (status === "completed_with_errors" || status === "partial") return "is-warning";
+function statusTone(run: PriceScanRun) {
+  if (run.stoppedReasonCode === "heartbeat_expired") return "is-warning";
+  if (run.status === "completed") return "is-success";
+  if (run.status === "running") return "is-live";
+  if (run.status === "completed_with_errors" || run.status === "partial") return "is-warning";
   return "is-error";
 }
 
@@ -203,6 +206,8 @@ function buildRunExplanation(run: PriceScanRun): RunExplanation {
   let headline = "Este escaneo terminó y dejó resultados utilizables.";
   if (run.status === "running") {
     headline = "Este escaneo sigue en marcha; las cifras todavía pueden aumentar.";
+  } else if (run.stoppedReasonCode === "heartbeat_expired") {
+    headline = "Este escaneo dejó de enviar actividad real y se cerró automáticamente conservando sus resultados.";
   } else if (run.status === "failed") {
     headline = "Este escaneo falló antes de completar el trabajo previsto.";
   } else if (run.status === "stopped") {
@@ -881,11 +886,11 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                 >
                   <summary>
                     <div className="price-scan-history__run-identity">
-                      <span className={`ops-send-badge ${statusTone(run.status)}`}>
-                        {statusLabel(run.status)}
+                      <span className={`ops-send-badge ${statusTone(run)}`}>
+                        {statusLabel(run)}
                       </span>
                       <strong>{formatDateTime(run.startedAt)}</strong>
-                      <small>{run.scannerSource} · {formatDuration(run.durationMs)}</small>
+                      <small>{run.scannerSource} · {formatDuration(run.durationMs, run.status)}</small>
                     </div>
                     <div className="price-scan-history__run-stat">
                       <span>Coverage</span>
@@ -990,7 +995,15 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                       </div>
                       <div>
                         <span>Duration</span>
-                        <strong>{formatDuration(run.durationMs)}</strong>
+                        <strong>{formatDuration(run.durationMs, run.status)}</strong>
+                      </div>
+                      <div>
+                        <span>Last real activity</span>
+                        <strong>
+                          {run.heartbeatAt || run.lastProgressAt
+                            ? formatDateTime(run.heartbeatAt ?? run.lastProgressAt ?? run.startedAt)
+                            : "Not recorded"}
+                        </strong>
                       </div>
                       <div>
                         <span>Search dates</span>
@@ -1042,7 +1055,13 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                     ) : null}
 
                     {run.stoppedReason ? (
-                      <p className="ops-status ops-status--error">
+                      <p
+                        className={`ops-status ${
+                          run.stoppedReasonCode === "heartbeat_expired"
+                            ? "ops-status--warning"
+                            : "ops-status--error"
+                        }`}
+                      >
                         Run stopped: {run.stoppedReason}
                       </p>
                     ) : null}

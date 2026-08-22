@@ -29,6 +29,7 @@ class RouteSeed:
     min_trip_nights: int | None = None
     max_trip_nights: int | None = None
     patterns: tuple[SearchPattern, ...] | None = None
+    buckets: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
         min_trip_nights = self.search_min_trip_nights
@@ -43,9 +44,16 @@ class RouteSeed:
         if self.patterns is not None and len(self.patterns) == 0:
             raise ValueError("Route-specific patterns cannot be empty.")
 
+        if self.buckets is not None and len(self.buckets) == 0:
+            raise ValueError("Route categories cannot be empty.")
+
     @property
     def key(self) -> str:
-        return f"{self.origin_airport}:{self.destination_airport}:{self.bucket}"
+        return f"{self.origin_airport}:{self.destination_airport}:{self.max_stops}"
+
+    @property
+    def supported_buckets(self) -> tuple[str, ...]:
+        return self.buckets if self.buckets is not None else (self.bucket,)
 
     @property
     def search_min_trip_nights(self) -> int:

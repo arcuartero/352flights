@@ -17,6 +17,7 @@ type RouteRow = {
   destination_airport: string;
   destination_city: string;
   bucket: string;
+  buckets: string[] | null;
   max_stops: string;
   is_active: boolean;
 };
@@ -617,7 +618,7 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
     readLatestPatternDiscoveryRouteStates(),
     supabase
       .from("scanned_routes")
-      .select("id,origin_airport,destination_airport,destination_city,bucket,max_stops,is_active")
+      .select("id,origin_airport,destination_airport,destination_city,bucket,buckets,max_stops,is_active")
       .order("bucket")
       .order("destination_city"),
     supabase
@@ -677,7 +678,8 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
     const stayBuckets = Array.from(
       new Set(
         groupRoutes
-          .map((route) => normalizeStayBucket(route.bucket))
+          .flatMap((route) => route.buckets ?? [route.bucket])
+          .map((bucket) => normalizeStayBucket(bucket))
           .filter(Boolean),
       ),
     ) as StayBucketValue[];
