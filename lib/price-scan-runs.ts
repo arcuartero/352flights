@@ -461,7 +461,6 @@ export async function reconcileStalePriceScanRuns(
 
 export async function getPriceScanRunHistory(limit = 100) {
   try {
-    await reconcileStalePriceScanRuns();
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
       .from("price_scan_runs")

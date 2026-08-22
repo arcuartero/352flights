@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const unauthorized = ensureOpsAuthorized(request);
   if (unauthorized) return unauthorized;
 
-  let history = await getPriceScanRunHistory(100);
+  let history = await getPriceScanRunHistory(10);
   if (history.error) {
     return NextResponse.json(
       { ok: false, reason: "scan_history_unavailable", detail: history.error },
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     try {
       const status = await callVpsScannerAgent<VpsScannerAgentStatus>("status");
       const recovery = await recoverLatestVpsPriceScanRun(status);
-      if (recovery.recovered) history = await getPriceScanRunHistory(100);
+      if (recovery.recovered) history = await getPriceScanRunHistory(10);
     } catch {
       // Keep serving the persisted history if the VPS cannot be reached.
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { formatRoutePatternLabel } from "@/lib/route-stay";
 
@@ -30,6 +30,7 @@ type RecentSnapshotsPanelProps = {
   eyebrow?: string;
   title?: string;
   emptyMessage?: string;
+  refreshEndpoint?: string;
 };
 
 function formatCurrency(value: number, currency: string = "EUR") {
@@ -129,8 +130,47 @@ export function RecentSnapshotsPanel({
   eyebrow = "Scanner output",
   title = "Recent snapshots",
   emptyMessage = "No snapshots stored in Supabase yet. Run the scanner after the schema is applied.",
+  refreshEndpoint,
 }: RecentSnapshotsPanelProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [liveSnapshots, setLiveSnapshots] = useState(snapshots);
+  const [isLoading, setIsLoading] = useState(Boolean(refreshEndpoint));
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!refreshEndpoint) return;
+
+    const controller = new AbortController();
+    async function loadSnapshots() {
+      try {
+        const response = await fetch(refreshEndpoint as string, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          snapshots?: RecentSnapshotItem[];
+          detail?: string;
+        };
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.detail ?? "Recent snapshots could not be loaded.");
+        }
+        setLiveSnapshots(payload.snapshots ?? []);
+        setLoadError(null);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setLoadError(
+            error instanceof Error ? error.message : "Recent snapshots could not be loaded.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
+    }
+
+    void loadSnapshots();
+    return () => controller.abort();
+  }, [refreshEndpoint]);
 
   return (
     <section className="ops-panel">
@@ -147,7 +187,7 @@ export function RecentSnapshotsPanel({
             <h2>{title}</h2>
           </div>
           <div className="ops-collapsible__meta">
-            <span>{snapshots.length} in view</span>
+            <span>{liveSnapshots.length} in view</span>
             <strong>{isOpen ? "Hide" : "Show"}</strong>
           </div>
         </button>
@@ -165,13 +205,21 @@ export function RecentSnapshotsPanel({
           className="ops-collapsible__content"
           id={collapsible ? "recent-snapshots-panel-content" : undefined}
         >
-          {snapshots.length === 0 ? (
+          {isLoading ? (
+            <div className="ops-empty" role="status">
+              <p>Loading recent snapshots independently...</p>
+            </div>
+          ) : loadError ? (
+            <div className="ops-empty" role="status">
+              <p>Recent snapshots are temporarily unavailable: {loadError}</p>
+            </div>
+          ) : liveSnapshots.length === 0 ? (
             <div className="ops-empty">
               <p>{emptyMessage}</p>
             </div>
           ) : (
             <div className="ops-list">
-              {snapshots.map((snapshot) => (
+              {liveSnapshots.map((snapshot) => (
                 <article className="ops-list__item" key={snapshot.id}>
                   <div>
                     <h3>{formatRoutePatternLabel(snapshot.routeLabel, snapshot.patternLabel)}</h3>

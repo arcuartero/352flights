@@ -1,10 +1,13 @@
 import { CampaignLauncher } from "@/components/campaign-launcher";
 import { DigestAutomationPanel } from "@/components/digest-automation-panel";
-import type { OpsDashboardData } from "@/lib/ops";
+import type { OpsEmailCampaignsData } from "@/lib/ops";
 import { formatStayBucketLabel } from "@/lib/stay-buckets";
 
 type EmailCampaignsBoardProps = {
-  data: Pick<OpsDashboardData, "digestAutomation" | "sendQueue" | "subscribers" | "recentCampaigns">;
+  data: Pick<
+    OpsEmailCampaignsData,
+    "digestAutomation" | "sendQueue" | "subscribers" | "recentCampaigns"
+  >;
 };
 
 function formatDate(value: string | null) {

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { ensureOpsAuthorized } from "@/lib/ops-auth";
-import { recoverLatestVpsPriceScanRun } from "@/lib/price-scan-run-recovery";
 import {
   callVpsScannerAgent,
   hasVpsScannerAgentConfig,
@@ -24,7 +23,6 @@ export async function GET(request: Request) {
 
   try {
     const status = await callVpsScannerAgent<VpsScannerAgentStatus>("status");
-    await recoverLatestVpsPriceScanRun(status);
     return NextResponse.json(status, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });
