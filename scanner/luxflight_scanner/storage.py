@@ -398,6 +398,53 @@ class LocalStore:
 
 
 class SupabaseStore:
+    RETRYABLE_HTTP_STATUSES = {
+        408,
+        425,
+        429,
+        500,
+        502,
+        503,
+        504,
+        520,
+        521,
+        522,
+        523,
+        524,
+    }
+    SCAN_RUN_CHECKPOINT_FIELDS = {
+        "run_key",
+        "scanner_source",
+        "status",
+        "started_at",
+        "search_window_start",
+        "search_window_end",
+        "scanned_cities",
+        "routes_planned",
+        "routes_started",
+        "routes_completed",
+        "destinations_planned",
+        "destinations_scanned",
+        "patterns_planned",
+        "patterns_scanned",
+        "rules_scanned",
+        "found_prices",
+        "deal_candidates",
+        "no_results",
+        "timed_out",
+        "network_outages",
+        "hard_errors",
+        "retries",
+        "currency",
+        "min_price",
+        "max_price",
+        "average_price",
+        "median_price",
+        "no_result_breakdown",
+        "error_breakdown",
+        "heartbeat_at",
+    }
+
     def __init__(self, config: ScannerConfig):
         self.write_attempts = max(config.storage_write_attempts, 1)
         self.retry_min_seconds = min(
@@ -435,8 +482,16 @@ class SupabaseStore:
             "max_stops": route.max_stops,
         }
 
-    def _sleep_before_retry(self) -> None:
-        delay = random.uniform(self.retry_min_seconds, self.retry_max_seconds)
+    def _sleep_before_retry(self, response: httpx.Response | None = None) -> None:
+        retry_after = response.headers.get("Retry-After") if response is not None else None
+        try:
+            requested_delay = float(retry_after) if retry_after is not None else 0.0
+        except ValueError:
+            requested_delay = 0.0
+        delay = max(
+            requested_delay,
+            random.uniform(self.retry_min_seconds, self.retry_max_seconds),
+        )
         if delay > 0:
             time.sleep(delay)
 
@@ -450,20 +505,49 @@ class SupabaseStore:
         params: dict[str, str] | None = None,
     ) -> httpx.Response:
         last_error: httpx.RequestError | None = None
+        last_response: httpx.Response | None = None
 
         for attempt in range(1, self.write_attempts + 1):
             try:
-                return self.client.post(path, headers=headers, json=json, params=params)
+                response = self.client.post(path, headers=headers, json=json, params=params)
             except httpx.RequestError as error:
                 last_error = error
                 if attempt >= self.write_attempts:
                     break
                 self._sleep_before_retry()
+                continue
+
+            last_response = response
+            if (
+                response.status_code not in self.RETRYABLE_HTTP_STATUSES
+                or attempt >= self.write_attempts
+            ):
+                return response
+            self._sleep_before_retry(response)
+
+        if last_response is not None:
+            return last_response
 
         raise RuntimeError(
             f"Supabase {operation_label} failed after {self.write_attempts} attempt(s): "
             f"{last_error}"
         ) from last_error
+
+    @staticmethod
+    def _raise_for_status_with_detail(
+        response: httpx.Response,
+        *,
+        operation_label: str,
+    ) -> None:
+        if response.is_success:
+            return
+        body = response.text.strip()
+        if len(body) > 1_000:
+            body = f"{body[:1_000]}..."
+        raise RuntimeError(
+            f"Supabase {operation_label} failed with HTTP {response.status_code}: "
+            f"{body or response.reason_phrase}"
+        )
 
     @staticmethod
     def _is_missing_table_error(response: httpx.Response) -> bool:
@@ -656,7 +740,36 @@ class SupabaseStore:
             json=payload,
             params={"on_conflict": "run_key"},
         )
-        response.raise_for_status()
+        self._raise_for_status_with_detail(
+            response,
+            operation_label="price scan run upsert",
+        )
+        data = response.json()
+        run_id = str(data[0]["id"]) if data else str(summary["run_key"])
+        self.price_scan_run_ids[str(summary["run_key"])] = run_id
+        return run_id
+
+    def save_scan_run_checkpoint(self, summary: dict[str, Any]) -> str:
+        """Persist live progress without resending the growing run detail JSON."""
+        payload = {
+            key: value
+            for key, value in summary.items()
+            if key in self.SCAN_RUN_CHECKPOINT_FIELDS
+        }
+        payload["updated_at"] = utcnow_iso()
+        response = self._post_with_retry(
+            "/rest/v1/price_scan_runs",
+            operation_label="price scan run checkpoint",
+            headers={
+                "Prefer": "resolution=merge-duplicates,return=representation",
+            },
+            json=payload,
+            params={"on_conflict": "run_key"},
+        )
+        self._raise_for_status_with_detail(
+            response,
+            operation_label="price scan run checkpoint",
+        )
         data = response.json()
         run_id = str(data[0]["id"]) if data else str(summary["run_key"])
         self.price_scan_run_ids[str(summary["run_key"])] = run_id

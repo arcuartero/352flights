@@ -112,7 +112,7 @@ def build_price_scan_run_summary(
     outcomes = _outcome_counts(report)
     prices = _price_summary(report)
     route_items: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    pattern_rows: list[dict[str, Any]] = []
+    pattern_rows_by_key: dict[str, dict[str, Any]] = {}
     no_result_counts: Counter[str] = Counter()
     error_counts: Counter[str] = Counter()
 
@@ -142,43 +142,59 @@ def build_price_scan_run_summary(
             error_counts.update([str(item.get("error_type") or "hard_error")])
 
         if pattern is not None:
-            pattern_rows.append(
-                {
-                    "route_key": route_key,
-                    "route_label": (
-                        f"{route.get('origin_airport', '?')} -> "
-                        f"{route.get('destination_airport', '?')}"
-                    ),
-                    "destination_airport": route.get("destination_airport"),
-                    "destination_city": route.get("destination_city"),
-                    "bucket": route.get("bucket"),
-                    "pattern_key": pattern.get("key"),
-                    "pattern_label": pattern.get("label"),
-                    "departure_weekday": pattern.get("departure_weekday"),
-                    "return_weekday": pattern.get("return_weekday"),
-                    "trip_nights": pattern.get("trip_nights"),
-                    "status": item.get("status"),
-                    "price": snapshot.get("price") if snapshot else None,
-                    "currency": snapshot.get("currency") if snapshot else None,
-                    "departure_date": snapshot.get("departure_date") if snapshot else None,
-                    "return_date": snapshot.get("return_date") if snapshot else None,
-                    "reason_code": item.get("reason_code"),
-                    "reason": item.get("reason"),
-                    "error_type": item.get("error_type"),
-                    "error": item.get("error"),
-                    "retry_count": retry_count,
-                    "rules_scanned": 1 + retry_count,
-                    "diagnostic": diagnostic,
-                    "airline": metadata.get("airline_summary") or metadata.get("primary_airline"),
-                    "airline_code": metadata.get("primary_airline_code"),
-                    "outbound_departure_at": metadata.get("outbound_departure_at"),
-                    "outbound_arrival_at": metadata.get("outbound_arrival_at"),
-                    "return_departure_at": metadata.get("return_departure_at"),
-                    "return_arrival_at": metadata.get("return_arrival_at"),
-                    "outbound_stop_count": metadata.get("outbound_stop_count"),
-                    "return_stop_count": metadata.get("return_stop_count"),
-                }
-            )
+            pattern_row = {
+                "route_key": route_key,
+                "route_label": (
+                    f"{route.get('origin_airport', '?')} -> "
+                    f"{route.get('destination_airport', '?')}"
+                ),
+                "destination_airport": route.get("destination_airport"),
+                "destination_city": route.get("destination_city"),
+                "bucket": route.get("bucket"),
+                "pattern_key": pattern.get("key"),
+                "pattern_label": pattern.get("label"),
+                "departure_weekday": pattern.get("departure_weekday"),
+                "return_weekday": pattern.get("return_weekday"),
+                "trip_nights": pattern.get("trip_nights"),
+                "status": item.get("status"),
+                "price": snapshot.get("price") if snapshot else None,
+                "currency": snapshot.get("currency") if snapshot else None,
+                "departure_date": snapshot.get("departure_date") if snapshot else None,
+                "return_date": snapshot.get("return_date") if snapshot else None,
+                "reason_code": item.get("reason_code"),
+                "reason": item.get("reason"),
+                "error_type": item.get("error_type"),
+                "error": item.get("error"),
+                "retry_count": retry_count,
+                "rules_scanned": 1 + retry_count,
+                "diagnostic": diagnostic,
+                "airline": metadata.get("airline_summary") or metadata.get("primary_airline"),
+                "airline_code": metadata.get("primary_airline_code"),
+                "outbound_departure_at": metadata.get("outbound_departure_at"),
+                "outbound_arrival_at": metadata.get("outbound_arrival_at"),
+                "return_departure_at": metadata.get("return_departure_at"),
+                "return_arrival_at": metadata.get("return_arrival_at"),
+                "outbound_stop_count": metadata.get("outbound_stop_count"),
+                "return_stop_count": metadata.get("return_stop_count"),
+            }
+            existing_pattern = pattern_rows_by_key.get(pattern_key)
+            status_priority = {"deal": 3, "tracked": 2, "no_results": 1, "error": 0}
+            should_replace = existing_pattern is None
+            if existing_pattern is not None:
+                new_priority = status_priority.get(str(pattern_row["status"]), -1)
+                old_priority = status_priority.get(str(existing_pattern["status"]), -1)
+                new_price = pattern_row["price"]
+                old_price = existing_pattern["price"]
+                should_replace = new_priority > old_priority or (
+                    new_priority == old_priority
+                    and isinstance(new_price, (int, float))
+                    and (
+                        not isinstance(old_price, (int, float))
+                        or float(new_price) < float(old_price)
+                    )
+                )
+            if should_replace:
+                pattern_rows_by_key[pattern_key] = pattern_row
 
     route_rows: list[dict[str, Any]] = []
     destination_items: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -281,7 +297,10 @@ def build_price_scan_run_summary(
         "stopped_reason_code": stopped_reason_code,
         "destinations": destination_rows,
         "routes": route_rows,
-        "patterns": pattern_rows,
+        # All individual fares already live in price_snapshots. Keep one
+        # representative outcome per search pattern here so a long scan does
+        # not turn its summary into a multi-megabyte heartbeat payload.
+        "patterns": list(pattern_rows_by_key.values()),
         "no_result_breakdown": dict(no_result_counts),
         "error_breakdown": dict(error_counts),
         "sync_status": "pending",

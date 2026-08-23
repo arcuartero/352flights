@@ -117,6 +117,70 @@ class PriceScanRunSummaryTests(unittest.TestCase):
             "2026-09-04T18:20",
         )
 
+    def test_keeps_one_representative_result_per_search_pattern(self) -> None:
+        route = RouteSeed(
+            origin_airport="LUX",
+            destination_airport="CPH",
+            destination_city="Copenhagen",
+            bucket="weekend_europe",
+            trip_nights=3,
+            lookahead_start_days=3,
+            lookahead_end_days=250,
+            max_stops="NON_STOP",
+            teaser="Copenhagen",
+        )
+        pattern = {
+            "key": "fri-mon-3",
+            "label": "Fri to Mon",
+            "departure_weekday": "FRI",
+            "return_weekday": "MON",
+            "trip_nights": 3,
+        }
+        route_payload = {
+            "origin_airport": route.origin_airport,
+            "destination_airport": route.destination_airport,
+            "destination_city": route.destination_city,
+            "bucket": route.bucket,
+            "max_stops": route.max_stops,
+        }
+        report = [
+            {
+                "route": route_payload,
+                "pattern": pattern,
+                "status": "tracked",
+                "snapshot": {
+                    "price": price,
+                    "currency": "EUR",
+                    "departure_date": departure,
+                    "return_date": "2026-09-07",
+                    "metadata": {},
+                },
+            }
+            for price, departure in ((99, "2026-09-04"), (49, "2026-09-11"))
+        ]
+        started_at = datetime(2026, 8, 23, 6, 0, tzinfo=timezone.utc)
+
+        summary = build_price_scan_run_summary(
+            run_key="run-compact",
+            scanner_source="test",
+            routes=[route],
+            report=report,
+            started_at=started_at,
+            completed_at=started_at + timedelta(minutes=5),
+            status="completed",
+            started_route_keys={route.key},
+            completed_route_keys={route.key},
+            patterns_planned=1,
+            patterns_scanned=1,
+            retry_counts={},
+            search_window_start=date(2026, 9, 1),
+            search_window_end=date(2026, 9, 30),
+        )
+
+        self.assertEqual(summary["found_prices"], 2)
+        self.assertEqual(len(summary["patterns"]), 1)
+        self.assertEqual(summary["patterns"][0]["price"], 49)
+
 
 if __name__ == "__main__":
     unittest.main()

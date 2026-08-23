@@ -61,6 +61,64 @@ class ScanRunSnapshotLinkTests(unittest.TestCase):
         )
         response.raise_for_status.assert_called_once_with()
 
+    def test_live_checkpoint_does_not_resend_large_detail_arrays(self) -> None:
+        store = object.__new__(SupabaseStore)
+        store.write_attempts = 1
+        store.retry_min_seconds = 0
+        store.retry_max_seconds = 0
+        store.price_scan_run_ids = {}
+        store.client = MagicMock()
+        response = MagicMock()
+        response.status_code = 201
+        response.is_success = True
+        response.json.return_value = [{"id": "run-uuid"}]
+        store.client.post.return_value = response
+
+        run_id = store.save_scan_run_checkpoint(
+            {
+                "run_key": "run-123",
+                "scanner_source": "vps",
+                "status": "running",
+                "started_at": "2026-08-23T06:00:00+00:00",
+                "heartbeat_at": "2026-08-23T06:01:00+00:00",
+                "routes_started": 2,
+                "patterns_scanned": 25,
+                "patterns": [{"large": "detail"}],
+                "routes": [{"large": "detail"}],
+                "destinations": [{"large": "detail"}],
+            }
+        )
+
+        self.assertEqual(run_id, "run-uuid")
+        payload = store.client.post.call_args.kwargs["json"]
+        self.assertEqual(payload["heartbeat_at"], "2026-08-23T06:01:00+00:00")
+        self.assertEqual(payload["patterns_scanned"], 25)
+        self.assertNotIn("patterns", payload)
+        self.assertNotIn("routes", payload)
+        self.assertNotIn("destinations", payload)
+
+    def test_retryable_supabase_response_is_retried(self) -> None:
+        store = object.__new__(SupabaseStore)
+        store.write_attempts = 2
+        store.retry_min_seconds = 0
+        store.retry_max_seconds = 0
+        store.client = MagicMock()
+        first = MagicMock(status_code=500)
+        first.headers = {}
+        second = MagicMock(status_code=201)
+        second.headers = {}
+        store.client.post.side_effect = [first, second]
+
+        response = store._post_with_retry(
+            "/rest/v1/price_scan_runs",
+            operation_label="test",
+            headers={},
+            json={"run_key": "run-123"},
+        )
+
+        self.assertIs(response, second)
+        self.assertEqual(store.client.post.call_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -31,6 +31,19 @@ type SnapshotRow = {
 };
 
 const RUN_START_MESSAGES = ["Starting local scanner.", "Starting local Lux flight scan."];
+const REAL_PROGRESS_PREFIXES = [
+  "Route start: ",
+  "Pattern start: ",
+  "Pattern done: ",
+  "Pattern no results: ",
+  "Pattern timed out: ",
+  "Pattern network outage: ",
+  "Pattern hard error: ",
+  "Pattern error: ",
+  "Deal candidate: ",
+  "Deal skipped: ",
+  "Calendar search: ",
+];
 const SYSTEMD_FAILURE_RESULTS = new Set([
   "exit-code",
   "failed",
@@ -92,6 +105,12 @@ function latestRunEvents(status: VpsScannerAgentStatus) {
   }
 
   return startIndex >= 0 ? events.slice(startIndex) : events;
+}
+
+function latestRealProgressEvent(events: JournalEvent[]) {
+  return [...events].reverse().find((event) =>
+    REAL_PROGRESS_PREFIXES.some((prefix) => event.message.startsWith(prefix)),
+  ) ?? null;
 }
 
 function serviceExitStatus(status: VpsScannerAgentStatus) {
@@ -376,6 +395,103 @@ async function reconcileInactiveRunningRuns() {
   return runs.length;
 }
 
+async function recoverActiveVpsRun(status: VpsScannerAgentStatus) {
+  const serviceStartedAt = parseTimestamp(status.service.ExecMainStartTimestamp);
+  const events = latestRunEvents(status);
+  const startedAt = serviceStartedAt ?? events[0]?.timestamp ?? null;
+  const latestProgress = latestRealProgressEvent(events);
+  if (!startedAt || !latestProgress) {
+    return { recovered: false, reason: "missing_active_run_timestamps", count: 0 };
+  }
+
+  const latestProgressAgeMs = Date.now() - latestProgress.timestampMs;
+  if (latestProgressAgeMs < 0 || latestProgressAgeMs > 15 * 60 * 1_000) {
+    return { recovered: false, reason: "active_service_without_recent_progress", count: 0 };
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const startMs = new Date(startedAt).getTime();
+  const existing = await supabase
+    .from("price_scan_runs")
+    .select("id,status,stopped_reason_code,sync_summary,heartbeat_at")
+    .gte("started_at", new Date(startMs - 120_000).toISOString())
+    .lte("started_at", new Date(startMs + 120_000).toISOString())
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (existing.error) throw new Error(existing.error.message);
+
+  const existingRun = existing.data as {
+    id: string;
+    status: string;
+    stopped_reason_code: string | null;
+    sync_summary: Record<string, unknown> | null;
+    heartbeat_at: string | null;
+  } | null;
+
+  if (existingRun?.status === "running") {
+    const savedHeartbeatMs = existingRun.heartbeat_at
+      ? new Date(existingRun.heartbeat_at).getTime()
+      : 0;
+    if (savedHeartbeatMs >= latestProgress.timestampMs) {
+      return { recovered: false, reason: "scanner_running", count: 0 };
+    }
+    const heartbeatUpdate = await supabase
+      .from("price_scan_runs")
+      .update({
+        heartbeat_at: latestProgress.timestamp,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingRun.id)
+      .eq("status", "running");
+    if (heartbeatUpdate.error) throw new Error(heartbeatUpdate.error.message);
+    return { recovered: true, reason: "active_heartbeat_refreshed", count: 1 };
+  }
+
+  if (existingRun) {
+    if (existingRun.stopped_reason_code !== "heartbeat_expired") {
+      return { recovered: false, reason: "active_run_already_terminal", count: 0 };
+    }
+    const update = await supabase
+      .from("price_scan_runs")
+      .update({
+        status: "running",
+        completed_at: null,
+        duration_ms: null,
+        stopped_reason: null,
+        stopped_reason_code: null,
+        heartbeat_at: latestProgress.timestamp,
+        sync_status: "pending",
+        sync_summary: {
+          ...(existingRun.sync_summary ?? {}),
+          recovered_from_live_vps_activity: true,
+          recovered_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingRun.id);
+    if (update.error) throw new Error(update.error.message);
+    return { recovered: true, reason: "active_run_reopened", count: 1 };
+  }
+
+  const insert = await supabase.from("price_scan_runs").insert({
+    run_key: `vps-active:${startedAt}`,
+    scanner_source: "vps_recovered",
+    status: "running",
+    started_at: startedAt,
+    heartbeat_at: latestProgress.timestamp,
+    last_progress_at: latestProgress.timestamp,
+    sync_status: "pending",
+    sync_summary: {
+      recovered_from_live_vps_activity: true,
+      recovered_at: new Date().toISOString(),
+    },
+    updated_at: new Date().toISOString(),
+  });
+  if (insert.error) throw new Error(insert.error.message);
+  return { recovered: true, reason: "active_run_stored", count: 1 };
+}
+
 export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus) {
   const serviceStartedAt = parseTimestamp(status.service.ExecMainStartTimestamp);
   const serviceCompletedAt = parseTimestamp(status.service.ExecMainExitTimestamp);
@@ -395,13 +511,18 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
   }
 
   if (status.running) {
+    const activeRecovery = await recoverActiveVpsRun(status);
     const reconciled = serviceStartedAt
       ? await reconcileSupersededRunningRuns(serviceStartedAt)
       : 0;
     return {
-      recovered: reconciled > 0,
-      reason: reconciled > 0 ? "superseded_runs_reconciled" : "scanner_running",
-      count: reconciled,
+      recovered: activeRecovery.recovered || reconciled > 0,
+      reason: activeRecovery.recovered
+        ? activeRecovery.reason
+        : reconciled > 0
+          ? "superseded_runs_reconciled"
+          : activeRecovery.reason,
+      count: activeRecovery.count + reconciled,
     };
   }
 

@@ -11,6 +11,7 @@ import {
   getLatestRunningPriceScanProgress,
   type PriceScanLiveProgress,
 } from "@/lib/price-scan-runs";
+import { recoverLatestVpsPriceScanRun } from "@/lib/price-scan-run-recovery";
 import {
   callVpsScannerAgent,
   hasVpsScannerAgentConfig,
@@ -623,10 +624,30 @@ export async function GET(request: Request) {
 
   try {
     if (hasVpsScannerAgentConfig()) {
-      const [status, persistedProgress] = await Promise.all([
+      const [status, initialPersistedProgress] = await Promise.all([
         callVpsScannerAgent<VpsScannerAgentStatus>("status"),
         getLatestRunningPriceScanProgress(),
       ]);
+      let persistedProgress = initialPersistedProgress;
+      const savedActivityMs = Math.max(
+        Date.parse(persistedProgress.progress?.heartbeatAt ?? ""),
+        Date.parse(persistedProgress.progress?.lastProgressAt ?? ""),
+        Date.parse(persistedProgress.progress?.updatedAt ?? ""),
+      );
+      if (
+        status.running &&
+        (!persistedProgress.progress || !Number.isFinite(savedActivityMs) ||
+          Date.now() - savedActivityMs > 5 * 60 * 1_000)
+      ) {
+        try {
+          const recovery = await recoverLatestVpsPriceScanRun(status);
+          if (recovery.recovered) {
+            persistedProgress = await getLatestRunningPriceScanProgress();
+          }
+        } catch {
+          // Live VPS status remains useful even if persisted history cannot be repaired.
+        }
+      }
       const serviceStartedAt = parseSystemdTimestamp(status.service.ExecMainStartTimestamp);
       const scannerStatus = mergePersistedProgress(
         vpsStatusToLocalScannerStatus(status),

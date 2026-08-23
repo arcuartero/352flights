@@ -2840,7 +2840,12 @@ class LuxFlightScanner:
 
         return diagnostic
 
-    def _save_scan_run_summary(self, summary: dict[str, Any]) -> None:
+    def _save_scan_run_summary(
+        self,
+        summary: dict[str, Any],
+        *,
+        checkpoint: bool = False,
+    ) -> None:
         try:
             self.store.save_scan_run(summary)
         except Exception as error:  # pragma: no cover - depends on storage availability
@@ -2850,7 +2855,10 @@ class LuxFlightScanner:
             return
 
         try:
-            self.live_sync_store.save_scan_run(summary)
+            if checkpoint:
+                self.live_sync_store.save_scan_run_checkpoint(summary)
+            else:
+                self.live_sync_store.save_scan_run(summary)
         except Exception as error:  # pragma: no cover - depends on live network behavior
             self._log_progress(f"Scan summary live sync failed: {error}")
 
@@ -2902,7 +2910,8 @@ class LuxFlightScanner:
                     retry_counts=self._run_retry_counts,
                     search_window_start=search_window_start,
                     search_window_end=search_window_end,
-                )
+                ),
+                checkpoint=True,
             )
             last_checkpoint_at = checkpoint_at
 
