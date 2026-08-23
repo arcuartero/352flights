@@ -604,8 +604,33 @@ begin
     return new;
   end if;
 
+  -- A fresh heartbeat from the exact same process can repair a run that the
+  -- liveness reconciler closed while Supabase was timing out. Saved or delayed
+  -- local state keeps its old heartbeat and therefore cannot reopen a run.
   if old.status <> 'running' and new.status = 'running' then
-    return old;
+    if
+      old.stopped_reason_code = 'heartbeat_expired'
+      and new.run_key = old.run_key
+      and new.started_at = old.started_at
+      and new.heartbeat_at is not null
+      and new.heartbeat_at > greatest(
+        coalesce(old.heartbeat_at, old.started_at),
+        coalesce(old.last_progress_at, old.started_at)
+      )
+      and new.heartbeat_at >= timezone('utc', now()) - interval '15 minutes'
+    then
+      new.completed_at := null;
+      new.duration_ms := null;
+      new.stopped_reason := null;
+      new.stopped_reason_code := null;
+      new.sync_status := 'pending';
+      new.sync_summary := coalesce(old.sync_summary, '{}'::jsonb) || jsonb_build_object(
+        'reopened_from_live_heartbeat', true,
+        'reopened_at', timezone('utc', now())
+      );
+    else
+      return old;
+    end if;
   end if;
 
   if

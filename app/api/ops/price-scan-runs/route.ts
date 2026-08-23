@@ -24,8 +24,10 @@ export async function GET(request: Request) {
     );
   }
 
-  const runningCount = history.runs.filter((run) => run.status === "running").length;
-  if (runningCount > 0 && hasVpsScannerAgentConfig()) {
+  // The VPS is the authority for whether the process is alive. Always compare
+  // it with persisted history so a run closed during a Supabase outage can be
+  // repaired even when no database row is currently marked as running.
+  if (hasVpsScannerAgentConfig()) {
     try {
       const status = await callVpsScannerAgent<VpsScannerAgentStatus>("status");
       const recovery = await recoverLatestVpsPriceScanRun(status);
