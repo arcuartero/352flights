@@ -627,7 +627,9 @@ class LuxFlightScanner:
                 **kwargs: Any,
             ) -> Any:
                 kwargs.setdefault("timeout", timeout_seconds)
-                attempts = max(1, self.config.search_rate_limit_attempts)
+                rate_limit_attempts = max(1, self.config.search_rate_limit_attempts)
+                provider_error_attempts = max(1, self.config.provider_error_attempts)
+                attempts = max(rate_limit_attempts, provider_error_attempts)
 
                 for attempt in range(1, attempts + 1):
                     try:
@@ -635,10 +637,23 @@ class LuxFlightScanner:
                         self._raise_for_empty_provider_response(response, args, kwargs)
                         return response
                     except Exception as error:
-                        if not self._is_rate_limit_error(error) or attempt >= attempts:
+                        is_rate_limited = self._is_rate_limit_error(error)
+                        is_provider_error = self._is_provider_unavailable_error(error)
+                        allowed_attempts = (
+                            rate_limit_attempts
+                            if is_rate_limited
+                            else provider_error_attempts
+                            if is_provider_error
+                            else 1
+                        )
+                        if attempt >= allowed_attempts:
                             raise
 
-                        delay = self._rate_limit_retry_delay(error, attempt)
+                        delay = (
+                            self._rate_limit_retry_delay(error, attempt)
+                            if is_rate_limited
+                            else self._provider_error_retry_delay(attempt)
+                        )
                         self._rate_limit_until = max(
                             self._rate_limit_until,
                             time.monotonic() + delay,
@@ -649,10 +664,13 @@ class LuxFlightScanner:
                             if self._active_pattern_retry_label
                             else ""
                         )
+                        if is_rate_limited:
+                            message = "Search rate limited (HTTP 429)"
+                        else:
+                            message = "Temporary provider response failure"
                         self._log_progress(
-                            "Search rate limited (HTTP 429): "
-                            f"pausing {delay:.0f}s before attempt "
-                            f"{attempt + 1}/{attempts}{context}"
+                            f"{message}: pausing {delay:.0f}s before attempt "
+                            f"{attempt + 1}/{allowed_attempts}{context}"
                         )
 
                 raise RuntimeError("Unreachable rate-limit retry state.")
@@ -728,6 +746,17 @@ class LuxFlightScanner:
             return retry_after
 
         base = max(0.0, self.config.search_rate_limit_base_seconds)
+        delay = base * (2 ** max(0, attempt - 1))
+        if maximum > 0:
+            delay = min(delay, maximum)
+        jitter_ratio = max(0.0, self.config.search_rate_limit_jitter_ratio)
+        if delay > 0 and jitter_ratio > 0:
+            delay += self._random.uniform(0.0, delay * jitter_ratio)
+        return delay
+
+    def _provider_error_retry_delay(self, attempt: int) -> float:
+        base = max(0.0, self.config.provider_error_base_seconds)
+        maximum = max(0.0, self.config.provider_error_max_seconds)
         delay = base * (2 ** max(0, attempt - 1))
         if maximum > 0:
             delay = min(delay, maximum)
@@ -963,11 +992,8 @@ class LuxFlightScanner:
                     top_n=1,
                 )
             except ProviderUnavailableError as error:
-                message = (
-                    f"Provider health check failed on {route_label}: {error}"
-                )
-                self._log_progress(f"Scanner provider unavailable: {message}")
-                raise ProviderUnavailableError(message) from error
+                check_errors.append(f"{route_label}: {error}")
+                continue
             except Exception as error:
                 check_errors.append(f"{route_label}: {error}")
                 continue
@@ -3209,9 +3235,20 @@ class LuxFlightScanner:
                     except Exception as error:  # pragma: no cover - depends on live upstream behavior
                         error_type = self._classify_error_type(error)
                         if error_type == "provider_unavailable":
-                            raise ProviderUnavailableError(
-                                self._provider_unavailable_message(error)
-                            ) from error
+                            try:
+                                self._assert_provider_available(
+                                    context=(
+                                        "confirming a pattern-level provider failure on "
+                                        f"{route.origin_airport} -> {route.destination_airport} "
+                                        f"{pattern.label}"
+                                    )
+                                )
+                            except ProviderUnavailableError as confirmation_error:
+                                raise confirmation_error from error
+                            self._log_progress(
+                                "Provider canaries are healthy; recording the failed "
+                                "pattern and continuing the scan."
+                            )
                         consecutive_network_outage_failures = (
                             consecutive_network_outage_failures + 1
                             if error_type == "network_outage"

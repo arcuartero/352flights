@@ -82,6 +82,15 @@ class ScannerConfig:
     provider_preflight_days_ahead: int = int(
         os.getenv("SCANNER_PROVIDER_PREFLIGHT_DAYS_AHEAD", "14")
     )
+    provider_error_attempts: int = int(
+        os.getenv("SCANNER_PROVIDER_ERROR_ATTEMPTS", "3")
+    )
+    provider_error_base_seconds: float = float(
+        os.getenv("SCANNER_PROVIDER_ERROR_BASE_SECONDS", "2")
+    )
+    provider_error_max_seconds: float = float(
+        os.getenv("SCANNER_PROVIDER_ERROR_MAX_SECONDS", "15")
+    )
     empty_result_breaker_threshold: int = int(
         os.getenv("SCANNER_EMPTY_RESULT_BREAKER_THRESHOLD", "20")
     )

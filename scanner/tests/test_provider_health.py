@@ -19,9 +19,23 @@ ERROR_13_BODY = (
 class StaticResponseClient:
     def __init__(self, body: str):
         self.response = SimpleNamespace(text=body, status_code=200)
+        self.calls = 0
 
     def post(self, *_args, **_kwargs):
+        self.calls += 1
         return self.response
+
+
+class SequenceResponseClient:
+    def __init__(self, bodies: list[str]):
+        self.responses = iter(
+            SimpleNamespace(text=body, status_code=200) for body in bodies
+        )
+        self.calls = 0
+
+    def post(self, *_args, **_kwargs):
+        self.calls += 1
+        return next(self.responses)
 
 
 def route(destination: str, city: str) -> RouteSeed:
@@ -46,6 +60,9 @@ def scanner_for_test(**config_overrides) -> LuxFlightScanner:
         search_rate_limit_base_seconds=0,
         search_rate_limit_max_seconds=0,
         search_rate_limit_jitter_ratio=0,
+        provider_error_attempts=3,
+        provider_error_base_seconds=0,
+        provider_error_max_seconds=0,
         search_pause_min_seconds=0,
         search_pause_max_seconds=0,
         provider_preflight_days_ahead=14,
@@ -79,6 +96,25 @@ class ProviderHealthTests(TestCase):
                 )
             )
 
+        self.assertEqual(client.calls, 3)
+
+    def test_retries_temporary_google_rpc_error_13(self) -> None:
+        scanner = scanner_for_test()
+        client = SequenceResponseClient(
+            [ERROR_13_BODY, ")]}'\n\n[[\"wrb.fr\",null,\"[]\"]]"]
+        )
+        scanner._install_default_timeout(client)
+
+        response = client.post(
+            url=(
+                "https://www.google.com/_/FlightsFrontendUi/data/"
+                "travel.frontend.flights.FlightsFrontendService/GetShoppingResults"
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(client.calls, 2)
+
     def test_does_not_inspect_unrelated_http_responses(self) -> None:
         scanner = scanner_for_test()
         client = StaticResponseClient("")
@@ -102,6 +138,20 @@ class ProviderHealthTests(TestCase):
         scanner = scanner_for_test()
         responses = iter(([], [object()]))
         scanner._run_flight_search = lambda _filters, top_n: next(responses)
+
+        scanner._assert_provider_available(context="test")
+
+    def test_preflight_passes_when_one_canary_errors_and_another_has_data(self) -> None:
+        scanner = scanner_for_test()
+        responses = iter((ProviderUnavailableError("RPC error 13"), [object()]))
+
+        def run_search(_filters, top_n):
+            response = next(responses)
+            if isinstance(response, Exception):
+                raise response
+            return response
+
+        scanner._run_flight_search = run_search
 
         scanner._assert_provider_available(context="test")
 
