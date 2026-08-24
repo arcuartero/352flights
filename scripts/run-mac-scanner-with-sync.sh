@@ -41,6 +41,10 @@ if [[ -f "$ROOT_DIR/.env" ]]; then
   load_env_value "SCANNER_HISTORY_WINDOW"
   load_env_value "SCANNER_REVIEW_RATIO"
   load_env_value "SCANNER_FLASH_RATIO"
+  load_env_value "SCANNER_PROVIDER_PREFLIGHT_ENABLED"
+  load_env_value "SCANNER_PROVIDER_PREFLIGHT_DESTINATIONS"
+  load_env_value "SCANNER_PROVIDER_PREFLIGHT_DAYS_AHEAD"
+  load_env_value "SCANNER_EMPTY_RESULT_BREAKER_THRESHOLD"
 fi
 
 export PATH="/Users/albertorodriguez/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"

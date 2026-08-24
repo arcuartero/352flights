@@ -298,6 +298,7 @@ function isScannerTerminalMessage(message: string) {
   return (
     message === "Local Lux flight scan finished successfully." ||
     message === "Local Lux flight scan paused by network/DNS outage." ||
+    message === "Local Lux flight scan stopped because the provider is unavailable." ||
     message === "Local Lux flight scan failed." ||
     message === "Local Lux flight scan stopped from ops UI."
   );
@@ -613,6 +614,27 @@ function toLogLine(event: LogEvent): LocalScannerLogLine | null {
       label: "Scanner",
       detail: "Network / DNS outage detected",
       secondaryDetail: message.replace("Scanner circuit breaker opened: ", ""),
+      tone: "error",
+    };
+  }
+
+  if (message.startsWith("Scanner provider unavailable: ")) {
+    return {
+      id: `${event.timestampIso}:${message}`,
+      timestamp: event.timestampIso,
+      label: "Proveedor no disponible",
+      detail: "El proveedor respondió sin datos utilizables",
+      secondaryDetail: message.replace("Scanner provider unavailable: ", ""),
+      tone: "error",
+    };
+  }
+
+  if (message === "Local Lux flight scan stopped because the provider is unavailable.") {
+    return {
+      id: `${event.timestampIso}:${message}`,
+      timestamp: event.timestampIso,
+      label: "Scanner",
+      detail: "Proveedor no disponible",
       tone: "error",
     };
   }

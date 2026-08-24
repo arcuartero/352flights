@@ -8,6 +8,39 @@ from luxflight_scanner.run_summary import build_price_scan_run_summary
 
 
 class PriceScanRunSummaryTests(unittest.TestCase):
+    def test_counts_provider_failure_without_a_route(self) -> None:
+        started_at = datetime(2026, 8, 24, 8, 0, tzinfo=timezone.utc)
+        summary = build_price_scan_run_summary(
+            run_key="provider-down",
+            scanner_source="test",
+            routes=[],
+            report=[
+                {
+                    "status": "error",
+                    "error_type": "provider_unavailable",
+                    "error": "Google Flights internal RPC error 13",
+                }
+            ],
+            started_at=started_at,
+            completed_at=started_at + timedelta(seconds=2),
+            status="failed",
+            started_route_keys=set(),
+            completed_route_keys=set(),
+            patterns_planned=0,
+            patterns_scanned=0,
+            retry_counts={},
+            search_window_start=None,
+            search_window_end=None,
+            stopped_reason="Flight provider unavailable",
+            stopped_reason_code="provider_unavailable",
+        )
+
+        self.assertEqual(summary["hard_errors"], 1)
+        self.assertEqual(
+            summary["error_breakdown"],
+            {"provider_unavailable": 1},
+        )
+
     def test_builds_aggregate_route_and_pattern_metrics(self) -> None:
         route = RouteSeed(
             origin_airport="LUX",

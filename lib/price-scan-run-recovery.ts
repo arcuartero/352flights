@@ -43,6 +43,9 @@ const REAL_PROGRESS_PREFIXES = [
   "Deal candidate: ",
   "Deal skipped: ",
   "Calendar search: ",
+  "Provider preflight start: ",
+  "Provider preflight passed: ",
+  "Scanner provider unavailable: ",
 ];
 const SYSTEMD_FAILURE_RESULTS = new Set([
   "exit-code",

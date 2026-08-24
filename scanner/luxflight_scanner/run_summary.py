@@ -117,6 +117,13 @@ def build_price_scan_run_summary(
     error_counts: Counter[str] = Counter()
 
     for item in report:
+        if item.get("status") == "no_results":
+            no_result_counts.update(
+                [str(item.get("reason_code") or "unknown_no_result")]
+            )
+        if item.get("status") == "error":
+            error_counts.update([str(item.get("error_type") or "hard_error")])
+
         route = item.get("route")
         if not isinstance(route, dict):
             continue
@@ -133,13 +140,6 @@ def build_price_scan_run_summary(
         diagnostic = item.get("diagnostic")
         diagnostic = diagnostic if isinstance(diagnostic, dict) else None
         retry_count = retry_counts.get(pattern_key, 0)
-
-        if item.get("status") == "no_results":
-            no_result_counts.update(
-                [str(item.get("reason_code") or "unknown_no_result")]
-            )
-        if item.get("status") == "error":
-            error_counts.update([str(item.get("error_type") or "hard_error")])
 
         if pattern is not None:
             pattern_row = {

@@ -71,6 +71,15 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def scanner_exit_code(report: dict[str, object]) -> int | None:
+    reason_code = report.get("stopped_reason_code")
+    if reason_code == "network_outage":
+        return 75
+    if reason_code == "provider_unavailable":
+        return 69
+    return None
+
+
 def main() -> None:
     # Treat service shutdowns like Ctrl-C so the scanner can persist a stopped run.
     def handle_stop(_signum: int, _frame: object) -> None:
@@ -130,9 +139,12 @@ def main() -> None:
         if args.discover_patterns
         else scanner.scan(limit=args.limit)
     )
+    exit_code = None if args.discover_patterns else scanner_exit_code(report)
 
     if args.json:
         print(json.dumps(report, indent=2))
+        if exit_code is not None:
+            raise SystemExit(exit_code)
         return
 
     if args.discover_patterns:
@@ -145,8 +157,11 @@ def main() -> None:
         )
 
     for item in report["report"]:
-        route = item["route"]
+        route = item.get("route")
         status = item["status"]
+        if not isinstance(route, dict):
+            print(f"- Scanner: {status} ({item.get('error', 'unknown error')})")
+            continue
         if status == "error":
             print(
                 f"- {route['origin_airport']} -> {route['destination_airport']}: "
@@ -168,8 +183,8 @@ def main() -> None:
             f"{snapshot['currency']} {snapshot['price']:.0f} ({status})"
         )
 
-    if report.get("stopped_reason_code") == "network_outage":
-        raise SystemExit(75)
+    if exit_code is not None:
+        raise SystemExit(exit_code)
 
 
 if __name__ == "__main__":

@@ -300,6 +300,10 @@ class NetworkOutageCircuitBreakerError(RuntimeError):
     """Raised when repeated network/DNS failures make the run non-actionable."""
 
 
+class ProviderUnavailableError(RuntimeError):
+    """Raised when the flight provider answers without usable flight data."""
+
+
 class LuxFlightScanner:
     def __init__(self, config: ScannerConfig):
         self.config = config
@@ -523,6 +527,61 @@ class LuxFlightScanner:
 
         return f"{LOG_META_MARKER}{json.dumps(payload, separators=(',', ':'), default=str)}"
 
+    @staticmethod
+    def _request_url(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
+        value = kwargs.get("url")
+        if value is None and args:
+            value = args[0]
+        return str(value or "")
+
+    @classmethod
+    def _raise_for_empty_provider_response(
+        cls,
+        response: object,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> None:
+        """Turn Google Flights' HTTP-200 RPC failures into real scanner errors."""
+        request_url = cls._request_url(args, kwargs)
+        if "FlightsFrontendService" not in request_url:
+            return
+
+        body = getattr(response, "text", None)
+        if not isinstance(body, str):
+            return
+        if not body.strip():
+            raise ProviderUnavailableError(
+                "Flight provider returned an empty response body."
+            )
+
+        try:
+            payload = json.loads(body.lstrip(")]}'\n\r "))
+        except (TypeError, ValueError):
+            return
+
+        if not isinstance(payload, list) or not payload:
+            return
+        rpc_row = payload[0]
+        if not isinstance(rpc_row, list) or not rpc_row or rpc_row[0] != "wrb.fr":
+            return
+
+        rpc_result = rpc_row[2] if len(rpc_row) > 2 else None
+        rpc_status = rpc_row[5] if len(rpc_row) > 5 else None
+        rpc_error_code = (
+            rpc_status[0]
+            if isinstance(rpc_status, list) and rpc_status
+            else None
+        )
+        if rpc_result not in (None, "") or not isinstance(rpc_error_code, int):
+            return
+        if rpc_error_code <= 0:
+            return
+
+        raise ProviderUnavailableError(
+            "Flight provider returned no usable payload "
+            f"(Google Flights internal RPC error {rpc_error_code})."
+        )
+
     def _install_default_timeout(self, client: object) -> None:
         if getattr(client, "_luxcheapflights_timeout_patched", False):
             return
@@ -572,7 +631,9 @@ class LuxFlightScanner:
 
                 for attempt in range(1, attempts + 1):
                     try:
-                        return __original(*args, **kwargs)
+                        response = __original(*args, **kwargs)
+                        self._raise_for_empty_provider_response(response, args, kwargs)
+                        return response
                     except Exception as error:
                         if not self._is_rate_limit_error(error) or attempt >= attempts:
                             raise
@@ -708,7 +769,14 @@ class LuxFlightScanner:
 
     def _run_date_search(self, filters: DateSearchFilters) -> list[object]:
         self._pause_between_searches()
-        return self.date_search.search(filters) or []
+        try:
+            return self.date_search.search(filters) or []
+        except Exception as error:
+            if self._is_provider_unavailable_error(error):
+                raise ProviderUnavailableError(
+                    self._provider_unavailable_message(error)
+                ) from error
+            raise
 
     def _run_flight_search(
         self,
@@ -717,7 +785,34 @@ class LuxFlightScanner:
         top_n: int,
     ) -> list[object]:
         self._pause_between_searches()
-        return self.flight_search.search(filters, top_n=top_n) or []
+        try:
+            return self.flight_search.search(filters, top_n=top_n) or []
+        except Exception as error:
+            if self._is_provider_unavailable_error(error):
+                raise ProviderUnavailableError(
+                    self._provider_unavailable_message(error)
+                ) from error
+            raise
+
+    @classmethod
+    def _is_provider_unavailable_error(cls, error: BaseException) -> bool:
+        markers = (
+            "provider returned an empty response",
+            "provider returned no usable payload",
+            "google flights internal rpc error",
+        )
+        return any(
+            isinstance(item, ProviderUnavailableError)
+            or any(marker in str(item).lower() for marker in markers)
+            for item in cls._exception_chain(error)
+        )
+
+    @classmethod
+    def _provider_unavailable_message(cls, error: BaseException) -> str:
+        for item in cls._exception_chain(error):
+            if isinstance(item, ProviderUnavailableError):
+                return str(item)
+        return str(error)
 
     @staticmethod
     def _is_timeout_error(error: Exception) -> bool:
@@ -762,6 +857,8 @@ class LuxFlightScanner:
         return any(marker in message for message in inspected_messages for marker in network_markers)
 
     def _classify_error_type(self, error: Exception) -> str:
+        if self._is_provider_unavailable_error(error):
+            return "provider_unavailable"
         if self._is_network_outage_error(error):
             return "network_outage"
         if self._is_timeout_error(error):
@@ -772,6 +869,8 @@ class LuxFlightScanner:
 
     @staticmethod
     def _error_log_prefix(error_type: str) -> str:
+        if error_type == "provider_unavailable":
+            return "Provider unavailable"
         if error_type == "timeout":
             return "Pattern timed out"
         if error_type == "network_outage":
@@ -795,6 +894,123 @@ class LuxFlightScanner:
         )
         self._log_progress(f"Scanner circuit breaker opened: {message}")
         raise NetworkOutageCircuitBreakerError(message) from latest_error
+
+    def _provider_canary_routes(self) -> list[RouteSeed]:
+        preferred = [
+            value.strip().upper()
+            for value in self.config.provider_preflight_destinations.split(",")
+            if value.strip()
+        ]
+        selected: list[RouteSeed] = []
+        selected_keys: set[str] = set()
+        for destination in preferred:
+            route = next(
+                (
+                    item
+                    for item in self.routes
+                    if item.destination_airport == destination
+                ),
+                None,
+            )
+            if route is not None and route.key not in selected_keys:
+                selected.append(route)
+                selected_keys.add(route.key)
+
+        if selected:
+            return selected
+
+        for route in self.routes:
+            if route.key in selected_keys:
+                continue
+            selected.append(route)
+            selected_keys.add(route.key)
+            if len(selected) >= 2:
+                break
+        return selected
+
+    def _assert_provider_available(self, *, context: str) -> None:
+        if not self.config.provider_preflight_enabled:
+            return
+
+        canary_routes = self._provider_canary_routes()
+        if not canary_routes:
+            raise ProviderUnavailableError(
+                "Flight provider health check has no configured canary routes."
+            )
+
+        travel_date = date.today() + timedelta(
+            days=max(1, self.config.provider_preflight_days_ahead)
+        )
+        checked_labels: list[str] = []
+        healthy_labels: list[str] = []
+        check_errors: list[str] = []
+        self._log_progress(
+            "Provider preflight start: "
+            f"{context} · {len(canary_routes)} canary route(s) for "
+            f"{travel_date.isoformat()}"
+        )
+
+        for route in canary_routes:
+            route_label = f"{route.origin_airport} -> {route.destination_airport}"
+            checked_labels.append(route_label)
+            try:
+                results = self._run_flight_search(
+                    self._build_service_calendar_flight_filters(
+                        route,
+                        travel_date=travel_date,
+                        max_stops="ONE_STOP_OR_FEWER",
+                    ),
+                    top_n=1,
+                )
+            except ProviderUnavailableError as error:
+                message = (
+                    f"Provider health check failed on {route_label}: {error}"
+                )
+                self._log_progress(f"Scanner provider unavailable: {message}")
+                raise ProviderUnavailableError(message) from error
+            except Exception as error:
+                check_errors.append(f"{route_label}: {error}")
+                continue
+
+            if results:
+                healthy_labels.append(route_label)
+
+        if healthy_labels:
+            self._log_progress(
+                "Provider preflight passed: "
+                f"{', '.join(healthy_labels)} returned usable flight data"
+            )
+            return
+
+        detail = (
+            f" Checked routes: {', '.join(checked_labels)}."
+            if checked_labels
+            else ""
+        )
+        if check_errors:
+            detail += f" Technical checks: {'; '.join(check_errors)}."
+        message = (
+            "Flight provider returned no usable fares for every canary route."
+            f"{detail}"
+        )
+        self._log_progress(f"Scanner provider unavailable: {message}")
+        raise ProviderUnavailableError(message)
+
+    def _check_empty_result_breaker(self, consecutive_empty_results: int) -> None:
+        threshold = self.config.empty_result_breaker_threshold
+        if threshold <= 0 or consecutive_empty_results < threshold:
+            return
+
+        self._log_progress(
+            "Empty-result circuit breaker check: "
+            f"{consecutive_empty_results} consecutive empty pattern results"
+        )
+        self._assert_provider_available(
+            context=(
+                "recheck after "
+                f"{consecutive_empty_results} consecutive empty pattern results"
+            )
+        )
 
     def _pick_cheapest_for_pattern_with_retry(
         self,
@@ -2876,6 +3092,7 @@ class LuxFlightScanner:
         search_window_start = min((window[0] for window in route_windows), default=None)
         search_window_end = max((window[1] for window in route_windows), default=None)
         consecutive_network_outage_failures = 0
+        consecutive_empty_results = 0
         stopped_reason: str | None = None
         stopped_reason_code: str | None = None
         run_status = "running"
@@ -2918,6 +3135,7 @@ class LuxFlightScanner:
         save_running_checkpoint(force=True)
 
         try:
+            self._assert_provider_available(context="before starting the full scan")
             for route_index, route in enumerate(routes, start=1):
                 if route_index > 1:
                     self._pause_between_routes()
@@ -2990,6 +3208,10 @@ class LuxFlightScanner:
                         )
                     except Exception as error:  # pragma: no cover - depends on live upstream behavior
                         error_type = self._classify_error_type(error)
+                        if error_type == "provider_unavailable":
+                            raise ProviderUnavailableError(
+                                self._provider_unavailable_message(error)
+                            ) from error
                         consecutive_network_outage_failures = (
                             consecutive_network_outage_failures + 1
                             if error_type == "network_outage"
@@ -3041,9 +3263,26 @@ class LuxFlightScanner:
                             }
                         )
                         save_running_checkpoint()
+                        if selection.no_result_reason_code in {
+                            "no_flights_found",
+                            "pattern_not_available",
+                        }:
+                            consecutive_empty_results += 1
+                            self._check_empty_result_breaker(
+                                consecutive_empty_results
+                            )
+                            if (
+                                self.config.empty_result_breaker_threshold > 0
+                                and consecutive_empty_results
+                                >= self.config.empty_result_breaker_threshold
+                            ):
+                                consecutive_empty_results = 0
+                        else:
+                            consecutive_empty_results = 0
                         continue
 
                     snapshots = selection.snapshots
+                    consecutive_empty_results = 0
                     batch_prices = [snapshot.price for snapshot in snapshots]
                     scoring_history = (
                         monthly_history
@@ -3149,6 +3388,21 @@ class LuxFlightScanner:
                     save_running_checkpoint()
                 completed_route_keys.add(route.key)
                 save_running_checkpoint()
+        except ProviderUnavailableError as error:
+            stopped_reason = str(error)
+            stopped_reason_code = "provider_unavailable"
+            run_status = (
+                "partial"
+                if any(item.get("status") in {"tracked", "deal"} for item in report)
+                else "failed"
+            )
+            report.append(
+                {
+                    "status": "error",
+                    "error": str(error),
+                    "error_type": "provider_unavailable",
+                }
+            )
         except NetworkOutageCircuitBreakerError as error:
             stopped_reason = str(error)
             stopped_reason_code = "network_outage"

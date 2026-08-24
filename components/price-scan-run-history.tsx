@@ -129,6 +129,7 @@ function ItineraryDetail({ pattern }: { pattern: PriceScanPatternSummary }) {
 }
 
 function statusLabel(run: PriceScanRun) {
+  if (run.stoppedReasonCode === "provider_unavailable") return "Proveedor no disponible";
   if (run.stoppedReasonCode === "heartbeat_expired") return "Stale / unverified";
   if (run.stoppedReasonCode === "superseded_by_new_run") return "Stopped automatically";
   if (run.status === "completed") return "Completed";
@@ -206,6 +207,8 @@ function buildRunExplanation(run: PriceScanRun): RunExplanation {
   let headline = "Este escaneo terminó y dejó resultados utilizables.";
   if (run.status === "running") {
     headline = "Este escaneo sigue en marcha; las cifras todavía pueden aumentar.";
+  } else if (run.stoppedReasonCode === "provider_unavailable") {
+    headline = "El proveedor de vuelos no estaba disponible y el escaneo se detuvo automáticamente.";
   } else if (run.stoppedReasonCode === "heartbeat_expired") {
     headline = "Este escaneo dejó de enviar actividad real y se cerró automáticamente conservando sus resultados.";
   } else if (run.status === "failed") {
@@ -240,6 +243,9 @@ function buildRunExplanation(run: PriceScanRun): RunExplanation {
   if (problemCount === 0 && run.noResults === 0) {
     issues = "No se registraron errores técnicos ni búsquedas sin resultado en los datos actuales.";
   }
+  if (run.stoppedReasonCode === "provider_unavailable") {
+    issues = `El proveedor respondió sin datos utilizables. El sistema lo reconoció como una incidencia técnica y evitó continuar con ${plural(pendingRoutes, "ruta pendiente", "rutas pendientes")}.`;
+  }
 
   let impact = "Todavía no hay precios nuevos de este registro que puedan afectar a la web pública.";
   if (run.status === "running") {
@@ -254,6 +260,9 @@ function buildRunExplanation(run: PriceScanRun): RunExplanation {
   }
   if (pendingRoutes > 0) {
     impact += ` Quedaron ${plural(pendingRoutes, "ruta", "rutas")} sin completar, por lo que esas rutas pueden conservar información anterior o mostrar menos opciones nuevas.`;
+  }
+  if (run.stoppedReasonCode === "provider_unavailable") {
+    impact = "No se publicaron falsos resultados de “sin vuelos”. Los precios anteriores permanecen disponibles y el scanner podrá intentarlo de nuevo cuando el proveedor vuelva a responder correctamente.";
   }
 
   return {
@@ -274,6 +283,7 @@ function patternOutcomeLabel(pattern: PriceScanPatternSummary) {
   }
   if (pattern.error_type === "timeout") return "Timed out";
   if (pattern.error_type === "network_outage") return "Network / DNS";
+  if (pattern.error_type === "provider_unavailable") return "Proveedor no disponible";
   return pattern.status === "error" ? "Hard error" : pattern.status;
 }
 
@@ -1083,7 +1093,10 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                             : "ops-status--error"
                         }`}
                       >
-                        Run stopped: {run.stoppedReason}
+                        {run.stoppedReasonCode === "provider_unavailable"
+                          ? "Proveedor no disponible: "
+                          : "Run stopped: "}
+                        {run.stoppedReason}
                       </p>
                     ) : null}
 

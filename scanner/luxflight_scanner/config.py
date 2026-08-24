@@ -71,6 +71,20 @@ class ScannerConfig:
     network_outage_breaker_threshold: int = int(
         os.getenv("SCANNER_NETWORK_OUTAGE_BREAKER_THRESHOLD", "6")
     )
+    provider_preflight_enabled: bool = env_flag(
+        "SCANNER_PROVIDER_PREFLIGHT_ENABLED",
+        True,
+    )
+    provider_preflight_destinations: str = os.getenv(
+        "SCANNER_PROVIDER_PREFLIGHT_DESTINATIONS",
+        "MAD,CDG",
+    )
+    provider_preflight_days_ahead: int = int(
+        os.getenv("SCANNER_PROVIDER_PREFLIGHT_DAYS_AHEAD", "14")
+    )
+    empty_result_breaker_threshold: int = int(
+        os.getenv("SCANNER_EMPTY_RESULT_BREAKER_THRESHOLD", "20")
+    )
     weekend_pattern_discovery_end_days: int = int(
         os.getenv("SCANNER_WEEKEND_PATTERN_DISCOVERY_END_DAYS", "120")
     )
