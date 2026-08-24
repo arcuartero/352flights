@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 
 import { NextResponse } from "next/server";
 
+import { removeStaleLocalScannerLock } from "@/lib/local-scanner-lock";
 import { getLocalPatternDiscoveryStatus } from "@/lib/local-pattern-discovery-status";
 import { resolveScannerRoot } from "@/lib/local-scanner-status";
 import {
@@ -129,10 +130,7 @@ function signalProcessGroup(pid: number, signal: NodeJS.Signals) {
 
 async function cleanupStateFiles(scannerRoot: string) {
   await Promise.allSettled([
-    rm("/tmp/luxcheapflights-pattern-discovery.lock", {
-      recursive: true,
-      force: true,
-    }),
+    removeStaleLocalScannerLock("dates_scanner"),
     rm(path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.pid"), {
       force: true,
     }),

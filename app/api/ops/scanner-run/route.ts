@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 
 import { NextResponse } from "next/server";
 
+import { getLocalScannerLockState } from "@/lib/local-scanner-lock";
 import { getLocalScannerStatus, resolveScannerRoot } from "@/lib/local-scanner-status";
 import { recordVpsPriceScanStartFailure } from "@/lib/price-scan-run-recovery";
 import {
@@ -96,6 +97,18 @@ export async function POST(request: Request) {
       {
         ok: false,
         reason: "already_running",
+      },
+      { status: 409 },
+    );
+  }
+
+  const sharedLock = await getLocalScannerLockState();
+  if (sharedLock.active) {
+    return NextResponse.json(
+      {
+        ok: false,
+        reason: "scanner_busy",
+        activeScanner: sharedLock.owner,
       },
       { status: 409 },
     );

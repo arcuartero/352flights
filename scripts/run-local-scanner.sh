@@ -6,12 +6,14 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SCANNER_DIR="$ROOT_DIR/scanner"
 LOG_DIR="$ROOT_DIR/logs"
-LOCK_DIR="/tmp/luxcheapflights-local-scan.lock"
+LOCK_OWNER="price_scanner"
 LAST_RUN_FILE="$ROOT_DIR/scanner/state/local-last-run.txt"
 PID_FILE="$ROOT_DIR/scanner/state/local-scanner.pid"
 CHILD_PID_FILE="$ROOT_DIR/scanner/state/local-scanner.child.pid"
 MIN_RUN_GAP_SECONDS=19800
 FORCE_RUN=0
+
+source "$SCRIPT_DIR/local-scanner-lock.zsh"
 
 if [[ "${1:-}" == "--force" ]] || [[ "${LUX_SCANNER_FORCE:-0}" == "1" ]]; then
   FORCE_RUN=1
@@ -27,14 +29,14 @@ TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
 STDOUT_LOG="$LOG_DIR/local-scanner.stdout.log"
 STDERR_LOG="$LOG_DIR/local-scanner.stderr.log"
 
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "[$TIMESTAMP] Scanner already running, skipping duplicate launch." >> "$STDOUT_LOG"
+if ! local_scanner_acquire_lock "$LOCK_OWNER"; then
+  echo "[$TIMESTAMP] Another Mac scanner is already running (${LOCAL_SCANNER_ACTIVE_OWNER:-unknown}), skipping duplicate launch." >> "$STDOUT_LOG"
   exit 0
 fi
 
 cleanup() {
   rm -f "$PID_FILE" "$CHILD_PID_FILE" 2>/dev/null || true
-  rmdir "$LOCK_DIR" 2>/dev/null || true
+  local_scanner_release_lock "$LOCK_OWNER"
 }
 
 terminate() {

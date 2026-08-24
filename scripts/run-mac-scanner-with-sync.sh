@@ -6,19 +6,21 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SCANNER_DIR="$ROOT_DIR/scanner"
 LOG_DIR="$ROOT_DIR/logs"
-LOCK_DIR="/tmp/352flights-mac-scanner.lock"
+LOCK_OWNER="price_scanner"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
+
+source "$SCRIPT_DIR/local-scanner-lock.zsh"
 
 mkdir -p "$LOG_DIR"
 mkdir -p "$SCANNER_DIR/state"
 
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "Another Mac scanner run is already active." >&2
+if ! local_scanner_acquire_lock "$LOCK_OWNER"; then
+  echo "Another Mac scanner is already active (${LOCAL_SCANNER_ACTIVE_OWNER:-unknown})." >&2
   exit 75
 fi
 
 cleanup() {
-  rmdir "$LOCK_DIR" 2>/dev/null || true
+  local_scanner_release_lock "$LOCK_OWNER"
 }
 trap cleanup EXIT
 

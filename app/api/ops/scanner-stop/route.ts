@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 
 import { NextResponse } from "next/server";
 
+import { removeStaleLocalScannerLock } from "@/lib/local-scanner-lock";
 import { getLocalScannerStatus, resolveScannerRoot } from "@/lib/local-scanner-status";
 import {
   callVpsScannerAgent,
@@ -128,10 +129,7 @@ function signalProcessGroup(pid: number, signal: NodeJS.Signals) {
 
 async function cleanupStateFiles(scannerRoot: string) {
   await Promise.allSettled([
-    rm("/tmp/luxcheapflights-local-scan.lock", {
-      recursive: true,
-      force: true,
-    }),
+    removeStaleLocalScannerLock("price_scanner"),
     rm(path.join(scannerRoot, "scanner", "state", "local-scanner.pid"), {
       force: true,
     }),

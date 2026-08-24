@@ -12,6 +12,10 @@ import type {
   LocalScannerRunTotals,
   LocalScannerStatus,
 } from "@/lib/local-scanner-status-shared";
+import {
+  getLocalScannerLockState,
+  removeStaleLocalScannerLock,
+} from "@/lib/local-scanner-lock";
 
 type ScannerRouteSeed = {
   origin_airport: string;
@@ -89,10 +93,7 @@ function processExists(pid: number) {
 
 async function cleanupStaleState(scannerRoot: string) {
   await Promise.allSettled([
-    rm("/tmp/luxcheapflights-local-scan.lock", {
-      recursive: true,
-      force: true,
-    }),
+    removeStaleLocalScannerLock("price_scanner"),
     rm(path.join(scannerRoot, "scanner", "state", "local-scanner.pid"), {
       force: true,
     }),
@@ -947,16 +948,18 @@ export async function getLocalScannerStatus(): Promise<LocalScannerStatus> {
     mergedEvents,
     (event) => event.message === "Local Lux flight scan finished successfully.",
   );
-  const lockExists = await pathExists("/tmp/luxcheapflights-local-scan.lock");
+  const sharedLock = await getLocalScannerLockState();
   const scriptPid = await readPidIfExists(
     path.join(scannerRoot, "scanner", "state", "local-scanner.pid"),
   );
   const childPid = await readPidIfExists(
     path.join(scannerRoot, "scanner", "state", "local-scanner.child.pid"),
   );
-  const running = [childPid, scriptPid].some((pid) => pid !== null && processExists(pid));
+  const running =
+    [childPid, scriptPid].some((pid) => pid !== null && processExists(pid)) ||
+    (sharedLock.owner === "price_scanner" && sharedLock.active);
 
-  if (!running && lockExists) {
+  if (!running && sharedLock.owner === "price_scanner") {
     await cleanupStaleState(scannerRoot);
   }
 

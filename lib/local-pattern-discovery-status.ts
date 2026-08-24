@@ -10,6 +10,10 @@ import type {
   LocalPatternDiscoveryStatus,
 } from "@/lib/local-pattern-discovery-status-shared";
 import { hasSupabaseAdminEnv } from "@/lib/env";
+import {
+  getLocalScannerLockState,
+  removeStaleLocalScannerLock,
+} from "@/lib/local-scanner-lock";
 import { resolveScannerRoot } from "@/lib/local-scanner-status";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -303,10 +307,7 @@ function processExists(pid: number) {
 
 async function cleanupStaleState(scannerRoot: string) {
   await Promise.allSettled([
-    rm("/tmp/luxcheapflights-pattern-discovery.lock", {
-      recursive: true,
-      force: true,
-    }),
+    removeStaleLocalScannerLock("dates_scanner"),
     rm(path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.pid"), {
       force: true,
     }),
@@ -624,16 +625,18 @@ export async function getLocalPatternDiscoveryStatus(): Promise<LocalPatternDisc
     stderrEvents,
     (event) => event.message === "Local route pattern discovery failed.",
   );
-  const lockExists = await pathExists("/tmp/luxcheapflights-pattern-discovery.lock");
+  const sharedLock = await getLocalScannerLockState();
   const scriptPid = await readPidIfExists(
     path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.pid"),
   );
   const childPid = await readPidIfExists(
     path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.child.pid"),
   );
-  const running = [childPid, scriptPid].some((pid) => pid !== null && processExists(pid));
+  const running =
+    [childPid, scriptPid].some((pid) => pid !== null && processExists(pid)) ||
+    (sharedLock.owner === "dates_scanner" && sharedLock.active);
 
-  if (!running && lockExists) {
+  if (!running && sharedLock.owner === "dates_scanner") {
     await cleanupStaleState(scannerRoot);
   }
 
