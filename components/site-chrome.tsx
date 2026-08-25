@@ -226,6 +226,7 @@ function NextScanCountdown() {
 function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   const [isBusy, setIsBusy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [controlAvailable, setControlAvailable] = useState(true);
   const [buttonLabel, setButtonLabel] = useState("Run scan now");
 
   useEffect(() => {
@@ -244,15 +245,22 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
           return;
         }
 
-        const payload = (await response.json()) as { running?: boolean };
+        const payload = (await response.json()) as {
+          running?: boolean;
+          controlAvailable?: boolean;
+        };
         if (!isMounted) {
           return;
         }
 
         const running = Boolean(payload.running);
+        const canControl = payload.controlAvailable !== false;
         setIsRunning(running);
+        setControlAvailable(canControl);
         if (!isBusy) {
-          setButtonLabel(running ? "Stop scan" : "Run scan now");
+          setButtonLabel(
+            running ? (canControl ? "Stop scan" : "Running on Mac") : "Run scan now",
+          );
         }
       } catch {
         // Keep the button quiet if polling fails.
@@ -318,8 +326,9 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   return (
     <button
       className={`site-chrome__scan-trigger ${isRunning ? "site-chrome__scan-trigger--danger" : ""}`}
-      disabled={isBusy}
+      disabled={isBusy || (isRunning && !controlAvailable)}
       onClick={handleClick}
+      title={isRunning && !controlAvailable ? "This scan is running on the Mac." : undefined}
       type="button"
     >
       {buttonLabel}

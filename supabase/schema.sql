@@ -609,7 +609,13 @@ begin
   -- local state keeps its old heartbeat and therefore cannot reopen a run.
   if old.status <> 'running' and new.status = 'running' then
     if
-      old.stopped_reason_code = 'heartbeat_expired'
+      (
+        old.stopped_reason_code = 'heartbeat_expired'
+        or (
+          old.stopped_reason_code = 'vps_service_inactive'
+          and old.scanner_source not like 'vps%'
+        )
+      )
       and new.run_key = old.run_key
       and new.started_at = old.started_at
       and new.heartbeat_at is not null

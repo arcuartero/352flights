@@ -681,7 +681,11 @@ export function LocalScannerStatusWidget({
         </div>
         <div className="ops-scanner-status__actions">
           <span className={`ops-send-badge ${status.running ? "is-live" : "is-warning"}`}>
-            {status.running ? "Running" : "Idle"}
+            {status.running
+              ? status.runnerSource === "mac"
+                ? "Mac · Running"
+                : "Running"
+              : "Idle"}
           </span>
           {canCollapse ? (
             <button

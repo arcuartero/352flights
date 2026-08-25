@@ -73,6 +73,8 @@ export type LocalScannerBreakdownItem = {
 export type LocalScannerStatus = {
   available: boolean;
   running: boolean;
+  runnerSource?: string | null;
+  controlAvailable?: boolean;
   totalRoutes: number | null;
   startedRoutes: number | null;
   remainingRoutes: number | null;

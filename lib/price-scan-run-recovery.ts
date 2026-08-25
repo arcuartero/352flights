@@ -169,6 +169,7 @@ async function recoverFailedServiceAttempt(
   const existing = await supabase
     .from("price_scan_runs")
     .select("id,status,error_breakdown,sync_summary")
+    .like("scanner_source", "vps%")
     .gte("started_at", existingStart)
     .lte("started_at", existingEnd)
     .limit(1);
@@ -315,6 +316,7 @@ async function reconcileSupersededRunningRuns(activeRunStartedAt: string) {
     .from("price_scan_runs")
     .select("id,started_at,updated_at,sync_summary")
     .eq("status", "running")
+    .like("scanner_source", "vps%")
     .lt("started_at", activeRunStartedAt);
   if (staleRuns.error) throw new Error(staleRuns.error.message);
 
@@ -359,7 +361,8 @@ async function reconcileInactiveRunningRuns() {
   const staleRuns = await supabase
     .from("price_scan_runs")
     .select("id,started_at,updated_at,sync_summary")
-    .eq("status", "running");
+    .eq("status", "running")
+    .like("scanner_source", "vps%");
   if (staleRuns.error) throw new Error(staleRuns.error.message);
 
   const runs = (staleRuns.data ?? []) as Array<{
@@ -417,6 +420,7 @@ async function recoverActiveVpsRun(status: VpsScannerAgentStatus) {
   const existing = await supabase
     .from("price_scan_runs")
     .select("id,status,stopped_reason_code,sync_summary,heartbeat_at")
+    .like("scanner_source", "vps%")
     .gte("started_at", new Date(startMs - 120_000).toISOString())
     .lte("started_at", new Date(startMs + 120_000).toISOString())
     .order("started_at", { ascending: false })
@@ -557,6 +561,7 @@ export async function recoverLatestVpsPriceScanRun(status: VpsScannerAgentStatus
   const existing = await supabase
     .from("price_scan_runs")
     .select("id")
+    .like("scanner_source", "vps%")
     .gte("started_at", existingStart)
     .lte("started_at", existingEnd)
     .limit(1);

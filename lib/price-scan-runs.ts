@@ -120,6 +120,7 @@ export type PriceScanRun = {
 
 export type PriceScanLiveProgress = {
   runKey: string;
+  scannerSource: string;
   startedAt: string;
   updatedAt: string;
   heartbeatAt: string | null;
@@ -183,6 +184,7 @@ type PriceScanRunRow = {
 
 type PriceScanLiveProgressRow = {
   run_key: string;
+  scanner_source: string;
   started_at: string;
   updated_at: string;
   heartbeat_at: string | null;
@@ -489,6 +491,7 @@ export async function getLatestRunningPriceScanProgress() {
       .from("price_scan_runs")
       .select([
         "run_key",
+        "scanner_source",
         "started_at",
         "updated_at",
         "heartbeat_at",
@@ -522,6 +525,7 @@ export async function getLatestRunningPriceScanProgress() {
     return {
       progress: {
         runKey: row.run_key,
+        scannerSource: row.scanner_source,
         startedAt: row.started_at,
         updatedAt: row.updated_at,
         heartbeatAt: row.heartbeat_at,

@@ -505,7 +505,15 @@ function mergePersistedProgress(
   progress: PriceScanLiveProgress | null,
   serviceStartedAt: string | null,
 ) {
-  if (!status.running || !progress || !isProgressForActiveService(progress, serviceStartedAt)) {
+  if (!progress) {
+    return status;
+  }
+
+  const isVpsProgress = progress.scannerSource.startsWith("vps");
+  if (
+    isVpsProgress &&
+    (!status.running || !isProgressForActiveService(progress, serviceStartedAt))
+  ) {
     return status;
   }
 
@@ -517,11 +525,31 @@ function mergePersistedProgress(
 
   return {
     ...status,
+    available: true,
+    running: true,
+    runnerSource: progress.scannerSource,
+    controlAvailable: isVpsProgress,
     totalRoutes,
     startedRoutes,
     remainingRoutes,
     startedAt: progress.startedAt,
     currentRouteLabel: progress.currentRouteLabel ?? status.currentRouteLabel,
+    currentPatternLabel: isVpsProgress ? status.currentPatternLabel : null,
+    latestCompletedAt: null,
+    latestFinishedAt: null,
+    latestActivity: isVpsProgress
+      ? status.latestActivity
+      : `Live progress received from ${progress.scannerSource}`,
+    recentLogLines: isVpsProgress
+      ? status.recentLogLines
+      : [{
+          id: `persisted:${progress.runKey}:${progress.lastProgressAt ?? progress.updatedAt}`,
+          timestamp: progress.lastProgressAt ?? progress.heartbeatAt ?? progress.updatedAt,
+          label: "Mac scanner",
+          detail: `${progress.routesStarted}/${totalRoutes ?? "?"} routes started`,
+          secondaryDetail: `${progress.foundPrices} prices found · ${progress.patternsScanned} patterns processed`,
+          tone: "progress" as const,
+        }],
     liveTotals: {
       routesStarted: progress.routesStarted,
       patternsStarted: progress.patternsScanned,
@@ -577,6 +605,8 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
   return {
     available: true,
     running: status.running,
+    runnerSource: "vps",
+    controlAvailable: true,
     totalRoutes: routeProgress.totalRoutes,
     startedRoutes: routeProgress.startedRoutes,
     remainingRoutes,
