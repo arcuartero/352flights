@@ -189,6 +189,8 @@ const markerIcon = divIcon({
   popupAnchor: [0, -32],
 });
 
+const PREVIEW_MARKER_LIMIT = 6;
+
 function createPriceMarkerIcon(price: number, locale: Locale) {
   return divIcon({
     className: "deals-results-map__price-marker-shell",
@@ -381,6 +383,10 @@ export function PublicDealsMap({ cities, locale, presentation = "preview" }: Pub
     () => cities.filter((city) => AIRPORT_COORDINATES[city.airport.toUpperCase()]),
     [cities],
   );
+  const previewCities = useMemo(
+    () => mappedCities.slice(0, PREVIEW_MARKER_LIMIT),
+    [mappedCities],
+  );
 
   const closeModal = () => {
     setIsOpen(false);
@@ -408,7 +414,7 @@ export function PublicDealsMap({ cities, locale, presentation = "preview" }: Pub
           </div>
           <div className="deals-results-map__preview">
             {mappedCities.length > 0 ? (
-              <DealsLeafletMap cities={mappedCities} compact locale={locale} />
+              <DealsLeafletMap cities={previewCities} compact locale={locale} />
             ) : (
               <p className="deals-results-map__empty">{copy.noCoordinates}</p>
             )}
