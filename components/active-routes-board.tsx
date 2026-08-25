@@ -2105,7 +2105,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
           <div>
             <CapacityMetricLabel
               label="Active routes"
-              tooltip="Routes that are enabled and have at least one enabled rule in a visible month. Seeded routes with no enabled rules are excluded, so this number can be lower than the seeded-routes total below."
+              tooltip="How many routes the scanner can check now. Routes with no searches turned on are not counted."
               tooltipId="active-routes-help"
             />
             <dd>{priceScanCapacity.activeRoutes.toLocaleString("en-GB")}</dd>
@@ -2113,7 +2113,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
           <div>
             <CapacityMetricLabel
               label="Active route-months"
-              tooltip="One count for every route and visible month that has at least one enabled rule. For example, one route with rules in 9 months contributes 9 active route-months."
+              tooltip="How many route-and-month pairs are ready. Example: 1 route active for 9 months = 9."
               tooltipId="active-route-months-help"
             />
             <dd>{priceScanCapacity.activeRouteMonths.toLocaleString("en-GB")}</dd>
@@ -2121,7 +2121,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
           <div>
             <CapacityMetricLabel
               label="Enabled rule slots"
-              tooltip="Every enabled rule inside a specific route-month counts as one slot. The same rule enabled for 9 months therefore uses 9 rule slots."
+              tooltip="How many searches are turned on across all routes and months. The same search in 9 months counts as 9."
               tooltipId="enabled-rule-slots-help"
             />
             <dd>{priceScanCapacity.activeRuleSlots.toLocaleString("en-GB")}</dd>
