@@ -254,7 +254,18 @@ body:has(.page-shell--deals-city)::before {
 
 .deals-results-map__preview > button {
   position: absolute;
+  inset: 0;
   z-index: 500;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.deals-results-map__preview > button > span {
+  position: absolute;
   bottom: 0.9rem;
   left: 50%;
   display: inline-flex;
@@ -263,7 +274,6 @@ body:has(.page-shell--deals-city)::before {
   justify-content: center;
   gap: 0.55rem;
   padding: 0.65rem 1rem;
-  border: 0;
   border-radius: 0.55rem;
   background: var(--v2-blue-strong);
   box-shadow: 0 9px 24px rgba(30, 96, 207, 0.28);
@@ -273,16 +283,15 @@ body:has(.page-shell--deals-city)::before {
   font-weight: 750;
   transform: translateX(-50%);
   white-space: nowrap;
-  cursor: pointer;
 }
 
-.deals-results-map__preview > button:hover {
+.deals-results-map__preview > button:hover > span {
   background: #1654bc;
 }
 
 .deals-results-map__preview > button:focus-visible {
   outline: 3px solid rgba(239, 50, 46, 0.38);
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 
 .deals-results-map__preview > button:disabled {
@@ -290,7 +299,7 @@ body:has(.page-shell--deals-city)::before {
   cursor: not-allowed;
 }
 
-.deals-results-map__preview > button svg {
+.deals-results-map__preview > button > span svg {
   width: 1rem;
   height: 1rem;
   fill: currentColor;
