@@ -3318,6 +3318,8 @@ export function PublicDealsExplorer({
 
     return groupSearchCityDeals(filteredDeals);
   }, [filteredDeals, mode]);
+  const showResultsMap =
+    mode !== "results" || effectiveFilters.destinationFilter === "any";
   const [openSearchCityGroups, setOpenSearchCityGroups] = useState<Set<string>>(() => new Set());
   const previousEffectiveFiltersRef = useRef<DealSearchFilters | null>(null);
   const selectedSearchGroup =
@@ -3920,11 +3922,13 @@ export function PublicDealsExplorer({
               </b>
             ) : null}
           </button>
-          <PublicDealsMap
-            cities={groupedOpportunityDeals}
-            locale={locale}
-            presentation="toolbar"
-          />
+          {showResultsMap ? (
+            <PublicDealsMap
+              cities={groupedOpportunityDeals}
+              locale={locale}
+              presentation="toolbar"
+            />
+          ) : null}
         </div>
         <p className="deals-mobile-results-count">
           {t("deals.mobile.resultsFound", { count: opportunityDeals.length })}
@@ -4762,9 +4766,11 @@ export function PublicDealsExplorer({
           <section className="deals-search-layout" ref={resultsBoundaryRef}>
             <aside className="deals-search-layout__filters">
               <div className="deals-search-sidebar" ref={fullSidebarRef}>
-              <div className="deals-search-sidebar__section">
-                <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
-              </div>
+                {showResultsMap ? (
+                  <div className="deals-search-sidebar__section">
+                    <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
+                  </div>
+                ) : null}
 
               <div className="deals-search-sidebar__section">
                 <div className="deals-control deals-control--static deals-control--origin-fixed">
