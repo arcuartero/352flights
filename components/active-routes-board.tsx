@@ -333,6 +333,35 @@ function summarizePriceScanCapacity(routes: ActiveRouteSummary[]) {
   );
 }
 
+function CapacityMetricLabel({
+  label,
+  tooltip,
+  tooltipId,
+}: {
+  label: string;
+  tooltip: string;
+  tooltipId: string;
+}) {
+  return (
+    <dt className="active-route-capacity-metric__label">
+      <span>{label}</span>
+      <span className="active-route-capacity-tooltip">
+        <button
+          aria-describedby={tooltipId}
+          aria-label={`What ${label.toLowerCase()} means`}
+          className="active-route-capacity-tooltip__trigger"
+          type="button"
+        >
+          i
+        </button>
+        <span className="active-route-capacity-tooltip__content" id={tooltipId} role="tooltip">
+          {tooltip}
+        </span>
+      </span>
+    </dt>
+  );
+}
+
 function SortableHeader({
   label,
   field,
@@ -2038,15 +2067,27 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
         </div>
         <dl className="active-route-scan-capacity__breakdown">
           <div>
-            <dt>Active routes</dt>
+            <CapacityMetricLabel
+              label="Active routes"
+              tooltip="Routes that are enabled and have at least one enabled rule in a visible month. Seeded routes with no enabled rules are excluded, so this number can be lower than the seeded-routes total below."
+              tooltipId="active-routes-help"
+            />
             <dd>{priceScanCapacity.activeRoutes.toLocaleString("en-GB")}</dd>
           </div>
           <div>
-            <dt>Active route-months</dt>
+            <CapacityMetricLabel
+              label="Active route-months"
+              tooltip="One count for every route and visible month that has at least one enabled rule. For example, one route with rules in 9 months contributes 9 active route-months."
+              tooltipId="active-route-months-help"
+            />
             <dd>{priceScanCapacity.activeRouteMonths.toLocaleString("en-GB")}</dd>
           </div>
           <div>
-            <dt>Enabled rule slots</dt>
+            <CapacityMetricLabel
+              label="Enabled rule slots"
+              tooltip="Every enabled rule inside a specific route-month counts as one slot. The same rule enabled for 9 months therefore uses 9 rule slots."
+              tooltipId="enabled-rule-slots-help"
+            />
             <dd>{priceScanCapacity.activeRuleSlots.toLocaleString("en-GB")}</dd>
           </div>
         </dl>
