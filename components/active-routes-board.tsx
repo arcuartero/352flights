@@ -258,6 +258,81 @@ function ariaSortValue(
   return activeDirection === "asc" ? "ascending" : "descending";
 }
 
+function weekdayCodeForIsoDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return WEEKDAY_ORDER[(date.getUTCDay() + 6) % 7];
+}
+
+function returnWeekdayCodeForIsoDate(value: string, tripNights: number) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day || !Number.isInteger(tripNights) || tripNights <= 0) {
+    return null;
+  }
+
+  const returnDate = new Date(Date.UTC(year, month - 1, day + tripNights));
+  return WEEKDAY_ORDER[(returnDate.getUTCDay() + 6) % 7];
+}
+
+function countMonthPricePossibilities(month: ActiveRouteMonthSummary) {
+  return month.activeRules.reduce((total, rule) => {
+    const matchingDepartures = month.departureDates.filter(
+      (departureDate) =>
+        weekdayCodeForIsoDate(departureDate) === rule.departureWeekday &&
+        returnWeekdayCodeForIsoDate(departureDate, rule.tripNights) === rule.returnWeekday,
+    ).length;
+
+    return total + matchingDepartures;
+  }, 0);
+}
+
+function summarizePriceScanCapacity(routes: ActiveRouteSummary[]) {
+  return routes.reduce(
+    (summary, route) => {
+      if (!route.isActive) {
+        return summary;
+      }
+
+      let routePossibilities = 0;
+      let routeHasRules = false;
+      for (const month of route.months) {
+        if (month.activeRules.length === 0) {
+          continue;
+        }
+
+        routeHasRules = true;
+        summary.activeRouteMonths += 1;
+        summary.activeRuleSlots += month.activeRules.length;
+        routePossibilities += countMonthPricePossibilities(month);
+      }
+
+      if (routeHasRules) {
+        summary.activeRoutes += 1;
+      }
+      summary.pricePossibilities += routePossibilities;
+      return summary;
+    },
+    {
+      pricePossibilities: 0,
+      activeRoutes: 0,
+      activeRouteMonths: 0,
+      activeRuleSlots: 0,
+    },
+  );
+}
+
 function SortableHeader({
   label,
   field,
@@ -1449,6 +1524,10 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
     () => data.routes.map((route) => routeOverrides[route.id] ?? route),
     [data.routes, routeOverrides],
   );
+  const priceScanCapacity = useMemo(
+    () => summarizePriceScanCapacity(routesForView),
+    [routesForView],
+  );
   const sortedRoutes = useMemo(() => {
     return [...routesForView].sort((left, right) => {
       const leftRulesActive = left.months.reduce(
@@ -1935,39 +2014,77 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
   );
 
   return (
-    <section className="ops-panel ops-panel--wide">
-      <div className="ops-panel__header">
-        <div>
-          <p className="ops-panel__eyebrow">Coverage</p>
-          <h2>Active route grid</h2>
-        </div>
-        <div className="active-route-grid__header-side">
+    <>
+      <section
+        aria-labelledby="price-scan-capacity-title"
+        className="ops-panel ops-panel--wide active-route-scan-capacity"
+      >
+        <div className="active-route-scan-capacity__intro">
+          <p className="ops-panel__eyebrow">Price scanner reach</p>
+          <h2 id="price-scan-capacity-title">
+            {priceScanCapacity.pricePossibilities.toLocaleString("en-GB")}
+          </h2>
+          <strong>possible price checks</strong>
           <p>
-            {data.routes.length} seeded routes · {data.totalChangeAlerts} cadence change(s) waiting
+            The scanner can test{" "}
+            {priceScanCapacity.pricePossibilities.toLocaleString("en-GB")} exact
+            outbound-and-return date combinations across{" "}
+            {priceScanCapacity.activeRoutes.toLocaleString("en-GB")} active route
+            {priceScanCapacity.activeRoutes === 1 ? "" : "s"} and{" "}
+            {priceScanCapacity.activeRouteMonths.toLocaleString("en-GB")} active route-month
+            {priceScanCapacity.activeRouteMonths === 1 ? "" : "s"}, using the rules and departure
+            dates currently detected.
           </p>
-          <div className="active-route-grid__actions">
-            <button
-              className="ops-button ops-button--ghost"
-              disabled={isBulkPending}
-              onClick={createRulesForAllRoutes}
-              type="button"
-            >
-              {isBulkPending ? "Creating..." : "Create rules"}
-            </button>
-            <button
-              className="ops-button ops-button--ghost"
-              disabled={isBulkPending}
-              onClick={clearRulesForAllRoutes}
-              type="button"
-            >
-              {isBulkPending ? "Clearing..." : "Clear all rules"}
-            </button>
+        </div>
+        <dl className="active-route-scan-capacity__breakdown">
+          <div>
+            <dt>Active routes</dt>
+            <dd>{priceScanCapacity.activeRoutes.toLocaleString("en-GB")}</dd>
+          </div>
+          <div>
+            <dt>Active route-months</dt>
+            <dd>{priceScanCapacity.activeRouteMonths.toLocaleString("en-GB")}</dd>
+          </div>
+          <div>
+            <dt>Enabled rule slots</dt>
+            <dd>{priceScanCapacity.activeRuleSlots.toLocaleString("en-GB")}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="ops-panel ops-panel--wide active-route-grid">
+        <div className="ops-panel__header">
+          <div>
+            <p className="ops-panel__eyebrow">Coverage</p>
+            <h2>Active route grid</h2>
+          </div>
+          <div className="active-route-grid__header-side">
+            <p>
+              {data.routes.length} seeded routes · {data.totalChangeAlerts} cadence change(s) waiting
+            </p>
+            <div className="active-route-grid__actions">
+              <button
+                className="ops-button ops-button--ghost"
+                disabled={isBulkPending}
+                onClick={createRulesForAllRoutes}
+                type="button"
+              >
+                {isBulkPending ? "Creating..." : "Create rules"}
+              </button>
+              <button
+                className="ops-button ops-button--ghost"
+                disabled={isBulkPending}
+                onClick={clearRulesForAllRoutes}
+                type="button"
+              >
+                {isBulkPending ? "Clearing..." : "Clear all rules"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {bulkFeedback ? <p className="active-route-grid__feedback is-success">{bulkFeedback}</p> : null}
-      {bulkError ? <p className="active-route-grid__feedback is-error">{bulkError}</p> : null}
+        {bulkFeedback ? <p className="active-route-grid__feedback is-success">{bulkFeedback}</p> : null}
+        {bulkError ? <p className="active-route-grid__feedback is-error">{bulkError}</p> : null}
 
       {data.routes.length === 0 ? (
         <div className="ops-empty">
@@ -2167,6 +2284,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
           routeIndex={Math.max(selectedRouteIndex, 0)}
         />
       ) : null}
-    </section>
+      </section>
+    </>
   );
 }
