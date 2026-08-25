@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { divIcon, latLngBounds, type LatLngExpression, type Marker as LeafletMarker } from "leaflet";
+import { divIcon, latLngBounds, type LatLngTuple, type Map as LeafletMap, type Marker as LeafletMarker } from "leaflet";
 import { MapPin, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -35,6 +35,7 @@ type MapCopy = {
   close: string;
   faresFrom: string;
   viewDestination: (city: string) => string;
+  clusterLabel: (count: number) => string;
   noCoordinates: string;
 };
 
@@ -48,6 +49,7 @@ const COPY: Record<Locale, MapCopy> = {
     close: "Close map",
     faresFrom: "Fares from",
     viewDestination: (city) => `See more flights to ${city}`,
+    clusterLabel: (count) => `Zoom to ${count} destinations`,
     noCoordinates: "No destinations with map coordinates match these filters.",
   },
   fr: {
@@ -59,6 +61,7 @@ const COPY: Record<Locale, MapCopy> = {
     close: "Fermer la carte",
     faresFrom: "Tarifs des",
     viewDestination: (city) => `Voir plus de vols vers ${city}`,
+    clusterLabel: (count) => `Afficher ${count} destinations`,
     noCoordinates: "Aucune destination avec des coordonnees ne correspond a ces filtres.",
   },
   de: {
@@ -70,6 +73,7 @@ const COPY: Record<Locale, MapCopy> = {
     close: "Karte schliessen",
     faresFrom: "Tarife ab",
     viewDestination: (city) => `Mehr Fluege nach ${city}`,
+    clusterLabel: (count) => `Auf ${count} Reiseziele zoomen`,
     noCoordinates: "Keine Reiseziele mit Kartenkoordinaten entsprechen diesen Filtern.",
   },
   pt: {
@@ -81,6 +85,7 @@ const COPY: Record<Locale, MapCopy> = {
     close: "Fechar mapa",
     faresFrom: "Tarifas desde",
     viewDestination: (city) => `Ver mais voos para ${city}`,
+    clusterLabel: (count) => `Aproximar ${count} destinos`,
     noCoordinates: "Nenhum destino com coordenadas corresponde a estes filtros.",
   },
   it: {
@@ -92,6 +97,7 @@ const COPY: Record<Locale, MapCopy> = {
     close: "Chiudi mappa",
     faresFrom: "Tariffe da",
     viewDestination: (city) => `Vedi altri voli per ${city}`,
+    clusterLabel: (count) => `Avvicina ${count} destinazioni`,
     noCoordinates: "Nessuna destinazione con coordinate corrisponde a questi filtri.",
   },
   es: {
@@ -103,11 +109,12 @@ const COPY: Record<Locale, MapCopy> = {
     close: "Cerrar mapa",
     faresFrom: "Tarifas desde",
     viewDestination: (city) => `Ver mas vuelos a ${city}`,
+    clusterLabel: (count) => `Acercar a ${count} destinos`,
     noCoordinates: "No hay destinos con coordenadas que coincidan con estos filtros.",
   },
 };
 
-const AIRPORT_COORDINATES: Record<string, LatLngExpression> = {
+const AIRPORT_COORDINATES: Record<string, LatLngTuple> = {
   AGA: [30.325, -9.413],
   AGP: [36.675, -4.499],
   AJA: [41.924, 8.803],
@@ -190,6 +197,18 @@ const markerIcon = divIcon({
 });
 
 const PREVIEW_MARKER_LIMIT = 6;
+const CLUSTER_EXPANSION_ZOOM = 10;
+
+type ClusterCity = {
+  city: DealsMapCity;
+  position: LatLngTuple;
+};
+
+type MapCityCluster = {
+  key: string;
+  cities: ClusterCity[];
+  center: LatLngTuple;
+};
 
 function createPriceMarkerIcon(price: number, locale: Locale) {
   return divIcon({
@@ -199,6 +218,83 @@ function createPriceMarkerIcon(price: number, locale: Locale) {
     iconSize: [76, 38],
     popupAnchor: [0, -30],
   });
+}
+
+function createClusterMarkerIcon(count: number) {
+  return divIcon({
+    className: "deals-results-map__cluster-shell",
+    html: `<span class="deals-results-map__cluster">${count}</span>`,
+    iconAnchor: [26, 26],
+    iconSize: [52, 52],
+  });
+}
+
+function getClusterRadius(zoom: number) {
+  if (zoom >= CLUSTER_EXPANSION_ZOOM) {
+    return 0;
+  }
+
+  if (zoom <= 4) {
+    return 112;
+  }
+
+  if (zoom <= 6) {
+    return 92;
+  }
+
+  return 74;
+}
+
+function buildMapClusters(cities: DealsMapCity[], map: LeafletMap, zoom: number) {
+  const clusterRadius = getClusterRadius(zoom);
+  const projectedClusters: Array<{
+    cities: ClusterCity[];
+    x: number;
+    y: number;
+  }> = [];
+
+  cities.forEach((city) => {
+    const position = AIRPORT_COORDINATES[city.airport.toUpperCase()];
+    if (!position) {
+      return;
+    }
+
+    const point = map.project(position, zoom);
+    const cluster =
+      clusterRadius > 0
+        ? projectedClusters.find((candidate) =>
+            Math.hypot(candidate.x - point.x, candidate.y - point.y) <= clusterRadius,
+          )
+        : undefined;
+
+    if (!cluster) {
+      projectedClusters.push({
+        cities: [{ city, position }],
+        x: point.x,
+        y: point.y,
+      });
+      return;
+    }
+
+    const previousCount = cluster.cities.length;
+    cluster.cities.push({ city, position });
+    cluster.x = (cluster.x * previousCount + point.x) / cluster.cities.length;
+    cluster.y = (cluster.y * previousCount + point.y) / cluster.cities.length;
+  });
+
+  return projectedClusters.map<MapCityCluster>((cluster) => ({
+    key: cluster.cities
+      .map(({ city }) => city.key)
+      .sort()
+      .join("|"),
+    cities: cluster.cities,
+    center: [
+      cluster.cities.reduce((total, item) => total + item.position[0], 0) /
+        cluster.cities.length,
+      cluster.cities.reduce((total, item) => total + item.position[1], 0) /
+        cluster.cities.length,
+    ],
+  }));
 }
 
 function getIntlLocale(locale: Locale) {
@@ -235,7 +331,7 @@ function MapViewport({ cities, compact }: { cities: DealsMapCity[]; compact: boo
   useEffect(() => {
     const points = cities
       .map((city) => AIRPORT_COORDINATES[city.airport.toUpperCase()])
-      .filter((coordinates): coordinates is LatLngExpression => Boolean(coordinates));
+      .filter((coordinates): coordinates is LatLngTuple => Boolean(coordinates));
 
     if (points.length === 1) {
       map.setView(points[0], compact ? 5 : 7, { animate: false });
@@ -254,8 +350,95 @@ function MapViewport({ cities, compact }: { cities: DealsMapCity[]; compact: boo
   return null;
 }
 
-function DealsLeafletMap({ cities, compact, locale }: PublicDealsMapProps & { compact: boolean }) {
+function MapCityPopup({ city, locale }: { city: DealsMapCity; locale: Locale }) {
   const copy = COPY[locale];
+
+  return (
+    <Popup closeButton={false} maxWidth={320} minWidth={250}>
+      <article className="deals-results-map__popup-card">
+        <header>
+          <div>
+            <strong>{city.city}</strong>
+            <span>{city.airport}</span>
+          </div>
+          <b>{copy.faresFrom} {formatCurrency(city.lowestPrice, locale)}</b>
+        </header>
+        <div className="deals-results-map__fares">
+          {[...city.deals]
+            .sort((left, right) => left.dealPrice - right.dealPrice)
+            .slice(0, 4)
+            .map((deal) => (
+              <div key={deal.id}>
+                <span>{formatDateRange(deal, locale)}</span>
+                <small>{deal.airlineSummary ?? deal.primaryAirlineCode ?? city.airport}</small>
+                <strong>{formatCurrency(deal.dealPrice, locale)}</strong>
+              </div>
+            ))}
+        </div>
+        <a href={`/deals/${toDestinationSlug(city.city)}`}>
+          {copy.viewDestination(city.city)} <span aria-hidden="true">-&gt;</span>
+        </a>
+      </article>
+    </Popup>
+  );
+}
+
+function PriceMapMarker({ city, locale }: { city: DealsMapCity; locale: Locale }) {
+  return (
+    <Marker
+      eventHandlers={{
+        mouseover: (event) => (event.target as LeafletMarker).openPopup(),
+      }}
+      icon={createPriceMarkerIcon(city.lowestPrice, locale)}
+      position={AIRPORT_COORDINATES[city.airport.toUpperCase()]}
+    >
+      <MapCityPopup city={city} locale={locale} />
+    </Marker>
+  );
+}
+
+function ClusteredPriceMarkers({ cities, locale }: { cities: DealsMapCity[]; locale: Locale }) {
+  const copy = COPY[locale];
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
+
+  useEffect(() => {
+    const syncZoom = () => setZoom(map.getZoom());
+    map.on("zoomend", syncZoom);
+    return () => {
+      map.off("zoomend", syncZoom);
+    };
+  }, [map]);
+
+  const clusters = useMemo(() => buildMapClusters(cities, map, zoom), [cities, map, zoom]);
+
+  const expandCluster = (cluster: MapCityCluster) => {
+    const nextZoom = Math.min(map.getZoom() + 3, CLUSTER_EXPANSION_ZOOM);
+    map.setView(cluster.center, nextZoom, { animate: true });
+  };
+
+  return clusters.map((cluster) => {
+    if (cluster.cities.length === 1) {
+      const [{ city }] = cluster.cities;
+      return <PriceMapMarker city={city} key={city.key} locale={locale} />;
+    }
+
+    const label = copy.clusterLabel(cluster.cities.length);
+    return (
+      <Marker
+        alt={label}
+        eventHandlers={{ click: () => expandCluster(cluster) }}
+        icon={createClusterMarkerIcon(cluster.cities.length)}
+        key={cluster.key}
+        position={cluster.center}
+        riseOnHover
+        title={label}
+      />
+    );
+  });
+}
+
+function DealsLeafletMap({ cities, compact, locale }: PublicDealsMapProps & { compact: boolean }) {
   const mappedCities = useMemo(
     () => cities.filter((city) => AIRPORT_COORDINATES[city.airport.toUpperCase()]),
     [cities],
@@ -277,45 +460,17 @@ function DealsLeafletMap({ cities, compact, locale }: PublicDealsMapProps & { co
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <MapViewport cities={mappedCities} compact={compact} />
-      {mappedCities.map((city) => (
-        <Marker
-          eventHandlers={{
-            mouseover: (event) => (event.target as LeafletMarker).openPopup(),
-          }}
-          icon={compact ? markerIcon : createPriceMarkerIcon(city.lowestPrice, locale)}
-          key={city.key}
-          position={AIRPORT_COORDINATES[city.airport.toUpperCase()]}
-        >
-          {!compact ? (
-            <Popup closeButton={false} maxWidth={320} minWidth={250}>
-              <article className="deals-results-map__popup-card">
-                <header>
-                  <div>
-                    <strong>{city.city}</strong>
-                    <span>{city.airport}</span>
-                  </div>
-                  <b>{copy.faresFrom} {formatCurrency(city.lowestPrice, locale)}</b>
-                </header>
-                <div className="deals-results-map__fares">
-                  {[...city.deals]
-                    .sort((left, right) => left.dealPrice - right.dealPrice)
-                    .slice(0, 4)
-                    .map((deal) => (
-                      <div key={deal.id}>
-                        <span>{formatDateRange(deal, locale)}</span>
-                        <small>{deal.airlineSummary ?? deal.primaryAirlineCode ?? city.airport}</small>
-                        <strong>{formatCurrency(deal.dealPrice, locale)}</strong>
-                      </div>
-                    ))}
-                </div>
-                <a href={`/deals/${toDestinationSlug(city.city)}`}>
-                  {copy.viewDestination(city.city)} <span aria-hidden="true">-&gt;</span>
-                </a>
-              </article>
-            </Popup>
-          ) : null}
-        </Marker>
-      ))}
+      {compact ? (
+        mappedCities.map((city) => (
+          <Marker
+            icon={markerIcon}
+            key={city.key}
+            position={AIRPORT_COORDINATES[city.airport.toUpperCase()]}
+          />
+        ))
+      ) : (
+        <ClusteredPriceMarkers cities={mappedCities} locale={locale} />
+      )}
     </MapContainer>
   );
 }

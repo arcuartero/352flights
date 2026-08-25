@@ -386,6 +386,33 @@ body:has(.page-shell--deals-city)::before {
   border-color: #fff transparent transparent;
 }
 
+.deals-results-map__cluster-shell {
+  border: 0;
+  background: transparent;
+}
+
+.deals-results-map__cluster {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--v2-blue-strong);
+  box-shadow: 0 7px 20px rgba(16, 32, 53, 0.3);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 850;
+  line-height: 1;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.deals-results-map__cluster-shell:hover .deals-results-map__cluster,
+.deals-results-map__cluster-shell:focus-visible .deals-results-map__cluster {
+  box-shadow: 0 9px 26px rgba(16, 32, 53, 0.38);
+  transform: scale(1.08);
+}
+
 .deals-mobile-results-controls {
   display: none;
 }
