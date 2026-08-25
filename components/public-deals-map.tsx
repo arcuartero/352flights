@@ -574,13 +574,16 @@ export function PublicDealsMap({ cities, locale, presentation = "preview" }: Pub
               <p className="deals-results-map__empty">{copy.noCoordinates}</p>
             )}
             <button
+              aria-label={copy.openMap}
               disabled={mappedCities.length === 0}
               onClick={() => setIsOpen(true)}
               ref={triggerRef}
               type="button"
             >
-              <MapPin aria-hidden="true" />
-              {copy.openMap}
+              <span>
+                <MapPin aria-hidden="true" />
+                {copy.openMap}
+              </span>
             </button>
           </div>
         </section>
