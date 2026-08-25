@@ -1755,6 +1755,9 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
 
   async function runSingleRouteDiscovery(route: ActiveRouteSummary) {
     setIsDiscoveryBusy(true);
+    setDiscoveryRouteId(route.id);
+    setBulkFeedback(null);
+    setBulkError(null);
 
     try {
       const response = await fetch("/api/ops/pattern-discovery-run", {
@@ -1763,6 +1766,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          forceRefresh: true,
           route: {
             originAirport: route.originAirport,
             destinationAirport: route.destinationAirport,
@@ -1771,15 +1775,33 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
         }),
       });
 
+      const payload = (await response.json().catch(() => null)) as
+        | { reason?: string; detail?: string; routeScope?: unknown }
+        | null;
+
       if (response.status === 409) {
-        setIsDiscoveryRunning(true);
+        setDiscoveryRouteId(null);
+        if (payload?.reason === "already_running") {
+          setIsDiscoveryRunning(true);
+          setBulkError("The Dates Scanner is already running. Follow the current run in Dates Scanner before starting another route.");
+        } else {
+          setIsDiscoveryRunning(false);
+          setBulkError("The Price Scanner is currently using the flight provider. Wait for it to finish, then scan this route again.");
+        }
+        emitClientActivityLog({
+          kind: "action",
+          level: "warning",
+          title: `Dates Scanner did not start for ${route.label}`,
+          detail: payload?.detail ?? payload?.reason ?? "Another scanner is already running.",
+        });
         return;
       }
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { reason?: string; detail?: string }
-          | null;
+        setDiscoveryRouteId(null);
+        setBulkError(
+          `The Dates Scanner could not start for ${route.label}: ${payload?.detail ?? payload?.reason ?? `HTTP ${response.status}`}`,
+        );
         emitClientActivityLog({
           kind: "action",
           level: "error",
@@ -1789,9 +1811,23 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
         return;
       }
 
-      setDiscoveryRouteId(route.id);
       setIsDiscoveryRunning(true);
+      setBulkFeedback(
+        `Dates Scanner started for ${route.label} only. It is refreshing every visible month across all airlines; live progress and results will appear in Dates Scanner.`,
+      );
+      emitClientActivityLog({
+        kind: "action",
+        level: "info",
+        title: `Dates Scanner started for ${route.label}`,
+        detail: "Single-route refresh · all visible months · all airlines",
+      });
     } catch (error) {
+      setDiscoveryRouteId(null);
+      setBulkError(
+        `The Dates Scanner request failed for ${route.label}: ${
+          error instanceof Error ? error.message : "Unknown request error."
+        }`,
+      );
       emitClientActivityLog({
         kind: "action",
         level: "error",
@@ -2284,12 +2320,14 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
                 </span>
                 <span role="cell">
                   <button
+                    aria-label={`Scan flight dates for ${route.label} across all airlines`}
                     className="ops-button ops-button--ghost"
                     disabled={isDiscoveryBusy || isDiscoveryRunning}
-                onClick={(event) => {
+                    onClick={(event) => {
                       event.stopPropagation();
                       void runSingleRouteDiscovery(route);
                     }}
+                    title="Refresh this route only, across all airlines"
                     type="button"
                   >
                     {discoveryButtonLabel === "Scan dates" ? "Scan" : discoveryButtonLabel}

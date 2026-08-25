@@ -1577,6 +1577,10 @@ class LuxFlightScanner:
             ],
             stops=to_max_stops(max_stops),
             seat_type=SeatType.ECONOMY,
+            # Deliberately unrestricted: a service date is valid when any
+            # airline sells this route, not only the carrier from the latest
+            # price snapshot shown in Active Routes.
+            airlines=None,
         )
 
     def _build_service_calendar_return_filters(
@@ -2186,7 +2190,7 @@ class LuxFlightScanner:
                     "departure_weekdays": self._sort_weekday_codes(month_bucket["departure_weekdays"]),
                     "observed_patterns": [],
                     "sample_size": 0,
-                    "detection_source": "auto_monthly_discovery",
+                    "detection_source": "auto_monthly_discovery_all_airlines",
                 }
             )
 
@@ -2246,12 +2250,12 @@ class LuxFlightScanner:
         if not visible_months:
             return (
                 f"Service calendar result: {route.origin_airport} -> {route.destination_airport} "
-                "no outbound departure dates found in the scanned months"
+                "no outbound departure dates found across all airlines in the scanned months"
             )
 
         summary = (
             f"Service calendar result: {route.origin_airport} -> {route.destination_airport} "
-            f"{'; '.join(visible_months)}"
+            f"{'; '.join(visible_months)} · all airlines"
         )
         if empty_months:
             summary += f" · empty: {', '.join(empty_months)}"

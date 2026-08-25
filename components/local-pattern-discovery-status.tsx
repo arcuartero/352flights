@@ -253,7 +253,9 @@ export function LocalPatternDiscoveryStatusWidget({
           <p className="ops-panel__eyebrow">Dates Scanner</p>
           <h2>
             {status.running
-              ? "Discovering flight cadence"
+              ? status.totalRoutes === 1
+                ? "Discovering one route"
+                : "Discovering flight cadence"
               : status.source === "supabase"
                 ? "Latest dates scanner results"
                 : "Dates scanner idle"}
@@ -304,7 +306,7 @@ export function LocalPatternDiscoveryStatusWidget({
               {status.startedRoutes ?? 0}
               {status.totalRoutes !== null ? `/${status.totalRoutes}` : ""}
             </strong>
-            <span>routes checked</span>
+            <span>{status.totalRoutes === 1 ? "route checked" : "routes checked"}</span>
           </div>
           <div aria-hidden="true" className="ops-scanner-status__meter">
             <span style={{ width: `${progressRatio * 100}%` }} />

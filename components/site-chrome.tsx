@@ -399,20 +399,35 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
       const response = await fetch(
         isRunning ? "/api/ops/pattern-discovery-stop" : "/api/ops/pattern-discovery-run",
         {
-        method: "POST",
+          method: "POST",
+          ...(!isRunning
+            ? {
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ forceRefresh: true }),
+              }
+            : {}),
         },
       );
 
+      const payload = (await response.json().catch(() => null)) as
+        | { reason?: string; detail?: string }
+        | null;
+
       if (response.status === 409) {
-        setIsRunning(true);
-        setButtonLabel("Stop discovery");
+        if (payload?.reason === "already_running") {
+          setIsRunning(true);
+          setButtonLabel("Stop discovery");
+        } else {
+          setIsRunning(false);
+          setButtonLabel("Price scanner busy");
+          window.setTimeout(() => {
+            setButtonLabel("Run monthly discovery");
+          }, 2600);
+        }
         return;
       }
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { reason?: string }
-          | null;
         const remoteFailure = payload?.reason?.startsWith("vps_pattern_discovery_");
         setButtonLabel(
           remoteFailure ? "VPS unavailable" : isRunning ? "Stop failed" : "Start failed",

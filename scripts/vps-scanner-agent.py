@@ -187,15 +187,19 @@ def stop_service() -> dict[str, Any]:
     }
 
 
-def normalize_route_scope(payload: Any) -> dict[str, str] | None:
+def normalize_pattern_request(payload: Any) -> tuple[dict[str, str] | None, bool]:
     if payload is None:
-        return None
+        return None, False
     if not isinstance(payload, dict):
         raise ValueError("Request body must be a JSON object.")
 
+    force_refresh = payload.get("forceRefresh", False)
+    if not isinstance(force_refresh, bool):
+        raise ValueError("forceRefresh must be a boolean.")
+
     route = payload.get("route")
     if route is None:
-        return None
+        return None, force_refresh
     if not isinstance(route, dict):
         raise ValueError("route must be a JSON object.")
 
@@ -211,16 +215,22 @@ def normalize_route_scope(payload: Any) -> dict[str, str] | None:
     if not ROUTING_PATTERN.fullmatch(max_stops):
         raise ValueError("maxStops has an invalid format.")
 
-    return {
-        "originAirport": origin,
-        "destinationAirport": destination,
-        "maxStops": max_stops,
-    }
+    return (
+        {
+            "originAirport": origin,
+            "destinationAirport": destination,
+            "maxStops": max_stops,
+        },
+        force_refresh,
+    )
 
 
-def save_pattern_request(route_scope: dict[str, str] | None) -> None:
+def save_pattern_request(
+    route_scope: dict[str, str] | None,
+    force_refresh: bool,
+) -> None:
     PATTERN_REQUEST_FILE.parent.mkdir(parents=True, exist_ok=True)
-    if route_scope is None:
+    if route_scope is None and not force_refresh:
         PATTERN_REQUEST_FILE.unlink(missing_ok=True)
         return
 
@@ -228,14 +238,23 @@ def save_pattern_request(route_scope: dict[str, str] | None) -> None:
         f"{PATTERN_REQUEST_FILE.name}.{os.getpid()}.{threading.get_ident()}.tmp"
     )
     temporary_path.write_text(
-        json.dumps({"route": route_scope}, ensure_ascii=True),
+        json.dumps(
+            {
+                "forceRefresh": force_refresh,
+                **({"route": route_scope} if route_scope is not None else {}),
+            },
+            ensure_ascii=True,
+        ),
         encoding="utf-8",
     )
     temporary_path.chmod(0o600)
     os.replace(temporary_path, PATTERN_REQUEST_FILE)
 
 
-def start_pattern_service(route_scope: dict[str, str] | None) -> dict[str, Any]:
+def start_pattern_service(
+    route_scope: dict[str, str] | None,
+    force_refresh: bool = False,
+) -> dict[str, Any]:
     with ACTION_LOCK:
         if service_is_running(PATTERN_SERVICE_NAME):
             return {
@@ -247,7 +266,7 @@ def start_pattern_service(route_scope: dict[str, str] | None) -> dict[str, Any]:
             return {"ok": False, "reason": "scanner_busy", "status": build_status()}
 
         try:
-            save_pattern_request(route_scope)
+            save_pattern_request(route_scope, force_refresh)
         except OSError as error:
             return {
                 "ok": False,
@@ -274,6 +293,8 @@ def start_pattern_service(route_scope: dict[str, str] | None) -> dict[str, Any]:
             "stdout": stdout.strip(),
             "stderr": stderr.strip(),
             "routeScope": route_scope,
+            "forceRefresh": force_refresh,
+            "carrierScope": "all_airlines",
             "status": build_pattern_status(),
         }
 
@@ -301,7 +322,7 @@ def stop_pattern_service() -> dict[str, Any]:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "352flights-scanner-agent/1.1"
+    server_version = "352flights-scanner-agent/1.2"
 
     def log_message(self, format: str, *args: object) -> None:
         return
@@ -368,14 +389,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/pattern-discovery/start":
             try:
-                route_scope = normalize_route_scope(self.read_json_body())
+                route_scope, force_refresh = normalize_pattern_request(self.read_json_body())
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
                 self.write_json(
                     {"ok": False, "reason": "invalid_request", "detail": str(error)},
                     HTTPStatus.BAD_REQUEST,
                 )
                 return
-            payload = start_pattern_service(route_scope)
+            payload = start_pattern_service(route_scope, force_refresh)
             self.write_json(payload, action_status(payload))
             return
         if path == "/pattern-discovery/stop":

@@ -16,6 +16,14 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const AIRPORT_CODE_PATTERN = /^[A-Z0-9]{3}$/;
+const ROUTING_VALUES = new Set([
+  "NON_STOP",
+  "ONE_STOP_OR_FEWER",
+  "TWO_OR_FEWER_STOPS",
+  "ANY",
+]);
+
 function unauthorizedResponse() {
   return new NextResponse("Authentication required.", {
     status: 401,
@@ -64,6 +72,14 @@ async function pathExists(targetPath: string) {
   }
 }
 
+function vpsFailureReason(error: unknown) {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  return error.message.match(/VPS scanner agent failed:\s*([a-z0-9_]+)/i)?.[1] ?? null;
+}
+
 export async function POST(request: Request) {
   const unauthorized = await ensureAuthorized(request);
   if (unauthorized) {
@@ -79,7 +95,8 @@ export async function POST(request: Request) {
     | null = null;
 
   try {
-    const payload = (await request.json()) as
+    const rawBody = await request.text();
+    const payload = (rawBody.trim() ? JSON.parse(rawBody) : {}) as
       | {
           route?: {
             originAirport?: string;
@@ -88,19 +105,40 @@ export async function POST(request: Request) {
           };
         }
       | null;
-    if (
-      payload?.route?.originAirport &&
-      payload.route.destinationAirport &&
-      payload.route.maxStops
-    ) {
+    if (payload?.route !== undefined) {
+      const originAirport = payload.route.originAirport?.trim().toUpperCase() ?? "";
+      const destinationAirport = payload.route.destinationAirport?.trim().toUpperCase() ?? "";
+      const maxStops = payload.route.maxStops?.trim().toUpperCase() ?? "";
+      if (
+        !AIRPORT_CODE_PATTERN.test(originAirport) ||
+        !AIRPORT_CODE_PATTERN.test(destinationAirport) ||
+        !ROUTING_VALUES.has(maxStops)
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            reason: "invalid_route_scope",
+            detail: "A route scan requires valid origin, destination, and routing values.",
+          },
+          { status: 400 },
+        );
+      }
+
       routeFilter = {
-        originAirport: payload.route.originAirport,
-        destinationAirport: payload.route.destinationAirport,
-        maxStops: payload.route.maxStops,
+        originAirport,
+        destinationAirport,
+        maxStops,
       };
     }
-  } catch {
-    routeFilter = null;
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        reason: "invalid_request",
+        detail: error instanceof Error ? error.message : "The request body is not valid JSON.",
+      },
+      { status: 400 },
+    );
   }
 
   if (hasVpsScannerAgentConfig()) {
@@ -110,20 +148,25 @@ export async function POST(request: Request) {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(routeFilter ? { route: routeFilter } : {}),
+          body: JSON.stringify({
+            forceRefresh: true,
+            ...(routeFilter ? { route: routeFilter } : {}),
+          }),
         },
       );
       return NextResponse.json(result, {
         headers: { "Cache-Control": "no-store, max-age=0" },
       });
     } catch (error) {
+      const agentReason = vpsFailureReason(error);
+      const isConflict = agentReason === "already_running" || agentReason === "scanner_busy";
       return NextResponse.json(
         {
           ok: false,
-          reason: "vps_pattern_discovery_start_failed",
+          reason: agentReason ?? "vps_pattern_discovery_start_failed",
           detail: error instanceof Error ? error.message : "Unknown VPS Dates Scanner error.",
         },
-        { status: 502 },
+        { status: isConflict ? 409 : 502 },
       );
     }
   }
@@ -173,7 +216,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const args = ["--force"];
+  const args = ["--force", "--refresh-service-months"];
   if (routeFilter) {
     args.push(
       "--origin-airport",
@@ -194,6 +237,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     reason: "started",
+    forceRefresh: true,
+    carrierScope: "all_airlines",
     routeScope: routeFilter,
   });
 }

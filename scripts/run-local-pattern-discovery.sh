@@ -12,6 +12,7 @@ PID_FILE="$ROOT_DIR/scanner/state/local-pattern-discovery.pid"
 CHILD_PID_FILE="$ROOT_DIR/scanner/state/local-pattern-discovery.child.pid"
 MIN_RUN_GAP_SECONDS=1728000
 FORCE_RUN=0
+REFRESH_SERVICE_MONTHS=0
 TARGET_ORIGIN=""
 TARGET_DESTINATION=""
 TARGET_MAX_STOPS=""
@@ -22,6 +23,10 @@ while (( $# > 0 )); do
   case "${1:-}" in
     --force)
       FORCE_RUN=1
+      shift
+      ;;
+    --refresh-service-months)
+      REFRESH_SERVICE_MONTHS=1
       shift
       ;;
     --origin-airport)
@@ -123,7 +128,13 @@ if (( FORCE_RUN == 1 )); then
   echo "[$TIMESTAMP] Force-run requested, bypassing monthly duplicate-run guard." >> "$STDOUT_LOG"
 fi
 
-DISCOVERY_ARGS=(run luxflight-scan --discover-patterns --only-missing-service-months --json)
+DISCOVERY_ARGS=(run luxflight-scan --discover-patterns --json)
+if (( REFRESH_SERVICE_MONTHS == 0 )); then
+  DISCOVERY_ARGS+=(--only-missing-service-months)
+else
+  DISCOVERY_ARGS+=(--refresh-service-months)
+  echo "[$TIMESTAMP] Manual service-calendar refresh requested; recent months will be rescanned." >> "$STDOUT_LOG"
+fi
 if [[ -n "$TARGET_ORIGIN" ]]; then
   DISCOVERY_ARGS+=(--origin-airport "$TARGET_ORIGIN")
 fi
@@ -135,7 +146,7 @@ if [[ -n "$TARGET_MAX_STOPS" ]]; then
 fi
 
 if [[ -n "$TARGET_ORIGIN" || -n "$TARGET_DESTINATION" || -n "$TARGET_MAX_STOPS" ]]; then
-  echo "[$TIMESTAMP] Discovery scope: single route ${TARGET_ORIGIN:-*} -> ${TARGET_DESTINATION:-*} (${TARGET_MAX_STOPS:-*})." >> "$STDOUT_LOG"
+  echo "[$TIMESTAMP] Discovery scope: single route ${TARGET_ORIGIN:-*} -> ${TARGET_DESTINATION:-*} (${TARGET_MAX_STOPS:-*}), all airlines." >> "$STDOUT_LOG"
 fi
 
 echo "[$TIMESTAMP] Starting local route pattern discovery." >> "$STDOUT_LOG"
@@ -152,7 +163,10 @@ EXIT_CODE=$?
 set -e
 
 if (( EXIT_CODE == 0 )); then
-  date +%s > "$LAST_RUN_FILE"
+  # A one-route refresh must not postpone the next scheduled network-wide run.
+  if [[ -z "$TARGET_ORIGIN" && -z "$TARGET_DESTINATION" && -z "$TARGET_MAX_STOPS" ]]; then
+    date +%s > "$LAST_RUN_FILE"
+  fi
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Local route pattern discovery finished successfully." >> "$STDOUT_LOG"
 elif (( EXIT_CODE == 130 || EXIT_CODE == 143 || EXIT_CODE == 137 )); then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Local route pattern discovery stopped from ops UI." >> "$STDOUT_LOG"

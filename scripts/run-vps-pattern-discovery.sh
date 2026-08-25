@@ -74,6 +74,7 @@ if [[ -z "$UV_BIN" ]]; then
 fi
 
 DISCOVERY_ARGS=()
+FORCE_REFRESH=0
 if [[ -f "$REQUEST_FILE" ]]; then
   mv "$REQUEST_FILE" "$RUN_REQUEST_FILE"
   mapfile -t REQUEST_VALUES < <(
@@ -85,6 +86,7 @@ with open(sys.argv[1], encoding="utf-8") as request_file:
     request = json.load(request_file)
 
 route = request.get("route") or {}
+print("1" if request.get("forceRefresh") is True else "0")
 for key in ("originAirport", "destinationAirport", "maxStops"):
     value = route.get(key)
     if value:
@@ -92,24 +94,37 @@ for key in ("originAirport", "destinationAirport", "maxStops"):
 PY
   )
 
-  if [[ "${#REQUEST_VALUES[@]}" -eq 3 ]]; then
+  if [[ "${REQUEST_VALUES[0]:-0}" == "1" ]]; then
+    FORCE_REFRESH=1
+  fi
+
+  if [[ "${#REQUEST_VALUES[@]}" -eq 4 ]]; then
     DISCOVERY_ARGS+=(
-      --origin-airport "${REQUEST_VALUES[0]}"
-      --destination-airport "${REQUEST_VALUES[1]}"
-      --max-stops "${REQUEST_VALUES[2]}"
+      --origin-airport "${REQUEST_VALUES[1]}"
+      --destination-airport "${REQUEST_VALUES[2]}"
+      --max-stops "${REQUEST_VALUES[3]}"
     )
   fi
+fi
+
+RUN_ARGS=(--discover-patterns --json)
+if [[ "$FORCE_REFRESH" -eq 1 ]]; then
+  RUN_ARGS+=(--refresh-service-months)
+else
+  RUN_ARGS+=(--only-missing-service-months)
 fi
 
 cd "$SCANNER_DIR"
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Starting VPS route pattern discovery."
 if [[ "${#DISCOVERY_ARGS[@]}" -gt 0 ]]; then
-  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Discovery scope: ${REQUEST_VALUES[0]} -> ${REQUEST_VALUES[1]} (${REQUEST_VALUES[2]})."
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Discovery scope: single route ${REQUEST_VALUES[1]} -> ${REQUEST_VALUES[2]} (${REQUEST_VALUES[3]}), all airlines."
+elif [[ "$FORCE_REFRESH" -eq 1 ]]; then
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Discovery scope: full manual refresh, all routes and all airlines."
 fi
 
 set +e
-"$UV_BIN" run luxflight-scan --discover-patterns --only-missing-service-months --json "${DISCOVERY_ARGS[@]}" 2>&1 | tee "$RUN_LOG"
+"$UV_BIN" run luxflight-scan "${RUN_ARGS[@]}" "${DISCOVERY_ARGS[@]}" 2>&1 | tee "$RUN_LOG"
 discovery_status="${PIPESTATUS[0]}"
 set -e
 
