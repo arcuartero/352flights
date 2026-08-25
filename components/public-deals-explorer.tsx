@@ -2431,7 +2431,7 @@ function DealFlightCard({
   const airlineName = getPrimaryAirlineName(deal);
   const outboundStopsLabel = formatLegStops(deal.outboundStopCount, deal.maxStops, t);
   const returnStopsLabel = formatLegStops(deal.returnStopCount, deal.maxStops, t);
-  const resolvedCtaLabel = ctaLabel ?? t("deals.bookOnSkyscanner");
+  const resolvedCtaLabel = ctaLabel ?? t("deals.viewFlights");
   const resolvedPendingLabel = pendingLabel === "Skyscanner link pending" ? t("deals.skyscannerPending") : pendingLabel;
   const strongPrice = isStrongPriceDeal(deal);
   const routeLayout = layout === "route";
