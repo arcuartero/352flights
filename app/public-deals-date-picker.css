@@ -43,6 +43,10 @@
 }
 
 .deals-date-picker__chevron {
+  display: block;
+  align-self: center;
+  flex: 0 0 auto;
+  transform-origin: center;
   transition: transform 0.2s var(--v2-ease);
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
 export type PublicDealsSelectOption = {
@@ -69,7 +70,12 @@ export function PublicDealsSelect({
         type="button"
       >
         <strong>{selectedOption?.label ?? label}</strong>
-        <i aria-hidden="true">⌄</i>
+        <ChevronDown
+          aria-hidden="true"
+          className="deals-select__chevron"
+          size={18}
+          strokeWidth={1.9}
+        />
       </button>
 
       {isOpen ? (

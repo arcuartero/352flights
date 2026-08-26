@@ -624,10 +624,11 @@ body:has(.v2) .scroll-top-button {
   font-weight: 650;
 }
 
-.v2-search__destination-select .deals-select__trigger i {
+.v2-search__destination-select .deals-select__trigger .deals-select__chevron {
   right: 0.85rem;
+  width: 1rem;
+  height: 1rem;
   color: var(--v2-ink);
-  font-size: 1.05rem;
 }
 
 .v2-search__destination-select .deals-select__menu {
