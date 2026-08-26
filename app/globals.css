@@ -2388,10 +2388,12 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   padding: 0 1.9rem 0 0.75rem;
   border: 1px solid color-mix(in srgb, var(--line-strong) 84%, transparent);
   border-radius: 0.65rem;
-  background:
-    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f4eee3' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
-      right 0.7rem center no-repeat,
-    color-mix(in srgb, var(--panel) 88%, transparent);
+  background-color: var(--panel);
+  background-color: color-mix(in srgb, var(--panel) 88%, transparent);
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f4eee3' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-position: right 0.7rem center;
+  background-repeat: no-repeat;
+  background-size: 10px 6px;
   color: var(--text-strong);
   font: inherit;
   font-size: 0.9rem;
