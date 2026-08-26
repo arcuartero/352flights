@@ -55,6 +55,9 @@
 }
 
 .deals-date-picker__popover {
+  --v2-accent: #e1322c;
+  --v2-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --v2-ink: #1d2733;
   position: absolute;
   top: calc(100% + 0.55rem);
   left: 0;
@@ -70,6 +73,18 @@
   border-radius: 1rem;
   background: #ffffff;
   box-shadow: 0 24px 56px rgba(29, 39, 51, 0.18);
+}
+
+.deals-date-picker__popover.is-viewport-layer {
+  position: fixed;
+  top: 50%;
+  bottom: auto;
+  left: 50%;
+  z-index: 7000;
+  width: min(39rem, calc(100vw - 2rem));
+  height: min(37rem, calc(100dvh - 2rem));
+  max-height: none;
+  transform: translate(-50%, -50%);
 }
 
 .deals-date-picker__popover.is-above {
@@ -349,7 +364,8 @@
 }
 
 @media (max-width: 560px) {
-  .deals-date-picker__popover {
+  .deals-date-picker__popover,
+  .deals-date-picker__popover.is-viewport-layer {
     position: fixed;
     inset: 1rem;
     grid-template-columns: 1fr;
@@ -358,6 +374,7 @@
     height: auto;
     max-height: none;
     overflow: hidden;
+    transform: none;
   }
 
   .deals-date-picker__popover.is-above {

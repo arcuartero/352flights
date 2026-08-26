@@ -13,6 +13,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 
 import type { PublicDealsSelectOption } from "@/components/public-deals-select";
 import { useI18n, type Locale } from "@/lib/i18n";
@@ -130,8 +131,10 @@ export function PublicDealsDatePicker({
   const maxDate = dateToKey(addDays(addMonths(startOfMonth(today), 19), -1));
   const [opensAbove, setOpensAbove] = useState(false);
   const [popoverMaxHeight, setPopoverMaxHeight] = useState(560);
+  const [usesViewportLayer, setUsesViewportLayer] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const monthsScrollRef = useRef<HTMLDivElement | null>(null);
   const monthRefs = useRef<Array<HTMLElement | null>>([]);
   const pickerId = useId();
@@ -183,9 +186,23 @@ export function PublicDealsDatePicker({
     if (controlRect) {
       const spaceAbove = Math.max(240, controlRect.top - 12);
       const spaceBelow = Math.max(240, window.innerHeight - controlRect.bottom - 12);
+      const popoverWidth = Math.min(624, window.innerWidth - 32);
+      const wouldOverflowHorizontally =
+        controlRect.left < 16 || controlRect.left + popoverWidth > window.innerWidth - 16;
+      const shouldUseViewportLayer =
+        window.innerHeight <= 900 || window.innerWidth <= 560 || wouldOverflowHorizontally;
       const shouldOpenAbove = spaceBelow < 480 && spaceAbove > spaceBelow;
-      setOpensAbove(shouldOpenAbove);
-      setPopoverMaxHeight(Math.floor(shouldOpenAbove ? spaceAbove : spaceBelow));
+      setUsesViewportLayer(shouldUseViewportLayer);
+      setOpensAbove(!shouldUseViewportLayer && shouldOpenAbove);
+      setPopoverMaxHeight(
+        Math.floor(
+          shouldUseViewportLayer
+            ? Math.max(240, window.innerHeight - 32)
+            : shouldOpenAbove
+              ? spaceAbove
+              : spaceBelow,
+        ),
+      );
     }
     const presetRange = getWhenFilterDateRange(value, today);
     setDraftWhenFilter(value);
@@ -200,7 +217,11 @@ export function PublicDealsDatePicker({
     }
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !popoverRef.current?.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -211,11 +232,40 @@ export function PublicDealsDatePicker({
       }
     };
 
+    const handleResize = () => {
+      const controlRect = rootRef.current?.getBoundingClientRect();
+      if (!controlRect) {
+        return;
+      }
+
+      const spaceAbove = Math.max(240, controlRect.top - 12);
+      const spaceBelow = Math.max(240, window.innerHeight - controlRect.bottom - 12);
+      const popoverWidth = Math.min(624, window.innerWidth - 32);
+      const wouldOverflowHorizontally =
+        controlRect.left < 16 || controlRect.left + popoverWidth > window.innerWidth - 16;
+      const shouldUseViewportLayer =
+        window.innerHeight <= 900 || window.innerWidth <= 560 || wouldOverflowHorizontally;
+      const shouldOpenAbove = spaceBelow < 480 && spaceAbove > spaceBelow;
+      setUsesViewportLayer(shouldUseViewportLayer);
+      setOpensAbove(!shouldUseViewportLayer && shouldOpenAbove);
+      setPopoverMaxHeight(
+        Math.floor(
+          shouldUseViewportLayer
+            ? Math.max(240, window.innerHeight - 32)
+            : shouldOpenAbove
+              ? spaceAbove
+              : spaceBelow,
+        ),
+      );
+    };
+
     window.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
     };
   }, [isOpen]);
 
@@ -263,207 +313,214 @@ export function PublicDealsDatePicker({
       ? Boolean(draftFrom && draftTo)
       : Boolean(selectedDraftPreset && !selectedDraftPreset.disabled);
 
-  return (
+  const popover = isOpen ? (
     <div
-      className={`deals-control deals-date-picker${className ? ` ${className}` : ""}`}
-      ref={rootRef}
+      aria-label={t("deals.datePicker.selectRange")}
+      className={`deals-date-picker__popover${opensAbove ? " is-above" : ""}${usesViewportLayer ? " is-viewport-layer" : ""}`}
+      id={`${pickerId}-popover`}
+      ref={popoverRef}
+      role="dialog"
+      style={
+        {
+          "--deals-date-picker-max-height": `${popoverMaxHeight}px`,
+        } as CSSProperties
+      }
     >
-      <span id={`${pickerId}-label`}>{label}</span>
-      <button
-        aria-controls={`${pickerId}-popover`}
-        aria-expanded={isOpen}
-        aria-haspopup="dialog"
-        aria-labelledby={`${pickerId}-label`}
-        className={`deals-date-picker__trigger${isOpen ? " is-open" : ""}`}
-        onClick={() => (isOpen ? setIsOpen(false) : openPicker())}
-        ref={triggerRef}
-        type="button"
-      >
-        <CalendarDays aria-hidden="true" size={18} strokeWidth={1.9} />
-        <strong>{triggerLabel}</strong>
-        <ChevronDown aria-hidden="true" className="deals-date-picker__chevron" size={18} />
-      </button>
-
-      {isOpen ? (
-        <div
-          aria-label={t("deals.datePicker.selectRange")}
-          className={`deals-date-picker__popover${opensAbove ? " is-above" : ""}`}
-          id={`${pickerId}-popover`}
-          role="dialog"
-          style={
-            {
-              "--deals-date-picker-max-height": `${popoverMaxHeight}px`,
-            } as CSSProperties
-          }
-        >
-          <div className="deals-date-picker__presets">
-            <span>{t("deals.datePicker.quickOptions")}</span>
-            {presetOptions.map((option) => {
-              const isSelected = option.value === draftWhenFilter;
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className={isSelected ? "is-selected" : ""}
-                  disabled={option.disabled}
-                  key={option.value}
-                  onClick={() => {
-                    const whenFilter = option.value as WhenFilter;
-                    const presetRange = getWhenFilterDateRange(whenFilter, today);
-                    setDraftWhenFilter(whenFilter);
-                    setDraftFrom(presetRange?.dateFrom ?? null);
-                    setDraftTo(presetRange?.dateTo ?? null);
-                    onChange({ whenFilter, dateFrom: null, dateTo: null });
-                  }}
-                  type="button"
-                >
-                  <span>{option.label}</span>
-                  <Check
-                    aria-hidden="true"
-                    className="deals-date-picker__preset-check"
-                    data-visible={isSelected ? "true" : "false"}
-                    size={16}
-                    strokeWidth={2.2}
-                  />
-                </button>
-              );
-            })}
+      <div className="deals-date-picker__presets">
+        <span>{t("deals.datePicker.quickOptions")}</span>
+        {presetOptions.map((option) => {
+          const isSelected = option.value === draftWhenFilter;
+          return (
             <button
-              aria-pressed={draftWhenFilter === "custom"}
-              className={draftWhenFilter === "custom" ? "is-selected" : ""}
+              aria-pressed={isSelected}
+              className={isSelected ? "is-selected" : ""}
+              disabled={option.disabled}
+              key={option.value}
               onClick={() => {
-                setDraftWhenFilter("custom");
-                if (!draftFrom || draftTo) {
-                  setDraftFrom(null);
-                  setDraftTo(null);
-                }
+                const whenFilter = option.value as WhenFilter;
+                const presetRange = getWhenFilterDateRange(whenFilter, today);
+                setDraftWhenFilter(whenFilter);
+                setDraftFrom(presetRange?.dateFrom ?? null);
+                setDraftTo(presetRange?.dateTo ?? null);
+                onChange({ whenFilter, dateFrom: null, dateTo: null });
               }}
               type="button"
             >
-              <span>{t("deals.datePicker.custom")}</span>
+              <span>{option.label}</span>
               <Check
                 aria-hidden="true"
                 className="deals-date-picker__preset-check"
-                data-visible={draftWhenFilter === "custom" ? "true" : "false"}
+                data-visible={isSelected ? "true" : "false"}
                 size={16}
                 strokeWidth={2.2}
               />
             </button>
+          );
+        })}
+        <button
+          aria-pressed={draftWhenFilter === "custom"}
+          className={draftWhenFilter === "custom" ? "is-selected" : ""}
+          onClick={() => {
+            setDraftWhenFilter("custom");
+            if (!draftFrom || draftTo) {
+              setDraftFrom(null);
+              setDraftTo(null);
+            }
+          }}
+          type="button"
+        >
+          <span>{t("deals.datePicker.custom")}</span>
+          <Check
+            aria-hidden="true"
+            className="deals-date-picker__preset-check"
+            data-visible={draftWhenFilter === "custom" ? "true" : "false"}
+            size={16}
+            strokeWidth={2.2}
+          />
+        </button>
+      </div>
+
+      <div className="deals-date-picker__calendar">
+        <div className="deals-date-picker__fields" aria-live="polite">
+          <div>
+            <span>{t("deals.datePicker.startDate")}</span>
+            <strong>{formatDateField(visualFrom, locale) ?? "—"}</strong>
           </div>
-
-          <div className="deals-date-picker__calendar">
-            <div className="deals-date-picker__fields" aria-live="polite">
-              <div>
-                <span>{t("deals.datePicker.startDate")}</span>
-                <strong>{formatDateField(visualFrom, locale) ?? "—"}</strong>
-              </div>
-              <i aria-hidden="true">–</i>
-              <div>
-                <span>{t("deals.datePicker.endDate")}</span>
-                <strong>{formatDateField(visualTo, locale) ?? "—"}</strong>
-              </div>
-            </div>
-
-            <div
-              aria-label={t("deals.datePicker.selectRange")}
-              className="deals-date-picker__months"
-              ref={monthsScrollRef}
-            >
-              {calendarMonths.map((month, monthIndex) => {
-                const monthKey = dateToKey(month).slice(0, 7);
-                return (
-                  <section
-                    className="deals-date-picker__month"
-                    key={monthKey}
-                    ref={(element) => {
-                      monthRefs.current[monthIndex] = element;
-                    }}
-                  >
-                    <strong className="deals-date-picker__month-title">
-                      {monthFormatter.format(month)}
-                    </strong>
-                    <div className="deals-date-picker__weekdays" aria-hidden="true">
-                      {weekdayLabels.map((weekday) => (
-                        <span key={`${monthKey}-${weekday}`}>{weekday}</span>
-                      ))}
-                    </div>
-                    <div className="deals-date-picker__days">
-                      {getCalendarDays(month).map((day) => {
-                        const key = dateToKey(day);
-                        const isOutside = !isSameMonth(day, month);
-                        const isDisabled = isOutside || key < minDate || key > maxDate;
-                        const isStart = !isOutside && key === visualFrom;
-                        const isEnd = !isOutside && key === visualTo;
-                        const isInRange = Boolean(
-                          !isOutside && visualFrom && visualTo && key > visualFrom && key < visualTo,
-                        );
-                        const isPresetSelected =
-                          !isOutside &&
-                          ((draftWhenFilter === "weekends" &&
-                            (day.getUTCDay() === 0 || day.getUTCDay() === 6)) ||
-                            (draftWhenFilter === "school_holidays" &&
-                              Boolean(getMatchingLuxSchoolHoliday(key, key))));
-                        const isToday = key === minDate;
-
-                        return (
-                          <button
-                            aria-current={isToday ? "date" : undefined}
-                            aria-label={fullDateFormatter.format(day)}
-                            className={[
-                              isOutside ? "is-outside" : "",
-                              isStart ? "is-range-start" : "",
-                              isEnd ? "is-range-end" : "",
-                              isInRange ? "is-in-range" : "",
-                              isPresetSelected ? "is-preset-selected" : "",
-                              isToday ? "is-today" : "",
-                            ]
-                              .filter(Boolean)
-                              .join(" ")}
-                            disabled={isDisabled}
-                            key={`${monthKey}-${key}`}
-                            onClick={() => selectDate(key)}
-                            type="button"
-                          >
-                            {day.getUTCDate()}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-
-            <div className="deals-date-picker__actions">
-              <button
-                className="deals-date-picker__cancel"
-                onClick={() => setIsOpen(false)}
-                type="button"
-              >
-                {t("deals.datePicker.cancel")}
-              </button>
-              <button
-                className="deals-date-picker__apply"
-                disabled={!canApply}
-                onClick={() => {
-                  if (!canApply) {
-                    return;
-                  }
-
-                  onChange({
-                    whenFilter: draftWhenFilter,
-                    dateFrom: draftWhenFilter === "custom" ? draftFrom : null,
-                    dateTo: draftWhenFilter === "custom" ? draftTo : null,
-                  });
-                  setIsOpen(false);
-                }}
-                type="button"
-              >
-                {t("deals.datePicker.apply")}
-              </button>
-            </div>
+          <i aria-hidden="true">–</i>
+          <div>
+            <span>{t("deals.datePicker.endDate")}</span>
+            <strong>{formatDateField(visualTo, locale) ?? "—"}</strong>
           </div>
         </div>
-      ) : null}
+
+        <div
+          aria-label={t("deals.datePicker.selectRange")}
+          className="deals-date-picker__months"
+          ref={monthsScrollRef}
+        >
+          {calendarMonths.map((month, monthIndex) => {
+            const monthKey = dateToKey(month).slice(0, 7);
+            return (
+              <section
+                className="deals-date-picker__month"
+                key={monthKey}
+                ref={(element) => {
+                  monthRefs.current[monthIndex] = element;
+                }}
+              >
+                <strong className="deals-date-picker__month-title">
+                  {monthFormatter.format(month)}
+                </strong>
+                <div className="deals-date-picker__weekdays" aria-hidden="true">
+                  {weekdayLabels.map((weekday) => (
+                    <span key={`${monthKey}-${weekday}`}>{weekday}</span>
+                  ))}
+                </div>
+                <div className="deals-date-picker__days">
+                  {getCalendarDays(month).map((day) => {
+                    const key = dateToKey(day);
+                    const isOutside = !isSameMonth(day, month);
+                    const isDisabled = isOutside || key < minDate || key > maxDate;
+                    const isStart = !isOutside && key === visualFrom;
+                    const isEnd = !isOutside && key === visualTo;
+                    const isInRange = Boolean(
+                      !isOutside && visualFrom && visualTo && key > visualFrom && key < visualTo,
+                    );
+                    const isPresetSelected =
+                      !isOutside &&
+                      ((draftWhenFilter === "weekends" &&
+                        (day.getUTCDay() === 0 || day.getUTCDay() === 6)) ||
+                        (draftWhenFilter === "school_holidays" &&
+                          Boolean(getMatchingLuxSchoolHoliday(key, key))));
+                    const isToday = key === minDate;
+
+                    return (
+                      <button
+                        aria-current={isToday ? "date" : undefined}
+                        aria-label={fullDateFormatter.format(day)}
+                        className={[
+                          isOutside ? "is-outside" : "",
+                          isStart ? "is-range-start" : "",
+                          isEnd ? "is-range-end" : "",
+                          isInRange ? "is-in-range" : "",
+                          isPresetSelected ? "is-preset-selected" : "",
+                          isToday ? "is-today" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        disabled={isDisabled}
+                        key={`${monthKey}-${key}`}
+                        onClick={() => selectDate(key)}
+                        type="button"
+                      >
+                        {day.getUTCDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        <div className="deals-date-picker__actions">
+          <button
+            className="deals-date-picker__cancel"
+            onClick={() => setIsOpen(false)}
+            type="button"
+          >
+            {t("deals.datePicker.cancel")}
+          </button>
+          <button
+            className="deals-date-picker__apply"
+            disabled={!canApply}
+            onClick={() => {
+              if (!canApply) {
+                return;
+              }
+
+              onChange({
+                whenFilter: draftWhenFilter,
+                dateFrom: draftWhenFilter === "custom" ? draftFrom : null,
+                dateTo: draftWhenFilter === "custom" ? draftTo : null,
+              });
+              setIsOpen(false);
+            }}
+            type="button"
+          >
+            {t("deals.datePicker.apply")}
+          </button>
+        </div>
+      </div>
     </div>
+  ) : null;
+
+  return (
+    <>
+      <div
+        className={`deals-control deals-date-picker${className ? ` ${className}` : ""}`}
+        ref={rootRef}
+      >
+        <span id={`${pickerId}-label`}>{label}</span>
+        <button
+          aria-controls={`${pickerId}-popover`}
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
+          aria-labelledby={`${pickerId}-label`}
+          className={`deals-date-picker__trigger${isOpen ? " is-open" : ""}`}
+          onClick={() => (isOpen ? setIsOpen(false) : openPicker())}
+          ref={triggerRef}
+          type="button"
+        >
+          <CalendarDays aria-hidden="true" size={18} strokeWidth={1.9} />
+          <strong>{triggerLabel}</strong>
+          <ChevronDown aria-hidden="true" className="deals-date-picker__chevron" size={18} />
+        </button>
+
+        {!usesViewportLayer ? popover : null}
+      </div>
+
+      {usesViewportLayer && popover ? createPortal(popover, document.body) : null}
+    </>
   );
 }
