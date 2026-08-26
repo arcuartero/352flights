@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguageSelector } from "@/components/language-selector";
+import { LocalizedPageMetadata } from "@/components/localized-page-metadata";
 import { PublicDealsDatePicker } from "@/components/public-deals-date-picker";
 import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import { PublicDealsSelect } from "@/components/public-deals-select";
@@ -546,6 +547,10 @@ export function V2Landing({
 
   return (
     <div className="v2" ref={rootRef}>
+      <LocalizedPageMetadata
+        description={t("home.lede")}
+        title={`${t("home.title.before")} ${t("home.title.em")}`}
+      />
       {/* ---------- Section 1 of 8 · Hero — giant statement, stacked center ---------- */}
       <header className="v2-topbar">
         <Link className="v2-topbar__brand" href="/" aria-label="352 Flights">

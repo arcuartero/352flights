@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import { ArrowUpDown, CalendarDays, Info, MapPin, Plane, SlidersHorizontal, X } from "lucide-react";
 
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
+import { LocalizedPageMetadata } from "@/components/localized-page-metadata";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { MonthlyPriceCard } from "@/components/monthly-price-card";
 import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
@@ -4242,6 +4243,22 @@ export function PublicDealsExplorer({
 
   return (
     <div className={`deals-explorer${mode === "results" || mode === "city" ? " deals-explorer--results" : ""}`}>
+      <LocalizedPageMetadata
+        description={
+          mode === "city"
+            ? getDestinationHeroDescription(cityHeroTitle, t)
+            : mode === "results"
+              ? t("deals.results.defaultDesc")
+              : t("deals.landingLede")
+        }
+        title={
+          mode === "city"
+            ? t("deals.cityMetaTitle", { city: cityHeroTitle })
+            : mode === "results"
+              ? t("deals.searchResults")
+              : `${t("deals.landingTitleLine1")} ${t("deals.landingTitleLine2")}`
+        }
+      />
       {mode === "landing" ? (
         <section className="deals-explorer__hero">
           <div className="deals-explorer__intro">

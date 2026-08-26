@@ -8,14 +8,11 @@ import { parseDealSearchFilters, parseDealSearchSort } from "@/lib/public-deals-
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Buscar vuelos baratos desde Luxemburgo",
+  title: "Search results",
   description:
-    "Filtra vuelos baratos desde Luxemburgo por destino, playa, fin de semana, vuelos directos, presupuesto y vacaciones escolares.",
+    "A live shortlist balancing price, timing, directness, and travel shape.",
   alternates: {
     canonical: "/deals",
-    languages: {
-      "es-LU": "/deals",
-    },
   },
   robots: {
     index: false,

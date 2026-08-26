@@ -15,16 +15,13 @@ import "./public-deals-price-range.css";
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "+352 Flights | Vuelos baratos desde Luxemburgo",
+    default: "You know when to fly. We'll find where. | +352 Flights",
     template: "%s | +352 Flights",
   },
   description:
-    "Compara vuelos baratos desde Luxemburgo con tarifas verificadas, historico de precios y alertas para escapadas, playas y vacaciones escolares.",
+    "We watch every fare out of LUX and write to you only when it's genuinely cheap. No noise — just the right deals, at the right time.",
   alternates: {
     canonical: "/",
-    languages: {
-      "es-LU": "/",
-    },
   },
 };
 
@@ -50,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html data-theme="dark" lang="es" suppressHydrationWarning>
+    <html data-theme="dark" lang="en" suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <LanguageProvider>

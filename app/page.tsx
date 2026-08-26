@@ -10,14 +10,11 @@ import "./home.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Vuelos baratos desde Luxemburgo",
+  title: "You know when to fly. We'll find where.",
   description:
-    "Encuentra vuelos baratos desde Luxemburgo con precios verificados, alertas de bajadas y rutas para escapadas, playa y vacaciones escolares.",
+    "We watch every fare out of LUX and write to you only when it's genuinely cheap. No noise — just the right deals, at the right time.",
   alternates: {
     canonical: "/",
-    languages: {
-      "es-LU": "/",
-    },
   },
 };
 

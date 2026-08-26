@@ -57,22 +57,27 @@ function getAbsoluteUrl(pathname: string) {
 function buildCityMetadata(cityName: string, citySlug: string, noindex: boolean): Metadata {
   const content = getDestinationContent(cityName);
   const canonicalPath = `/deals/${citySlug}`;
+  const escapeLabel =
+    content.theme === "beach"
+      ? "seaside escape"
+      : content.theme === "nature"
+        ? "outdoor escape"
+        : "city break";
+  const title = `Cheap flights from Luxembourg to ${content.titleLabel}`;
+  const description = `Find the cheapest flights from Luxembourg to ${content.titleLabel}. Compare real-time fares, tailor your search, and grab the best deal for your next ${escapeLabel}.`;
 
   return {
-    title: `Vuelos baratos de Luxemburgo a ${content.titleLabel}`,
-    description: content.metaDescription,
+    title,
+    description,
     alternates: {
       canonical: canonicalPath,
-      languages: {
-        "es-LU": canonicalPath,
-      },
     },
     openGraph: {
-      title: `Vuelos baratos de Luxemburgo a ${content.titleLabel}`,
-      description: content.metaDescription,
+      title,
+      description,
       url: canonicalPath,
       type: "website",
-      locale: "es_LU",
+      locale: "en_LU",
     },
     robots: noindex
       ? {

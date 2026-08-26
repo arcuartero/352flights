@@ -7,14 +7,11 @@ import { getPublicDealsPageData } from "@/lib/ops";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Ofertas de vuelos baratos desde Luxemburgo",
+  title: "Find flights from Luxembourg, while they're still cheap.",
   description:
-    "Explora ofertas de vuelos baratos desde Luxemburgo con tarifas en directo, comparacion historica y filtros para playa, fin de semana y vuelos directos.",
+    "Every day we surface the fares that still look unusually good, then group them by timing, trip length, and travel style.",
   alternates: {
     canonical: "/deals",
-    languages: {
-      "es-LU": "/deals",
-    },
   },
 };
 
