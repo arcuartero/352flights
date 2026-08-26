@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { localeOptions, useI18n, type Locale } from "@/lib/i18n";
@@ -49,9 +50,15 @@ export function LanguageSelector() {
         title={current.label}
         type="button"
       >
-        <span aria-hidden="true" className="language-selector__trigger-flag">
-          {current.flag}
-        </span>
+        <Image
+          alt=""
+          aria-hidden="true"
+          className="language-selector__flag-image"
+          height={21}
+          src={current.flagSrc}
+          unoptimized
+          width={28}
+        />
         <span className="language-selector__trigger-code">{current.shortLabel}</span>
       </button>
 
@@ -71,7 +78,15 @@ export function LanguageSelector() {
                 role="option"
                 type="button"
               >
-                <span aria-hidden="true">{option.flag}</span>
+                <Image
+                  alt=""
+                  aria-hidden="true"
+                  className="language-selector__flag-image"
+                  height={18}
+                  src={option.flagSrc}
+                  unoptimized
+                  width={24}
+                />
                 <strong>{option.label}</strong>
               </button>
             );

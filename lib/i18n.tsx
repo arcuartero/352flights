@@ -6,13 +6,13 @@ export const locales = ["en", "fr", "de", "pt", "it", "es"] as const;
 
 export type Locale = (typeof locales)[number];
 
-export const localeOptions: Array<{ code: Locale; flag: string; label: string; shortLabel: string }> = [
-  { code: "en", flag: "🇬🇧", label: "English", shortLabel: "EN" },
-  { code: "fr", flag: "🇫🇷", label: "Français", shortLabel: "FR" },
-  { code: "de", flag: "🇩🇪", label: "Deutsch", shortLabel: "DE" },
-  { code: "pt", flag: "🇵🇹", label: "Português", shortLabel: "PT" },
-  { code: "it", flag: "🇮🇹", label: "Italiano", shortLabel: "IT" },
-  { code: "es", flag: "🇪🇸", label: "Español", shortLabel: "ES" },
+export const localeOptions: Array<{ code: Locale; flagSrc: string; label: string; shortLabel: string }> = [
+  { code: "en", flagSrc: "/flags/gb.svg", label: "English", shortLabel: "EN" },
+  { code: "fr", flagSrc: "/flags/fr.svg", label: "Français", shortLabel: "FR" },
+  { code: "de", flagSrc: "/flags/de.svg", label: "Deutsch", shortLabel: "DE" },
+  { code: "pt", flagSrc: "/flags/pt.svg", label: "Português", shortLabel: "PT" },
+  { code: "it", flagSrc: "/flags/it.svg", label: "Italiano", shortLabel: "IT" },
+  { code: "es", flagSrc: "/flags/es.svg", label: "Español", shortLabel: "ES" },
 ];
 
 const storageKey = "luxflightdeals-locale";
