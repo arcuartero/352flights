@@ -21,11 +21,12 @@
   --v2-cream: #fdfdfb;
   --v2-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --v2-pad: clamp(1.25rem, 4vw, 4.5rem);
+  --v2-page-max: 100rem;
 
   position: relative;
   z-index: 2;
-  width: 100vw;
-  margin-inline: calc(50% - 50vw);
+  width: min(100%, var(--v2-page-max));
+  margin-inline: auto;
   background: var(--v2-paper);
   color: var(--v2-ink);
   font-family: var(--font-sans), sans-serif;
