@@ -425,19 +425,19 @@ function DestinationSummaryTable({ rows }: { rows: PriceScanDestinationSummary[]
       <tbody>
         {sortedRows.map((destination) => (
           <tr key={destination.destination_city}>
-            <td>
+            <td data-label="Destination">
               <strong>{destination.destination_city}</strong>
               <small>{destination.destination_airports.join(", ")}</small>
             </td>
-            <td>{destination.routes_started}/{destination.routes_planned}</td>
-            <td>{destination.patterns_scanned}</td>
-            <td>{destination.rules_scanned}</td>
-            <td>{destination.found_prices}</td>
-            <td className={problemMetricClass(destination.no_results)}>{destination.no_results}</td>
-            <td className={problemMetricClass(destination.timed_out)}>{destination.timed_out}</td>
-            <td className={problemMetricClass(destination.network_outages)}>{destination.network_outages}</td>
-            <td className={problemMetricClass(destination.hard_errors)}>{destination.hard_errors}</td>
-            <td className={problemMetricClass(destination.retries)}>{destination.retries}</td>
+            <td data-label="Routes">{destination.routes_started}/{destination.routes_planned}</td>
+            <td data-label="Patterns">{destination.patterns_scanned}</td>
+            <td data-label="Rules">{destination.rules_scanned}</td>
+            <td data-label="Found">{destination.found_prices}</td>
+            <td className={problemMetricClass(destination.no_results)} data-label="No result">{destination.no_results}</td>
+            <td className={problemMetricClass(destination.timed_out)} data-label="Timeout">{destination.timed_out}</td>
+            <td className={problemMetricClass(destination.network_outages)} data-label="Net / DNS">{destination.network_outages}</td>
+            <td className={problemMetricClass(destination.hard_errors)} data-label="Hard errors">{destination.hard_errors}</td>
+            <td className={problemMetricClass(destination.retries)} data-label="Retries">{destination.retries}</td>
           </tr>
         ))}
       </tbody>
@@ -507,17 +507,17 @@ function RouteAuditTable({ rows }: { rows: PriceScanRouteSummary[] }) {
       <tbody>
         {sortedRows.map((route) => (
           <tr key={route.route_key}>
-            <td><strong>{route.route_label}</strong><small>{route.routing}</small></td>
-            <td>{route.destination_city}</td>
-            <td>{routeStatus(route)}</td>
-            <td>{route.patterns_scanned}</td>
-            <td>{route.rules_scanned}</td>
-            <td>{route.found_prices}</td>
-            <td className={problemMetricClass(route.no_results)}>{route.no_results}</td>
-            <td className={problemMetricClass(route.timed_out)}>{route.timed_out}</td>
-            <td className={problemMetricClass(route.network_outages)}>{route.network_outages}</td>
-            <td className={problemMetricClass(route.hard_errors)}>{route.hard_errors}</td>
-            <td className={problemMetricClass(route.retries)}>{route.retries}</td>
+            <td data-label="Route"><strong>{route.route_label}</strong><small>{route.routing}</small></td>
+            <td data-label="Destination">{route.destination_city}</td>
+            <td data-label="Status">{routeStatus(route)}</td>
+            <td data-label="Patterns">{route.patterns_scanned}</td>
+            <td data-label="Rules">{route.rules_scanned}</td>
+            <td data-label="Found">{route.found_prices}</td>
+            <td className={problemMetricClass(route.no_results)} data-label="No result">{route.no_results}</td>
+            <td className={problemMetricClass(route.timed_out)} data-label="Timeout">{route.timed_out}</td>
+            <td className={problemMetricClass(route.network_outages)} data-label="Net / DNS">{route.network_outages}</td>
+            <td className={problemMetricClass(route.hard_errors)} data-label="Hard errors">{route.hard_errors}</td>
+            <td className={problemMetricClass(route.retries)} data-label="Retries">{route.retries}</td>
           </tr>
         ))}
       </tbody>
@@ -564,13 +564,13 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
       <tbody>
         {sortedRows.map((pattern, index) => (
           <tr key={`${pattern.route_key}:${pattern.pattern_key}:${index}`}>
-            <td><strong>{pattern.route_label}</strong><small>{pattern.destination_city}</small></td>
-            <td><strong>{pattern.pattern_label}</strong><small>{pattern.trip_nights} nights</small></td>
-            <td>{pattern.departure_date ?? "n/a"}<small>{pattern.return_date ?? "n/a"}</small></td>
-            <td>{patternOutcomeLabel(pattern)}</td>
-            <td>{formatMoney(pattern.price, pattern.currency)}</td>
-            <td>{pattern.rules_scanned}</td>
-            <td><ItineraryDetail pattern={pattern} /></td>
+            <td data-label="Route"><strong>{pattern.route_label}</strong><small>{pattern.destination_city}</small></td>
+            <td data-label="Pattern"><strong>{pattern.pattern_label}</strong><small>{pattern.trip_nights} nights</small></td>
+            <td data-label="Dates">{pattern.departure_date ?? "n/a"}<small>{pattern.return_date ?? "n/a"}</small></td>
+            <td data-label="Outcome">{patternOutcomeLabel(pattern)}</td>
+            <td data-label="Price">{formatMoney(pattern.price, pattern.currency)}</td>
+            <td data-label="Rules">{pattern.rules_scanned}</td>
+            <td data-label="Itinerary / detail"><ItineraryDetail pattern={pattern} /></td>
           </tr>
         ))}
       </tbody>

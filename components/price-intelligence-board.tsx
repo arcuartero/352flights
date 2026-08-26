@@ -557,6 +557,7 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
   const [airlineFilter, setAirlineFilter] = useState("all");
   const [maxPriceFilter, setMaxPriceFilter] = useState("");
   const [sortBy, setSortBy] = useState<string[]>(["freshness"]);
+  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [selectedSeriesKey, setSelectedSeriesKey] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSnapshotTableOpen, setIsSnapshotTableOpen] = useState(false);
@@ -809,7 +810,17 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
         </div>
       </section>
 
-      <section className="price-controls">
+      <section className={`price-controls ${areFiltersOpen ? "is-open" : ""}`}>
+        <button
+          aria-expanded={areFiltersOpen}
+          className="ops-filter-panel__toggle"
+          onClick={() => setAreFiltersOpen((current) => !current)}
+          type="button"
+        >
+          <span>Filters and sorting</span>
+          <strong>{areFiltersOpen ? "Hide" : "Show"}</strong>
+        </button>
+        <div className="ops-filter-panel__body">
         <label className="price-control price-control--search">
           <span>Search route</span>
           <input
@@ -890,6 +901,7 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
             </div>
           </details>
         </label>
+        </div>
       </section>
 
       <section className="price-route-grid">

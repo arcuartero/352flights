@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarSearch,
   ChartNoAxesCombined,
@@ -9,8 +10,10 @@ import {
   Images,
   LayoutDashboard,
   Mail,
+  Menu,
   Radar,
   Route,
+  X,
 } from "lucide-react";
 
 const links = [
@@ -102,6 +105,36 @@ const pageCopy: Record<string, { eyebrow: string; title: string; description: st
 export function OpsSubnav() {
   const pathname = usePathname();
   const copy = pageCopy[pathname] ?? pageCopy["/ops"];
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isMenuOpen]);
 
   return (
     <header className="ops-page-header">
@@ -111,7 +144,53 @@ export function OpsSubnav() {
         <p>{copy.description}</p>
       </div>
 
-      <nav aria-label="Ops sections" className="ops-subnav">
+      <button
+        aria-controls="ops-mobile-navigation"
+        aria-expanded={isMenuOpen}
+        aria-label="Open ops navigation"
+        className="ops-subnav__mobile-trigger"
+        onClick={() => setIsMenuOpen(true)}
+        ref={menuButtonRef}
+        type="button"
+      >
+        <Menu aria-hidden="true" size={21} strokeWidth={2} />
+        <span>Sections</span>
+      </button>
+
+      <button
+        aria-label="Close ops navigation"
+        aria-hidden={!isMenuOpen}
+        className={`ops-subnav__backdrop ${isMenuOpen ? "is-open" : ""}`}
+        onClick={() => setIsMenuOpen(false)}
+        tabIndex={isMenuOpen ? 0 : -1}
+        type="button"
+      />
+
+      <nav
+        aria-label="Ops sections"
+        aria-modal={isMenuOpen ? "true" : undefined}
+        className={`ops-subnav ${isMenuOpen ? "is-open" : ""}`}
+        id="ops-mobile-navigation"
+        role={isMenuOpen ? "dialog" : undefined}
+      >
+        <div className="ops-subnav__mobile-header">
+          <div>
+            <span>Operations</span>
+            <strong>{copy.title}</strong>
+          </div>
+          <button
+            aria-label="Close ops navigation"
+            className="ops-subnav__mobile-close"
+            onClick={() => {
+              setIsMenuOpen(false);
+              menuButtonRef.current?.focus();
+            }}
+            ref={closeButtonRef}
+            type="button"
+          >
+            <X aria-hidden="true" size={22} />
+          </button>
+        </div>
         {links.map((link) => {
           const isActive = pathname === link.href;
           const Icon = link.icon;
@@ -122,6 +201,7 @@ export function OpsSubnav() {
               className={`ops-subnav__link ${isActive ? "is-active" : ""}`}
               href={link.href}
               key={link.href}
+              onClick={() => setIsMenuOpen(false)}
               prefetch={false}
             >
               <Icon aria-hidden="true" size={16} strokeWidth={1.9} />

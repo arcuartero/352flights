@@ -5730,3 +5730,870 @@ body:has(.ops-app) .ops-scanner-status__modal-card {
     padding: 0.9rem;
   }
 }
+
+/* ============================================================
+   OPS MOBILE SYSTEM
+   Shared navigation, data cards and bottom-sheet behaviour for
+   every route below /ops. Desktop presentation remains intact.
+   ============================================================ */
+
+.ops-subnav__mobile-trigger,
+.ops-subnav__mobile-header,
+.ops-subnav__backdrop,
+.ops-scanner-hub__mobile-trigger,
+.ops-scanner-hub__mobile-backdrop,
+.ops-scanner-hub__mobile-toggle-label,
+.ops-filter-panel__toggle {
+  display: none;
+}
+
+.ops-filter-panel__body {
+  display: contents;
+}
+
+@media (max-width: 820px) {
+  body:has(.ops-app),
+  .ops-app,
+  .ops-shell,
+  .ops-page-header,
+  .ops-panel,
+  .ops-grid,
+  .ops-shell__center-panel,
+  .price-intelligence,
+  .price-page,
+  .price-scan-history,
+  .date-scan-history {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body:has(.ops-app) {
+    overflow-x: clip;
+  }
+
+  .ops-app *,
+  body:has(.ops-app) [role="dialog"] * {
+    min-width: 0;
+  }
+
+  .ops-shell {
+    width: 100%;
+    padding: calc(5.2rem + env(safe-area-inset-top, 0px)) 0.65rem
+      calc(6.5rem + env(safe-area-inset-bottom, 0px));
+    overflow-x: clip;
+  }
+
+  .ops-page-header {
+    margin-bottom: 0.85rem;
+    border-radius: 1.25rem;
+  }
+
+  .ops-page-header::before {
+    top: 0;
+    right: -0.08em;
+    font-size: clamp(5.5rem, 28vw, 7rem);
+  }
+
+  .ops-page-header__copy {
+    max-width: none;
+    padding: 1.8rem 4.8rem 1.45rem 1.1rem;
+  }
+
+  .ops-page-header__copy h1 {
+    max-width: 100%;
+    font-size: clamp(2rem, 10vw, 3rem);
+    line-height: 0.98;
+    overflow-wrap: anywhere;
+  }
+
+  .ops-page-header__copy > p:last-child {
+    margin-top: 0.75rem;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .ops-subnav__mobile-trigger {
+    position: absolute;
+    top: 1rem;
+    right: 0.85rem;
+    z-index: 4;
+    display: inline-flex;
+    min-width: 3rem;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0 0.75rem;
+    border: 1px solid rgba(119, 173, 248, 0.28);
+    border-radius: 999px;
+    background: rgba(7, 20, 38, 0.92);
+    color: #fff;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 760;
+    box-shadow: 0 12px 30px rgba(0, 5, 14, 0.3);
+  }
+
+  .ops-subnav__mobile-trigger span {
+    display: none;
+  }
+
+  .ops-subnav__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 89;
+    display: block;
+    border: 0;
+    background: rgba(1, 6, 14, 0.72);
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+    transition: opacity 180ms ease;
+  }
+
+  .ops-subnav__backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .ops-subnav {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 90;
+    display: flex;
+    width: min(22rem, calc(100vw - 1.25rem));
+    height: 100dvh;
+    margin: 0;
+    padding: max(1rem, env(safe-area-inset-top, 0px)) 0.85rem
+      max(1rem, env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    gap: 0.35rem;
+    overflow-y: auto;
+    border: 0;
+    border-left: 1px solid var(--line-strong);
+    border-radius: 1.3rem 0 0 1.3rem;
+    background:
+      radial-gradient(circle at 90% 0%, rgba(36, 116, 232, 0.18), transparent 18rem),
+      #071426;
+    box-shadow: -28px 0 80px rgba(0, 4, 12, 0.5);
+    transform: translateX(105%);
+    transition: transform 220ms ease;
+    visibility: hidden;
+  }
+
+  .ops-subnav.is-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .ops-subnav__mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+    padding: 0.35rem 0.25rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ops-subnav__mobile-header > div {
+    display: grid;
+    gap: 0.18rem;
+  }
+
+  .ops-subnav__mobile-header span {
+    color: #77adf8;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .ops-subnav__mobile-header strong {
+    color: #fff;
+    font-size: 1.1rem;
+  }
+
+  .ops-subnav__mobile-close {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.055);
+    color: #fff;
+  }
+
+  .ops-subnav__link {
+    width: 100%;
+    min-height: 3.25rem;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0 0.9rem;
+    border-radius: 0.9rem;
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  .ops-subnav__link svg {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .ops-grid,
+  .price-intelligence__intro,
+  .price-route-grid,
+  .price-focus__stats,
+  .ops-deal,
+  .active-route-rule-composer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ops-grid {
+    width: 100%;
+  }
+
+  .ops-panel,
+  .price-intelligence__intro,
+  .price-table-panel,
+  .price-focus,
+  .price-scan-history,
+  .date-scan-history {
+    padding: 1rem;
+    border-radius: 1.1rem;
+  }
+
+  .ops-panel__header,
+  .price-scan-history__header,
+  .price-scan-history__section-head,
+  .destination-photo-manager__toolbar,
+  .active-route-global__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .ops-panel__header h1,
+  .ops-panel__header h2,
+  .ops-panel h2,
+  .price-intelligence__intro h2,
+  .price-focus__header h2 {
+    overflow-wrap: anywhere;
+  }
+
+  .ops-panel__header > p,
+  .ops-deal__summary,
+  .ops-list__item h3,
+  .ops-list__item p,
+  .ops-subscriber-note,
+  .ops-pill,
+  .active-route-rule-chip,
+  .price-card,
+  .price-table__row span {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .ops-metrics,
+  .ops-state-strip,
+  .price-intelligence__meta,
+  .price-scan-history__aggregate,
+  .price-scan-history__run-metrics,
+  .price-scan-history__run-scope {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ops-metrics article,
+  .ops-state-strip article,
+  .price-intelligence__meta article {
+    padding: 0.85rem;
+  }
+
+  .ops-metrics strong,
+  .ops-state-strip strong,
+  .price-intelligence__meta strong {
+    font-size: clamp(1.35rem, 7vw, 1.8rem);
+    overflow-wrap: anywhere;
+  }
+
+  .ops-filter-panel__toggle {
+    display: flex;
+    width: 100%;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 0.9rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.045);
+    color: #fff;
+    font: inherit;
+    font-weight: 740;
+  }
+
+  .ops-filter-panel__toggle strong {
+    color: #77adf8;
+    font-size: 0.78rem;
+  }
+
+  .ops-review-controls,
+  .price-controls {
+    position: relative;
+    top: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: 0.7rem;
+    border-radius: 1rem;
+  }
+
+  .ops-filter-panel__body {
+    display: none;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.8rem;
+    padding-top: 0.8rem;
+  }
+
+  .ops-review-controls.is-open .ops-filter-panel__body,
+  .price-controls.is-open .ops-filter-panel__body {
+    display: grid;
+  }
+
+  .ops-review-control--search,
+  .price-control--search {
+    grid-column: auto;
+  }
+
+  .price-sort-menu__panel {
+    position: static;
+    margin-top: 0.45rem;
+    box-shadow: none;
+  }
+
+  .ops-review-bulk {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0.85rem;
+  }
+
+  .ops-review-bulk.is-active {
+    position: sticky;
+    bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 22;
+    border-color: rgba(91, 156, 244, 0.36);
+    box-shadow: 0 18px 50px rgba(0, 5, 14, 0.64);
+    backdrop-filter: blur(20px);
+  }
+
+  .ops-review-bulk__summary,
+  .ops-review-bulk__actions,
+  .ops-review-bulk__actions form,
+  .ops-deal__actions,
+  .active-route-grid__actions,
+  .active-route-global__actions,
+  .destination-photo-card__actions {
+    width: 100%;
+  }
+
+  .ops-review-bulk__actions,
+  .ops-deal__actions,
+  .active-route-grid__actions,
+  .active-route-global__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ops-review-bulk__actions .ops-button,
+  .ops-deal__actions .ops-button,
+  .active-route-grid__actions .ops-button,
+  .active-route-global__actions .ops-button,
+  .destination-photo-card__actions button,
+  .tiktok-json-generator__output-head .ops-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ops-deal {
+    gap: 0.8rem;
+    padding: 1rem 0;
+  }
+
+  .ops-deal__select {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  .ops-deal__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .ops-deal__facts div {
+    padding: 0.72rem;
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .ops-deal-section__header {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .ops-deal-section__header p:last-child {
+    max-width: none;
+    text-align: left;
+  }
+
+  .ops-review-pagination {
+    flex-wrap: wrap;
+  }
+
+  .price-chart,
+  .price-chart svg,
+  .price-card__sparkline,
+  .ops-email-preview,
+  .ops-email-preview iframe {
+    max-width: 100%;
+  }
+
+  .price-chart__legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .price-table__row--head {
+    display: none;
+  }
+
+  .price-table {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .price-table__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .price-table__row > span {
+    display: grid;
+    align-content: start;
+    gap: 0.22rem;
+  }
+
+  .price-table__row > span:first-child,
+  .price-table__row > span:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .price-table__inline-label {
+    display: block;
+    color: #7f94ae;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .price-scan-history__table-wrap,
+  .price-scan-history__table-wrap.is-patterns {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .price-scan-history table,
+  .price-scan-history tbody {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: 0.75rem;
+  }
+
+  .price-scan-history thead {
+    display: none;
+  }
+
+  .price-scan-history tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.72rem;
+    padding: 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.026);
+  }
+
+  .price-scan-history td {
+    display: grid;
+    gap: 0.16rem;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .price-scan-history td::before {
+    content: attr(data-label);
+    color: #7f94ae;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .price-scan-history td:first-child,
+  .price-scan-history td[data-label="Itinerary / detail"] {
+    grid-column: 1 / -1;
+  }
+
+  .price-scan-history__run > summary {
+    min-height: 4rem;
+    padding: 0.85rem;
+  }
+
+  .price-scan-history__run-body {
+    padding: 0.85rem;
+  }
+
+  .date-scan-history__route-list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.28rem;
+  }
+
+  .ops-route-table {
+    display: grid;
+    gap: 0.75rem;
+    overflow: visible;
+  }
+
+  .ops-route-table__row--head {
+    display: none;
+  }
+
+  .ops-route-table__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.028);
+  }
+
+  .active-route-table .ops-route-table__row {
+    min-width: 0;
+  }
+
+  .ops-route-table__row > span {
+    display: grid;
+    gap: 0.18rem;
+    align-content: start;
+    overflow-wrap: anywhere;
+  }
+
+  .ops-route-table__row > span::before {
+    color: #7f94ae;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .ops-route-table__row > span:nth-child(1) {
+    grid-column: 1 / -1;
+  }
+
+  .ops-route-table__row > span:nth-child(1)::before { content: "Route"; }
+  .ops-route-table__row > span:nth-child(2)::before { content: "Bucket"; }
+  .ops-route-table__row > span:nth-child(3)::before { content: "Routing"; }
+  .ops-route-table__row > span:nth-child(4)::before { content: "Airlines"; }
+  .ops-route-table__row > span:nth-child(5)::before { content: "Rules"; }
+  .ops-route-table__row > span:nth-child(6)::before { content: "Cadence"; }
+  .ops-route-table__row > span:nth-child(7)::before { content: "Refresh dates"; }
+  .ops-route-table__row > span:nth-child(8)::before { content: "Planner"; }
+
+  .ops-route-table__row > span:nth-child(7) .ops-button,
+  .ops-route-table__row > span:nth-child(8) .ops-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .active-route-grid__header-side {
+    justify-items: stretch;
+  }
+
+  .active-route-scan-capacity,
+  .active-route-scan-capacity__breakdown {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .active-route-scan-capacity::after {
+    display: none;
+  }
+
+  .destination-photo-manager__search,
+  .destination-photo-manager__download,
+  .destination-photo-manager__grid {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .destination-photo-manager__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .destination-photo-card input[type="file"] {
+    max-width: 100%;
+    font-size: 0.76rem;
+  }
+
+  .tiktok-json-panel,
+  .tiktok-json-generator__config,
+  .tiktok-json-generator__output {
+    padding: 0.85rem;
+  }
+
+  .tiktok-json-menu,
+  .tiktok-json-preview,
+  .tiktok-json-generator {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tiktok-json-menu button,
+  .tiktok-json-generator button,
+  .tiktok-json-editor textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .tiktok-json-editor textarea {
+    min-height: 20rem;
+  }
+
+  .ops-list__item,
+  .ops-list__item--stacked,
+  .ops-send-card,
+  .ops-subscriber-card__header,
+  .ops-subscriber-card__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ops-list__item--stacked {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .ops-list__item--stacked > span {
+    justify-self: start;
+  }
+
+  .ops-email-preview iframe {
+    min-height: 24rem;
+  }
+
+  .ops-button,
+  .ops-app button,
+  .ops-app a.ops-button,
+  body:has(.ops-app) [role="dialog"] button {
+    min-height: 2.75rem;
+  }
+
+  .ops-scanner-status-stack {
+    inset: auto calc(0.75rem + env(safe-area-inset-right, 0px))
+      calc(0.75rem + env(safe-area-inset-bottom, 0px)) auto;
+    z-index: 96;
+    display: block;
+    pointer-events: none;
+  }
+
+  .ops-scanner-hub__mobile-trigger {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 3.5rem;
+    height: 3.5rem;
+    place-items: center;
+    border: 1px solid rgba(91, 156, 244, 0.38);
+    border-radius: 50%;
+    background: #2474e8;
+    color: #fff;
+    box-shadow: 0 18px 45px rgba(0, 5, 14, 0.58);
+    pointer-events: auto;
+  }
+
+  .ops-scanner-hub__mobile-status {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.2rem;
+    width: 0.72rem;
+    height: 0.72rem;
+    border: 2px solid #071426;
+    border-radius: 50%;
+    background: #5dd6a0;
+  }
+
+  .ops-scanner-hub__mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    border: 0;
+    background: rgba(1, 6, 14, 0.76);
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+    transition: opacity 180ms ease;
+  }
+
+  .ops-scanner-hub__mobile-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .ops-scanner-status-stack .ops-scanner-status--floating {
+    position: fixed;
+    inset: auto 0.5rem 0.5rem;
+    z-index: 2;
+    display: none;
+    width: auto;
+    max-height: calc(88dvh - env(safe-area-inset-bottom, 0px));
+    padding: 0.85rem;
+    border-radius: 1.35rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    pointer-events: auto;
+  }
+
+  .ops-scanner-status-stack .ops-scanner-status--floating.is-mobile-open {
+    display: grid;
+  }
+
+  .ops-scanner-hub__header {
+    padding: 0.15rem 0 0.7rem;
+  }
+
+  .ops-scanner-hub__tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .ops-scanner-hub__desktop-toggle-label {
+    display: none;
+  }
+
+  .ops-scanner-hub__mobile-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .price-modal,
+  .ops-health-modal__backdrop,
+  .ops-scanner-status__modal-backdrop,
+  .active-route-modal__overlay {
+    align-items: end;
+    justify-content: center;
+    padding: 0.45rem;
+  }
+
+  .price-modal__panel,
+  .ops-health-modal,
+  .ops-scanner-status__modal,
+  .active-route-modal {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 0.9rem);
+    margin: 0;
+    border-radius: 1.35rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .price-modal__chrome,
+  .ops-health-modal__header,
+  .ops-scanner-status__modal-header,
+  .active-route-modal__header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding-top: 0.45rem;
+    background: #09172a;
+  }
+
+  .active-route-modal__header,
+  .active-route-modal__header-actions,
+  .active-route-modal__section-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  .active-route-modal__months {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .ops-shell {
+    padding-inline: 0.45rem;
+  }
+
+  .ops-page-header__copy {
+    padding-right: 4.2rem;
+    padding-left: 0.9rem;
+  }
+
+  .ops-page-header__copy h1 {
+    font-size: clamp(1.85rem, 10vw, 2.5rem);
+  }
+
+  .ops-panel,
+  .price-intelligence__intro,
+  .price-table-panel,
+  .price-focus,
+  .price-scan-history,
+  .date-scan-history {
+    padding: 0.85rem;
+  }
+
+  .ops-deal__facts,
+  .price-chart__legend,
+  .price-table__row,
+  .price-scan-history tr,
+  .ops-route-table__row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .ops-deal__facts div,
+  .price-table__row > span,
+  .price-scan-history td,
+  .ops-route-table__row > span {
+    grid-column: 1 / -1;
+  }
+
+  .ops-review-bulk__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .ops-review-bulk__summary .ops-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ops-scanner-status-stack .ops-scanner-status--floating {
+    inset-inline: 0.3rem;
+    bottom: 0.3rem;
+  }
+}

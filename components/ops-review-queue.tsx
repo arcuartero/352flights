@@ -710,6 +710,7 @@ export function OpsReviewQueue({
   const [airlineFilter, setAirlineFilter] = useState("all");
   const [maxPriceFilter, setMaxPriceFilter] = useState("");
   const [sortBy, setSortBy] = useState<string[]>(["freshness"]);
+  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [selectedDealIds, setSelectedDealIds] = useState<string[]>([]);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [seriesByDealId, setSeriesByDealId] = useState<
@@ -975,7 +976,17 @@ export function OpsReviewQueue({
         </p>
       </div>
 
-      <section className="ops-review-controls">
+      <section className={`ops-review-controls ${areFiltersOpen ? "is-open" : ""}`}>
+        <button
+          aria-expanded={areFiltersOpen}
+          className="ops-filter-panel__toggle"
+          onClick={() => setAreFiltersOpen((current) => !current)}
+          type="button"
+        >
+          <span>Filters and sorting</span>
+          <strong>{areFiltersOpen ? "Hide" : "Show"}</strong>
+        </button>
+        <div className="ops-filter-panel__body">
         <label className="ops-review-control ops-review-control--search">
           <span>Search route</span>
           <input
@@ -1056,6 +1067,7 @@ export function OpsReviewQueue({
             </div>
           </details>
         </label>
+        </div>
       </section>
 
       {filteredDeals.length === 0 ? (
@@ -1064,7 +1076,9 @@ export function OpsReviewQueue({
         </div>
       ) : (
         <div className="ops-deals">
-          <section className="ops-review-bulk">
+          <section
+            className={`ops-review-bulk ${selectedDealIds.length > 0 ? "is-active" : ""}`}
+          >
             <div className="ops-review-bulk__summary">
               <strong>{selectedDealIds.length} selected</strong>
               <button
