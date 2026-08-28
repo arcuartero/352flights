@@ -5757,13 +5757,35 @@ body:has(.ops-app) .ops-scanner-status__modal-card {
   }
 
   .site-chrome__ops-label,
-  body:has(.ops-app) .site-chrome__center,
   body:has(.ops-app) .site-chrome__actions {
     display: none;
   }
 
+  body:has(.ops-app) .site-chrome__center {
+    display: flex;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  body:has(.ops-app) .site-chrome__status-row {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 0.55rem;
+  }
+
+  body:has(.ops-app) .site-chrome__scan-trigger--secondary {
+    display: none;
+  }
+
+  body:has(.ops-app) .site-chrome__scan-trigger:not(.site-chrome__scan-trigger--secondary) {
+    min-height: 2.55rem;
+    padding-inline: 1rem;
+  }
+
   .ops-shell {
-    padding: 5.5rem 0.75rem 5rem;
+    padding: 8rem 0.75rem 5rem;
   }
 
   .ops-page-header {
@@ -6758,6 +6780,14 @@ body:has(.ops-app) .ops-scanner-status__modal-card {
 }
 
 @media (max-width: 520px) {
+  body:has(.ops-app) .site-chrome__countdown:not(.site-chrome__countdown--secondary) {
+    display: none;
+  }
+
+  body:has(.ops-app) .site-chrome__scan-trigger:not(.site-chrome__scan-trigger--secondary) {
+    width: 100%;
+  }
+
   .ops-shell {
     padding-inline: 0.45rem;
   }

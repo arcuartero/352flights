@@ -228,7 +228,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   const [isRunning, setIsRunning] = useState(false);
   const [controlAvailable, setControlAvailable] = useState(true);
   const [pendingAction, setPendingAction] = useState<"start" | "stop" | null>(null);
-  const [buttonLabel, setButtonLabel] = useState("Run scan now");
+  const [buttonLabel, setButtonLabel] = useState("Run scan on Mac");
 
   useEffect(() => {
     if (!enabled) {
@@ -265,7 +265,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
           if (nextPendingAction === "start") setButtonLabel("Starting on Mac...");
           else if (nextPendingAction === "stop") setButtonLabel("Stopping on Mac...");
           else if (!canControl) setButtonLabel("Mac offline");
-          else setButtonLabel(running ? "Stop scan" : "Run scan now");
+          else setButtonLabel(running ? "Stop Mac scan" : "Run scan on Mac");
         }
       } catch {
         // Keep the button quiet if polling fails.
@@ -300,7 +300,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
       if (response.status === 409) {
         if (payload?.reason === "already_running") {
           setIsRunning(true);
-          setButtonLabel("Stop scan");
+          setButtonLabel("Stop Mac scan");
         } else {
           setButtonLabel("Another Mac scanner is busy");
         }
