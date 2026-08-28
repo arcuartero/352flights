@@ -334,15 +334,46 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
     }
   }
 
+  const compactButtonLabel = (() => {
+    switch (buttonLabel) {
+      case "Run scan on Mac":
+        return "Run scan";
+      case "Stop Mac scan":
+        return "Stop scan";
+      case "Starting on Mac...":
+        return "Starting...";
+      case "Stopping on Mac...":
+      case "Stopping...":
+        return "Stopping...";
+      case "Another Mac scanner is busy":
+        return "Mac busy";
+      case "Start failed":
+        return "Start failed";
+      case "Stop failed":
+        return "Stop failed";
+      default:
+        return buttonLabel;
+    }
+  })();
+
   return (
     <button
+      aria-label={buttonLabel}
       className={`site-chrome__scan-trigger ${isRunning ? "site-chrome__scan-trigger--danger" : ""}`}
       disabled={isBusy || pendingAction !== null || !controlAvailable}
       onClick={handleClick}
       title={!controlAvailable ? "The Mac controller is offline." : undefined}
       type="button"
     >
-      {buttonLabel}
+      <span className="site-chrome__scan-trigger-label site-chrome__scan-trigger-label--desktop">
+        {buttonLabel}
+      </span>
+      <span
+        aria-hidden="true"
+        className="site-chrome__scan-trigger-label site-chrome__scan-trigger-label--mobile"
+      >
+        {compactButtonLabel}
+      </span>
     </button>
   );
 }

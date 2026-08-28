@@ -821,6 +821,10 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     color var(--ease-standard);
 }
 
+.site-chrome__scan-trigger-label--mobile {
+  display: none;
+}
+
 .site-chrome__scan-trigger:hover:not(:disabled) {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--accent) 56%, transparent);
