@@ -12,7 +12,6 @@ type HubTab = "price" | "dates";
 export function OpsScannerStatusHub() {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<HubTab>("price");
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const mobileTriggerRef = useRef<HTMLButtonElement>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
@@ -66,14 +65,12 @@ export function OpsScannerStatusHub() {
         aria-expanded={isMobileOpen}
         aria-label="Open scanner status"
         className="ops-scanner-hub__mobile-trigger"
-        onClick={() => {
-          setIsCollapsed(false);
-          setIsMobileOpen(true);
-        }}
+        onClick={() => setIsMobileOpen(true)}
         ref={mobileTriggerRef}
         type="button"
       >
         <Radar aria-hidden="true" size={24} strokeWidth={2} />
+        <span className="ops-scanner-hub__trigger-label">Scanner status</span>
         <span aria-hidden="true" className="ops-scanner-hub__mobile-status" />
       </button>
 
@@ -91,9 +88,7 @@ export function OpsScannerStatusHub() {
         aria-modal={isMobileOpen ? "true" : undefined}
         className={`ops-scanner-hub ops-scanner-status ops-scanner-status--floating ${
           activeTab === "dates" ? "is-dates" : "is-price"
-        } ${isCollapsed ? "is-collapsed" : "is-expanded"} ${
-          isMobileOpen ? "is-mobile-open" : ""
-        }`}
+        } is-expanded ${isMobileOpen ? "is-mobile-open" : ""}`}
         id="ops-scanner-mobile-sheet"
         role={isMobileOpen ? "dialog" : undefined}
       >
@@ -119,22 +114,15 @@ export function OpsScannerStatusHub() {
             </button>
           </div>
           <button
-            aria-expanded={!isCollapsed}
+            aria-label="Close scanner status"
             className="ops-scanner-status__toggle"
             onClick={() => {
-              if (isMobileOpen) {
-                setIsMobileOpen(false);
-                mobileTriggerRef.current?.focus();
-                return;
-              }
-              setIsCollapsed((current) => !current);
+              setIsMobileOpen(false);
+              mobileTriggerRef.current?.focus();
             }}
             ref={mobileCloseRef}
             type="button"
           >
-            <span className="ops-scanner-hub__desktop-toggle-label">
-              {isCollapsed ? "Expand" : "Minimize"}
-            </span>
             <span className="ops-scanner-hub__mobile-toggle-label">
               <X aria-hidden="true" size={19} />
               Close
@@ -142,21 +130,13 @@ export function OpsScannerStatusHub() {
           </button>
         </div>
 
-        {isCollapsed ? (
-          <div className="ops-scanner-hub__collapsed">
-            <p className="ops-scanner-status__meta">
-              {activeTab === "price" ? "Price Scanner" : "Dates Scanner"}
-            </p>
-          </div>
-        ) : (
-          <div className="ops-scanner-hub__panel" role="tabpanel">
-            {activeTab === "price" ? (
-              <LocalScannerStatusWidget displayMode="page" />
-            ) : (
-              <LocalPatternDiscoveryStatusWidget displayMode="page" />
-            )}
-          </div>
-        )}
+        <div className="ops-scanner-hub__panel" role="tabpanel">
+          {activeTab === "price" ? (
+            <LocalScannerStatusWidget displayMode="page" />
+          ) : (
+            <LocalPatternDiscoveryStatusWidget displayMode="page" />
+          )}
+        </div>
       </aside>
     </>
   );
