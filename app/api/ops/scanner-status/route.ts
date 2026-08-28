@@ -100,7 +100,7 @@ function asBoolean(value: unknown) {
 
 function parseNoResultReason(detail: string) {
   const match = detail.match(/\(([^()]*)\)\s*$/);
-  return match?.[1] ?? "No matching result for this route and pattern.";
+  return match?.[1] ?? "No matching result for this route and rule.";
 }
 
 function parseNoResultDetail(detail: string) {
@@ -146,7 +146,7 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
     return {
       id,
       timestamp: event.timestampIso,
-      label: "Pattern",
+      label: "Rule",
       detail: message.replace("Pattern start: ", ""),
       tone: "progress",
     };
@@ -184,7 +184,7 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
         destinationCity: asText(meta?.destination_city),
         bucket: asText(meta?.bucket),
         routing: asText(meta?.routing),
-        patternLabel: asText(meta?.pattern_label) ?? "Unknown pattern",
+        patternLabel: asText(meta?.pattern_label) ?? "Unknown rule",
         tripNights: asNumber(meta?.trip_nights),
         searchWindowStart: asText(meta?.search_window_start),
         searchWindowEnd: asText(meta?.search_window_end),
@@ -245,7 +245,7 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
         bucket: asText(meta?.bucket),
         routing: asText(meta?.routing),
         configuredRouting: asText(meta?.configured_routing),
-        patternLabel: asText(meta?.pattern_label) ?? "Unknown pattern",
+        patternLabel: asText(meta?.pattern_label) ?? "Unknown rule",
         tripNights: asNumber(meta?.trip_nights),
         searchWindowStart: asText(meta?.search_window_start),
         searchWindowEnd: asText(meta?.search_window_end),
@@ -436,7 +436,7 @@ function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTota
   return logLines.reduce<LocalScannerRunTotals>(
     (totals, line) => {
       if (line.label === "Route") totals.routesStarted += 1;
-      if (line.label === "Pattern") totals.patternsStarted += 1;
+      if (line.label === "Pattern" || line.label === "Rule") totals.patternsStarted += 1;
       if (line.label === "Found") totals.found += 1;
       if (line.label === "No results") totals.noResults += 1;
       if (line.label === "Timed out") totals.timedOut += 1;
@@ -478,7 +478,7 @@ function breakdownFromProgress(progress: PriceScanLiveProgress) {
   return Object.entries(progress.noResultBreakdown)
     .map(([code, count]) => ({
       code,
-      label: code.replaceAll("_", " "),
+      label: code.replaceAll("pattern", "rule").replaceAll("_", " "),
       count,
     }))
     .sort((left, right) => right.count - left.count);

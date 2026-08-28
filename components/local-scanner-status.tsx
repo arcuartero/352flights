@@ -318,7 +318,7 @@ function buildNoResultSecondaryDetail(logLine: LocalScannerLogLine) {
 
   if (diagnostic.reasonCode === "pattern_not_available") {
     return [
-      `Flights were found for this trip length, but not for the exact ${diagnostic.patternLabel} pattern.`,
+      `Flights were found for this trip length, but not for the exact ${diagnostic.patternLabel} rule.`,
       price ? `Closest result: ${price}.` : null,
       airline,
       dates,
@@ -977,7 +977,7 @@ export function LocalScannerStatusWidget({
                     </div>
                     <div className="ops-scanner-status__modal-grid">
                       <div>
-                        <span>Travel pattern</span>
+                        <span>Travel rule</span>
                         <strong>{patternLabel}</strong>
                       </div>
                       <div>
