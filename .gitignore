@@ -14,3 +14,4 @@ logs/
 .claude/
 .scanner-vps.lock
 supabase/.temp/
+.vercel/
