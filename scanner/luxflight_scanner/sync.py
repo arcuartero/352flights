@@ -5,7 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from luxflight_scanner.config import ScannerConfig
-from luxflight_scanner.models import DealCandidate, RouteSeed, SnapshotRecord
+from luxflight_scanner.models import (
+    DealCandidate,
+    IndicativePriceRecord,
+    RouteSeed,
+    SnapshotRecord,
+)
 from luxflight_scanner.scanner import load_routes
 from luxflight_scanner.storage import SupabaseStore, utcnow_iso, write_json_atomic
 
@@ -14,6 +19,7 @@ def _load_state(state_path: Path) -> dict[str, Any]:
     if not state_path.exists():
         return {
             "snapshots": [],
+            "indicative_prices": [],
             "deals": [],
             "route_pattern_overrides": [],
             "route_service_months": [],
@@ -26,6 +32,7 @@ def _load_state(state_path: Path) -> dict[str, Any]:
         payload = json.load(file)
 
     payload.setdefault("snapshots", [])
+    payload.setdefault("indicative_prices", [])
     payload.setdefault("deals", [])
     payload.setdefault("route_pattern_overrides", [])
     payload.setdefault("route_service_months", [])
@@ -180,6 +187,30 @@ class LocalSupabaseSync:
         )
 
     @staticmethod
+    def _indicative_price_record(item: dict[str, Any]) -> IndicativePriceRecord:
+        metadata = item.get("metadata")
+        return IndicativePriceRecord(
+            origin_airport=str(item["origin_airport"]),
+            destination_airport=str(item["destination_airport"]),
+            rule_key=str(item["rule_key"]),
+            rule_label=str(item["rule_label"]),
+            departure_weekday=str(item["departure_weekday"]),
+            return_weekday=str(item["return_weekday"]),
+            departure_date=str(item["departure_date"]),
+            return_date=str(item["return_date"]),
+            departure_month=str(item["departure_month"]),
+            trip_nights=int(item["trip_nights"]),
+            max_stops=str(item["max_stops"]),
+            routing_type=str(item["routing_type"]),
+            price=float(item["price"]),
+            currency=str(item.get("currency") or "EUR"),
+            observed_at=str(item["observed_at"]),
+            days_until_departure=int(item["days_until_departure"]),
+            verification_status=str(item.get("verification_status") or "indicative"),
+            metadata=metadata if isinstance(metadata, dict) else {},
+        )
+
+    @staticmethod
     def _deal_candidate(deal: dict[str, Any]) -> DealCandidate:
         return DealCandidate(
             title=str(deal["title"]),
@@ -198,8 +229,10 @@ class LocalSupabaseSync:
             "state_path": str(self.state_path),
             "generated_at": synced_at,
             "snapshots_synced": 0,
+            "indicative_prices_synced": 0,
             "deals_synced": 0,
             "snapshots_skipped": 0,
+            "indicative_prices_skipped": 0,
             "deals_skipped": 0,
             "scan_runs_synced": 0,
             "scan_runs_skipped": 0,
@@ -220,6 +253,11 @@ class LocalSupabaseSync:
             for snapshot in state["snapshots"]
             if snapshot.get("scan_run_key") and not _is_synced(snapshot)
         }
+        pending_snapshot_run_keys.update(
+            str(item.get("scan_run_key"))
+            for item in state["indicative_prices"]
+            if item.get("scan_run_key") and not _is_synced(item)
+        )
         for scan_run in state["price_scan_runs"]:
             run_key = str(scan_run.get("run_key") or "")
             if not run_key or run_key not in pending_snapshot_run_keys:
@@ -240,6 +278,49 @@ class LocalSupabaseSync:
                         "error": str(error),
                     }
                 )
+
+        pending_indicative = [
+            item for item in state["indicative_prices"] if not _is_synced(item)
+        ]
+        for item in state["indicative_prices"]:
+            if _is_synced(item):
+                report["indicative_prices_skipped"] += 1
+
+        for start in range(0, len(pending_indicative), 250):
+            batch = pending_indicative[start : start + 250]
+            grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+            for item in batch:
+                route = self._route_for_snapshot(item)
+                run_key = str(item.get("scan_run_key") or "")
+                grouped.setdefault((route.key, run_key), []).append(item)
+
+            for (route_key, run_key), items in grouped.items():
+                try:
+                    route = self.routes_by_key[route_key]
+                    remote_route_id = self._remote_route_id(route)
+                    self.supabase.save_indicative_prices(
+                        remote_route_id,
+                        [self._indicative_price_record(item) for item in items],
+                        scan_run_key=run_key,
+                    )
+                    batch_synced_at = utcnow_iso()
+                    for item in items:
+                        item["sync"] = {
+                            "synced_at": batch_synced_at,
+                            "deduplication_key": item.get("deduplication_key"),
+                        }
+                    report["indicative_prices_synced"] += len(items)
+                    _persist_state(self.state_path, state)
+                except Exception as error:  # pragma: no cover - depends on live Supabase
+                    report["errors"].append(
+                        {
+                            "type": "indicative_price_batch",
+                            "route_key": route_key,
+                            "run_key": run_key,
+                            "records": len(items),
+                            "error": str(error),
+                        }
+                    )
 
         for snapshot in state["snapshots"]:
             local_snapshot_id = str(snapshot.get("id"))
@@ -343,6 +424,8 @@ class LocalSupabaseSync:
                     "sync_summary": {
                         "snapshots_synced": report["snapshots_synced"],
                         "snapshots_skipped": report["snapshots_skipped"],
+                        "indicative_prices_synced": report["indicative_prices_synced"],
+                        "indicative_prices_skipped": report["indicative_prices_skipped"],
                         "deals_synced": report["deals_synced"],
                         "deals_skipped": report["deals_skipped"],
                         "errors": sync_errors,

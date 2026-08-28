@@ -1,4 +1,5 @@
 import { OpsSubnav } from "@/components/ops-subnav";
+import { IndicativePriceCoverage } from "@/components/indicative-price-coverage";
 import { PriceScanRunHistory } from "@/components/price-scan-run-history";
 import { RecentSnapshotsPanel } from "@/components/recent-snapshots-panel";
 
@@ -9,6 +10,9 @@ export default function OpsScannerLivePage() {
     <main className="ops-shell ops-shell--scanner-live">
       <OpsSubnav />
       <PriceScanRunHistory error={null} runs={[]} />
+      <div className="ops-shell__center-panel">
+        <IndicativePriceCoverage />
+      </div>
       <div className="ops-shell__center-panel">
         <RecentSnapshotsPanel
           collapsible

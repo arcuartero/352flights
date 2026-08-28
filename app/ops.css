@@ -890,6 +890,121 @@
   background: color-mix(in srgb, var(--accent-soft) 54%, var(--panel-muted) 46%);
 }
 
+.indicative-price-coverage {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1.15rem;
+  border: var(--border-soft);
+  border-radius: 1.3rem;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.indicative-price-coverage__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.indicative-price-coverage__header h2 {
+  margin: 0.18rem 0 0;
+  color: var(--text-strong);
+  font-size: 1.55rem;
+}
+
+.indicative-price-coverage__header p {
+  max-width: 48rem;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.indicative-price-coverage__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.indicative-price-coverage__metrics div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-muted) 90%, transparent);
+}
+
+.indicative-price-coverage__metrics span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.indicative-price-coverage__metrics strong {
+  color: var(--text-strong);
+  font-size: 1.1rem;
+}
+
+.indicative-price-coverage__state {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.9rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.indicative-price-coverage__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.indicative-price-coverage table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.indicative-price-coverage th,
+.indicative-price-coverage td {
+  padding: 0.7rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.indicative-price-coverage th {
+  color: var(--text-strong);
+  font-size: 0.67rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.indicative-price-coverage td strong,
+.indicative-price-coverage td small {
+  display: block;
+}
+
+.indicative-price-coverage td strong {
+  color: var(--text-strong);
+}
+
+@media (max-width: 760px) {
+  .indicative-price-coverage__header {
+    display: grid;
+  }
+
+  .indicative-price-coverage__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .date-scan-history__route-list {
   display: grid;
   gap: 8px;

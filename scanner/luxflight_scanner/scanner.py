@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 import sys
@@ -16,6 +17,7 @@ from urllib.parse import urlencode
 from luxflight_scanner.config import ScannerConfig
 from luxflight_scanner.models import (
     DealCandidate,
+    IndicativePriceRecord,
     PatternSelectionResult,
     RouteSeed,
     SearchPattern,
@@ -324,6 +326,7 @@ class LuxFlightScanner:
         )
         self.live_sync_remote_route_ids: dict[str, str] = {}
         self._run_retry_counts: dict[str, int] = {}
+        self._provider_query_counts = {"calendar": 0, "exact": 0}
         self._random = random.Random()
         self._next_http_request_at = 0.0
         self._rate_limit_until = 0.0
@@ -797,6 +800,7 @@ class LuxFlightScanner:
         )
 
     def _run_date_search(self, filters: DateSearchFilters) -> list[object]:
+        self._provider_query_counts["calendar"] += 1
         self._pause_between_searches()
         try:
             return self.date_search.search(filters) or []
@@ -813,6 +817,7 @@ class LuxFlightScanner:
         *,
         top_n: int,
     ) -> list[object]:
+        self._provider_query_counts["exact"] += 1
         self._pause_between_searches()
         try:
             return self.flight_search.search(filters, top_n=top_n) or []
@@ -1188,6 +1193,65 @@ class LuxFlightScanner:
                 **LuxFlightScanner._pattern_metadata(pattern),
             },
         )
+
+    @staticmethod
+    def _indicative_routing_type(max_stops: str) -> str:
+        return "direct" if max_stops == "NON_STOP" else "stops_allowed"
+
+    def _indicative_prices_from_calendar_results(
+        self,
+        route: RouteSeed,
+        pattern: SearchPattern,
+        results: list[object],
+        *,
+        max_stops: str,
+        observed_at: datetime | None = None,
+    ) -> tuple[IndicativePriceRecord, ...]:
+        observed = observed_at or datetime.now(timezone.utc)
+        records: list[IndicativePriceRecord] = []
+        seen_dates: set[tuple[str, str]] = set()
+        for result in results:
+            raw_dates = getattr(result, "date", ())
+            if not raw_dates:
+                continue
+            outbound_date = raw_dates[0].date()
+            inbound_date = raw_dates[1].date() if len(raw_dates) > 1 else outbound_date
+            if not self._matches_pattern(outbound_date, inbound_date, pattern):
+                continue
+            price = self._positive_price(getattr(result, "price", None))
+            if price is None:
+                continue
+            date_key = (outbound_date.isoformat(), inbound_date.isoformat())
+            if date_key in seen_dates:
+                continue
+            seen_dates.add(date_key)
+            records.append(
+                IndicativePriceRecord(
+                    origin_airport=route.origin_airport,
+                    destination_airport=route.destination_airport,
+                    rule_key=pattern.key,
+                    rule_label=pattern.label,
+                    departure_weekday=pattern.departure_weekday,
+                    return_weekday=pattern.return_weekday,
+                    departure_date=date_key[0],
+                    return_date=date_key[1],
+                    departure_month=outbound_date.replace(day=1).isoformat(),
+                    trip_nights=(inbound_date - outbound_date).days,
+                    max_stops=max_stops,
+                    routing_type=self._indicative_routing_type(max_stops),
+                    price=price,
+                    currency=self.config.currency_code,
+                    observed_at=observed.isoformat(),
+                    days_until_departure=max((outbound_date - observed.date()).days, 0),
+                    metadata={
+                        "destination_city": route.destination_city,
+                        "bucket": route.bucket,
+                        "buckets": list(route.supported_buckets),
+                        "price_source": "calendar_graph",
+                    },
+                )
+            )
+        return tuple(records)
 
     def _build_candidate_snapshot_from_itinerary(
         self,
@@ -2512,6 +2576,12 @@ class LuxFlightScanner:
             )
 
         results = date_results_cache[cache_key]
+        indicative_prices = self._indicative_prices_from_calendar_results(
+            route,
+            pattern,
+            results,
+            max_stops=route.max_stops,
+        )
         if not results:
             relaxed_max_stops = self._next_relaxed_max_stops(route.max_stops)
             if relaxed_max_stops is not None:
@@ -2528,6 +2598,12 @@ class LuxFlightScanner:
 
                 relaxed_results = date_results_cache[relaxed_cache_key]
                 if relaxed_results:
+                    relaxed_indicative_prices = self._indicative_prices_from_calendar_results(
+                        route,
+                        pattern,
+                        relaxed_results,
+                        max_stops=relaxed_max_stops,
+                    )
                     for result in relaxed_results:
                         outbound_date = result.date[0].date()
                         inbound_date = result.date[1].date() if len(result.date) > 1 else outbound_date
@@ -2551,6 +2627,8 @@ class LuxFlightScanner:
                                 if relaxed_snapshot is not None
                                 else {}
                             )
+                            if not relaxed_metadata:
+                                continue
                             if relaxed_metadata.get("itinerary_rejected") == "destination_stay_under_24h":
                                 continue
                             return PatternSelectionResult(
@@ -2559,11 +2637,15 @@ class LuxFlightScanner:
                                     relaxed_snapshot,
                                     relaxed_metadata,
                                 ),
+                                indicative_prices=relaxed_indicative_prices,
+                                calendar_results_received=len(relaxed_results),
                             )
 
             reason = "No flights were returned for this route and trip length."
             return PatternSelectionResult(
                 snapshot=None,
+                indicative_prices=indicative_prices,
+                calendar_results_received=len(results),
                 no_result_reason=reason,
                 no_result_reason_code="no_flights_found",
                 no_result_diagnostic=self._build_no_result_diagnostic(
@@ -2621,6 +2703,12 @@ class LuxFlightScanner:
                     )
 
                 relaxed_results = date_results_cache[relaxed_cache_key]
+                relaxed_indicative_prices = self._indicative_prices_from_calendar_results(
+                    route,
+                    pattern,
+                    relaxed_results,
+                    max_stops=relaxed_max_stops,
+                )
                 for result in relaxed_results:
                     outbound_date = result.date[0].date()
                     inbound_date = result.date[1].date() if len(result.date) > 1 else outbound_date
@@ -2644,6 +2732,8 @@ class LuxFlightScanner:
                             if relaxed_snapshot is not None
                             else {}
                         )
+                        if not relaxed_metadata:
+                            continue
                         if relaxed_metadata.get("itinerary_rejected") == "destination_stay_under_24h":
                             continue
                         return PatternSelectionResult(
@@ -2652,6 +2742,8 @@ class LuxFlightScanner:
                                 relaxed_snapshot,
                                 relaxed_metadata,
                             ),
+                            indicative_prices=relaxed_indicative_prices,
+                            calendar_results_received=len(relaxed_results),
                         )
 
             cheapest_result = min(results, key=lambda item: float(item.price))
@@ -2677,6 +2769,8 @@ class LuxFlightScanner:
             )
             return PatternSelectionResult(
                 snapshot=None,
+                indicative_prices=indicative_prices,
+                calendar_results_received=len(results),
                 no_result_reason=reason,
                 no_result_reason_code="pattern_not_available",
                 no_result_diagnostic=self._build_no_result_diagnostic(
@@ -2767,11 +2861,30 @@ class LuxFlightScanner:
                         "skyscanner_url": fallback_skyscanner_url,
                         **airline_metadata,
                     },
-                )
+                ),
+                indicative_prices=indicative_prices,
+                calendar_results_received=len(results),
             )
 
         if fallback_snapshot is not None:
-            return PatternSelectionResult(snapshot=fallback_snapshot)
+            reason = (
+                "Calendar prices were captured, but an exact shopping result could not be "
+                "verified for publication."
+            )
+            return PatternSelectionResult(
+                snapshot=None,
+                indicative_prices=indicative_prices,
+                calendar_results_received=len(results),
+                no_result_reason=reason,
+                no_result_reason_code="verification_unavailable",
+                no_result_diagnostic=self._build_no_result_diagnostic(
+                    route,
+                    pattern,
+                    "verification_unavailable",
+                    reason,
+                    snapshot=fallback_snapshot,
+                ),
+            )
 
         if rejected_short_stays:
             best_stay = min(rejected_short_stays)
@@ -2781,6 +2894,8 @@ class LuxFlightScanner:
             )
             return PatternSelectionResult(
                 snapshot=None,
+                indicative_prices=indicative_prices,
+                calendar_results_received=len(results),
                 no_result_reason=reason,
                 no_result_reason_code="destination_stay_under_24h",
                 no_result_diagnostic=self._build_no_result_diagnostic(
@@ -2796,6 +2911,8 @@ class LuxFlightScanner:
         reason = "Flights were found, but none passed validation cleanly."
         return PatternSelectionResult(
             snapshot=None,
+            indicative_prices=indicative_prices,
+            calendar_results_received=len(results),
             no_result_reason=reason,
             no_result_reason_code="validation_rejected",
             no_result_diagnostic=self._build_no_result_diagnostic(
@@ -3108,15 +3225,49 @@ class LuxFlightScanner:
         except Exception as error:  # pragma: no cover - depends on live network behavior
             self._log_progress(f"Scan summary live sync failed: {error}")
 
-    def scan(self, limit: int | None = None) -> dict[str, Any]:
-        report: list[dict[str, Any]] = []
-        routes = self.routes[:limit] if limit else self.routes
-        run_key = str(uuid.uuid4())
-        started_at = datetime.now(timezone.utc)
-        started_route_keys: set[str] = set()
-        completed_route_keys: set[str] = set()
-        patterns_planned = 0
-        patterns_scanned = 0
+    def scan(
+        self,
+        limit: int | None = None,
+        destination_airports: set[str] | None = None,
+    ) -> dict[str, Any]:
+        filtered_routes = [
+            route
+            for route in self.routes
+            if not destination_airports or route.destination_airport in destination_airports
+        ]
+        routes = filtered_routes[:limit] if limit else filtered_routes
+        plan_key = hashlib.sha256(
+            json.dumps(
+                {
+                    "scanner_source": self.config.scanner_source,
+                    "routes": [route.key for route in routes],
+                },
+                sort_keys=True,
+            ).encode("utf-8")
+        ).hexdigest()
+        resume_checkpoint = self.store.load_price_scan_checkpoint(plan_key)
+        if resume_checkpoint:
+            run_key = str(resume_checkpoint["run_key"])
+            started_at = datetime.fromisoformat(
+                str(resume_checkpoint["started_at"]).replace("Z", "+00:00")
+            )
+            report = list(resume_checkpoint.get("report") or [])
+            started_route_keys = set(resume_checkpoint.get("started_route_keys") or [])
+            completed_route_keys = set(resume_checkpoint.get("completed_route_keys") or [])
+            completed_rule_keys = set(resume_checkpoint.get("completed_rule_keys") or [])
+            planned_route_keys = set(resume_checkpoint.get("planned_route_keys") or [])
+            patterns_planned = int(resume_checkpoint.get("patterns_planned") or 0)
+            patterns_scanned = int(resume_checkpoint.get("patterns_scanned") or 0)
+        else:
+            report: list[dict[str, Any]] = []
+            run_key = str(uuid.uuid4())
+            started_at = datetime.now(timezone.utc)
+            started_route_keys: set[str] = set()
+            completed_route_keys: set[str] = set()
+            completed_rule_keys: set[str] = set()
+            planned_route_keys: set[str] = set()
+            patterns_planned = 0
+            patterns_scanned = 0
         total_routes = len(routes)
         route_windows = [self._search_window_dates(route) for route in routes]
         search_window_start = min((window[0] for window in route_windows), default=None)
@@ -3129,7 +3280,22 @@ class LuxFlightScanner:
         fatal_error: BaseException | None = None
         final_summary: dict[str, Any] | None = None
         last_checkpoint_at: datetime | None = None
-        self._run_retry_counts = {}
+        self._run_retry_counts = dict(
+            (resume_checkpoint or {}).get("retry_counts") or {}
+        )
+        self._provider_query_counts = {
+            "calendar": int((resume_checkpoint or {}).get("calendar_queries") or 0),
+            "exact": int((resume_checkpoint or {}).get("exact_queries") or 0),
+        }
+        indicative_prices_received = int(
+            (resume_checkpoint or {}).get("indicative_prices_received") or 0
+        )
+        indicative_prices_inserted = int(
+            (resume_checkpoint or {}).get("indicative_prices_inserted") or 0
+        )
+        indicative_price_duplicates = int(
+            (resume_checkpoint or {}).get("indicative_price_duplicates") or 0
+        )
 
         def save_running_checkpoint(*, force: bool = False) -> None:
             nonlocal last_checkpoint_at
@@ -3141,8 +3307,7 @@ class LuxFlightScanner:
                 < SCAN_RUN_CHECKPOINT_INTERVAL_SECONDS
             ):
                 return
-            self._save_scan_run_summary(
-                build_price_scan_run_summary(
+            checkpoint_summary = build_price_scan_run_summary(
                     run_key=run_key,
                     scanner_source=self.config.scanner_source,
                     routes=routes,
@@ -3157,8 +3322,34 @@ class LuxFlightScanner:
                     retry_counts=self._run_retry_counts,
                     search_window_start=search_window_start,
                     search_window_end=search_window_end,
-                ),
-                checkpoint=True,
+                )
+            checkpoint_summary.update(
+                {
+                    "indicative_prices": indicative_prices_inserted,
+                    "calendar_queries": self._provider_query_counts["calendar"],
+                    "exact_queries": self._provider_query_counts["exact"],
+                }
+            )
+            self._save_scan_run_summary(checkpoint_summary, checkpoint=True)
+            self.store.save_price_scan_checkpoint(
+                {
+                    "plan_key": plan_key,
+                    "run_key": run_key,
+                    "started_at": started_at.isoformat(),
+                    "report": report,
+                    "started_route_keys": sorted(started_route_keys),
+                    "completed_route_keys": sorted(completed_route_keys),
+                    "completed_rule_keys": sorted(completed_rule_keys),
+                    "planned_route_keys": sorted(planned_route_keys),
+                    "patterns_planned": patterns_planned,
+                    "patterns_scanned": patterns_scanned,
+                    "retry_counts": self._run_retry_counts,
+                    "calendar_queries": self._provider_query_counts["calendar"],
+                    "exact_queries": self._provider_query_counts["exact"],
+                    "indicative_prices_received": indicative_prices_received,
+                    "indicative_prices_inserted": indicative_prices_inserted,
+                    "indicative_price_duplicates": indicative_price_duplicates,
+                }
             )
             last_checkpoint_at = checkpoint_at
 
@@ -3167,13 +3358,17 @@ class LuxFlightScanner:
         try:
             self._assert_provider_available(context="before starting the full scan")
             for route_index, route in enumerate(routes, start=1):
+                if route.key in completed_route_keys:
+                    continue
                 if route_index > 1:
                     self._pause_between_routes()
                 started_route_keys.add(route.key)
                 try:
                     route_id = self.store.ensure_route(route)
                     patterns = self._patterns_for_route(route, route_id)
-                    patterns_planned += len(patterns)
+                    if route.key not in planned_route_keys:
+                        patterns_planned += len(patterns)
+                        planned_route_keys.add(route.key)
                     route_progress_label = f"{route_index}/{total_routes}"
                     self._log_progress(
                         f"Route start: {route_progress_label} · "
@@ -3208,6 +3403,16 @@ class LuxFlightScanner:
                 service_month_rows = self.store.route_service_months(route_id, route.max_stops)
                 total_patterns = len(patterns)
                 for pattern_index, pattern in enumerate(patterns, start=1):
+                    completed_rule_key = "|".join(
+                        (
+                            route.key,
+                            pattern.key,
+                            pattern.valid_from or "",
+                            pattern.valid_until or "",
+                        )
+                    )
+                    if completed_rule_key in completed_rule_keys:
+                        continue
                     patterns_scanned += 1
                     pattern_progress_label = f"{pattern_index}/{total_patterns}"
                     try:
@@ -3235,6 +3440,21 @@ class LuxFlightScanner:
                             date_results_cache,
                             service_month_rows,
                             pattern_progress_label,
+                        )
+                        capture_result = self.store.save_indicative_prices(
+                            route_id,
+                            list(selection.indicative_prices),
+                            scan_run_key=run_key,
+                        )
+                        indicative_prices_received += capture_result["received"]
+                        indicative_prices_inserted += capture_result["inserted"]
+                        indicative_price_duplicates += capture_result["duplicates"]
+                        self._log_progress(
+                            f"Calendar combinations saved: {pattern_progress_label} · "
+                            f"{route.origin_airport} -> {route.destination_airport} "
+                            f"{pattern.label} received {selection.calendar_results_received}, "
+                            f"valid {len(selection.indicative_prices)}, "
+                            f"inserted {capture_result['inserted']}"
                         )
                     except Exception as error:  # pragma: no cover - depends on live upstream behavior
                         error_type = self._classify_error_type(error)
@@ -3273,6 +3493,7 @@ class LuxFlightScanner:
                                 "error_type": error_type,
                             }
                         )
+                        completed_rule_keys.add(completed_rule_key)
                         save_running_checkpoint()
                         self._trip_network_outage_breaker_if_needed(
                             consecutive_network_outage_failures,
@@ -3301,8 +3522,11 @@ class LuxFlightScanner:
                                 "reason": selection.no_result_reason,
                                 "reason_code": selection.no_result_reason_code,
                                 "diagnostic": selection.no_result_diagnostic,
+                                "calendar_results_received": selection.calendar_results_received,
+                                "indicative_prices_saved": len(selection.indicative_prices),
                             }
                         )
+                        completed_rule_keys.add(completed_rule_key)
                         save_running_checkpoint()
                         if selection.no_result_reason_code in {
                             "no_flights_found",
@@ -3355,6 +3579,14 @@ class LuxFlightScanner:
                                 route_id,
                                 snapshot,
                                 scan_run_key=run_key,
+                            )
+                            self.store.mark_indicative_price_verified(
+                                route_id,
+                                scan_run_key=run_key,
+                                rule_key=pattern.key,
+                                departure_date=snapshot.departure_date,
+                                return_date=snapshot.return_date,
+                                max_stops=snapshot.max_stops,
                             )
                             if candidate is not None:
                                 self.store.save_deal(route_id, snapshot_id, candidate)
@@ -3418,6 +3650,8 @@ class LuxFlightScanner:
                                 "history_points": len(scoring_history),
                                 "deal_skip_diagnostic": deal_skip_diagnostic,
                                 "candidate": asdict(candidate) if candidate else None,
+                                "calendar_results_received": selection.calendar_results_received,
+                                "indicative_prices_saved": len(selection.indicative_prices),
                             }
                         )
 
@@ -3426,8 +3660,14 @@ class LuxFlightScanner:
                         f"{route.origin_airport} -> {route.destination_airport} "
                         f"{pattern.label} captured {len(snapshots)} fare(s)"
                     )
+                    completed_rule_keys.add(completed_rule_key)
                     save_running_checkpoint()
-                completed_route_keys.add(route.key)
+                route_rule_keys = {
+                    "|".join((route.key, item.key, item.valid_from or "", item.valid_until or ""))
+                    for item in patterns
+                }
+                if route_rule_keys.issubset(completed_rule_keys):
+                    completed_route_keys.add(route.key)
                 save_running_checkpoint()
         except ProviderUnavailableError as error:
             stopped_reason = str(error)
@@ -3482,7 +3722,16 @@ class LuxFlightScanner:
                 stopped_reason=stopped_reason,
                 stopped_reason_code=stopped_reason_code,
             )
+            final_summary.update(
+                {
+                    "indicative_prices": indicative_prices_inserted,
+                    "calendar_queries": self._provider_query_counts["calendar"],
+                    "exact_queries": self._provider_query_counts["exact"],
+                }
+            )
             self._save_scan_run_summary(final_summary)
+            if run_status in {"completed", "completed_with_errors"}:
+                self.store.clear_price_scan_checkpoint(run_key)
 
         if fatal_error is not None:
             raise fatal_error
@@ -3493,6 +3742,13 @@ class LuxFlightScanner:
             "routes_scanned": len(started_route_keys),
             "patterns_scanned": patterns_scanned,
             "rules_scanned": patterns_scanned + sum(self._run_retry_counts.values()),
+            "indicative_prices_received": indicative_prices_received,
+            "indicative_prices_inserted": indicative_prices_inserted,
+            "indicative_price_duplicates": indicative_price_duplicates,
+            "provider_queries": {
+                **self._provider_query_counts,
+                "total": sum(self._provider_query_counts.values()),
+            },
             "report": report,
             "stopped_reason": stopped_reason,
             "stopped_reason_code": stopped_reason_code,

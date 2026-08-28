@@ -52,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Limit discovery to a single destination airport.",
     )
     parser.add_argument(
+        "--destination-airports",
+        type=str,
+        default=None,
+        help="Limit a price scan to a comma-separated list of destination airports.",
+    )
+    parser.add_argument(
         "--max-stops",
         type=str,
         default=None,
@@ -144,7 +150,15 @@ def main() -> None:
             ),
         )
         if args.discover_patterns
-        else scanner.scan(limit=args.limit)
+        else scanner.scan(
+            limit=args.limit,
+            destination_airports={
+                value.strip().upper()
+                for value in (args.destination_airports or "").split(",")
+                if value.strip()
+            }
+            or None,
+        )
     )
     exit_code = None if args.discover_patterns else scanner_exit_code(report)
 

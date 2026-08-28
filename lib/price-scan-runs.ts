@@ -93,6 +93,9 @@ export type PriceScanRun = {
   patternsPlanned: number;
   patternsScanned: number;
   rulesScanned: number;
+  indicativePrices: number;
+  calendarQueries: number;
+  exactQueries: number;
   foundPrices: number;
   dealCandidates: number;
   noResults: number;
@@ -157,6 +160,9 @@ type PriceScanRunRow = {
   patterns_planned: number;
   patterns_scanned: number;
   rules_scanned: number;
+  indicative_prices: number;
+  calendar_queries: number;
+  exact_queries: number;
   found_prices: number;
   deal_candidates: number;
   no_results: number;
@@ -221,6 +227,9 @@ const baseSelect = [
   "patterns_planned",
   "patterns_scanned",
   "rules_scanned",
+  "indicative_prices",
+  "calendar_queries",
+  "exact_queries",
   "found_prices",
   "deal_candidates",
   "no_results",
@@ -406,6 +415,9 @@ function mapRun(row: PriceScanRunRow): PriceScanRun {
     patternsPlanned: numberValue(row.patterns_planned),
     patternsScanned: numberValue(row.patterns_scanned),
     rulesScanned: numberValue(row.rules_scanned),
+    indicativePrices: numberValue(row.indicative_prices),
+    calendarQueries: numberValue(row.calendar_queries),
+    exactQueries: numberValue(row.exact_queries),
     foundPrices: numberValue(row.found_prices),
     dealCandidates: numberValue(row.deal_candidates),
     noResults: numberValue(row.no_results),

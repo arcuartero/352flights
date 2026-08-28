@@ -11,7 +11,12 @@ from typing import Any
 import httpx
 
 from luxflight_scanner.config import ScannerConfig
-from luxflight_scanner.models import DealCandidate, RouteSeed, SnapshotRecord
+from luxflight_scanner.models import (
+    DealCandidate,
+    IndicativePriceRecord,
+    RouteSeed,
+    SnapshotRecord,
+)
 
 
 def utcnow_iso() -> str:
@@ -58,6 +63,27 @@ def has_non_positive_price(value: object) -> bool:
     return not isinstance(value, (int, float)) or float(value) <= 0
 
 
+def indicative_price_key(
+    route_id: str,
+    scan_run_key: str,
+    record: IndicativePriceRecord | dict[str, Any],
+) -> str:
+    def read(name: str) -> object:
+        return getattr(record, name) if isinstance(record, IndicativePriceRecord) else record.get(name)
+
+    return "|".join(
+        str(value)
+        for value in (
+            scan_run_key,
+            route_id,
+            read("rule_key"),
+            read("departure_date"),
+            read("return_date"),
+            read("max_stops"),
+        )
+    )
+
+
 class LocalStore:
     def __init__(self, state_path: Path):
         self.state_path = state_path
@@ -68,6 +94,7 @@ class LocalStore:
         if not self.state_path.exists():
             return {
                 "snapshots": [],
+                "indicative_prices": [],
                 "deals": [],
                 "route_pattern_overrides": [],
                 "route_service_months": [],
@@ -75,12 +102,14 @@ class LocalStore:
                 "route_service_change_events": [],
                 "price_scan_runs": [],
                 "date_scan_runs": [],
+                "price_scan_checkpoint": None,
             }
 
         with self.state_path.open("r", encoding="utf-8") as file:
             payload = json.load(file)
 
         payload.setdefault("snapshots", [])
+        payload.setdefault("indicative_prices", [])
         payload.setdefault("deals", [])
         payload.setdefault("route_pattern_overrides", [])
         payload.setdefault("route_service_months", [])
@@ -88,6 +117,7 @@ class LocalStore:
         payload.setdefault("route_service_change_events", [])
         payload.setdefault("price_scan_runs", [])
         payload.setdefault("date_scan_runs", [])
+        payload.setdefault("price_scan_checkpoint", None)
         return payload
 
     def _persist(self) -> None:
@@ -157,6 +187,96 @@ class LocalStore:
         )
         self._persist()
         return snapshot_id
+
+    def save_indicative_prices(
+        self,
+        route_id: str,
+        records: list[IndicativePriceRecord],
+        *,
+        scan_run_key: str,
+    ) -> dict[str, int]:
+        if not records:
+            return {"received": 0, "inserted": 0, "duplicates": 0}
+
+        rows_by_key = {
+            str(item.get("deduplication_key")): item
+            for item in self._state["indicative_prices"]
+            if item.get("deduplication_key")
+        }
+        inserted = 0
+        duplicates = 0
+        for record in records:
+            if has_non_positive_price(record.price):
+                raise ValueError(
+                    f"Refusing to save non-positive indicative price for route_id={route_id}."
+                )
+            deduplication_key = indicative_price_key(route_id, scan_run_key, record)
+            existing = rows_by_key.get(deduplication_key)
+            payload = {
+                "id": deduplication_key,
+                "deduplication_key": deduplication_key,
+                "route_id": route_id,
+                "scan_run_key": scan_run_key,
+                **record.__dict__,
+            }
+            if existing is not None:
+                existing.update(payload)
+                duplicates += 1
+                continue
+            self._state["indicative_prices"].append(payload)
+            rows_by_key[deduplication_key] = payload
+            inserted += 1
+
+        self._persist()
+        return {
+            "received": len(records),
+            "inserted": inserted,
+            "duplicates": duplicates,
+        }
+
+    def mark_indicative_price_verified(
+        self,
+        route_id: str,
+        *,
+        scan_run_key: str,
+        rule_key: str,
+        departure_date: str,
+        return_date: str,
+        max_stops: str,
+    ) -> None:
+        changed = False
+        for item in self._state["indicative_prices"]:
+            if (
+                item.get("route_id") == route_id
+                and item.get("scan_run_key") == scan_run_key
+                and item.get("rule_key") == rule_key
+                and item.get("departure_date") == departure_date
+                and item.get("return_date") == return_date
+                and item.get("max_stops") == max_stops
+            ):
+                item["verification_status"] = "verified"
+                changed = True
+        if changed:
+            self._persist()
+
+    def load_price_scan_checkpoint(self, plan_key: str) -> dict[str, Any] | None:
+        checkpoint = self._state.get("price_scan_checkpoint")
+        if not isinstance(checkpoint, dict) or checkpoint.get("plan_key") != plan_key:
+            return None
+        return dict(checkpoint)
+
+    def save_price_scan_checkpoint(self, checkpoint: dict[str, Any]) -> None:
+        self._state["price_scan_checkpoint"] = {
+            **checkpoint,
+            "updated_at": utcnow_iso(),
+        }
+        self._persist()
+
+    def clear_price_scan_checkpoint(self, run_key: str) -> None:
+        checkpoint = self._state.get("price_scan_checkpoint")
+        if isinstance(checkpoint, dict) and checkpoint.get("run_key") == run_key:
+            self._state["price_scan_checkpoint"] = None
+            self._persist()
 
     def snapshot_by_id(self, snapshot_id: str) -> dict[str, Any] | None:
         for snapshot in self._state["snapshots"]:
@@ -428,6 +548,9 @@ class SupabaseStore:
         "patterns_planned",
         "patterns_scanned",
         "rules_scanned",
+        "indicative_prices",
+        "calendar_queries",
+        "exact_queries",
         "found_prices",
         "deal_candidates",
         "no_results",
@@ -708,6 +831,110 @@ class SupabaseStore:
         )
         response.raise_for_status()
         return str(response.json()[0]["id"])
+
+    def save_indicative_prices(
+        self,
+        route_id: str,
+        records: list[IndicativePriceRecord],
+        *,
+        scan_run_key: str,
+        batch_size: int = 250,
+    ) -> dict[str, int]:
+        if not records:
+            return {"received": 0, "inserted": 0, "duplicates": 0}
+
+        scan_run_id = self._price_scan_run_id(scan_run_key)
+        payloads: list[dict[str, Any]] = []
+        for record in records:
+            if has_non_positive_price(record.price):
+                raise ValueError(
+                    f"Refusing to save non-positive indicative price for route_id={route_id}."
+                )
+            payloads.append(
+                {
+                    "route_id": route_id,
+                    "scan_run_id": scan_run_id,
+                    "origin_airport": record.origin_airport,
+                    "destination_airport": record.destination_airport,
+                    "rule_key": record.rule_key,
+                    "rule_label": record.rule_label,
+                    "departure_weekday": record.departure_weekday,
+                    "return_weekday": record.return_weekday,
+                    "departure_date": record.departure_date,
+                    "return_date": record.return_date,
+                    "departure_month": record.departure_month,
+                    "trip_nights": record.trip_nights,
+                    "max_stops": record.max_stops,
+                    "routing_type": record.routing_type,
+                    "price": record.price,
+                    "currency": record.currency,
+                    "observed_at": record.observed_at,
+                    "days_until_departure": record.days_until_departure,
+                    "verification_status": record.verification_status,
+                    "metadata": record.metadata or {},
+                }
+            )
+
+        safe_batch_size = max(1, min(batch_size, 500))
+        for start in range(0, len(payloads), safe_batch_size):
+            response = self._post_with_retry(
+                "/rest/v1/indicative_price_observations",
+                operation_label="indicative price batch upsert",
+                headers={"Prefer": "resolution=merge-duplicates,return=minimal"},
+                params={
+                    "on_conflict": (
+                        "scan_run_id,route_id,rule_key,departure_date,return_date,max_stops"
+                    )
+                },
+                json=payloads[start : start + safe_batch_size],
+            )
+            self._raise_for_status_with_detail(
+                response,
+                operation_label="indicative price batch upsert",
+            )
+
+        return {
+            "received": len(payloads),
+            "inserted": len(payloads),
+            "duplicates": 0,
+        }
+
+    def mark_indicative_price_verified(
+        self,
+        route_id: str,
+        *,
+        scan_run_key: str,
+        rule_key: str,
+        departure_date: str,
+        return_date: str,
+        max_stops: str,
+    ) -> None:
+        response = self.client.patch(
+            "/rest/v1/indicative_price_observations",
+            params={
+                "scan_run_id": f"eq.{self._price_scan_run_id(scan_run_key)}",
+                "route_id": f"eq.{route_id}",
+                "rule_key": f"eq.{rule_key}",
+                "departure_date": f"eq.{departure_date}",
+                "return_date": f"eq.{return_date}",
+                "max_stops": f"eq.{max_stops}",
+            },
+            headers={"Prefer": "return=minimal"},
+            json={"verification_status": "verified"},
+        )
+        self._raise_for_status_with_detail(
+            response,
+            operation_label="indicative price verification update",
+        )
+
+    def load_price_scan_checkpoint(self, _plan_key: str) -> None:
+        return None
+
+    def save_price_scan_checkpoint(self, _checkpoint: dict[str, Any]) -> None:
+        return None
+
+    def clear_price_scan_checkpoint(self, _run_key: str) -> None:
+        return None
 
     def find_deal_by_snapshot_id(self, snapshot_id: str) -> str | None:
         response = self.client.get(

@@ -76,9 +76,33 @@ class SnapshotRecord:
 
 
 @dataclass(frozen=True)
+class IndicativePriceRecord:
+    origin_airport: str
+    destination_airport: str
+    rule_key: str
+    rule_label: str
+    departure_weekday: str
+    return_weekday: str
+    departure_date: str
+    return_date: str
+    departure_month: str
+    trip_nights: int
+    max_stops: str
+    routing_type: str
+    price: float
+    currency: str
+    observed_at: str
+    days_until_departure: int
+    verification_status: str = "indicative"
+    metadata: dict[str, object] | None = None
+
+
+@dataclass(frozen=True)
 class PatternSelectionResult:
     snapshot: SnapshotRecord | None
     additional_snapshots: tuple[SnapshotRecord, ...] = ()
+    indicative_prices: tuple[IndicativePriceRecord, ...] = ()
+    calendar_results_received: int = 0
     no_result_reason: str | None = None
     no_result_reason_code: str | None = None
     no_result_diagnostic: dict[str, object] | None = None

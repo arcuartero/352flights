@@ -51,7 +51,7 @@ type RunExplanation = {
 const noResultLabels: Record<string, string> = {
   no_flights_found: "No flights found",
   more_stops_required: "More stops required",
-  pattern_not_available: "Pattern unavailable",
+  pattern_not_available: "Rule unavailable",
   outside_current_window: "Outside current window",
   destination_stay_under_24h: "Stay under 24h",
   validation_rejected: "Validation rejected",
@@ -412,10 +412,10 @@ function DestinationSummaryTable({ rows }: { rows: PriceScanDestinationSummary[]
         <tr>
           <SortableHeader column="destination" kind="text" label="Destination" onSort={onSort} sort={sort} tooltip="City scanned and the destination airports included in that city." />
           <SortableHeader column="routes" kind="number" label="Routes" onSort={onSort} sort={sort} tooltip="Airport routes started compared with the routes planned for this city." />
-          <SortableHeader column="patterns" kind="number" label="Patterns" onSort={onSort} sort={sort} tooltip="Date and weekday combinations processed for this city." />
-          <SortableHeader column="rules" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Actual scanner searches performed, including fallback searches." />
-          <SortableHeader column="found" kind="number" label="Found" onSort={onSort} sort={sort} tooltip="Patterns for which the scanner found a valid fare." />
-          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tooltip="Patterns completed without an available valid fare." />
+          <SortableHeader column="patterns" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Travel rules processed for this city." />
+          <SortableHeader column="rules" kind="number" label="Searches" onSort={onSort} sort={sort} tooltip="Actual scanner searches performed, including fallback searches." />
+          <SortableHeader column="found" kind="number" label="Found" onSort={onSort} sort={sort} tooltip="Rules for which the scanner found a valid fare." />
+          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tooltip="Rules completed without an available valid fare." />
           <SortableHeader column="timeout" kind="number" label="Timeout" onSort={onSort} sort={sort} tooltip="Searches stopped because the provider did not answer in time." />
           <SortableHeader column="network" kind="number" label="Net / DNS" onSort={onSort} sort={sort} tooltip="Searches affected by network connectivity or DNS failures." />
           <SortableHeader column="hard" kind="number" label="Hard" onSort={onSort} sort={sort} tooltip="Unexpected scanner or provider errors that were not recoverable." />
@@ -430,8 +430,8 @@ function DestinationSummaryTable({ rows }: { rows: PriceScanDestinationSummary[]
               <small>{destination.destination_airports.join(", ")}</small>
             </td>
             <td data-label="Routes">{destination.routes_started}/{destination.routes_planned}</td>
-            <td data-label="Patterns">{destination.patterns_scanned}</td>
-            <td data-label="Rules">{destination.rules_scanned}</td>
+            <td data-label="Rules">{destination.patterns_scanned}</td>
+            <td data-label="Searches">{destination.rules_scanned}</td>
             <td data-label="Found">{destination.found_prices}</td>
             <td className={problemMetricClass(destination.no_results)} data-label="No result">{destination.no_results}</td>
             <td className={problemMetricClass(destination.timed_out)} data-label="Timeout">{destination.timed_out}</td>
@@ -494,10 +494,10 @@ function RouteAuditTable({ rows }: { rows: PriceScanRouteSummary[] }) {
           <SortableHeader column="route" kind="text" label="Route" onSort={onSort} sort={sort} tooltip="Origin and destination airport pair processed by the scanner." />
           <SortableHeader column="destination" kind="text" label="Destination" onSort={onSort} sort={sort} tooltip="Destination city associated with the airport route." />
           <SortableHeader column="status" kind="text" label="Status" onSort={onSort} sort={sort} tooltip="Whether this route completed, ran partially, or never started." />
-          <SortableHeader column="patterns" kind="number" label="Patterns" onSort={onSort} sort={sort} tooltip="Date and weekday combinations processed for this route." />
-          <SortableHeader column="rules" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Actual scanner searches performed for this route." />
-          <SortableHeader column="found" kind="number" label="Found" onSort={onSort} sort={sort} tooltip="Patterns on this route for which a valid fare was found." />
-          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tooltip="Patterns completed without an available valid fare." />
+          <SortableHeader column="patterns" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Travel rules processed for this route." />
+          <SortableHeader column="rules" kind="number" label="Searches" onSort={onSort} sort={sort} tooltip="Actual scanner searches performed for this route." />
+          <SortableHeader column="found" kind="number" label="Found" onSort={onSort} sort={sort} tooltip="Rules on this route for which a valid fare was found." />
+          <SortableHeader column="noResult" kind="number" label="No result" onSort={onSort} sort={sort} tooltip="Rules completed without an available valid fare." />
           <SortableHeader column="timeout" kind="number" label="Timeout" onSort={onSort} sort={sort} tooltip="Searches stopped because the provider did not answer in time." />
           <SortableHeader column="network" kind="number" label="Net / DNS" onSort={onSort} sort={sort} tooltip="Searches affected by network connectivity or DNS failures." />
           <SortableHeader column="hard" kind="number" label="Hard" onSort={onSort} sort={sort} tooltip="Unexpected non-recoverable scanner or provider errors." />
@@ -510,8 +510,8 @@ function RouteAuditTable({ rows }: { rows: PriceScanRouteSummary[] }) {
             <td data-label="Route"><strong>{route.route_label}</strong><small>{route.routing}</small></td>
             <td data-label="Destination">{route.destination_city}</td>
             <td data-label="Status">{routeStatus(route)}</td>
-            <td data-label="Patterns">{route.patterns_scanned}</td>
-            <td data-label="Rules">{route.rules_scanned}</td>
+            <td data-label="Rules">{route.patterns_scanned}</td>
+            <td data-label="Searches">{route.rules_scanned}</td>
             <td data-label="Found">{route.found_prices}</td>
             <td className={problemMetricClass(route.no_results)} data-label="No result">{route.no_results}</td>
             <td className={problemMetricClass(route.timed_out)} data-label="Timeout">{route.timed_out}</td>
@@ -552,24 +552,24 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
     <table>
       <thead>
         <tr>
-          <SortableHeader column="route" kind="text" label="Route" onSort={onSort} sort={sort} tooltip="Airport route and destination city associated with this pattern." />
-          <SortableHeader column="pattern" kind="text" label="Pattern" onSort={onSort} sort={sort} tooltip="Outbound weekday, return weekday, and trip duration combination." />
+          <SortableHeader column="route" kind="text" label="Route" onSort={onSort} sort={sort} tooltip="Airport route and destination city associated with this rule." />
+          <SortableHeader column="pattern" kind="text" label="Rule" onSort={onSort} sort={sort} tooltip="Outbound weekday, return weekday, and trip duration." />
           <SortableHeader column="dates" kind="text" label="Dates" onSort={onSort} sort={sort} tooltip="Departure and return dates selected for this execution." />
-          <SortableHeader column="outcome" kind="text" label="Outcome" onSort={onSort} sort={sort} tooltip="Final result of the pattern: price, no result, timeout, network failure, or error." />
-          <SortableHeader column="price" kind="number" label="Price" onSort={onSort} sort={sort} tooltip="Valid fare found for this pattern, in the displayed currency." />
-          <SortableHeader column="rules" kind="number" label="Rules" onSort={onSort} sort={sort} tooltip="Number of actual searches performed for this pattern." />
-          <SortableHeader column="detail" kind="text" label="Itinerary / detail" onSort={onSort} sort={sort} tooltip="Airline, outbound and return times, stops, rejection reason, or technical error. A pattern can contain several distinct itineraries." />
+          <SortableHeader column="outcome" kind="text" label="Outcome" onSort={onSort} sort={sort} tooltip="Final result of the rule: price, no result, timeout, network failure, or error." />
+          <SortableHeader column="price" kind="number" label="Price" onSort={onSort} sort={sort} tooltip="Valid fare found for this rule, in the displayed currency." />
+          <SortableHeader column="rules" kind="number" label="Searches" onSort={onSort} sort={sort} tooltip="Number of provider searches performed for this rule." />
+          <SortableHeader column="detail" kind="text" label="Itinerary / detail" onSort={onSort} sort={sort} tooltip="Airline, times, stops, rejection reason, or technical error. A rule can contain several date combinations." />
         </tr>
       </thead>
       <tbody>
         {sortedRows.map((pattern, index) => (
           <tr key={`${pattern.route_key}:${pattern.pattern_key}:${index}`}>
             <td data-label="Route"><strong>{pattern.route_label}</strong><small>{pattern.destination_city}</small></td>
-            <td data-label="Pattern"><strong>{pattern.pattern_label}</strong><small>{pattern.trip_nights} nights</small></td>
+            <td data-label="Rule"><strong>{pattern.pattern_label}</strong><small>{pattern.trip_nights} nights</small></td>
             <td data-label="Dates">{pattern.departure_date ?? "n/a"}<small>{pattern.return_date ?? "n/a"}</small></td>
             <td data-label="Outcome">{patternOutcomeLabel(pattern)}</td>
             <td data-label="Price">{formatMoney(pattern.price, pattern.currency)}</td>
-            <td data-label="Rules">{pattern.rules_scanned}</td>
+            <td data-label="Searches">{pattern.rules_scanned}</td>
             <td data-label="Itinerary / detail"><ItineraryDetail pattern={pattern} /></td>
           </tr>
         ))}
@@ -652,7 +652,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
             });
             const detailPayload = (await detailResponse.json()) as RunDetailResponse;
             if (!detailResponse.ok || !detailPayload.ok) {
-              throw new Error("Pattern refresh failed.");
+              throw new Error("Rule detail refresh failed.");
             }
             return [runId, detailPayload.run.patterns ?? []] as const;
           }),
@@ -717,6 +717,9 @@ export function PriceScanRunHistory({ error, runs }: Props) {
       routes: routeKeys.size,
       patterns: sum(visibleRuns, (run) => run.patternsScanned),
       rules: sum(visibleRuns, (run) => run.rulesScanned),
+      indicativePrices: sum(visibleRuns, (run) => run.indicativePrices),
+      calendarQueries: sum(visibleRuns, (run) => run.calendarQueries),
+      exactQueries: sum(visibleRuns, (run) => run.exactQueries),
       found,
       deals: sum(visibleRuns, (run) => run.dealCandidates),
       noResults,
@@ -747,7 +750,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
       const payload = (await response.json()) as RunDetailResponse;
       if (!response.ok || !payload.ok) {
         throw new Error(
-          payload.ok ? "Pattern audit request failed." : payload.detail ?? payload.reason,
+          payload.ok ? "Rule audit request failed." : payload.detail ?? payload.reason,
         );
       }
       setLoadedPatterns((current) => ({
@@ -760,7 +763,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
         message:
           requestError instanceof Error
             ? requestError.message
-            : "Pattern audit request failed.",
+            : "Rule audit request failed.",
         runId,
       });
     } finally {
@@ -876,16 +879,19 @@ export function PriceScanRunHistory({ error, runs }: Props) {
           <div className="price-scan-history__definitions" aria-label="Metric definitions">
             <span><strong>Destinations</strong> unique cities attempted</span>
             <span><strong>Routes</strong> airport pairs attempted</span>
-            <span><strong>Patterns</strong> date and weekday combinations processed</span>
-            <span><strong>Rules</strong> actual searches, including retries</span>
+            <span><strong>Rules</strong> weekday and trip-duration rules processed</span>
+            <span><strong>Searches</strong> provider requests, including retries</span>
           </div>
 
           <section className="price-scan-history__aggregate" aria-label="Aggregated scanner totals">
             <div><span>Scans</span><strong>{visibleRuns.length}</strong></div>
             <div><span>Destinations</span><strong>{aggregate.destinations}</strong></div>
             <div><span>Routes</span><strong>{aggregate.routes}</strong></div>
-            <div><span>Patterns</span><strong>{aggregate.patterns}</strong></div>
-            <div><span>Rules scanned</span><strong>{aggregate.rules}</strong></div>
+            <div><span>Rules processed</span><strong>{aggregate.patterns}</strong></div>
+            <div><span>Provider searches</span><strong>{aggregate.rules}</strong></div>
+            <div><span>Calendar prices</span><strong>{aggregate.indicativePrices}</strong></div>
+            <div><span>Calendar queries</span><strong>{aggregate.calendarQueries}</strong></div>
+            <div><span>Exact queries</span><strong>{aggregate.exactQueries}</strong></div>
             <div className="is-success"><span>Found prices</span><strong>{aggregate.found}</strong></div>
             <div className="is-success"><span>Deal candidates</span><strong>{aggregate.deals}</strong></div>
             <div><span>No results</span><strong>{aggregate.noResults}</strong></div>
@@ -929,7 +935,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                     </div>
                     <div className="price-scan-history__run-stat">
                       <span>Work</span>
-                      <strong>{run.patternsScanned} patterns · {run.rulesScanned} rules</strong>
+                      <strong>{run.patternsScanned} rules · {run.rulesScanned} provider searches</strong>
                     </div>
                     <div className="price-scan-history__run-stat">
                       <span>Outcome</span>
@@ -1127,8 +1133,8 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                     <section className="price-scan-history__table-section">
                       <div className="price-scan-history__section-head">
                         <div>
-                          <h3>Pattern audit</h3>
-                          <p>Each found row is a distinct itinerary; one pattern and date pair can contain several schedules and prices.</p>
+                          <h3>Rule audit</h3>
+                          <p>Each found row is a distinct itinerary; one rule and date pair can contain several schedules and prices.</p>
                         </div>
                         <button
                           className="ops-button ops-button--ghost"
@@ -1141,7 +1147,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                             ? `${patterns.length} results · Refresh`
                             : loadingRunId === run.id
                               ? "Loading"
-                              : "Load pattern audit"}
+                              : "Load rule audit"}
                         </button>
                       </div>
                       {loadError?.runId === run.id ? (
