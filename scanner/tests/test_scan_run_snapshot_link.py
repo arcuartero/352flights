@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,34 @@ from luxflight_scanner.storage import LocalStore, SupabaseStore
 
 
 class ScanRunSnapshotLinkTests(unittest.TestCase):
+    def test_local_run_writes_compact_live_progress(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            state_path = Path(temporary_directory) / "state.json"
+            store = LocalStore(state_path)
+            store.save_scan_run(
+                {
+                    "run_key": "run-live",
+                    "status": "running",
+                    "routes_started": 3,
+                    "routes": [{"route_label": "LUX -> BCN"}],
+                    "destinations": [{"destination_city": "Barcelona"}],
+                    "patterns": [
+                        {"pattern_label": f"Rule {index}"}
+                        for index in range(20)
+                    ],
+                }
+            )
+
+            live_progress = json.loads(
+                state_path.with_name("live-progress.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(live_progress["run_key"], "run-live")
+        self.assertEqual(live_progress["routes_started"], 3)
+        self.assertEqual(live_progress["routes"], [{"route_label": "LUX -> BCN"}])
+        self.assertEqual(len(live_progress["recent_rules"]), 16)
+        self.assertEqual(live_progress["recent_rules"][0]["pattern_label"], "Rule 4")
+
     def test_local_snapshot_keeps_its_scan_run_key(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             store = LocalStore(Path(temporary_directory) / "state.json")

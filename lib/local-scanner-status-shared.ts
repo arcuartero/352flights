@@ -56,6 +56,9 @@ export type LocalScannerLogLine = {
 export type LocalScannerRunTotals = {
   routesStarted: number;
   patternsStarted: number;
+  indicativePrices?: number;
+  calendarQueries?: number;
+  exactQueries?: number;
   found: number;
   noResults: number;
   timedOut: number;

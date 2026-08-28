@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 import signal
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -16,6 +19,8 @@ from luxflight_scanner.config import ScannerConfig
 AGENT_ID = "mac"
 PRICE_SCANNER_LABEL = "com.luxcheapflights.scanner"
 LOCK_DIR = Path("/tmp/luxcheapflights-scanner.lock")
+LIVE_EVENT_LIMIT = 18
+LOG_TAIL_BYTES = 384 * 1024
 
 
 def utcnow_iso() -> str:
@@ -67,6 +72,14 @@ class MacScannerControlAgent:
             timeout=15,
         )
         self.gui_domain = f"gui/{os.getuid()}"
+        self.state_path = config.state_path
+        self.live_progress_path = config.state_path.with_name("live-progress.json")
+        self.log_path = Path(
+            os.getenv(
+                "SCANNER_LOG_FILE",
+                str(config.state_path.parent.parent / "logs" / "launchd.stderr.log"),
+            )
+        )
 
     def close(self) -> None:
         self.client.close()
@@ -93,6 +106,233 @@ class MacScannerControlAgent:
             json=payload,
         )
         response.raise_for_status()
+        try:
+            self.publish_live_progress()
+        except Exception as error:
+            # Scanner control must keep working even if optional live telemetry fails.
+            print(f"[{utcnow_iso()}] Live telemetry update failed: {error}", file=sys.stderr)
+
+    @staticmethod
+    def _as_record(value: object) -> dict[str, Any]:
+        return dict(value) if isinstance(value, dict) else {}
+
+    def _latest_running_mac_scan(self) -> dict[str, Any] | None:
+        response = self.client.get(
+            "/price_scan_runs",
+            params={
+                "select": "id,run_key,started_at,sync_summary",
+                "status": "eq.running",
+                "scanner_source": "eq.mac",
+                "order": "started_at.desc",
+                "limit": "1",
+            },
+        )
+        response.raise_for_status()
+        rows = response.json() or []
+        return self._as_record(rows[0]) if rows else None
+
+    def _read_local_progress(self, run_key: str) -> dict[str, Any] | None:
+        for candidate in (self.live_progress_path, self.state_path):
+            try:
+                payload = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+
+            if candidate == self.live_progress_path:
+                if str(payload.get("run_key")) == run_key:
+                    return self._as_record(payload)
+                continue
+
+            runs = payload.get("price_scan_runs") if isinstance(payload, dict) else None
+            if not isinstance(runs, list):
+                continue
+            for run in reversed(runs):
+                if isinstance(run, dict) and str(run.get("run_key")) == run_key:
+                    return dict(run)
+        return None
+
+    def _tail_log_lines(self) -> list[str]:
+        try:
+            with self.log_path.open("rb") as file:
+                file.seek(0, os.SEEK_END)
+                size = file.tell()
+                file.seek(max(0, size - LOG_TAIL_BYTES))
+                raw = file.read().decode("utf-8", errors="replace")
+        except OSError:
+            return []
+        lines = raw.splitlines()
+        return lines[1:] if size > LOG_TAIL_BYTES and lines else lines
+
+    @staticmethod
+    def _display_text(value: str) -> str:
+        text = value.split(" ||meta|| ", 1)[0].strip()
+        text = re.sub(
+            r"\bpatterns\b",
+            lambda match: "Rules" if match.group(0)[0].isupper() else "rules",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r"\bpattern\b",
+            lambda match: "Rule" if match.group(0)[0].isupper() else "rule",
+            text,
+            flags=re.IGNORECASE,
+        )
+        return text[:700]
+
+    def _live_log_state(
+        self,
+        *,
+        started_at: str | None,
+    ) -> tuple[str | None, str | None, list[dict[str, Any]]]:
+        started = None
+        if started_at:
+            try:
+                started = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+            except ValueError:
+                started = None
+
+        current_route: str | None = None
+        current_rule: str | None = None
+        events: list[dict[str, Any]] = []
+        line_pattern = re.compile(
+            r"^\[(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})Z\]\s*(.*)$"
+        )
+
+        for raw_line in self._tail_log_lines():
+            match = line_pattern.match(raw_line)
+            if not match:
+                continue
+            timestamp = datetime.fromisoformat(f"{match.group(1)}T{match.group(2)}+00:00")
+            if started is not None and timestamp < started:
+                continue
+            message = self._display_text(match.group(3))
+            iso_timestamp = timestamp.isoformat().replace("+00:00", "Z")
+
+            route_match = re.match(
+                r"Route start:\s*\d+/\d+\s*[·-]\s*([A-Z]{3}\s*->\s*[A-Z]{3})",
+                message,
+            )
+            rule_match = re.match(
+                r"Rule start:\s*\d+/\d+\s*[·-]\s*([A-Z]{3}\s*->\s*[A-Z]{3})\s+(.+)$",
+                message,
+            )
+            if route_match:
+                current_route = route_match.group(1)
+                current_rule = None
+            if rule_match:
+                current_route = rule_match.group(1)
+                current_rule = rule_match.group(2)
+
+            label: str | None = None
+            detail = message
+            tone = "progress"
+            prefixes = (
+                ("Route start: ", "Route", "progress"),
+                ("Rule start: ", "Rule", "progress"),
+                ("Calendar combinations saved: ", "Calendar", "success"),
+                ("Rule done: ", "Verified", "success"),
+                ("Rule no results: ", "No results", "muted"),
+                ("Fare live sync: ", "Price", "success"),
+                ("Deal candidate: ", "Offer", "success"),
+                ("Deal skipped: ", "Checked", "muted"),
+                ("Rule retry: ", "Retry", "error"),
+                ("Temporary provider response failure: ", "Retry", "error"),
+                ("Fare live sync failed: ", "Sync", "error"),
+                ("Deal live sync failed: ", "Sync", "error"),
+            )
+            for prefix, event_label, event_tone in prefixes:
+                if message.startswith(prefix):
+                    label = event_label
+                    detail = message[len(prefix):]
+                    tone = event_tone
+                    break
+            if label is None:
+                continue
+            events.append(
+                {
+                    "id": f"{iso_timestamp}:{label}:{detail[:120]}",
+                    "timestamp": iso_timestamp,
+                    "label": label,
+                    "detail": detail,
+                    "tone": tone,
+                }
+            )
+
+        return current_route, current_rule, events[-LIVE_EVENT_LIMIT:]
+
+    def publish_live_progress(self) -> bool:
+        remote = self._latest_running_mac_scan()
+        if remote is None:
+            return False
+        run_key = str(remote.get("run_key") or "")
+        if not run_key:
+            return False
+        progress = self._read_local_progress(run_key)
+        if progress is None or str(progress.get("status")) != "running":
+            return False
+
+        sync_summary = self._as_record(remote.get("sync_summary"))
+        existing = self._as_record(sync_summary.get("live_telemetry"))
+        source_updated_at = str(
+            progress.get("updated_at")
+            or progress.get("heartbeat_at")
+            or progress.get("written_at")
+            or ""
+        )
+        current_route, current_rule, events = self._live_log_state(
+            started_at=str(remote.get("started_at") or progress.get("started_at") or "") or None,
+        )
+        if current_route is None:
+            for route in reversed(list(progress.get("routes") or [])):
+                if (
+                    isinstance(route, dict)
+                    and route.get("started") is True
+                    and route.get("completed") is not True
+                ):
+                    current_route = str(route.get("route_label") or "") or None
+                    break
+        latest_event_id = str(events[-1].get("id") or "") if events else ""
+        if (
+            source_updated_at
+            and existing.get("source_updated_at") == source_updated_at
+            and existing.get("latest_event_id") == latest_event_id
+        ):
+            return False
+
+        routes_started = int(progress.get("routes_started") or 0)
+        routes_completed = int(progress.get("routes_completed") or 0)
+        telemetry = {
+            "published_at": utcnow_iso(),
+            "source_updated_at": source_updated_at,
+            "detail_routes_started": routes_started,
+            "detail_routes_completed": routes_completed,
+            "current_route_label": current_route,
+            "current_rule_label": current_rule,
+            "latest_event_id": latest_event_id,
+            "recent_events": events,
+        }
+        sync_summary["live_telemetry"] = telemetry
+        payload: dict[str, Any] = {
+            "sync_summary": sync_summary,
+            "patterns": list(progress.get("recent_rules") or progress.get("patterns") or [])[-16:],
+        }
+        detail_changed = (
+            int(existing.get("detail_routes_started") or -1) != routes_started
+            or int(existing.get("detail_routes_completed") or -1) != routes_completed
+        )
+        if detail_changed:
+            payload["routes"] = list(progress.get("routes") or [])
+            payload["destinations"] = list(progress.get("destinations") or [])
+
+        response = self.client.patch(
+            "/price_scan_runs",
+            params={"id": f"eq.{remote['id']}"},
+            headers={"Prefer": "return=minimal"},
+            json=payload,
+        )
+        response.raise_for_status()
+        return True
 
     def claim_command(self) -> ControlCommand | None:
         response = self.client.post(

@@ -130,7 +130,7 @@ function formatCollapsedSummary(status: LocalScannerStatus) {
 
 function formatPatternWithWindow(status: LocalScannerStatus) {
   if (!status.currentPatternLabel) {
-    return "Preparing first pattern...";
+    return "Preparing first rule...";
   }
 
   if (!status.currentPatternWindowLabel) {
@@ -169,16 +169,26 @@ function logToneClassName(logLine: LocalScannerLogLine) {
 }
 
 function buildLiveTotals(totals: LocalScannerRunTotals) {
-  return [
+  const items = [
     { label: "Routes", value: totals.routesStarted, tone: "is-progress" },
-    { label: "Patterns", value: totals.patternsStarted, tone: "is-progress" },
-    { label: "Found prices", value: totals.found, tone: "is-success" },
+    { label: "Rules", value: totals.patternsStarted, tone: "is-progress" },
+    ...(typeof totals.indicativePrices === "number"
+      ? [{ label: "Calendar prices", value: totals.indicativePrices, tone: "is-progress" }]
+      : []),
+    ...(typeof totals.calendarQueries === "number"
+      ? [{ label: "Calendar queries", value: totals.calendarQueries, tone: "is-progress" }]
+      : []),
+    ...(typeof totals.exactQueries === "number"
+      ? [{ label: "Exact checks", value: totals.exactQueries, tone: "is-progress" }]
+      : []),
+    { label: "Verified prices", value: totals.found, tone: "is-success" },
     { label: "No results", value: totals.noResults, tone: "is-muted" },
     { label: "Timed out", value: totals.timedOut, tone: "is-error" },
     { label: "Net / DNS", value: totals.networkOutages, tone: "is-error" },
     { label: "Hard errors", value: totals.hardErrors, tone: "is-error" },
     { label: "Retries", value: totals.retries, tone: "is-progress" },
   ];
+  return items;
 }
 
 function buildNoResultRouteLabel(diagnostic: LocalScannerNoResultDiagnostic | null | undefined) {
@@ -770,7 +780,7 @@ export function LocalScannerStatusWidget({
                 <dd>{status.currentRouteLabel ?? "Waiting for route checkpoint..."}</dd>
               </div>
               <div>
-                <dt>Pattern</dt>
+                <dt>Rule</dt>
                 <dd>{formatPatternWithWindow(status)}</dd>
               </div>
             </dl>

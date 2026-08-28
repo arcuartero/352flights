@@ -1010,7 +1010,10 @@ export function PriceScanRunHistory({ error, runs }: Props) {
 
                     <div className="price-scan-history__run-metrics">
                       <div><span>Found rate</span><strong>{percentage(run.foundPrices, terminalOutcomes)}</strong></div>
-                      <div><span>Found prices</span><strong>{run.foundPrices}</strong></div>
+                      <div><span>Calendar prices</span><strong>{run.indicativePrices}</strong></div>
+                      <div><span>Calendar queries</span><strong>{run.calendarQueries}</strong></div>
+                      <div><span>Exact checks</span><strong>{run.exactQueries}</strong></div>
+                      <div><span>Verified prices</span><strong>{run.foundPrices}</strong></div>
                       <div><span>No results</span><strong>{run.noResults}</strong></div>
                       <div><span>Timed out</span><strong>{run.timedOut}</strong></div>
                       <div><span>Net / DNS</span><strong>{run.networkOutages}</strong></div>

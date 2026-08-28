@@ -131,7 +131,11 @@ export type PriceScanLiveProgress = {
   routesPlanned: number;
   routesStarted: number;
   currentRouteLabel: string | null;
+  currentRuleLabel: string | null;
   patternsScanned: number;
+  indicativePrices: number;
+  calendarQueries: number;
+  exactQueries: number;
   foundPrices: number;
   noResults: number;
   timedOut: number;
@@ -139,6 +143,16 @@ export type PriceScanLiveProgress = {
   hardErrors: number;
   retries: number;
   noResultBreakdown: Record<string, number>;
+  recentEvents: PriceScanLiveEvent[];
+};
+
+export type PriceScanLiveEvent = {
+  id: string;
+  timestamp: string;
+  label: string;
+  detail: string;
+  secondaryDetail?: string | null;
+  tone: "progress" | "success" | "muted" | "error";
 };
 
 type PriceScanRunRow = {
@@ -198,6 +212,9 @@ type PriceScanLiveProgressRow = {
   routes_planned: number;
   routes_started: number;
   patterns_scanned: number;
+  indicative_prices: number;
+  calendar_queries: number;
+  exact_queries: number;
   found_prices: number;
   no_results: number;
   timed_out: number;
@@ -206,6 +223,7 @@ type PriceScanLiveProgressRow = {
   retries: number;
   routes: unknown;
   no_result_breakdown: unknown;
+  sync_summary: unknown;
 };
 
 const baseSelect = [
@@ -298,6 +316,28 @@ function currentRouteLabel(value: unknown) {
     .reverse()
     .find((route) => route.started === true && route.completed !== true);
   return nullableString(currentRoute?.route_label);
+}
+
+function liveEventValue(value: unknown): PriceScanLiveEvent[] {
+  return arrayValue<Record<string, unknown>>(value).flatMap((event) => {
+    const id = nullableString(event.id);
+    const timestamp = nullableString(event.timestamp);
+    const label = nullableString(event.label);
+    const detail = nullableString(event.detail);
+    const rawTone = nullableString(event.tone);
+    const tone = rawTone === "success" || rawTone === "muted" || rawTone === "error"
+      ? rawTone
+      : "progress";
+    if (!id || !timestamp || !label || !detail) return [];
+    return [{
+      id,
+      timestamp,
+      label,
+      detail,
+      secondaryDetail: nullableString(event.secondary_detail),
+      tone,
+    }];
+  });
 }
 
 function patternItineraryKey(pattern: PriceScanPatternSummary) {
@@ -511,6 +551,9 @@ export async function getLatestRunningPriceScanProgress() {
         "routes_planned",
         "routes_started",
         "patterns_scanned",
+        "indicative_prices",
+        "calendar_queries",
+        "exact_queries",
         "found_prices",
         "no_results",
         "timed_out",
@@ -519,6 +562,7 @@ export async function getLatestRunningPriceScanProgress() {
         "retries",
         "routes",
         "no_result_breakdown",
+        "sync_summary",
       ].join(","))
       .eq("status", "running")
       .order("started_at", { ascending: false })
@@ -534,6 +578,7 @@ export async function getLatestRunningPriceScanProgress() {
     }
 
     const row = data as unknown as PriceScanLiveProgressRow;
+    const liveTelemetry = recordValue(recordValue(row.sync_summary).live_telemetry);
     return {
       progress: {
         runKey: row.run_key,
@@ -544,8 +589,13 @@ export async function getLatestRunningPriceScanProgress() {
         lastProgressAt: row.last_progress_at,
         routesPlanned: numberValue(row.routes_planned),
         routesStarted: numberValue(row.routes_started),
-        currentRouteLabel: currentRouteLabel(row.routes),
+        currentRouteLabel:
+          nullableString(liveTelemetry.current_route_label) ?? currentRouteLabel(row.routes),
+        currentRuleLabel: nullableString(liveTelemetry.current_rule_label),
         patternsScanned: numberValue(row.patterns_scanned),
+        indicativePrices: numberValue(row.indicative_prices),
+        calendarQueries: numberValue(row.calendar_queries),
+        exactQueries: numberValue(row.exact_queries),
         foundPrices: numberValue(row.found_prices),
         noResults: numberValue(row.no_results),
         timedOut: numberValue(row.timed_out),
@@ -553,6 +603,7 @@ export async function getLatestRunningPriceScanProgress() {
         hardErrors: numberValue(row.hard_errors),
         retries: numberValue(row.retries),
         noResultBreakdown: countRecord(row.no_result_breakdown),
+        recentEvents: liveEventValue(liveTelemetry.recent_events),
       },
       error: null as string | null,
     };

@@ -123,6 +123,48 @@ class LocalStore:
     def _persist(self) -> None:
         write_json_atomic(self.state_path, self._state)
 
+    def _persist_live_scan_progress(self, summary: dict[str, Any]) -> None:
+        """Keep a small live view so the Mac controller never rereads the full state file."""
+        scalar_fields = (
+            "run_key",
+            "scanner_source",
+            "status",
+            "started_at",
+            "updated_at",
+            "heartbeat_at",
+            "last_progress_at",
+            "routes_planned",
+            "routes_started",
+            "routes_completed",
+            "destinations_planned",
+            "destinations_scanned",
+            "patterns_scanned",
+            "rules_scanned",
+            "indicative_prices",
+            "calendar_queries",
+            "exact_queries",
+            "found_prices",
+            "deal_candidates",
+            "no_results",
+            "timed_out",
+            "network_outages",
+            "hard_errors",
+            "retries",
+        )
+        payload = {key: summary.get(key) for key in scalar_fields}
+        payload.update(
+            {
+                "scanned_cities": list(summary.get("scanned_cities") or []),
+                "routes": list(summary.get("routes") or []),
+                "destinations": list(summary.get("destinations") or []),
+                # The full rule history remains in state.json and is sent at the end.
+                # Live operations only need the most recent results.
+                "recent_rules": list(summary.get("patterns") or [])[-16:],
+                "written_at": utcnow_iso(),
+            }
+        )
+        write_json_atomic(self.state_path.with_name("live-progress.json"), payload)
+
     def ensure_route(self, route: RouteSeed) -> str:
         return route.key
 
@@ -349,10 +391,12 @@ class LocalStore:
                 continue
             self._state["price_scan_runs"][index] = payload
             self._persist()
+            self._persist_live_scan_progress(payload)
             return run_key
 
         self._state["price_scan_runs"].append(payload)
         self._persist()
+        self._persist_live_scan_progress(payload)
         return run_key
 
     def save_date_scan_run(self, summary: dict[str, Any]) -> None:

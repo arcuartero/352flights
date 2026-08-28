@@ -529,7 +529,10 @@ function mergePersistedProgress(
     remainingRoutes,
     startedAt: progress.startedAt,
     currentRouteLabel: progress.currentRouteLabel ?? status.currentRouteLabel,
-    currentPatternLabel: isVpsProgress ? status.currentPatternLabel : null,
+    currentPatternLabel: isVpsProgress
+      ? status.currentPatternLabel
+      : progress.currentRuleLabel,
+    currentPatternWindowLabel: isVpsProgress ? status.currentPatternWindowLabel : null,
     latestCompletedAt: null,
     latestFinishedAt: null,
     latestActivity: isVpsProgress
@@ -537,17 +540,22 @@ function mergePersistedProgress(
       : `Live progress received from ${progress.scannerSource}`,
     recentLogLines: isVpsProgress
       ? status.recentLogLines
-      : [{
+      : progress.recentEvents.length > 0
+        ? progress.recentEvents
+        : [{
           id: `persisted:${progress.runKey}:${progress.lastProgressAt ?? progress.updatedAt}`,
           timestamp: progress.lastProgressAt ?? progress.heartbeatAt ?? progress.updatedAt,
           label: "Mac scanner",
           detail: `${progress.routesStarted}/${totalRoutes ?? "?"} routes started`,
-          secondaryDetail: `${progress.foundPrices} prices found · ${progress.patternsScanned} patterns processed`,
+          secondaryDetail: `${progress.foundPrices} verified prices · ${progress.indicativePrices} calendar prices · ${progress.patternsScanned} rules processed`,
           tone: "progress" as const,
         }],
     liveTotals: {
       routesStarted: progress.routesStarted,
       patternsStarted: progress.patternsScanned,
+      indicativePrices: progress.indicativePrices,
+      calendarQueries: progress.calendarQueries,
+      exactQueries: progress.exactQueries,
       found: progress.foundPrices,
       noResults: progress.noResults,
       timedOut: progress.timedOut,
