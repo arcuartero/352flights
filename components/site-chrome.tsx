@@ -227,6 +227,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   const [isBusy, setIsBusy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [controlAvailable, setControlAvailable] = useState(true);
+  const [pendingAction, setPendingAction] = useState<"start" | "stop" | null>(null);
   const [buttonLabel, setButtonLabel] = useState("Run scan now");
 
   useEffect(() => {
@@ -248,6 +249,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
         const payload = (await response.json()) as {
           running?: boolean;
           controlAvailable?: boolean;
+          pendingAction?: "start" | "stop" | null;
         };
         if (!isMounted) {
           return;
@@ -255,12 +257,15 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
 
         const running = Boolean(payload.running);
         const canControl = payload.controlAvailable !== false;
+        const nextPendingAction = payload.pendingAction ?? null;
         setIsRunning(running);
         setControlAvailable(canControl);
+        setPendingAction(nextPendingAction);
         if (!isBusy) {
-          setButtonLabel(
-            running ? (canControl ? "Stop scan" : "Running on Mac") : "Run scan now",
-          );
+          if (nextPendingAction === "start") setButtonLabel("Starting on Mac...");
+          else if (nextPendingAction === "stop") setButtonLabel("Stopping on Mac...");
+          else if (!canControl) setButtonLabel("Mac offline");
+          else setButtonLabel(running ? "Stop scan" : "Run scan now");
         }
       } catch {
         // Keep the button quiet if polling fails.
@@ -288,32 +293,38 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
       const response = await fetch(isRunning ? "/api/ops/scanner-stop" : "/api/ops/scanner-run", {
         method: "POST",
       });
+      const payload = (await response.json().catch(() => null)) as
+        | { reason?: string }
+        | null;
 
       if (response.status === 409) {
-        setIsRunning(true);
-        setButtonLabel("Stop scan");
+        if (payload?.reason === "already_running") {
+          setIsRunning(true);
+          setButtonLabel("Stop scan");
+        } else {
+          setButtonLabel("Another Mac scanner is busy");
+        }
         return;
       }
 
       if (!response.ok) {
-        setButtonLabel(isRunning ? "Stop failed" : "Start failed");
+        if (payload?.reason === "mac_controller_offline") {
+          setControlAvailable(false);
+          setButtonLabel("Mac offline");
+        } else {
+          setButtonLabel(isRunning ? "Stop failed" : "Start failed");
+        }
         return;
       }
 
       if (isRunning) {
-        setIsRunning(false);
-        setButtonLabel("Scan stopped");
-        window.setTimeout(() => {
-          setButtonLabel("Run scan now");
-        }, 1600);
+        setPendingAction("stop");
+        setButtonLabel("Stopping on Mac...");
         return;
       }
 
-      setIsRunning(true);
-      setButtonLabel("Scan started");
-      window.setTimeout(() => {
-        setButtonLabel("Stop scan");
-      }, 1600);
+      setPendingAction("start");
+      setButtonLabel("Starting on Mac...");
     } catch {
       setButtonLabel(isRunning ? "Stop failed" : "Start failed");
     } finally {
@@ -326,9 +337,9 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   return (
     <button
       className={`site-chrome__scan-trigger ${isRunning ? "site-chrome__scan-trigger--danger" : ""}`}
-      disabled={isBusy || (isRunning && !controlAvailable)}
+      disabled={isBusy || pendingAction !== null || !controlAvailable}
       onClick={handleClick}
-      title={isRunning && !controlAvailable ? "This scan is running on the Mac." : undefined}
+      title={!controlAvailable ? "The Mac controller is offline." : undefined}
       type="button"
     >
       {buttonLabel}

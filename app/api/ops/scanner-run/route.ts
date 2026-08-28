@@ -1,149 +1,77 @@
-import { access, constants } from "node:fs/promises";
-import path from "node:path";
-import { spawn } from "node:child_process";
-
 import { NextResponse } from "next/server";
 
-import { getLocalScannerLockState } from "@/lib/local-scanner-lock";
-import { getLocalScannerStatus, resolveScannerRoot } from "@/lib/local-scanner-status";
-import { recordVpsPriceScanStartFailure } from "@/lib/price-scan-run-recovery";
 import {
-  callVpsScannerAgent,
-  hasVpsScannerAgentConfig,
-  type VpsScannerActionResponse,
-} from "@/lib/vps-scanner-agent";
+  enqueueMacScannerCommand,
+  getMacScannerControlState,
+} from "@/lib/mac-scanner-control";
+import { ensureOpsAuthorized } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function unauthorizedResponse() {
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
-    },
-  });
-}
-
-async function ensureAuthorized(request: Request) {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (!expectedUser || !expectedPassword) {
-    return null;
-  }
-
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Basic ")) {
-    return unauthorizedResponse();
-  }
-
-  try {
-    const encoded = authorization.slice("Basic ".length);
-    const decoded = atob(encoded);
-    const separatorIndex = decoded.indexOf(":");
-    const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-    if (user !== expectedUser || password !== expectedPassword) {
-      return unauthorizedResponse();
-    }
-  } catch {
-    return unauthorizedResponse();
-  }
-
-  return null;
-}
-
-async function pathExists(targetPath: string) {
-  try {
-    await access(targetPath, constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(request: Request) {
-  const unauthorized = await ensureAuthorized(request);
-  if (unauthorized) {
-    return unauthorized;
-  }
+  const unauthorized = ensureOpsAuthorized(request);
+  if (unauthorized) return unauthorized;
 
-  if (hasVpsScannerAgentConfig()) {
-    const startedAt = new Date().toISOString();
-    try {
-      const result = await callVpsScannerAgent<VpsScannerActionResponse>("start", {
-        method: "POST",
-      });
-      return NextResponse.json(result);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : "Unknown VPS scanner error.";
-      await recordVpsPriceScanStartFailure(startedAt, detail).catch(() => undefined);
-      return NextResponse.json(
-        {
-          ok: false,
-          reason: "vps_start_failed",
-          detail,
-        },
-        { status: 502 },
-      );
-    }
-  }
-
-  const status = await getLocalScannerStatus();
-  if (status.running) {
+  const state = await getMacScannerControlState("price_scanner");
+  if (!state.configured || !state.online) {
+    console.warn("[ops/scanner-run] Mac controller offline", {
+      configured: state.configured,
+      lastSeenAt: state.lastSeenAt,
+    });
     return NextResponse.json(
       {
         ok: false,
-        reason: "already_running",
-      },
-      { status: 409 },
-    );
-  }
-
-  const sharedLock = await getLocalScannerLockState();
-  if (sharedLock.active) {
-    return NextResponse.json(
-      {
-        ok: false,
-        reason: "scanner_busy",
-        activeScanner: sharedLock.owner,
-      },
-      { status: 409 },
-    );
-  }
-
-  const scannerRoot = await resolveScannerRoot();
-  if (!scannerRoot) {
-    return NextResponse.json(
-      {
-        ok: false,
-        reason: "scanner_unavailable",
+        reason: "mac_controller_offline",
+        detail: "The Mac controller has not reported in the last 45 seconds.",
       },
       { status: 503 },
     );
   }
-
-  const scriptPath = path.join(scannerRoot, "scripts", "run-local-scanner.sh");
-  if (!(await pathExists(scriptPath))) {
+  if (state.priceScannerRunning) {
+    console.info("[ops/scanner-run] Mac scanner already running", {
+      activePid: state.activePid,
+    });
+    return NextResponse.json(
+      { ok: false, reason: "already_running" },
+      { status: 409 },
+    );
+  }
+  if (state.activeOwner && state.activeOwner !== "price_scanner") {
     return NextResponse.json(
       {
         ok: false,
-        reason: "script_missing",
+        reason: "scanner_busy",
+        activeScanner: state.activeOwner,
       },
+      { status: 409 },
+    );
+  }
+
+  const result = await enqueueMacScannerCommand("price_scanner", "start");
+  if (result.error) {
+    console.error("[ops/scanner-run] Failed to queue Mac command", {
+      error: result.error,
+    });
+    return NextResponse.json(
+      { ok: false, reason: "mac_start_queue_failed", detail: result.error },
       { status: 500 },
     );
   }
 
-  const child = spawn("zsh", [scriptPath, "--force"], {
-    detached: true,
-    stdio: "ignore",
+  console.info("[ops/scanner-run] Start queued for Mac", {
+    commandId: result.command?.id ?? null,
   });
-  child.unref();
 
-  return NextResponse.json({
-    ok: true,
-    reason: "started",
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      reason: "queued_for_mac",
+      commandId: result.command?.id ?? null,
+    },
+    {
+      status: 202,
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    },
+  );
 }

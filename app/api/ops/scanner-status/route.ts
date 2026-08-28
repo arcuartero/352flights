@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { getLocalScannerStatus } from "@/lib/local-scanner-status";
 import type {
   LocalScannerBreakdownItem,
   LocalScannerLogLine,
@@ -11,12 +10,8 @@ import {
   getLatestRunningPriceScanProgress,
   type PriceScanLiveProgress,
 } from "@/lib/price-scan-runs";
-import { recoverLatestVpsPriceScanRun } from "@/lib/price-scan-run-recovery";
-import {
-  callVpsScannerAgent,
-  hasVpsScannerAgentConfig,
-  type VpsScannerAgentStatus,
-} from "@/lib/vps-scanner-agent";
+import { getMacScannerControlState } from "@/lib/mac-scanner-control";
+import type { VpsScannerAgentStatus } from "@/lib/vps-scanner-agent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -528,7 +523,7 @@ function mergePersistedProgress(
     available: true,
     running: true,
     runnerSource: progress.scannerSource,
-    controlAvailable: isVpsProgress,
+    controlAvailable: isVpsProgress ? true : status.controlAvailable !== false,
     totalRoutes,
     startedRoutes,
     remainingRoutes,
@@ -653,47 +648,47 @@ export async function GET(request: Request) {
   }
 
   try {
-    if (hasVpsScannerAgentConfig()) {
-      const [status, initialPersistedProgress] = await Promise.all([
-        callVpsScannerAgent<VpsScannerAgentStatus>("status"),
-        getLatestRunningPriceScanProgress(),
-      ]);
-      let persistedProgress = initialPersistedProgress;
-      const savedActivityMs = Math.max(
-        Date.parse(persistedProgress.progress?.heartbeatAt ?? ""),
-        Date.parse(persistedProgress.progress?.lastProgressAt ?? ""),
-        Date.parse(persistedProgress.progress?.updatedAt ?? ""),
-      );
-      if (
-        status.running &&
-        (!persistedProgress.progress || !Number.isFinite(savedActivityMs) ||
-          Date.now() - savedActivityMs > 5 * 60 * 1_000)
-      ) {
-        try {
-          const recovery = await recoverLatestVpsPriceScanRun(status);
-          if (recovery.recovered) {
-            persistedProgress = await getLatestRunningPriceScanProgress();
-          }
-        } catch {
-          // Live VPS status remains useful even if persisted history cannot be repaired.
-        }
-      }
-      const serviceStartedAt = parseSystemdTimestamp(status.service.ExecMainStartTimestamp);
-      const scannerStatus = mergePersistedProgress(
-        vpsStatusToLocalScannerStatus(status),
-        persistedProgress.progress,
-        serviceStartedAt,
-      );
-      return NextResponse.json(scannerStatus, {
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      });
-    }
+    const [control, persistedProgress] = await Promise.all([
+      getMacScannerControlState("price_scanner"),
+      getLatestRunningPriceScanProgress(),
+    ]);
+    const controllerStatus: LocalScannerStatus = {
+      available: control.configured,
+      running: control.priceScannerRunning,
+      runnerSource: "mac",
+      controlAvailable: control.online,
+      totalRoutes: null,
+      startedRoutes: null,
+      remainingRoutes: null,
+      startedAt: null,
+      latestCompletedAt: null,
+      latestFinishedAt: null,
+      currentRouteLabel: null,
+      currentPatternLabel: null,
+      currentPatternWindowLabel: null,
+      latestActivity: control.online
+        ? "Mac controller connected"
+        : "Mac controller offline",
+      recentLogLines: [],
+      liveTotals: null,
+      noResultBreakdown: [],
+      lastRunDurationMs: null,
+      lastRunTotals: null,
+      lastRunNoResultBreakdown: [],
+      lastRunLogLines: [],
+    };
+    const status = mergePersistedProgress(
+      controllerStatus,
+      persistedProgress.progress,
+      null,
+    );
 
-    const status = await getLocalScannerStatus();
-
-    return NextResponse.json(status, {
+    return NextResponse.json({
+      ...status,
+      pendingAction: control.pendingCommand?.action ?? null,
+      pendingCommandStatus: control.pendingCommand?.status ?? null,
+      controllerLastSeenAt: control.lastSeenAt,
+    }, {
       headers: {
         "Cache-Control": "no-store, max-age=0",
       },

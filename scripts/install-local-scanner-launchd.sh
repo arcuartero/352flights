@@ -5,11 +5,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 ROOT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 PLIST_TARGET="$HOME/Library/LaunchAgents/com.luxcheapflights.scanner.plist"
+CONTROL_PLIST_TARGET="$HOME/Library/LaunchAgents/com.luxcheapflights.scanner-control.plist"
 RUNTIME_ROOT="$HOME/Library/Application Support/352flights-scanner"
 RUNTIME_SCANNER_DIR="$RUNTIME_ROOT/scanner"
 RUNTIME_SCRIPT_DIR="$RUNTIME_ROOT/scripts"
 RUNTIME_LOG_DIR="$RUNTIME_ROOT/logs"
 LABEL="com.luxcheapflights.scanner"
+CONTROL_LABEL="com.luxcheapflights.scanner-control"
 START_NOW=0
 INSTALL_LOCK_OWNER="scanner_installer"
 LOCAL_LOCK_DIR="/tmp/luxcheapflights-scanner.lock"
@@ -76,7 +78,9 @@ mkdir -p "$RUNTIME_ROOT/data"
 /usr/bin/ditto "$ROOT_DIR/data/lux-routes.json" "$RUNTIME_ROOT/data/lux-routes.json"
 /usr/bin/ditto "$ROOT_DIR/scripts/local-scanner-lock.zsh" "$RUNTIME_SCRIPT_DIR/local-scanner-lock.zsh"
 /usr/bin/ditto "$ROOT_DIR/scripts/run-mac-scanner-with-sync.sh" "$RUNTIME_SCRIPT_DIR/run-mac-scanner-with-sync.sh"
+/usr/bin/ditto "$ROOT_DIR/scripts/run-mac-scanner-control.sh" "$RUNTIME_SCRIPT_DIR/run-mac-scanner-control.sh"
 chmod 700 "$RUNTIME_SCRIPT_DIR/run-mac-scanner-with-sync.sh"
+chmod 700 "$RUNTIME_SCRIPT_DIR/run-mac-scanner-control.sh"
 
 if [[ -f "$ROOT_DIR/.env" ]]; then
   /usr/bin/ditto "$ROOT_DIR/.env" "$RUNTIME_ROOT/.env"
@@ -133,6 +137,41 @@ PLIST
 launchctl bootout "gui/$(id -u)" "$PLIST_TARGET" >/dev/null 2>&1 || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST_TARGET"
 
+cat > "$CONTROL_PLIST_TARGET" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$CONTROL_LABEL</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>$RUNTIME_SCRIPT_DIR/run-mac-scanner-control.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>$RUNTIME_ROOT</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StartInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>$RUNTIME_LOG_DIR/control.stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>$RUNTIME_LOG_DIR/control.stderr.log</string>
+</dict>
+</plist>
+PLIST
+
+launchctl bootout "gui/$(id -u)" "$CONTROL_PLIST_TARGET" >/dev/null 2>&1 || true
+launchctl bootstrap "gui/$(id -u)" "$CONTROL_PLIST_TARGET"
+
 if (( START_NOW == 1 )); then
   launchctl kickstart -k "gui/$(id -u)/$LABEL"
 fi
@@ -140,6 +179,7 @@ fi
 echo "Installed $LABEL"
 echo "plist: $PLIST_TARGET"
 echo "runtime: $RUNTIME_ROOT"
+echo "control: $CONTROL_LABEL (checks Supabase every 10 seconds)"
 if (( START_NOW == 1 )); then
   echo "Started now."
 else
