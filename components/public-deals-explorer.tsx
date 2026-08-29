@@ -3310,6 +3310,13 @@ export function PublicDealsExplorer({
 
     return [...nextDeals].sort((left, right) => compareDealsBySort(left, right, sortOrder));
   }, [data.deals, effectiveFilters, now, sortOrder]);
+  const draftFilteredDealsCount = useMemo(() => {
+    const filters = coerceFiltersForMode(draftFilters);
+    return data.deals.reduce(
+      (count, deal) => count + (matchesDealSearchFilters(deal, filters, now) ? 1 : 0),
+      0,
+    );
+  }, [coerceFiltersForMode, data.deals, draftFilters, now]);
 
   const draftQuickChips = useMemo(() => getActiveQuickChips(draftFilters), [draftFilters]);
   const appliedQuickChips = useMemo(() => getActiveQuickChips(effectiveFilters), [effectiveFilters]);
@@ -4169,7 +4176,7 @@ export function PublicDealsExplorer({
                     type="button"
                   >
                     {mobileResultsPanel === "filters"
-                      ? t("deals.showDeals")
+                      ? t("deals.mobile.showResults", { count: draftFilteredDealsCount })
                       : t("deals.mobile.showResults", { count: opportunityDeals.length })}
                   </button>
                 </footer>
