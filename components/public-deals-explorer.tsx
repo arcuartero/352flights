@@ -4550,52 +4550,26 @@ export function PublicDealsExplorer({
                   <span aria-hidden="true">›</span>
                   <span aria-current="page">{cityHeroTitle}</span>
                 </nav>
-                <h1 className={`deals-city-page__hero-title${cityHeroTitleLengthClass}`}>
-                  {cityHeroTitle}
+                <h1 className="deals-city-page__hero-seo-title">
+                  {t("deals.cityMetaTitle", { city: cityHeroTitle })}
                 </h1>
+                <p className={`deals-city-page__hero-title${cityHeroTitleLengthClass}`}>
+                  {cityHeroTitle}
+                </p>
                 <span className="deals-city-page__hero-wave" aria-hidden="true" />
                 <p className="deals-city-page__hero-desc">
                   {getDestinationHeroDescription(cityHeroTitle, t)}
                 </p>
-                <ul className="deals-city-page__hero-trust">
-                  <li>
-                    <span className="deals-city-page__hero-trust-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="M12 7v5l3 2" />
-                      </svg>
-                    </span>
-                    <span className="deals-city-page__hero-trust-copy">
-                      <strong>{t("deals.hero.recentlyChecked")}</strong>
-                      <small>{data.updatedAt ? formatVerifiedAge(data.updatedAt, t) : t("deals.hero.noCompletedScan")}</small>
-                    </span>
-                  </li>
-                  <li>
-                    <span className="deals-city-page__hero-trust-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 7h16M4 17h16" />
-                        <circle cx="9" cy="7" r="2.4" fill="currentColor" stroke="none" />
-                        <circle cx="15" cy="17" r="2.4" fill="currentColor" stroke="none" />
-                      </svg>
-                    </span>
-                    <span className="deals-city-page__hero-trust-copy">
-                      <strong>{t("deals.hero.flexibleFilters")}</strong>
-                      <small>{t("deals.hero.tailorSearch")}</small>
-                    </span>
-                  </li>
-                  <li>
-                    <span className="deals-city-page__hero-trust-icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 3l7 3v5c0 4.6-3 7.7-7 9-4-1.3-7-4.4-7-9V6z" />
-                        <path d="M9 12l2 2 4-4" />
-                      </svg>
-                    </span>
-                    <span className="deals-city-page__hero-trust-copy">
-                      <strong>{t("deals.hero.recordedDetails")}</strong>
-                      <small>{t("deals.hero.recordedDetailsDesc")}</small>
-                    </span>
-                  </li>
-                </ul>
+                {opportunityDeals.length > 0 && cityLowestPrice !== null ? (
+                  <a className="deals-city-page__hero-cta" href="#destination-fares">
+                    {t("deals.cityHeroCta", {
+                      count: opportunityDeals.length,
+                      fareLabel:
+                        opportunityDeals.length === 1 ? t("deals.fare") : t("deals.fares"),
+                      price: formatCurrency(cityLowestPrice),
+                    })}
+                  </a>
+                ) : null}
               </div>
 
               <div className="deals-city-page__hero-visual">
@@ -4645,7 +4619,7 @@ export function PublicDealsExplorer({
 
             {renderMobileResultsControls(false)}
 
-            <section className="deals-search-layout" ref={resultsBoundaryRef}>
+            <section className="deals-search-layout" id="destination-fares" ref={resultsBoundaryRef}>
               <aside className="deals-search-layout__filters">
                 <div className="deals-search-sidebar" ref={fullSidebarRef}>
                   <MonthlyPriceCard
