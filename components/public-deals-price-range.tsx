@@ -1,10 +1,11 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 type PublicDealsPriceRangeProps = {
   bounds: { min: number; max: number };
   className?: string;
+  deferChanges?: boolean;
   showHistogram?: boolean;
   label: string;
   legacyMaximum?: number | null;
@@ -17,6 +18,7 @@ type PublicDealsPriceRangeProps = {
 export function PublicDealsPriceRange({
   bounds,
   className = "",
+  deferChanges = false,
   showHistogram = false,
   label,
   legacyMaximum = null,
@@ -27,17 +29,46 @@ export function PublicDealsPriceRange({
 }: PublicDealsPriceRangeProps) {
   const minimum = Math.floor(bounds.min);
   const maximum = Math.max(minimum, Math.ceil(bounds.max));
-  const selectedMin = Math.min(maximum, Math.max(minimum, priceMin ?? minimum));
-  const selectedMax = Math.max(
-    selectedMin,
+  const controlledMin = Math.min(maximum, Math.max(minimum, priceMin ?? minimum));
+  const controlledMax = Math.max(
+    controlledMin,
     Math.min(maximum, priceMax ?? legacyMaximum ?? maximum),
   );
+  const [deferredRange, setDeferredRange] = useState({
+    min: controlledMin,
+    max: controlledMax,
+  });
+  const selectedMin = deferChanges
+    ? Math.min(maximum, Math.max(minimum, deferredRange.min))
+    : controlledMin;
+  const selectedMax = deferChanges
+    ? Math.max(selectedMin, Math.min(maximum, deferredRange.max))
+    : controlledMax;
   const span = Math.max(1, maximum - minimum);
   const start = ((selectedMin - minimum) / span) * 100;
   const end = ((selectedMax - minimum) / span) * 100;
 
   const update = (nextMin: number, nextMax: number) => {
     onChange(nextMin <= minimum ? null : nextMin, nextMax >= maximum ? null : nextMax);
+  };
+
+  useEffect(() => {
+    setDeferredRange({ min: controlledMin, max: controlledMax });
+  }, [controlledMax, controlledMin]);
+
+  const preview = (nextMin: number, nextMax: number) => {
+    if (deferChanges) {
+      setDeferredRange({ min: nextMin, max: nextMax });
+      return;
+    }
+
+    update(nextMin, nextMax);
+  };
+
+  const commitDeferredRange = () => {
+    if (deferChanges) {
+      update(selectedMin, selectedMax);
+    }
   };
 
   return (
@@ -78,8 +109,11 @@ export function PublicDealsPriceRange({
           max={maximum}
           min={minimum}
           onChange={(event) =>
-            update(Math.min(Number(event.target.value), selectedMax), selectedMax)
+            preview(Math.min(Number(event.target.value), selectedMax), selectedMax)
           }
+          onKeyUp={commitDeferredRange}
+          onPointerCancel={commitDeferredRange}
+          onPointerUp={commitDeferredRange}
           step="1"
           type="range"
           value={selectedMin}
@@ -90,8 +124,11 @@ export function PublicDealsPriceRange({
           max={maximum}
           min={minimum}
           onChange={(event) =>
-            update(selectedMin, Math.max(Number(event.target.value), selectedMin))
+            preview(selectedMin, Math.max(Number(event.target.value), selectedMin))
           }
+          onKeyUp={commitDeferredRange}
+          onPointerCancel={commitDeferredRange}
+          onPointerUp={commitDeferredRange}
           step="1"
           type="range"
           value={selectedMax}

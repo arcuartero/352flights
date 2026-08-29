@@ -3056,6 +3056,9 @@ export function PublicDealsExplorer({
     return coerceFiltersForMode(baseFilters);
   }, [coerceFiltersForMode, initialFilters, mode]);
   const [draftFilters, setDraftFilters] = useState<DealSearchFilters>({ ...appliedFilters });
+  const [mobileFilterBaseline, setMobileFilterBaseline] = useState<DealSearchFilters>({
+    ...appliedFilters,
+  });
   const [sortOrder, setSortOrder] = useState<DealSearchSort>(
     mode === "landing" ? DEFAULT_DEAL_SEARCH_SORT : initialSort,
   );
@@ -3084,7 +3087,9 @@ export function PublicDealsExplorer({
   const now = useMemo(() => new Date(), []);
   const effectiveFilters =
     mode === "results" || mode === "city"
-      ? coerceFiltersForMode(draftFilters)
+      ? mobileResultsPanel === "filters"
+        ? mobileFilterBaseline
+        : coerceFiltersForMode(draftFilters)
       : appliedFilters;
   const buildDealsHrefForMode = useCallback(
     (filters: DealSearchFilters) => {
@@ -3101,6 +3106,7 @@ export function PublicDealsExplorer({
 
   useEffect(() => {
     setDraftFilters({ ...appliedFilters });
+    setMobileFilterBaseline({ ...appliedFilters });
   }, [appliedFilters]);
 
   useEffect(() => {
@@ -3112,13 +3118,13 @@ export function PublicDealsExplorer({
       return;
     }
 
-    const nextHref = buildDealsHrefForMode(draftFilters);
+    const nextHref = buildDealsHrefForMode(effectiveFilters);
     const currentHref = `${window.location.pathname}${window.location.search}`;
 
     if (currentHref !== nextHref) {
       window.history.replaceState(null, "", nextHref);
     }
-  }, [buildDealsHrefForMode, draftFilters, mode]);
+  }, [buildDealsHrefForMode, effectiveFilters, mode]);
 
   useEffect(() => {
     const computeVisibleCount = () => {
@@ -3228,6 +3234,9 @@ export function PublicDealsExplorer({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (mobileResultsPanel === "filters") {
+          setDraftFilters({ ...mobileFilterBaseline });
+        }
         setMobileResultsPanel(null);
         window.requestAnimationFrame(() => mobileResultsReturnFocusRef.current?.focus());
       }
@@ -3238,7 +3247,7 @@ export function PublicDealsExplorer({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [mobileResultsPanel]);
+  }, [mobileFilterBaseline, mobileResultsPanel]);
 
   const filterFacetDeals = useMemo(() => {
     const facetFilters = coerceFiltersForMode({
@@ -3687,12 +3696,22 @@ export function PublicDealsExplorer({
 
   const openMobileResultsPanel = useCallback(
     (panel: Exclude<MobileResultsPanel, null>, trigger: HTMLButtonElement) => {
+      if (panel === "filters") {
+        setMobileFilterBaseline(coerceFiltersForMode({ ...draftFilters }));
+      }
       mobileResultsReturnFocusRef.current = trigger;
       setMobileResultsPanel(panel);
     },
-    [],
+    [coerceFiltersForMode, draftFilters],
   );
   const closeMobileResultsPanel = useCallback(() => {
+    if (mobileResultsPanel === "filters") {
+      setDraftFilters({ ...mobileFilterBaseline });
+    }
+    setMobileResultsPanel(null);
+    window.requestAnimationFrame(() => mobileResultsReturnFocusRef.current?.focus());
+  }, [mobileFilterBaseline, mobileResultsPanel]);
+  const applyMobileResultsFilters = useCallback(() => {
     setMobileResultsPanel(null);
     window.requestAnimationFrame(() => mobileResultsReturnFocusRef.current?.focus());
   }, []);
@@ -4071,6 +4090,7 @@ export function PublicDealsExplorer({
                         />
                         <PublicDealsPriceRange
                           bounds={priceBounds}
+                          deferChanges
                           label={t("common.priceRange")}
                           legacyMaximum={legacyPriceMaximum}
                           onChange={updatePriceRange}
@@ -4135,8 +4155,17 @@ export function PublicDealsExplorer({
                 </div>
 
                 <footer className="deals-mobile-results-sheet__footer">
-                  <button onClick={closeMobileResultsPanel} type="button">
-                    {t("deals.mobile.showResults", { count: opportunityDeals.length })}
+                  <button
+                    onClick={
+                      mobileResultsPanel === "filters"
+                        ? applyMobileResultsFilters
+                        : closeMobileResultsPanel
+                    }
+                    type="button"
+                  >
+                    {mobileResultsPanel === "filters"
+                      ? t("deals.showDeals")
+                      : t("deals.mobile.showResults", { count: opportunityDeals.length })}
                   </button>
                 </footer>
               </div>
