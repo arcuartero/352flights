@@ -12,7 +12,7 @@ export type HomeRecentDrop = {
   city: string;
   route: string;
   price: number;
-  drop: number;
+  drop: number | null;
 };
 
 const LANDMARK_TITLE_BY_DESTINATION: Record<string, string> = {
@@ -76,6 +76,18 @@ function getDropPercent(deal: CampaignPreviewDeal) {
   return Math.max(0, Math.round((1 - deal.dropRatio) * 100));
 }
 
+function getReliableDropPercent(deal: CampaignPreviewDeal) {
+  const hasReliableBaseline =
+    deal.baselinePrice !== null &&
+    deal.baselinePrice > 0 &&
+    deal.historyPoints >= 3 &&
+    deal.dropRatio !== null &&
+    deal.dropRatio > 0 &&
+    deal.dropRatio < 1;
+
+  return hasReliableBaseline ? getDropPercent(deal) : null;
+}
+
 function isNonstopDeal(deal: CampaignPreviewDeal) {
   const routeIsNonstop = deal.maxStops.trim().toUpperCase() === "NON_STOP";
   const outboundIsNonstop =
@@ -121,8 +133,8 @@ function compareRecentDropDeals(left: CampaignPreviewDeal, right: CampaignPrevie
     return freshnessDifference;
   }
 
-  const leftDrop = getDropPercent(left) ?? -1;
-  const rightDrop = getDropPercent(right) ?? -1;
+  const leftDrop = getReliableDropPercent(left) ?? -1;
+  const rightDrop = getReliableDropPercent(right) ?? -1;
   if (leftDrop !== rightDrop) {
     return rightDrop - leftDrop;
   }
@@ -197,37 +209,29 @@ export function buildHomeRecentDrops(
   deals: readonly CampaignPreviewDeal[],
   limit: number = 8,
 ): HomeRecentDrop[] {
-  const latestDropByDestination = new Map<string, CampaignPreviewDeal>();
+  const latestFareByDestination = new Map<string, CampaignPreviewDeal>();
 
   for (const deal of deals) {
     const city = deal.destinationCity?.trim();
     const destinationAirport = deal.destinationAirport?.trim().toUpperCase();
-    const drop = getDropPercent(deal);
-    const hasReliableBaseline =
-      deal.baselinePrice !== null &&
-      deal.baselinePrice > 0 &&
-      deal.historyPoints >= 3 &&
-      deal.dropRatio !== null &&
-      deal.dropRatio > 0 &&
-      deal.dropRatio < 1;
 
-    if (!city || !destinationAirport || deal.dealPrice <= 0 || !drop || !hasReliableBaseline) {
+    if (!city || !destinationAirport || deal.dealPrice <= 0) {
       continue;
     }
 
-    const existing = latestDropByDestination.get(destinationAirport);
+    const existing = latestFareByDestination.get(destinationAirport);
     if (!existing || compareRecentDropDeals(deal, existing) < 0) {
-      latestDropByDestination.set(destinationAirport, deal);
+      latestFareByDestination.set(destinationAirport, deal);
     }
   }
 
-  return [...latestDropByDestination.values()]
+  return [...latestFareByDestination.values()]
     .sort(compareRecentDropDeals)
     .slice(0, limit)
     .map((deal) => ({
       city: deal.destinationCity.trim(),
       route: `${getOriginAirport(deal)} → ${deal.destinationAirport.trim().toUpperCase()}`,
       price: deal.dealPrice,
-      drop: getDropPercent(deal) ?? 0,
+      drop: getReliableDropPercent(deal),
     }));
 }

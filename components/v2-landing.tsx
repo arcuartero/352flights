@@ -699,7 +699,9 @@ export function V2Landing({
                   <li key={`${copy}-${index}-${fare.route}`}>
                     <span className="v2-ticker__route">{fare.route}</span>
                     <span className="v2-ticker__price">€{Math.round(fare.price)}</span>
-                    <span className="v2-ticker__drop">−{fare.drop}%</span>
+                    {fare.drop !== null ? (
+                      <span className="v2-ticker__drop">−{fare.drop}%</span>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -708,7 +710,12 @@ export function V2Landing({
           <p className="sr-only">
             {t("home.recentDrops")}:{" "}
             {recentDrops
-              .map((fare) => `${fare.route} €${Math.round(fare.price)}, −${fare.drop}%`)
+              .map(
+                (fare) =>
+                  `${fare.route} €${Math.round(fare.price)}${
+                    fare.drop !== null ? `, −${fare.drop}%` : ""
+                  }`,
+              )
               .join(", ")}
           </p>
         </section>
