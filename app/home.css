@@ -1423,7 +1423,10 @@ body:has(.v2) .scroll-top-button {
    Responsive
    ============================================================ */
 
-@media (min-width: 901px) {
+/* Keep the closing sections full-bleed on laptops, including 16-inch
+   Retina displays (typically 1728 CSS px). Only wide monitors receive
+   the inset, rounded-panel treatment. */
+@media (min-width: 1800px) {
   .v2-testimonials,
   .v2-metrics,
   .v2-join {
