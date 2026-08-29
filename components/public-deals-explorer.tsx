@@ -3483,7 +3483,9 @@ export function PublicDealsExplorer({
           ...draftFilters,
           departureWeekdayFilter: value as DepartureWeekdayFilter,
         }),
-      ).map((option) => ({ ...option, label: t(`deals.weekday.${option.value}`) })),
+      )
+        .map((option) => ({ ...option, label: t(`deals.weekday.${option.value}`) }))
+        .filter((option) => option.value === "any" || !option.disabled),
     [data.deals, draftFilters, now, t],
   );
   const resultsWhenOptions = useMemo<SelectOption[]>(
