@@ -23,6 +23,7 @@ export type DepartureWeekdayFilter =
   | "saturday"
   | "sunday";
 export type DealSearchSort =
+  | "best"
   | "price_asc"
   | "price_desc"
   | "departure_soonest"
@@ -90,6 +91,7 @@ const DEPARTURE_WEEKDAY_FILTERS = new Set<DepartureWeekdayFilter>([
   "sunday",
 ]);
 const DEAL_SEARCH_SORTS = new Set<DealSearchSort>([
+  "best",
   "price_asc",
   "price_desc",
   "departure_soonest",
@@ -97,7 +99,7 @@ const DEAL_SEARCH_SORTS = new Set<DealSearchSort>([
   "trip_shortest",
   "trip_longest",
 ]);
-export const DEFAULT_DEAL_SEARCH_SORT: DealSearchSort = "price_asc";
+export const DEFAULT_DEAL_SEARCH_SORT: DealSearchSort = "best";
 
 function extractDateKey(value: string | null | undefined) {
   return value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;

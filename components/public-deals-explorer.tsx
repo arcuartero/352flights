@@ -303,6 +303,7 @@ const DEPARTURE_WEEKDAY_OPTIONS: SelectOption[] = [
 const DURATION_FILTER_VALUES: Exclude<DurationFilter, "any">[] = ["1", "2", "3", "4_plus"];
 
 const DEAL_SORT_OPTIONS: SelectOption[] = [
+  { value: "best", label: "Best deals" },
   { value: "price_asc", label: "Price: lowest first" },
   { value: "price_desc", label: "Price: highest first" },
   { value: "departure_soonest", label: "Departure: soonest first" },
@@ -312,6 +313,7 @@ const DEAL_SORT_OPTIONS: SelectOption[] = [
 ];
 
 const DEAL_SORT_TRANSLATION_KEYS: Record<DealSearchSort, string> = {
+  best: "deals.sort.best",
   price_asc: "deals.sort.priceAsc",
   price_desc: "deals.sort.priceDesc",
   departure_soonest: "deals.sort.departureSoonest",
@@ -1557,12 +1559,65 @@ function getDepartureTimestamp(deal: CampaignPreviewDeal) {
   return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
 }
 
+const BEST_DEAL_PREFERRED_STAY_HOURS = 48;
+const BEST_DEAL_FRESHNESS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getDestinationStayHoursForSort(deal: CampaignPreviewDeal) {
+  return deal.destinationStayHours ?? Math.max(0, deal.tripNights * 24);
+}
+
+function hasPreferredDestinationStay(deal: CampaignPreviewDeal) {
+  return getDestinationStayHoursForSort(deal) > BEST_DEAL_PREFERRED_STAY_HOURS;
+}
+
+function getBestDealSortScore(deal: CampaignPreviewDeal, now: Date) {
+  const priceScore = 35 / (1 + Math.max(0, deal.dealPrice) / 120);
+  const verifiedTimestamp = deal.verifiedAt ? new Date(deal.verifiedAt).getTime() : Number.NaN;
+  const verifiedAge = Number.isFinite(verifiedTimestamp)
+    ? Math.max(0, now.getTime() - verifiedTimestamp)
+    : BEST_DEAL_FRESHNESS_WINDOW_MS;
+  const freshnessScore =
+    12 * (1 - Math.min(verifiedAge, BEST_DEAL_FRESHNESS_WINDOW_MS) / BEST_DEAL_FRESHNESS_WINDOW_MS);
+  const directScore = deal.maxStops === "NON_STOP" ? 15 : 0;
+  const verifiedDiscount =
+    deal.pricePosition !== "new_price" &&
+    deal.baselinePrice !== null &&
+    deal.baselinePrice > 0 &&
+    deal.dropRatio !== null
+      ? Math.max(0, Math.min(0.5, 1 - deal.dropRatio))
+      : 0;
+  const discountScore = (verifiedDiscount / 0.5) * 30;
+  const destinationStayHours = getDestinationStayHoursForSort(deal);
+  const usefulStayScore =
+    10 * Math.min(1, Math.max(0, destinationStayHours - BEST_DEAL_PREFERRED_STAY_HOURS) / 120);
+
+  return priceScore + freshnessScore + directScore + discountScore + usefulStayScore;
+}
+
+function compareBestDeals(left: CampaignPreviewDeal, right: CampaignPreviewDeal, now: Date) {
+  const leftHasPreferredStay = hasPreferredDestinationStay(left);
+  const rightHasPreferredStay = hasPreferredDestinationStay(right);
+  if (leftHasPreferredStay !== rightHasPreferredStay) {
+    return leftHasPreferredStay ? -1 : 1;
+  }
+
+  const scoreDifference = getBestDealSortScore(right, now) - getBestDealSortScore(left, now);
+  if (Math.abs(scoreDifference) > Number.EPSILON) {
+    return scoreDifference;
+  }
+
+  return compareDealsByPrice(left, right);
+}
+
 function compareDealsBySort(
   left: CampaignPreviewDeal,
   right: CampaignPreviewDeal,
   sort: DealSearchSort,
+  now: Date,
 ) {
   switch (sort) {
+    case "best":
+      return compareBestDeals(left, right, now);
     case "price_desc":
       if (left.dealPrice !== right.dealPrice) {
         return right.dealPrice - left.dealPrice;
@@ -3308,7 +3363,7 @@ export function PublicDealsExplorer({
   const filteredDeals = useMemo(() => {
     const nextDeals = data.deals.filter((deal) => matchesDealSearchFilters(deal, effectiveFilters, now));
 
-    return [...nextDeals].sort((left, right) => compareDealsBySort(left, right, sortOrder));
+    return [...nextDeals].sort((left, right) => compareDealsBySort(left, right, sortOrder, now));
   }, [data.deals, effectiveFilters, now, sortOrder]);
   const draftFilteredDealsCount = useMemo(() => {
     const filters = coerceFiltersForMode(draftFilters);
