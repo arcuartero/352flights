@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+
+const HISTOGRAM_BUCKET_COUNT = 18;
+const EMPTY_PRICES: readonly number[] = [];
 
 type PublicDealsPriceRangeProps = {
   bounds: { min: number; max: number };
@@ -12,6 +15,7 @@ type PublicDealsPriceRangeProps = {
   onChange: (priceMin: number | null, priceMax: number | null) => void;
   priceMax: number | null;
   priceMin: number | null;
+  prices?: readonly number[];
   showLabel?: boolean;
 };
 
@@ -25,6 +29,7 @@ export function PublicDealsPriceRange({
   onChange,
   priceMax,
   priceMin,
+  prices = EMPTY_PRICES,
   showLabel = true,
 }: PublicDealsPriceRangeProps) {
   const minimum = Math.floor(bounds.min);
@@ -47,6 +52,28 @@ export function PublicDealsPriceRange({
   const span = Math.max(1, maximum - minimum);
   const start = ((selectedMin - minimum) / span) * 100;
   const end = ((selectedMax - minimum) / span) * 100;
+  const histogramBars = useMemo(() => {
+    const counts = Array.from({ length: HISTOGRAM_BUCKET_COUNT }, () => 0);
+
+    prices.forEach((price) => {
+      if (!Number.isFinite(price) || price < minimum || price > maximum) {
+        return;
+      }
+
+      const position = maximum === minimum ? 0.5 : (price - minimum) / (maximum - minimum);
+      const bucketIndex = Math.min(
+        HISTOGRAM_BUCKET_COUNT - 1,
+        Math.max(0, Math.floor(position * HISTOGRAM_BUCKET_COUNT)),
+      );
+      counts[bucketIndex] += 1;
+    });
+
+    const peak = Math.max(...counts, 1);
+    return counts.map((count) => ({
+      count,
+      height: count === 0 ? 0 : Math.max(22, Math.round((count / peak) * 100)),
+    }));
+  }, [maximum, minimum, prices]);
 
   const update = (nextMin: number, nextMax: number) => {
     onChange(nextMin <= minimum ? null : nextMin, nextMax >= maximum ? null : nextMax);
@@ -80,14 +107,13 @@ export function PublicDealsPriceRange({
       {showLabel ? <span className="deals-price-range__label">{label}</span> : null}
       {showHistogram ? (
         <span className="deals-price-range__histogram" aria-hidden="true">
-          {[28, 38, 50, 42, 62, 76, 54, 68, 47, 36, 57, 72, 48, 64, 82, 58, 44, 52].map(
-            (height, index) => (
-              <span
-                key={`${height}-${index}`}
-                style={{ "--histogram-height": `${height}%` } as CSSProperties}
-              />
-            ),
-          )}
+          {histogramBars.map(({ count, height }, index) => (
+            <span
+              data-empty={count === 0}
+              key={`price-bucket-${index}`}
+              style={{ "--histogram-height": `${height}%` } as CSSProperties}
+            />
+          ))}
         </span>
       ) : null}
       <div className="deals-price-range__values" aria-hidden="true">

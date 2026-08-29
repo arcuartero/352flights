@@ -3259,19 +3259,23 @@ export function PublicDealsExplorer({
     });
     return data.deals.filter((deal) => matchesDealSearchFilters(deal, facetFilters, now));
   }, [coerceFiltersForMode, data.deals, draftFilters, now]);
+  const priceHistogramValues = useMemo(
+    () =>
+      filterFacetDeals
+        .map((deal) => deal.dealPrice)
+        .filter((price) => Number.isFinite(price) && price > 0),
+    [filterFacetDeals],
+  );
   const priceBounds = useMemo(() => {
-    const prices = filterFacetDeals
-      .map((deal) => deal.dealPrice)
-      .filter((price) => Number.isFinite(price) && price > 0);
     const fallbackPrices = data.deals
       .map((deal) => deal.dealPrice)
       .filter((price) => Number.isFinite(price) && price > 0);
-    const source = prices.length > 0 ? prices : fallbackPrices;
+    const source = priceHistogramValues.length > 0 ? priceHistogramValues : fallbackPrices;
     return {
       min: source.length > 0 ? Math.floor(Math.min(...source)) : 0,
       max: source.length > 0 ? Math.ceil(Math.max(...source)) : 1,
     };
-  }, [data.deals, filterFacetDeals]);
+  }, [data.deals, priceHistogramValues]);
   const airlineOptions = useMemo<AirlineFilterOption[]>(() => {
     const labelsByKey = new Map<string, string>();
     filterFacetDeals.forEach((deal) => {
@@ -4096,6 +4100,7 @@ export function PublicDealsExplorer({
                           onChange={updatePriceRange}
                           priceMax={draftFilters.priceMax}
                           priceMin={draftFilters.priceMin}
+                          prices={priceHistogramValues}
                           showHistogram
                         />
                         <DealsAirlineFilter
@@ -4378,6 +4383,7 @@ export function PublicDealsExplorer({
               onChange={updatePriceRange}
               priceMax={draftFilters.priceMax}
               priceMin={draftFilters.priceMin}
+              prices={priceHistogramValues}
             />
 
             <label
@@ -4663,6 +4669,7 @@ export function PublicDealsExplorer({
                         onChange={updatePriceRange}
                         priceMax={draftFilters.priceMax}
                         priceMin={draftFilters.priceMin}
+                        prices={priceHistogramValues}
                         showHistogram
                       />
                     </div>
@@ -4901,6 +4908,7 @@ export function PublicDealsExplorer({
                     onChange={updatePriceRange}
                     priceMax={draftFilters.priceMax}
                     priceMin={draftFilters.priceMin}
+                    prices={priceHistogramValues}
                     showHistogram
                   />
                 </div>

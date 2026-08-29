@@ -53,6 +53,11 @@
   background: #e8ecf1;
 }
 
+.deals-price-range__histogram > span[data-empty="true"] {
+  min-height: 0;
+  background: transparent;
+}
+
 .deals-price-range__values {
   display: flex;
   align-items: center;
