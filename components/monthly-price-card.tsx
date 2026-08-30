@@ -22,6 +22,8 @@ type ChartProps = {
   cheapestMonth: string | null;
 };
 
+const MIN_MONTHS_FOR_CHART = 3;
+
 function formatPrice(value: number, currency: string) {
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
@@ -284,20 +286,35 @@ export function MonthlyPriceCard({
     };
   }, [isOpen]);
 
+  const hasCoverage = status === "ready" && data !== null && data.months.length > 0;
+  const pricedMonthCount =
+    data?.months.filter((month) => month.averagePrice !== null).length ?? 0;
+  const hasUsefulChart = hasCoverage && pricedMonthCount >= MIN_MONTHS_FOR_CHART;
+  const canOpenDetails = status !== "ready" || hasUsefulChart;
+
+  useEffect(() => {
+    if (isOpen && status === "ready" && !hasUsefulChart) {
+      setIsOpen(false);
+    }
+  }, [hasUsefulChart, isOpen, status]);
+
   const closeModal = () => {
     setIsOpen(false);
     window.requestAnimationFrame(() => cardRef.current?.focus());
   };
-  const hasCoverage = status === "ready" && data !== null && data.months.length > 0;
   const accessibleSummary = useMemo(() => (data ? buildAccessibleSummary(data) : ""), [data]);
   const titleId = `monthly-price-title-${requestId.replaceAll(":", "")}`;
 
   return (
     <>
       <button
-        aria-haspopup="dialog"
+        aria-haspopup={canOpenDetails ? "dialog" : undefined}
         className="monthly-price-card"
+        disabled={!canOpenDetails}
         onClick={() => {
+          if (!canOpenDetails) {
+            return;
+          }
           if (status === "error") {
             setReloadToken((current) => current + 1);
           }
@@ -327,7 +344,13 @@ export function MonthlyPriceCard({
             Todavía no se ha explorado la ventana de precios de esta ruta.
           </span>
         ) : null}
-        {hasCoverage && data ? (
+        {hasCoverage && !hasUsefulChart ? (
+          <span className="monthly-price-card__message monthly-price-card__message--insufficient">
+            Aún no hay suficientes meses con tarifas para comparar precios. Se necesitan al menos{" "}
+            {MIN_MONTHS_FOR_CHART} meses.
+          </span>
+        ) : null}
+        {hasUsefulChart && data ? (
           <>
             <MonthlyPriceChart
               cheapestMonth={data.cheapestMonth}
@@ -348,7 +371,7 @@ export function MonthlyPriceCard({
         ) : null}
       </button>
 
-      {isOpen && typeof document !== "undefined"
+      {isOpen && canOpenDetails && typeof document !== "undefined"
         ? createPortal(
             <div
               className="monthly-price-modal"
@@ -392,7 +415,7 @@ export function MonthlyPriceCard({
                     Todavía no se ha explorado la ventana de precios de esta ruta.
                   </div>
                 ) : null}
-                {hasCoverage && data ? (
+                {hasUsefulChart && data ? (
                   <>
                     <MonthlyPriceChart
                       cheapestMonth={data.cheapestMonth}

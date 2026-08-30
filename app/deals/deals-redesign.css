@@ -3557,6 +3557,11 @@ body:has(.page-shell--deals-city)::before {
   color: var(--v2-blue-strong);
 }
 
+.monthly-price-card:disabled {
+  color: var(--v2-ink);
+  cursor: default;
+}
+
 .monthly-price-card:focus-visible {
   outline: 2px solid var(--v2-blue-strong);
   outline-offset: 0.35rem;
@@ -3747,6 +3752,11 @@ body:has(.page-shell--deals-city)::before {
   color: var(--v2-ink-soft);
   font-size: 0.82rem;
   line-height: 1.5;
+}
+
+.monthly-price-card__message--insufficient {
+  min-height: 4.8rem;
+  padding-bottom: 0.6rem;
 }
 
 .monthly-price-skeleton {
