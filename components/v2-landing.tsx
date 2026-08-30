@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguageSelector } from "@/components/language-selector";
-import { LocalizedPageMetadata } from "@/components/localized-page-metadata";
 import { PublicDealsDatePicker } from "@/components/public-deals-date-picker";
 import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import { PublicDealsSelect } from "@/components/public-deals-select";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
 import { useI18n } from "@/lib/i18n";
+import { getLocalizedHomePath } from "@/lib/locales";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import type { HomeBoardDestination, HomeRecentDrop } from "@/lib/home-board";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
@@ -392,7 +392,7 @@ export function V2Landing({
   destinationPhotoUrls = {},
   recentDrops = [],
 }: V2LandingProps) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const heroMediaRef = useRef<HTMLDivElement | null>(null);
   const tickerRef = useRef<HTMLElement | null>(null);
@@ -548,13 +548,13 @@ export function V2Landing({
 
   return (
     <div className="v2" ref={rootRef}>
-      <LocalizedPageMetadata
-        description={t("home.lede")}
-        title={`${t("home.title.before")} ${t("home.title.em")}`}
-      />
       {/* ---------- Section 1 of 8 · Hero — giant statement, stacked center ---------- */}
       <header className="v2-topbar">
-        <Link className="v2-topbar__brand" href="/" aria-label="352 Flights">
+        <Link
+          className="v2-topbar__brand"
+          href={getLocalizedHomePath(locale)}
+          aria-label="352 Flights"
+        >
           <img src="/v2-logo.png" alt="352 Flights" />
         </Link>
         <div className="v2-topbar__actions">

@@ -1,10 +1,18 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 
-export const locales = ["en", "fr", "de", "pt", "it", "es"] as const;
+import {
+  getHomeLocaleFromPathname,
+  htmlLangTags,
+  isLocale,
+  localeCookieName,
+  locales,
+  type Locale,
+} from "@/lib/locales";
 
-export type Locale = (typeof locales)[number];
+export { locales, type Locale } from "@/lib/locales";
 
 export const localeOptions: Array<{ code: Locale; flagSrc: string; label: string; shortLabel: string }> = [
   { code: "en", flagSrc: "/flags/gb.svg", label: "English", shortLabel: "EN" },
@@ -15,7 +23,7 @@ export const localeOptions: Array<{ code: Locale; flagSrc: string; label: string
   { code: "es", flagSrc: "/flags/es.svg", label: "Español", shortLabel: "ES" },
 ];
 
-const storageKey = "luxflightdeals-locale";
+const storageKey = localeCookieName;
 
 const dictionaries: Record<Locale, Record<string, string>> = {
   en: {
@@ -2296,19 +2304,6 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-function isLocale(value: string | null | undefined): value is Locale {
-  return Boolean(value && locales.includes(value as Locale));
-}
-
-function resolveBrowserLocale() {
-  if (typeof navigator === "undefined") {
-    return "en";
-  }
-
-  const language = navigator.language.slice(0, 2);
-  return isLocale(language) ? language : "en";
-}
-
 function interpolate(value: string, values?: Record<string, string | number>) {
   if (!values) {
     return value;
@@ -2320,26 +2315,42 @@ function interpolate(value: string, values?: Record<string, string | number>) {
   );
 }
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en");
-  const [localeResolved, setLocaleResolved] = useState(false);
+function resolveBrowserLocale() {
+  const stored = window.localStorage.getItem(storageKey);
+  if (isLocale(stored)) {
+    return stored;
+  }
+
+  const browserLocale = window.navigator.language.slice(0, 2);
+  return isLocale(browserLocale) ? browserLocale : "en";
+}
+
+export function LanguageProvider({
+  children,
+  initialLocale = "en",
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
+  const pathname = usePathname();
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
-    const nextLocale = isLocale(stored) ? stored : resolveBrowserLocale();
-    setLocaleState(nextLocale);
-    setLocaleResolved(true);
-  }, []);
-
-  useEffect(() => {
-    if (!localeResolved) {
+    const pathnameLocale = getHomeLocaleFromPathname(pathname);
+    if (pathnameLocale) {
+      setLocaleState(pathnameLocale);
       return;
     }
 
-    document.documentElement.lang = locale;
+    setLocaleState(resolveBrowserLocale());
+  }, [pathname]);
+
+  useEffect(() => {
+    document.documentElement.lang = htmlLangTags[locale];
     document.documentElement.dataset.locale = locale;
     window.localStorage.setItem(storageKey, locale);
-  }, [locale, localeResolved]);
+    document.cookie = `${localeCookieName}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }, [locale]);
 
   const value = useMemo<I18nContextValue>(
     () => ({

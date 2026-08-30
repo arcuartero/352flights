@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 
 import { GlobalFlightRouteLoader } from "@/components/flight-route-loader";
@@ -7,6 +8,7 @@ import { SiteChrome } from "@/components/site-chrome";
 import { WebActivityLog } from "@/components/web-activity-log";
 import { getSiteUrl } from "@/lib/env";
 import { LanguageProvider } from "@/lib/i18n";
+import { htmlLangTags, isLocale, localeRequestHeader } from "@/lib/locales";
 
 import "./globals.css";
 import "./public-deals-date-picker.css";
@@ -41,16 +43,25 @@ const themeBootScript = `
 })();
 `;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
+  const requestLocale = requestHeaders.get(localeRequestHeader);
+  const initialLocale = isLocale(requestLocale) ? requestLocale : "en";
+
   return (
-    <html data-theme="dark" lang="en" suppressHydrationWarning>
+    <html
+      data-locale={initialLocale}
+      data-theme="dark"
+      lang={htmlLangTags[initialLocale]}
+      suppressHydrationWarning
+    >
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-        <LanguageProvider>
+        <LanguageProvider initialLocale={initialLocale}>
           <Suspense fallback={null}>
             <GlobalFlightRouteLoader />
           </Suspense>

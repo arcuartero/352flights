@@ -1,12 +1,16 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { localeOptions, useI18n, type Locale } from "@/lib/i18n";
+import { getHomeLocaleFromPathname, getLocalizedHomePath } from "@/lib/locales";
 
 export function LanguageSelector() {
   const { locale, setLocale, t } = useI18n();
+  const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const listboxId = useId();
@@ -72,8 +76,14 @@ export function LanguageSelector() {
                 className={`language-selector__option${isSelected ? " is-selected" : ""}`}
                 key={option.code}
                 onClick={() => {
-                  setLocale(option.code as Locale);
+                  const nextLocale = option.code as Locale;
+                  setLocale(nextLocale);
                   setIsOpen(false);
+
+                  if (getHomeLocaleFromPathname(pathname)) {
+                    const suffix = `${window.location.search}${window.location.hash}`;
+                    router.push(`${getLocalizedHomePath(nextLocale)}${suffix}`);
+                  }
                 }}
                 role="option"
                 type="button"

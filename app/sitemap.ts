@@ -3,6 +3,8 @@ import type { MetadataRoute } from "next";
 import routes from "@/data/lux-routes.json";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import { getSiteUrl } from "@/lib/env";
+import { getHomeLanguageAlternates } from "@/lib/home-localization";
+import { getLocalizedHomePath, locales } from "@/lib/locales";
 
 function uniqueDestinationSlugs() {
   return Array.from(
@@ -13,13 +15,21 @@ function uniqueDestinationSlugs() {
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = getSiteUrl();
   const now = new Date();
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: `${siteUrl}/`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 1,
+  const homePages: MetadataRoute.Sitemap = locales.map((locale) => ({
+    url: new URL(getLocalizedHomePath(locale), siteUrl).toString(),
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: 1,
+    alternates: {
+      languages: Object.fromEntries(
+        Object.entries(getHomeLanguageAlternates()).map(([language, pathname]) => [
+          language,
+          new URL(pathname, siteUrl).toString(),
+        ]),
+      ),
     },
+  }));
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: `${siteUrl}/deals`,
       lastModified: now,
@@ -35,5 +45,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: slug === "gran-canaria" ? 0.9 : 0.8,
   }));
 
-  return [...staticPages, ...cityPages];
+  return [...homePages, ...staticPages, ...cityPages];
 }
