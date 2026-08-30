@@ -1373,15 +1373,24 @@ body:has(.v2) .scroll-top-button {
   gap: 1rem;
   width: 100%;
   margin-top: clamp(4rem, 8vw, 6.5rem);
-  padding: 1.4rem 0 0.6rem;
-  border-top: 1px solid var(--v2-hairline);
-  color: var(--v2-ink-soft);
-  font-size: 0.85rem;
+  padding: 1.65rem 0 0.85rem;
+  border-top: 1px solid rgba(29, 39, 51, 0.2);
+  color: rgba(29, 39, 51, 0.76);
+  font-size: clamp(0.93rem, 1vw, 1rem);
+  line-height: 1.4;
+}
+
+.v2-footer__brand,
+.v2-footer__made {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: 600;
 }
 
 .v2-footer__brand span {
   margin: 0 0.5rem;
-  color: color-mix(in srgb, var(--v2-ink-soft) 50%, transparent);
+  color: rgba(29, 39, 51, 0.38);
 }
 
 .v2-footer__made {
@@ -1391,8 +1400,8 @@ body:has(.v2) .scroll-top-button {
 }
 
 .v2-footer__heart {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 1.05rem;
+  height: 1.05rem;
   color: var(--v2-accent);
 }
 
@@ -1407,17 +1416,34 @@ body:has(.v2) .scroll-top-button {
 
 .v2-footer nav {
   display: flex;
-  gap: 1.4rem;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .v2-footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.7rem;
   color: inherit;
+  font-weight: 650;
   text-decoration: none;
-  transition: color 0.25s var(--v2-ease);
+  transition:
+    color 0.25s var(--v2-ease),
+    background 0.25s var(--v2-ease);
 }
 
 .v2-footer a:hover {
   color: var(--v2-ink);
+  background: rgba(31, 95, 214, 0.08);
+}
+
+.v2-footer a:focus-visible {
+  color: var(--v2-blue-strong);
+  outline: 3px solid rgba(31, 95, 214, 0.2);
+  outline-offset: 2px;
 }
 
 /* ============================================================
