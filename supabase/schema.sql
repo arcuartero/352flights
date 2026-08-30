@@ -252,6 +252,38 @@ create table if not exists public.price_snapshots (
   metadata jsonb not null default '{}'::jsonb
 );
 
+create or replace view public.route_airline_coverage as
+with observed_airlines as (
+  select
+    snapshot.route_id,
+    trim(airline.value) as airline_name
+  from public.price_snapshots as snapshot
+  cross join lateral jsonb_array_elements_text(
+    case
+      when jsonb_typeof(snapshot.metadata -> 'airline_names') = 'array'
+        then snapshot.metadata -> 'airline_names'
+      else '[]'::jsonb
+    end
+  ) as airline(value)
+  where snapshot.departure_date >= current_date
+  union all
+  select
+    snapshot.route_id,
+    trim(snapshot.metadata ->> 'primary_airline') as airline_name
+  from public.price_snapshots as snapshot
+  where snapshot.departure_date >= current_date
+    and nullif(trim(snapshot.metadata ->> 'primary_airline'), '') is not null
+)
+select
+  route_id,
+  array_agg(distinct airline_name order by airline_name) as airline_names
+from observed_airlines
+where airline_name <> ''
+group by route_id;
+
+revoke all on public.route_airline_coverage from anon, authenticated;
+grant select on public.route_airline_coverage to service_role;
+
 create table if not exists public.route_pattern_overrides (
   id uuid primary key default gen_random_uuid(),
   route_id uuid not null references public.scanned_routes(id) on delete cascade,
@@ -282,6 +314,7 @@ create table if not exists public.route_service_months (
     check (routing in ('NON_STOP', 'ONE_STOP_OR_FEWER', 'ANY')),
   departure_dates date[] not null default '{}'::date[],
   departure_weekdays text[] not null default '{}'::text[],
+  airline_names text[] not null default '{}'::text[],
   observed_patterns jsonb not null default '[]'::jsonb,
   sample_size integer not null default 0 check (sample_size >= 0),
   detection_source text not null default 'auto_monthly_discovery',
@@ -685,6 +718,9 @@ on conflict (id) do nothing;
 
 create index if not exists price_snapshots_route_scanned_at_idx
   on public.price_snapshots (route_id, scanned_at desc);
+
+create index if not exists price_snapshots_departure_route_idx
+  on public.price_snapshots (departure_date, route_id);
 
 create index if not exists price_snapshots_scan_run_route_idx
   on public.price_snapshots (scan_run_id, route_id);

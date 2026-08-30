@@ -3,7 +3,7 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { formatAirlineSummary, normalizeAirlineNames } from "@/lib/airline-summary";
+import { normalizeAirlineNames } from "@/lib/airline-summary";
 import { resolveScannerRoot } from "@/lib/local-scanner-status";
 import {
   normalizeStayBucket,
@@ -22,10 +22,9 @@ type RouteRow = {
   is_active: boolean;
 };
 
-type RouteSnapshotRow = {
+type RouteAirlineCoverageRow = {
   route_id: string;
-  scanned_at: string;
-  metadata: Record<string, unknown> | null;
+  airline_names: string[] | null;
 };
 
 type RouteServiceMonthRow = {
@@ -34,6 +33,7 @@ type RouteServiceMonthRow = {
   routing: string;
   departure_dates: string[] | null;
   departure_weekdays: string[] | null;
+  airline_names: string[] | null;
   observed_patterns:
     | Array<{
         key: string;
@@ -364,6 +364,7 @@ export type ActiveRouteSummary = {
   bucket: string;
   stayBuckets: StayBucketValue[];
   maxStops: string;
+  airlineNames: string[];
   airlineSummary: string | null;
   isActive: boolean;
   months: ActiveRouteMonthSummary[];
@@ -402,10 +403,6 @@ function formatMonthLabel(value: string) {
     year: "numeric",
     timeZone: "Europe/Luxembourg",
   }).format(new Date(`${value}T00:00:00Z`));
-}
-
-function extractAirlineSummary(metadata: Record<string, unknown> | null) {
-  return formatAirlineSummary(normalizeAirlineNames(metadata?.["airline_names"]));
 }
 
 function monthStartList(count: number) {
@@ -613,7 +610,7 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
   const supabase = getSupabaseAdminClient();
   const defaultMonths = monthStartList(DEFAULT_ROUTE_PLANNER_MONTH_COUNT);
 
-  const [currentCatalogKeys, latestDiscoveryStates, routesQuery, serviceMonthsQuery, changeEventsQuery] = await Promise.all([
+  const [currentCatalogKeys, latestDiscoveryStates, routesQuery, serviceMonthsQuery, changeEventsQuery, routeAirlinesQuery] = await Promise.all([
     readCurrentCatalogRouteKeys(),
     readLatestPatternDiscoveryRouteStates(),
     supabase
@@ -624,7 +621,7 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
     supabase
       .from("route_service_months")
       .select(
-        "route_id,month_start,routing,departure_dates,departure_weekdays,observed_patterns,sample_size,last_checked_at",
+        "route_id,month_start,routing,departure_dates,departure_weekdays,airline_names,observed_patterns,sample_size,last_checked_at",
       )
       .order("month_start")
       .order("routing"),
@@ -635,12 +632,16 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
       )
       .eq("is_acknowledged", false)
       .order("detected_at", { ascending: false }),
+    supabase
+      .from("route_airline_coverage")
+      .select("route_id,airline_names"),
   ]);
 
   const errors = [
     routesQuery.error ? formatError(routesQuery.error) : null,
     serviceMonthsQuery.error ? formatError(serviceMonthsQuery.error) : null,
     changeEventsQuery.error ? formatError(changeEventsQuery.error) : null,
+    routeAirlinesQuery.error ? formatError(routeAirlinesQuery.error) : null,
   ].filter(Boolean) as string[];
 
   if (errors.length > 0) {
@@ -731,44 +732,23 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
       from += pageSize;
     }
   }
-  const snapshotQuery =
-    routeIds.length === 0
-      ? { data: [] as RouteSnapshotRow[], error: null }
-      : await supabase
-          .from("price_snapshots")
-          .select("route_id,scanned_at,metadata")
-          .in("route_id", routeIds)
-          .order("scanned_at", { ascending: false });
-
-  if (snapshotQuery.error) {
-    const message = formatError(snapshotQuery.error);
-    return {
-      configured: true,
-      schemaReady: false,
-      onboardingMessage: isMissingTableError(message)
-        ? "Supabase is reachable, but the new Active Routes tables are not created yet. Re-run supabase/schema.sql in the SQL Editor."
-        : `Supabase responded with an error: ${message}`,
-      routes: [],
-      totalChangeAlerts: 0,
-    };
-  }
-
   const serviceMonths = (serviceMonthsQuery.data ?? []) as RouteServiceMonthRow[];
   const changeEvents = (changeEventsQuery.data ?? []) as RouteServiceChangeEventRow[];
-  const snapshots = (snapshotQuery.data ?? []) as RouteSnapshotRow[];
+  const routeAirlines = (routeAirlinesQuery.data ?? []) as RouteAirlineCoverageRow[];
 
   const serviceMonthMap = new Map<string, RouteServiceMonthRow>();
   for (const row of serviceMonths) {
     serviceMonthMap.set(`${row.route_id}:${row.month_start}:${row.routing}`, row);
   }
 
-  const latestAirlineSummaryByRoute = new Map<string, string | null>();
-  for (const snapshot of snapshots) {
-    if (latestAirlineSummaryByRoute.has(snapshot.route_id)) {
-      continue;
-    }
-
-    latestAirlineSummaryByRoute.set(snapshot.route_id, extractAirlineSummary(snapshot.metadata));
+  const airlineNamesByRoute = new Map<string, Set<string>>();
+  for (const route of routeAirlines) {
+    airlineNamesByRoute.set(route.route_id, new Set(normalizeAirlineNames(route.airline_names)));
+  }
+  for (const month of serviceMonths) {
+    const names = airlineNamesByRoute.get(month.route_id) ?? new Set<string>();
+    normalizeAirlineNames(month.airline_names).forEach((name) => names.add(name));
+    airlineNamesByRoute.set(month.route_id, names);
   }
 
   const searchRuleMap = new Map<string, ActiveRouteRule[]>();
@@ -919,6 +899,12 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
       const latestDiscoveryGeneratedAtMs = parseIsoTimestamp(latestDiscovery?.generatedAt ?? null);
       const latestMonthCheckedAtMs = parseIsoTimestamp(latestMonthCheckedAt);
 
+      const airlineNames = Array.from(
+        new Set(
+          groupRoutes.flatMap((route) => Array.from(airlineNamesByRoute.get(route.id) ?? [])),
+        ),
+      ).sort((left, right) => left.localeCompare(right, "en"));
+
       return {
         id: primaryRoute.id,
         routeIds: groupRoutes.map((route) => route.id),
@@ -929,10 +915,8 @@ export async function getOpsActiveRoutesData(): Promise<OpsActiveRoutesData> {
         bucket: stayBuckets[0] ?? "weekend",
         stayBuckets,
         maxStops: primaryRoute.max_stops,
-        airlineSummary:
-          groupRoutes
-            .map((route) => latestAirlineSummaryByRoute.get(route.id) ?? null)
-            .find(Boolean) ?? null,
+        airlineNames,
+        airlineSummary: airlineNames.length > 0 ? airlineNames.join(", ") : null,
         isActive: groupRoutes.some((route) => route.is_active),
         months: monthsForRoute,
         changeAlerts: routeChangeAlerts,

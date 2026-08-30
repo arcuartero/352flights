@@ -1681,8 +1681,9 @@ class LuxFlightScanner:
         start_date: date,
         end_date: date,
         max_stops: str,
-    ) -> list[date]:
+    ) -> tuple[list[date], list[str]]:
         departure_dates: list[date] = []
+        airline_names: set[str] = set()
         current_date = start_date
 
         while current_date <= end_date:
@@ -1692,14 +1693,16 @@ class LuxFlightScanner:
                     travel_date=current_date,
                     max_stops=max_stops,
                 ),
-                top_n=1,
+                top_n=10,
             )
             if results:
                 departure_dates.append(current_date)
+                for result in results:
+                    airline_names.update(self._extract_airline_names(result))
 
             current_date += timedelta(days=1)
 
-        return departure_dates
+        return departure_dates, sorted(airline_names)
 
     def _discover_return_dates_for_route(
         self,
@@ -2221,6 +2224,7 @@ class LuxFlightScanner:
                 "month_start": month_start.isoformat(),
                 "departure_dates": set(),
                 "departure_weekdays": set(),
+                "airline_names": set(),
             }
             for month_start in month_starts
         }
@@ -2233,7 +2237,7 @@ class LuxFlightScanner:
             if month_window_end < month_window_start:
                 continue
 
-            direct_departure_dates = self._discover_departure_dates_for_route(
+            direct_departure_dates, airline_names = self._discover_departure_dates_for_route(
                 route,
                 start_date=month_window_start,
                 end_date=month_window_end,
@@ -2242,6 +2246,7 @@ class LuxFlightScanner:
             for outbound_date in direct_departure_dates:
                 month_bucket["departure_dates"].add(outbound_date.isoformat())
                 month_bucket["departure_weekdays"].add(self._weekday_code(outbound_date))
+            month_bucket["airline_names"].update(airline_names)
 
         discovered_months: list[dict[str, Any]] = []
         for month_start in month_starts:
@@ -2252,6 +2257,7 @@ class LuxFlightScanner:
                     "month_start": month_key,
                     "departure_dates": sorted(month_bucket["departure_dates"]),
                     "departure_weekdays": self._sort_weekday_codes(month_bucket["departure_weekdays"]),
+                    "airline_names": sorted(month_bucket["airline_names"]),
                     "observed_patterns": [],
                     "sample_size": 0,
                     "detection_source": "auto_monthly_discovery_all_airlines",

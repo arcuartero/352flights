@@ -1539,6 +1539,13 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
   const [discoveryRouteId, setDiscoveryRouteId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<ActiveRoutesSortField>("route");
   const [sortDirection, setSortDirection] = useState<ActiveRoutesSortDirection>("asc");
+  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [bucketFilter, setBucketFilter] = useState("all");
+  const [routingFilter, setRoutingFilter] = useState("all");
+  const [airlineFilter, setAirlineFilter] = useState("all");
+  const [rulesFilter, setRulesFilter] = useState("all");
+  const [cadenceFilter, setCadenceFilter] = useState("all");
   const [columnWidths, setColumnWidths] = useState<ActiveRouteColumnWidths>(
     DEFAULT_ACTIVE_ROUTE_COLUMN_WIDTHS,
   );
@@ -1557,8 +1564,65 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
     () => summarizePriceScanCapacity(routesForView),
     [routesForView],
   );
+  const bucketOptions = useMemo(
+    () => Array.from(new Set(routesForView.flatMap((route) => route.stayBuckets))).sort(),
+    [routesForView],
+  );
+  const routingOptions = useMemo(
+    () => Array.from(new Set(routesForView.map((route) => route.maxStops))).sort(),
+    [routesForView],
+  );
+  const airlineOptions = useMemo(
+    () =>
+      Array.from(new Set(routesForView.flatMap((route) => route.airlineNames))).sort(
+        (left, right) => left.localeCompare(right, "en"),
+      ),
+    [routesForView],
+  );
+  const filteredRoutes = useMemo(() => {
+    const search = searchFilter.trim().toLocaleLowerCase("en");
+    return routesForView.filter((route) => {
+      const activeRuleCount = route.months.reduce(
+        (total, month) => total + month.activePatternKeys.length,
+        0,
+      );
+      if (
+        search &&
+        ![
+          route.label,
+          route.destinationCity,
+          route.originAirport,
+          route.destinationAirport,
+          ...route.airlineNames,
+        ]
+          .join(" ")
+          .toLocaleLowerCase("en")
+          .includes(search)
+      ) return false;
+      if (
+        bucketFilter !== "all" &&
+        !route.stayBuckets.some((bucket) => bucket === bucketFilter)
+      ) return false;
+      if (routingFilter !== "all" && route.maxStops !== routingFilter) return false;
+      if (airlineFilter !== "all" && !route.airlineNames.includes(airlineFilter)) return false;
+      if (rulesFilter === "with-rules" && activeRuleCount === 0) return false;
+      if (rulesFilter === "without-rules" && activeRuleCount > 0) return false;
+      if (cadenceFilter === "changes" && route.pendingChangeCount === 0) return false;
+      if (cadenceFilter === "stable" && route.pendingChangeCount > 0) return false;
+      if (cadenceFilter === "airline-pending" && route.airlineNames.length > 0) return false;
+      return true;
+    });
+  }, [
+    airlineFilter,
+    bucketFilter,
+    cadenceFilter,
+    routesForView,
+    routingFilter,
+    rulesFilter,
+    searchFilter,
+  ]);
   const sortedRoutes = useMemo(() => {
-    return [...routesForView].sort((left, right) => {
+    return [...filteredRoutes].sort((left, right) => {
       const leftRulesActive = left.months.reduce(
         (total, month) => total + month.activePatternKeys.length,
         0,
@@ -1602,7 +1666,11 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [routesForView, sortDirection, sortField]);
+  }, [filteredRoutes, sortDirection, sortField]);
+  const hasActiveFilters = Boolean(
+    searchFilter || bucketFilter !== "all" || routingFilter !== "all" ||
+    airlineFilter !== "all" || rulesFilter !== "all" || cadenceFilter !== "all",
+  );
   const selectedRoute = useMemo(
     () =>
       sortedRoutes.find((route) => route.id === selectedRouteId) ??
@@ -1624,6 +1692,15 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
   function closeRoutePlanner() {
     setSelectedRouteId(null);
     setSelectedRouteSnapshot(null);
+  }
+
+  function clearRouteFilters() {
+    setSearchFilter("");
+    setBucketFilter("all");
+    setRoutingFilter("all");
+    setAirlineFilter("all");
+    setRulesFilter("all");
+    setCadenceFilter("all");
   }
 
   function applySelectionOverrides(
@@ -2163,12 +2240,104 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
         {bulkFeedback ? <p className="active-route-grid__feedback is-success">{bulkFeedback}</p> : null}
         {bulkError ? <p className="active-route-grid__feedback is-error">{bulkError}</p> : null}
 
+        <section
+          className={`ops-review-controls active-route-filters ${areFiltersOpen ? "is-open" : ""}`}
+        >
+          <button
+            aria-expanded={areFiltersOpen}
+            className="ops-filter-panel__toggle"
+            onClick={() => setAreFiltersOpen((current) => !current)}
+            type="button"
+          >
+            <span>Route filters</span>
+            <strong>{areFiltersOpen ? "Hide" : "Show"}</strong>
+          </button>
+          <div className="ops-filter-panel__body">
+            <label className="ops-review-control ops-review-control--search">
+              <span>Search route or airline</span>
+              <input
+                onChange={(event) => setSearchFilter(event.target.value)}
+                placeholder="London, STN, Luxair..."
+                type="search"
+                value={searchFilter}
+              />
+            </label>
+            <label className="ops-review-control">
+              <span>Airline</span>
+              <select
+                onChange={(event) => setAirlineFilter(event.target.value)}
+                value={airlineFilter}
+              >
+                <option value="all">All airlines</option>
+                {airlineOptions.map((airline) => (
+                  <option key={airline} value={airline}>{airline}</option>
+                ))}
+              </select>
+            </label>
+            <label className="ops-review-control">
+              <span>Bucket</span>
+              <select onChange={(event) => setBucketFilter(event.target.value)} value={bucketFilter}>
+                <option value="all">All buckets</option>
+                {bucketOptions.map((bucket) => (
+                  <option key={bucket} value={bucket}>
+                    {formatStayBucketListLabel([bucket])}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="ops-review-control">
+              <span>Routing</span>
+              <select onChange={(event) => setRoutingFilter(event.target.value)} value={routingFilter}>
+                <option value="all">All routing types</option>
+                {routingOptions.map((routing) => (
+                  <option key={routing} value={routing}>{formatStops(routing)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="ops-review-control">
+              <span>Rules</span>
+              <select onChange={(event) => setRulesFilter(event.target.value)} value={rulesFilter}>
+                <option value="all">Any rules status</option>
+                <option value="with-rules">With active rules</option>
+                <option value="without-rules">Without active rules</option>
+              </select>
+            </label>
+            <label className="ops-review-control">
+              <span>Status</span>
+              <select onChange={(event) => setCadenceFilter(event.target.value)} value={cadenceFilter}>
+                <option value="all">Any status</option>
+                <option value="stable">Stable cadence</option>
+                <option value="changes">Cadence changes</option>
+                <option value="airline-pending">Airline data pending</option>
+              </select>
+            </label>
+            <div className="active-route-filters__footer">
+              <span>{sortedRoutes.length} of {routesForView.length} routes</span>
+              <button
+                className="ops-button ops-button--ghost ops-button--compact"
+                disabled={!hasActiveFilters}
+                onClick={clearRouteFilters}
+                type="button"
+              >
+                Clear filters
+              </button>
+            </div>
+          </div>
+        </section>
+
       {data.routes.length === 0 ? (
         <div className="ops-empty">
           <p>
             Run the monthly service discovery after applying the schema and this planner will fill
             with route calendars for the next 9 months.
           </p>
+        </div>
+      ) : sortedRoutes.length === 0 ? (
+        <div className="ops-empty">
+          <p>No routes match the selected filters.</p>
+          <button className="ops-button ops-button--ghost" onClick={clearRouteFilters} type="button">
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="ops-route-table active-route-table" role="table" aria-label="Active route grid">
@@ -2307,7 +2476,15 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
                 </span>
                 <span role="cell">{formatStayBucketListLabel(route.stayBuckets)}</span>
                 <span role="cell">{formatStops(route.maxStops)}</span>
-                <span role="cell">{route.airlineSummary ?? "Pending"}</span>
+                <span role="cell">
+                  {route.airlineNames.length > 0 ? (
+                    <span className="active-route-table__airlines">
+                      {route.airlineNames.map((airline) => (
+                        <span key={airline}>{airline}</span>
+                      ))}
+                    </span>
+                  ) : "Pending"}
+                </span>
                 <span role="cell">{activeRuleCount}</span>
                 <span role="cell">
                   {route.pendingChangeCount > 0 ? (

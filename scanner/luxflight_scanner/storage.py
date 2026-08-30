@@ -494,6 +494,7 @@ class LocalStore:
                     "routing": routing,
                     "departure_dates": month["departure_dates"],
                     "departure_weekdays": month["departure_weekdays"],
+                    "airline_names": month.get("airline_names", []),
                     "observed_patterns": month["observed_patterns"],
                     "sample_size": month["sample_size"],
                     "detection_source": month.get("detection_source", "auto_monthly_discovery"),
@@ -1184,7 +1185,7 @@ class SupabaseStore:
                 "route_id": f"eq.{route_id}",
                 "routing": f"eq.{routing}",
                 "select": (
-                    "month_start,routing,departure_dates,departure_weekdays,observed_patterns,"
+                    "month_start,routing,departure_dates,departure_weekdays,airline_names,observed_patterns,"
                     "sample_size,last_checked_at"
                 ),
                 "order": "month_start.asc",
@@ -1226,6 +1227,7 @@ class SupabaseStore:
                     "routing": routing,
                     "departure_dates": month["departure_dates"],
                     "departure_weekdays": month["departure_weekdays"],
+                    "airline_names": month.get("airline_names", []),
                     "observed_patterns": month["observed_patterns"],
                     "sample_size": month["sample_size"],
                     "detection_source": month.get("detection_source", "auto_monthly_discovery"),

@@ -292,14 +292,6 @@ const TRIP_OPTIONS: SelectOption[] = [
   { value: "long_stay", label: "Long stay" },
 ];
 
-const BUDGET_OPTIONS: SelectOption[] = [
-  { value: "any", label: "Any budget" },
-  { value: "50", label: "Under EUR 50" },
-  { value: "80", label: "Under EUR 80" },
-  { value: "120", label: "Under EUR 120" },
-  { value: "200", label: "Under EUR 200" },
-];
-
 const DEPARTURE_WEEKDAY_OPTIONS: SelectOption[] = [
   { value: "any", label: "Any day" },
   { value: "monday", label: "Monday" },
@@ -3454,6 +3446,7 @@ export function PublicDealsExplorer({
       max: source.length > 0 ? Math.ceil(Math.max(...source)) : 1,
     };
   }, [data.deals, priceHistogramValues]);
+  const shouldShowPriceRangeFilter = mode !== "city" || priceBounds.min < priceBounds.max;
   const airlineOptions = useMemo<AirlineFilterOption[]>(() => {
     const labelsByKey = new Map<string, string>();
     filterFacetDeals.forEach((deal) => {
@@ -3468,10 +3461,7 @@ export function PublicDealsExplorer({
       .map(([key, label]) => ({ key, label }))
       .sort((left, right) => left.label.localeCompare(right.label, locale));
   }, [filterFacetDeals, locale]);
-  const airlineLabels = useMemo(
-    () => new Map(airlineOptions.map((option) => [option.key, option.label])),
-    [airlineOptions],
-  );
+  const shouldShowAirlineFilter = mode !== "city" || airlineOptions.length > 1;
   const legacyPriceMaximum =
     draftFilters.budgetFilter === "any" ? null : Number(draftFilters.budgetFilter);
   const updatePriceRange = useCallback((priceMin: number | null, priceMax: number | null) => {
@@ -3708,14 +3698,6 @@ export function PublicDealsExplorer({
     () => buildDurationOptions(data.deals, draftFilters, now, t),
     [data.deals, draftFilters, now, t],
   );
-  const resultsBudgetOptions = useMemo<SelectOption[]>(
-    () =>
-      buildAvailabilityOptions(BUDGET_OPTIONS, data.deals, draftFilters, now, (value) => ({
-        ...draftFilters,
-        budgetFilter: value as BudgetFilter,
-      })).map((option) => ({ ...option, label: t(`deals.budget.${option.value}`) })),
-    [data.deals, draftFilters, now, t],
-  );
   const dealSortOptions = useMemo<SelectOption[]>(
     () =>
       DEAL_SORT_OPTIONS.map((option) => ({
@@ -3723,131 +3705,6 @@ export function PublicDealsExplorer({
         label: t(DEAL_SORT_TRANSLATION_KEYS[option.value as DealSearchSort]),
       })),
     [t],
-  );
-  const activeFilterChips = useMemo(
-    () => {
-      const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
-
-      if (
-        effectiveFilters.destinationFilter !== "any" &&
-        effectiveFilters.destinationFilter !== lockedDestinationFilter
-      ) {
-        chips.push({
-          key: "destination",
-          label: findOptionLabel(destinationOptions, effectiveFilters.destinationFilter),
-          onRemove: () =>
-            setDraftFilters((current) =>
-              coerceFiltersForMode({ ...current, destinationFilter: "any" }),
-            ),
-        });
-      }
-
-      if (effectiveFilters.departureWeekdayFilter !== "any") {
-        chips.push({
-          key: "departureWeekday",
-          label: findOptionLabel(departureWeekdayOptions, effectiveFilters.departureWeekdayFilter),
-          onRemove: () =>
-            setDraftFilters((current) => ({ ...current, departureWeekdayFilter: "any" })),
-        });
-      }
-
-      if (effectiveFilters.whenFilter !== "any") {
-        chips.push({
-          key: "when",
-          label:
-            effectiveFilters.whenFilter === "custom"
-              ? formatPublicDealDateRange(
-                  effectiveFilters.dateFrom,
-                  effectiveFilters.dateTo,
-                  locale,
-                )
-              : findOptionLabel(resultsWhenOptions, effectiveFilters.whenFilter),
-          onRemove: () =>
-            setDraftFilters((current) => ({
-              ...current,
-              whenFilter: "any",
-              dateFrom: null,
-              dateTo: null,
-            })),
-        });
-      }
-
-      if (effectiveFilters.tripFilter !== "any") {
-        chips.push({
-          key: "trip",
-          label: findOptionLabel(resultsTripOptions, effectiveFilters.tripFilter),
-          onRemove: () => setDraftFilters((current) => ({ ...current, tripFilter: "any" })),
-        });
-      }
-
-      if (effectiveFilters.durationFilter !== "any") {
-        chips.push({
-          key: "duration",
-          label: findOptionLabel(resultsDurationOptions, effectiveFilters.durationFilter),
-          onRemove: () => setDraftFilters((current) => ({ ...current, durationFilter: "any" })),
-        });
-      }
-
-      if (effectiveFilters.budgetFilter !== "any") {
-        chips.push({
-          key: "budget",
-          label: findOptionLabel(resultsBudgetOptions, effectiveFilters.budgetFilter),
-          onRemove: () => setDraftFilters((current) => ({ ...current, budgetFilter: "any" })),
-        });
-      }
-
-      if (effectiveFilters.priceMin !== null || effectiveFilters.priceMax !== null) {
-        chips.push({
-          key: "priceRange",
-          label: `€${effectiveFilters.priceMin ?? priceBounds.min} – €${effectiveFilters.priceMax ?? priceBounds.max}`,
-          onRemove: () =>
-            setDraftFilters((current) => ({
-              ...current,
-              budgetFilter: "any",
-              priceMin: null,
-              priceMax: null,
-            })),
-        });
-      }
-
-      effectiveFilters.excludedAirlines.forEach((airline) => {
-        chips.push({
-          key: `airline-${airline}`,
-          label: t("deals.withoutAirline", { airline: airlineLabels.get(airline) ?? airline }),
-          onRemove: () =>
-            setDraftFilters((current) => ({
-              ...current,
-              excludedAirlines: current.excludedAirlines.filter((key) => key !== airline),
-            })),
-        });
-      });
-
-      if (effectiveFilters.directOnly) {
-        chips.push({
-          key: "directOnly",
-          label: t("common.directOnly"),
-          onRemove: () => setDraftFilters((current) => ({ ...current, directOnly: false })),
-        });
-      }
-
-      return chips;
-    },
-    [
-      coerceFiltersForMode,
-      airlineLabels,
-      departureWeekdayOptions,
-      destinationOptions,
-      effectiveFilters,
-      locale,
-      lockedDestinationFilter,
-      resultsBudgetOptions,
-      resultsDurationOptions,
-      resultsTripOptions,
-      resultsWhenOptions,
-      priceBounds.max,
-      priceBounds.min,
-      t,
-    ],
   );
   const directOnlyOptionAvailable = useMemo(
     () =>
@@ -4141,11 +3998,6 @@ export function PublicDealsExplorer({
           >
             <SlidersHorizontal aria-hidden="true" />
             <span>{t("deals.mobile.filter")}</span>
-            {activeFilterChips.length > 0 ? (
-              <b aria-label={t("deals.mobile.activeFilterCount", { count: activeFilterChips.length })}>
-                {activeFilterChips.length}
-              </b>
-            ) : null}
           </button>
           {showResultsMap ? (
             <PublicDealsMap
@@ -4291,25 +4143,29 @@ export function PublicDealsExplorer({
                           options={resultsDurationOptions}
                           value={draftFilters.durationFilter}
                         />
-                        <PublicDealsPriceRange
-                          bounds={priceBounds}
-                          deferChanges
-                          label={t("common.priceRange")}
-                          legacyMaximum={legacyPriceMaximum}
-                          onChange={updatePriceRange}
-                          priceMax={draftFilters.priceMax}
-                          priceMin={draftFilters.priceMin}
-                          prices={priceHistogramValues}
-                          showHistogram
-                        />
-                        <DealsAirlineFilter
-                          excludedAirlines={draftFilters.excludedAirlines}
-                          onChange={(excludedAirlines) =>
-                            setDraftFilters((current) => ({ ...current, excludedAirlines }))
-                          }
-                          options={airlineOptions}
-                          t={t}
-                        />
+                        {shouldShowPriceRangeFilter ? (
+                          <PublicDealsPriceRange
+                            bounds={priceBounds}
+                            deferChanges
+                            label={t("common.priceRange")}
+                            legacyMaximum={legacyPriceMaximum}
+                            onChange={updatePriceRange}
+                            priceMax={draftFilters.priceMax}
+                            priceMin={draftFilters.priceMin}
+                            prices={priceHistogramValues}
+                            showHistogram
+                          />
+                        ) : null}
+                        {shouldShowAirlineFilter ? (
+                          <DealsAirlineFilter
+                            excludedAirlines={draftFilters.excludedAirlines}
+                            onChange={(excludedAirlines) =>
+                              setDraftFilters((current) => ({ ...current, excludedAirlines }))
+                            }
+                            options={airlineOptions}
+                            t={t}
+                          />
+                        ) : null}
                         <label
                           className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
                         >
@@ -4836,32 +4692,36 @@ export function PublicDealsExplorer({
                       value={draftFilters.durationFilter}
                     />
 
-                    <div className="deals-search-sidebar__filter-group">
-                      <PublicDealsPriceRange
-                        bounds={priceBounds}
-                        label={t("common.priceRange")}
-                        legacyMaximum={legacyPriceMaximum}
-                        onChange={updatePriceRange}
-                        priceMax={draftFilters.priceMax}
-                        priceMin={draftFilters.priceMin}
-                        prices={priceHistogramValues}
-                        showHistogram
-                      />
-                    </div>
+                    {shouldShowPriceRangeFilter ? (
+                      <div className="deals-search-sidebar__filter-group">
+                        <PublicDealsPriceRange
+                          bounds={priceBounds}
+                          label={t("common.priceRange")}
+                          legacyMaximum={legacyPriceMaximum}
+                          onChange={updatePriceRange}
+                          priceMax={draftFilters.priceMax}
+                          priceMin={draftFilters.priceMin}
+                          prices={priceHistogramValues}
+                          showHistogram
+                        />
+                      </div>
+                    ) : null}
 
-                    <div className="deals-search-sidebar__filter-group">
-                      <DealsAirlineFilter
-                        excludedAirlines={draftFilters.excludedAirlines}
-                        onChange={(excludedAirlines) =>
-                          setDraftFilters((current) => ({
-                            ...current,
-                            excludedAirlines,
-                          }))
-                        }
-                        options={airlineOptions}
-                        t={t}
-                      />
-                    </div>
+                    {shouldShowAirlineFilter ? (
+                      <div className="deals-search-sidebar__filter-group">
+                        <DealsAirlineFilter
+                          excludedAirlines={draftFilters.excludedAirlines}
+                          onChange={(excludedAirlines) =>
+                            setDraftFilters((current) => ({
+                              ...current,
+                              excludedAirlines,
+                            }))
+                          }
+                          options={airlineOptions}
+                          t={t}
+                        />
+                      </div>
+                    ) : null}
 
                     <label
                       className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
@@ -4931,25 +4791,6 @@ export function PublicDealsExplorer({
                       <span>{opportunityDeals.length} {opportunityDeals.length === 1 ? t("deals.fare") : t("deals.fares")}</span>
                     </div>
                   </div>
-
-                  {activeFilterChips.length > 0 ? (
-                    <div className="deals-active-filters" aria-label={t("deals.activeFilters")}>
-                      <span className="deals-active-filters__label">{t("deals.activeFilters")}</span>
-                      <div className="deals-active-filters__chips">
-                        {activeFilterChips.map((chip) => (
-                          <button
-                            className="deals-active-filters__chip"
-                            key={chip.key}
-                            onClick={chip.onRemove}
-                            type="button"
-                          >
-                            <span>{chip.label}</span>
-                            <i aria-hidden="true">×</i>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
 
                   {opportunityDeals.length === 0 ? (
                     <div className="deals-explorer__empty">
@@ -5168,25 +5009,6 @@ export function PublicDealsExplorer({
                   <span>{opportunityDeals.length} {opportunityDeals.length === 1 ? t("deals.fare") : t("deals.fares")}</span>
                 </div>
               </div>
-
-              {activeFilterChips.length > 0 ? (
-                <div className="deals-active-filters" aria-label={t("deals.activeFilters")}>
-                  <span className="deals-active-filters__label">{t("deals.activeFilters")}</span>
-                  <div className="deals-active-filters__chips">
-                    {activeFilterChips.map((chip) => (
-                      <button
-                        className="deals-active-filters__chip"
-                        key={chip.key}
-                        onClick={chip.onRemove}
-                        type="button"
-                      >
-                        <span>{chip.label}</span>
-                        <i aria-hidden="true">×</i>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
 
               {opportunityDeals.length === 0 ? (
                 <div className="deals-explorer__empty">
