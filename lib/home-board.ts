@@ -230,7 +230,7 @@ export function buildHomeRecentDrops(
     .slice(0, limit)
     .map((deal) => ({
       city: deal.destinationCity.trim(),
-      route: `${getOriginAirport(deal)} → ${deal.destinationAirport.trim().toUpperCase()}`,
+      route: `${getOriginAirport(deal)} → ${deal.destinationCity.trim()}`,
       price: deal.dealPrice,
       drop: getReliableDropPercent(deal),
     }));
