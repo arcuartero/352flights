@@ -813,7 +813,7 @@ body:has(.v2) .scroll-top-button {
    ============================================================ */
 
 .v2-ticker {
-  margin-block: clamp(3.5rem, 7vw, 6rem) clamp(1.75rem, 3vw, 2.75rem);
+  margin-block: clamp(3.5rem, 7vw, 6rem) clamp(3rem, 5vw, 4.5rem);
   border-block: 1px solid var(--v2-hairline);
   padding: 0;
   overflow: hidden;
@@ -915,7 +915,7 @@ body:has(.v2) .scroll-top-button {
   margin: 0 0 clamp(1.35rem, 2.6vw, 2.25rem);
   color: var(--v2-accent);
   font-size: clamp(1rem, 1.45vw, 1.35rem);
-  font-weight: 720;
+  font-weight: 600;
   letter-spacing: 0.08em;
   line-height: 1.15;
   text-align: center;
@@ -959,6 +959,7 @@ body:has(.v2) .scroll-top-button {
 .v2-smart-flights__icon--value > svg:first-child {
   width: 92%;
   height: 92%;
+  transform: scaleX(-1);
 }
 
 .v2-smart-flights__icon--value .v2-smart-flights__check {
