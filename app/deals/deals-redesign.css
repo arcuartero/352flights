@@ -1407,7 +1407,7 @@ body:has(.page-shell--deals-city)::before {
   color: #0b203d;
   font-family: var(--font-sans), sans-serif;
   font-size: clamp(4.6rem, 6.5vw, 6.9rem);
-  font-weight: 780;
+  font-weight: 660;
   line-height: 0.88;
   letter-spacing: -0.055em;
   text-shadow: none;
@@ -1425,7 +1425,7 @@ body:has(.page-shell--deals-city)::before {
   color: #263a55;
   font-family: var(--font-sans), sans-serif;
   font-size: clamp(1.05rem, 1.25vw, 1.25rem);
-  font-weight: 720;
+  font-weight: 600;
   line-height: 1.45;
   letter-spacing: -0.012em;
   text-shadow: none;
