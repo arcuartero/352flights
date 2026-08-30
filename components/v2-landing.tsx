@@ -586,28 +586,6 @@ export function V2Landing({
             <p className="v2-hero__lede" data-reveal style={{ "--d": "300ms" } as React.CSSProperties}>
               {t("home.lede")}
             </p>
-            <ul className="v2-hero__trust" data-reveal style={{ "--d": "380ms" } as React.CSSProperties}>
-              <li>
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 2.5l7.5 3.4v5.6c0 4.7-3.2 8-7.5 9.5-4.3-1.5-7.5-4.8-7.5-9.5V5.9z" />
-                  <path d="M9 12l2.2 2.2L15.5 9.8" />
-                </svg>
-                {t("home.noSpam")}
-              </li>
-              <li>
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" />
-                </svg>
-                {t("home.bestFares")}
-              </li>
-              <li>
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 21.5s-7-5.8-7-11a7 7 0 0 1 14 0c0 5.2-7 11-7 11z" />
-                  <circle cx="12" cy="10.2" r="2.4" />
-                </svg>
-                {t("home.luxDepartures")}
-              </li>
-            </ul>
           </div>
 
           {/* Search — same engine as the /deals home, docked inside the hero card */}
