@@ -487,6 +487,24 @@ export function V2Landing({
       })),
     ];
   }, [deals, filters, now, t]);
+  const popularDestinationValues = useMemo(() => {
+    const destinationCounts = new Map<string, number>();
+    for (const deal of deals) {
+      const city = deal.destinationCity?.trim();
+      if (!city) continue;
+      const key = normalizeDestinationKey(city);
+      destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
+    }
+
+    const seasonalDestinations = (boardDestinations ?? []).map((destination) =>
+      normalizeDestinationKey(destination.city),
+    );
+    const destinationsWithMostLiveFares = [...destinationCounts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .map(([destination]) => destination);
+
+    return [...new Set([...seasonalDestinations, ...destinationsWithMostLiveFares])].slice(0, 6);
+  }, [boardDestinations, deals]);
 
   useEffect(() => {
     if (filters.destinationFilter === "any") {
@@ -597,10 +615,12 @@ export function V2Landing({
           <PublicDealsSelect
             className="v2-search__field v2-search__field--destination v2-search__destination-select"
             label={t("common.to")}
+            mobileDestinationSheet
             onChange={(value) =>
               setFilters((current) => ({ ...current, destinationFilter: value }))
             }
             options={destinationOptions}
+            popularOptionValues={popularDestinationValues}
             value={filters.destinationFilter}
           />
           <PublicDealsDatePicker

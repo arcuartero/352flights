@@ -3660,6 +3660,20 @@ export function PublicDealsExplorer({
       ),
     [data.deals, draftFilters, now, t],
   );
+  const popularDestinationValues = useMemo(() => {
+    const destinationCounts = new Map<string, number>();
+    for (const deal of data.deals) {
+      const city = deal.destinationCity?.trim();
+      if (!city) continue;
+      const key = normalizeDestinationKey(city);
+      destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
+    }
+
+    return [...destinationCounts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 6)
+      .map(([destination]) => destination);
+  }, [data.deals]);
   const departureWeekdayOptions = useMemo<SelectOption[]>(
     () =>
       buildAvailabilityOptions(
@@ -4081,6 +4095,7 @@ export function PublicDealsExplorer({
                         {includeDestination ? (
                           <DealsSelect
                             label={t("common.destination")}
+                            mobileDestinationSheet
                             onChange={(nextValue) =>
                               setDraftFilters((current) => ({
                                 ...current,
@@ -4088,6 +4103,7 @@ export function PublicDealsExplorer({
                               }))
                             }
                             options={destinationOptions}
+                            popularOptionValues={popularDestinationValues}
                             value={draftFilters.destinationFilter}
                           />
                         ) : (
@@ -4257,6 +4273,7 @@ export function PublicDealsExplorer({
         {includeDestination ? (
           <DealsSelect
             label={t("common.destination")}
+            mobileDestinationSheet
             onChange={(nextValue) =>
               setDraftFilters((current) => ({
                 ...current,
@@ -4264,6 +4281,7 @@ export function PublicDealsExplorer({
               }))
             }
             options={destinationOptions}
+            popularOptionValues={popularDestinationValues}
             value={draftFilters.destinationFilter}
           />
         ) : null}
@@ -4395,6 +4413,7 @@ export function PublicDealsExplorer({
 
             <DealsSelect
               label={t("common.to")}
+              mobileDestinationSheet
               onChange={(nextValue) =>
                 setDraftFilters((current) => ({
                   ...current,
@@ -4402,6 +4421,7 @@ export function PublicDealsExplorer({
                 }))
               }
               options={destinationOptions}
+              popularOptionValues={popularDestinationValues}
               value={draftFilters.destinationFilter}
             />
 
@@ -4856,6 +4876,7 @@ export function PublicDealsExplorer({
               <div className="deals-search-sidebar__section">
                 <DealsSelect
                   label={t("common.destination")}
+                  mobileDestinationSheet
                   onChange={(nextValue) =>
                     setDraftFilters((current) => ({
                       ...current,
@@ -4863,6 +4884,7 @@ export function PublicDealsExplorer({
                     }))
                   }
                   options={destinationOptions}
+                  popularOptionValues={popularDestinationValues}
                   value={draftFilters.destinationFilter}
                 />
 
