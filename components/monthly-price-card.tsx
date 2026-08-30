@@ -204,20 +204,6 @@ function MonthlyPriceChart({ currency, detailed = false, months, cheapestMonth }
   );
 }
 
-function MonthlyPriceSkeleton({ detailed = false }: { detailed?: boolean }) {
-  return (
-    <div
-      aria-label="Cargando precios medios"
-      className={`monthly-price-skeleton${detailed ? " monthly-price-skeleton--detailed" : ""}`}
-      role="status"
-    >
-      <span />
-      <span />
-      <span />
-    </div>
-  );
-}
-
 export function MonthlyPriceCard({
   destinationCity,
   destinationSlug,
@@ -290,6 +276,9 @@ export function MonthlyPriceCard({
   const pricedMonthCount =
     data?.months.filter((month) => month.averagePrice !== null).length ?? 0;
   const hasUsefulChart = hasCoverage && pricedMonthCount >= MIN_MONTHS_FOR_CHART;
+  const shouldHideCard =
+    status === "loading" ||
+    (status === "ready" && pricedMonthCount > 0 && pricedMonthCount < MIN_MONTHS_FOR_CHART);
   const canOpenDetails = status !== "ready" || hasUsefulChart;
 
   useEffect(() => {
@@ -304,6 +293,10 @@ export function MonthlyPriceCard({
   };
   const accessibleSummary = useMemo(() => (data ? buildAccessibleSummary(data) : ""), [data]);
   const titleId = `monthly-price-title-${requestId.replaceAll(":", "")}`;
+
+  if (shouldHideCard) {
+    return null;
+  }
 
   return (
     <>
@@ -333,7 +326,6 @@ export function MonthlyPriceCard({
             size={17}
           />
         </span>
-        {status === "loading" ? <MonthlyPriceSkeleton /> : null}
         {status === "error" ? (
           <span className="monthly-price-card__message">
             No se pudieron cargar los precios medios. Inténtalo de nuevo.
@@ -342,12 +334,6 @@ export function MonthlyPriceCard({
         {status === "ready" && !hasCoverage ? (
           <span className="monthly-price-card__message">
             Todavía no se ha explorado la ventana de precios de esta ruta.
-          </span>
-        ) : null}
-        {hasCoverage && !hasUsefulChart ? (
-          <span className="monthly-price-card__message monthly-price-card__message--insufficient">
-            Aún no hay suficientes meses con tarifas para comparar precios. Se necesitan al menos{" "}
-            {MIN_MONTHS_FOR_CHART} meses.
           </span>
         ) : null}
         {hasUsefulChart && data ? (
@@ -404,7 +390,6 @@ export function MonthlyPriceCard({
                     {directOnly ? "Vuelos directos" : "Todos los vuelos"} desde Luxemburgo ({originAirport})
                   </span>
                 </header>
-                {status === "loading" ? <MonthlyPriceSkeleton detailed /> : null}
                 {status === "error" ? (
                   <div className="monthly-price-modal__state">
                     No se pudieron cargar los precios medios. Inténtalo de nuevo.

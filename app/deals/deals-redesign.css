@@ -3754,40 +3754,6 @@ body:has(.page-shell--deals-city)::before {
   line-height: 1.5;
 }
 
-.monthly-price-card__message--insufficient {
-  min-height: 4.8rem;
-  padding-bottom: 0.6rem;
-}
-
-.monthly-price-skeleton {
-  display: grid;
-  align-content: end;
-  gap: 0.7rem;
-  min-height: 9.5rem;
-  padding-block: 1rem 0.35rem;
-}
-
-.monthly-price-skeleton span {
-  display: block;
-  height: 0.65rem;
-  border-radius: 0.35rem;
-  background: linear-gradient(90deg, #e8edf3 25%, #f7f9fb 50%, #e8edf3 75%);
-  background-size: 200% 100%;
-  animation: monthly-price-pulse 1.4s ease-in-out infinite;
-}
-
-.monthly-price-skeleton span:nth-child(1) { width: 42%; }
-.monthly-price-skeleton span:nth-child(2) { width: 78%; }
-.monthly-price-skeleton span:nth-child(3) { width: 100%; }
-
-.monthly-price-skeleton--detailed {
-  min-height: 20rem;
-}
-
-@keyframes monthly-price-pulse {
-  to { background-position: -200% 0; }
-}
-
 .monthly-price-modal {
   position: fixed;
   z-index: 1000;
@@ -3930,8 +3896,7 @@ body:has(.page-shell--deals-city)::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .monthly-price-card,
-  .monthly-price-skeleton span {
+  .monthly-price-card {
     animation: none;
     transition: none;
   }
