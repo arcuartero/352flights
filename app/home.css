@@ -815,7 +815,7 @@ body:has(.v2) .scroll-top-button {
 .v2-ticker {
   margin-block: clamp(3.5rem, 7vw, 6rem);
   border-block: 1px solid var(--v2-hairline);
-  padding: 1.15rem 0;
+  padding: 0;
   overflow: hidden;
   background: var(--v2-cream);
 }
@@ -826,7 +826,8 @@ body:has(.v2) .scroll-top-button {
   animation: v2-marquee 64s linear infinite;
 }
 
-.v2-ticker:hover .v2-ticker__track {
+.v2-ticker:hover .v2-ticker__track,
+.v2-ticker:focus-within .v2-ticker__track {
   animation-play-state: paused;
 }
 
@@ -839,12 +840,34 @@ body:has(.v2) .scroll-top-button {
 }
 
 .v2-ticker__group li {
+  display: block;
+  border-right: 1px solid var(--v2-hairline);
+  white-space: nowrap;
+}
+
+.v2-ticker__group a {
   display: inline-flex;
   align-items: baseline;
   gap: 0.7rem;
-  padding: 0 2.4rem;
-  border-right: 1px solid var(--v2-hairline);
+  padding: 1.15rem 2.4rem;
+  color: inherit;
+  text-decoration: none;
   white-space: nowrap;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.v2-ticker__group a:hover {
+  color: var(--v2-blue-strong);
+  background: rgba(31, 95, 214, 0.06);
+}
+
+.v2-ticker__group a:focus-visible {
+  border-radius: 0.25rem;
+  outline: 2px solid var(--v2-blue-strong);
+  outline-offset: -2px;
+  background: rgba(31, 95, 214, 0.08);
 }
 
 .v2-ticker__route {

@@ -3635,6 +3635,12 @@ body:has(.page-shell--deals-city)::before {
   stroke-width: 3;
 }
 
+.monthly-price-chart__no-departures {
+  stroke: rgba(29, 39, 51, 0.38);
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+
 .monthly-price-chart__hit-area {
   fill: transparent;
   cursor: pointer;
@@ -3656,13 +3662,27 @@ body:has(.page-shell--deals-city)::before {
 
 .monthly-price-chart__month-labels {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
   margin-top: -1.85rem;
   padding-inline: 5.5% 3%;
   color: var(--v2-ink-soft);
   font-size: clamp(0.52rem, 1.1vw, 0.68rem);
   text-align: center;
   text-transform: capitalize;
+}
+
+.monthly-price-chart__month-label {
+  display: grid;
+  justify-items: center;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.monthly-price-chart__month-label small {
+  color: rgba(29, 39, 51, 0.52);
+  font-size: 0.56rem;
+  line-height: 1.05;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .monthly-price-chart__tooltip {

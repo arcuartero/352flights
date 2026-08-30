@@ -24,6 +24,13 @@ type MonthlySnapshotRow = {
   currency: string;
 };
 
+type MonthlyServiceRow = {
+  route_id: string;
+  month_start: string;
+  routing: string;
+  departure_dates: string[];
+};
+
 const PAGE_SIZE = 1000;
 const MONTH_COUNT = 12;
 
@@ -87,6 +94,23 @@ async function fetchSnapshots(routeIds: string[], fromDate: string, toDate: stri
   return rows;
 }
 
+async function fetchServiceMonths(routeIds: string[], fromDate: string, toDate: string) {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("route_service_months")
+    .select("route_id,month_start,routing,departure_dates")
+    .in("route_id", routeIds)
+    .gte("month_start", fromDate)
+    .lt("month_start", toDate)
+    .order("month_start", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as MonthlyServiceRow[];
+}
+
 export async function getMonthlyPriceAverages(input: {
   originAirport: string;
   destinationSlug: string;
@@ -126,16 +150,18 @@ export async function getMonthlyPriceAverages(input: {
       annualAverage: null,
       cheapestMonth: null,
       totalSamples: 0,
-      months: monthKeys.map((month) => ({ month, averagePrice: null, sampleCount: 0 })),
+      months: [],
     };
   }
 
   const routeById = new Map(routes.map((route) => [route.id, route]));
-  const snapshots = await fetchSnapshots(
-    routes.map((route) => route.id),
-    firstMonth.toISOString().slice(0, 10),
-    endMonth.toISOString().slice(0, 10),
-  );
+  const routeIds = routes.map((route) => route.id);
+  const fromDate = firstMonth.toISOString().slice(0, 10);
+  const toDate = endMonth.toISOString().slice(0, 10);
+  const [snapshots, serviceMonths] = await Promise.all([
+    fetchSnapshots(routeIds, fromDate, toDate),
+    fetchServiceMonths(routeIds, fromDate, toDate),
+  ]);
   const latestByItinerary = new Map<string, MonthlySnapshotRow>();
 
   for (const snapshot of snapshots) {
@@ -173,12 +199,43 @@ export async function getMonthlyPriceAverages(input: {
     pricesByMonth.set(key, prices);
   }
 
-  const months = monthKeys.map((month) => {
+  const relevantServiceMonths = serviceMonths.filter(
+    (serviceMonth) => !input.directOnly || serviceMonth.routing === "NON_STOP",
+  );
+  const serviceByMonth = new Map<string, MonthlyServiceRow[]>();
+  for (const serviceMonth of relevantServiceMonths) {
+    const key = serviceMonth.month_start.slice(0, 7);
+    const rows = serviceByMonth.get(key) ?? [];
+    rows.push(serviceMonth);
+    serviceByMonth.set(key, rows);
+  }
+
+  const lastCoveredMonthIndex = monthKeys.reduce((lastIndex, month, index) => {
+    if (serviceByMonth.has(month) || pricesByMonth.has(month)) {
+      return index;
+    }
+    return lastIndex;
+  }, -1);
+  const visibleMonthKeys =
+    lastCoveredMonthIndex >= 0 ? monthKeys.slice(0, lastCoveredMonthIndex + 1) : [];
+  const months = visibleMonthKeys.map((month) => {
     const prices = pricesByMonth.get(month) ?? [];
+    const serviceRows = serviceByMonth.get(month) ?? [];
+    const coveredRouteIds = new Set(serviceRows.map((row) => row.route_id));
+    const everyRouteWasChecked = routeIds.every((routeId) => coveredRouteIds.has(routeId));
+    const hasScheduledDepartures = serviceRows.some((row) => row.departure_dates.length > 0);
+    const averagePrice = roundAverage(prices);
+
     return {
       month,
-      averagePrice: roundAverage(prices),
+      averagePrice,
       sampleCount: prices.length,
+      availability:
+        averagePrice !== null
+          ? ("priced" as const)
+          : serviceRows.length > 0 && everyRouteWasChecked && !hasScheduledDepartures
+            ? ("no_departures" as const)
+            : ("no_prices" as const),
     };
   });
   const populatedMonths = months.filter(

@@ -113,9 +113,6 @@ export function DestinationPhotoManager({
   }, [destinations, query]);
 
   const photoCount = destinations.filter((destination) => photos[destination.slug]).length;
-  const downloadableCount = destinations.filter(
-    (destination) => photos[destination.slug]?.source === "upload",
-  ).length;
 
   async function refreshPhotos() {
     const response = await fetch("/api/destination-photos", {
@@ -224,17 +221,17 @@ export function DestinationPhotoManager({
   }
 
   async function downloadAllPhotos() {
-    const uploadedDestinations = destinations.filter(
-      (destination) => photos[destination.slug]?.source === "upload",
+    const destinationsWithPhotos = destinations.filter(
+      (destination) => photos[destination.slug],
     );
-    if (uploadedDestinations.length === 0 || isDownloading) {
+    if (destinationsWithPhotos.length === 0 || isDownloading) {
       return;
     }
 
     setIsDownloading(true);
     setStatus({
       tone: "idle",
-      message: `Preparing 0 of ${uploadedDestinations.length} photos...`,
+      message: `Preparing 0 of ${destinationsWithPhotos.length} photos...`,
     });
 
     try {
@@ -242,8 +239,8 @@ export function DestinationPhotoManager({
       const zip = new JSZip();
       let completed = 0;
 
-      for (let index = 0; index < uploadedDestinations.length; index += 4) {
-        const batch = uploadedDestinations.slice(index, index + 4);
+      for (let index = 0; index < destinationsWithPhotos.length; index += 4) {
+        const batch = destinationsWithPhotos.slice(index, index + 4);
         await Promise.all(
           batch.map(async (destination) => {
             const photo = photos[destination.slug];
@@ -260,7 +257,7 @@ export function DestinationPhotoManager({
             completed += 1;
             setStatus({
               tone: "idle",
-              message: `Preparing ${completed} of ${uploadedDestinations.length} photos...`,
+              message: `Preparing ${completed} of ${destinationsWithPhotos.length} photos...`,
             });
           }),
         );
@@ -283,7 +280,7 @@ export function DestinationPhotoManager({
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1_000);
       setStatus({
         tone: "success",
-        message: `${uploadedDestinations.length} destination photos downloaded.`,
+        message: `${destinationsWithPhotos.length} destination photos downloaded.`,
       });
     } catch (error) {
       setStatus({
@@ -307,9 +304,9 @@ export function DestinationPhotoManager({
           </span>
           <button
             className="ops-button destination-photo-manager__download"
-            disabled={downloadableCount === 0 || isDownloading}
+            disabled={photoCount === 0 || isDownloading}
             onClick={downloadAllPhotos}
-            title="Download every uploaded destination photo in one ZIP file"
+            title="Download every available destination photo in one ZIP file"
             type="button"
           >
             {isDownloading ? (

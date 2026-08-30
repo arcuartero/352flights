@@ -2,6 +2,7 @@ export type MonthlyPricePoint = {
   month: string;
   averagePrice: number | null;
   sampleCount: number;
+  availability: "priced" | "no_departures" | "no_prices";
 };
 
 export type MonthlyPriceAverageData = {

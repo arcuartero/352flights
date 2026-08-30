@@ -1,6 +1,6 @@
 import { OpsSubnav } from "@/components/ops-subnav";
 import { TikTokJsonGenerator } from "@/components/tiktok-json-generator";
-import { generateTikTokCarousel, generateTikTokTravelOffers } from "@/lib/tiktok-carousel";
+import { generateCreatelloDocument } from "@/lib/tiktok-carousel";
 import { loadTikTokCarouselSource } from "@/lib/tiktok-carousel-data";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,6 @@ function currentMonthKey() {
 export default async function OpsTikTokJsonPage() {
   const initialMonth = currentMonthKey();
   let initialData = null;
-  let initialTravelOfferData = null;
   let initialError: string | null = null;
   try {
     const options = {
@@ -27,16 +26,13 @@ export default async function OpsTikTokJsonPage() {
       startMonth: initialMonth,
       slideCount: 5,
       offersPerSlide: 3,
+      template: "travel-offer" as const,
+      language: "en" as const,
     };
     const source = await loadTikTokCarouselSource(options);
     if (!source.configured) throw new Error("Supabase no está configurado.");
     initialData = {
-      ...generateTikTokCarousel(source.offers, source.photoUrls, options),
-      origins: source.origins,
-    };
-    initialTravelOfferData = {
-      ...generateTikTokTravelOffers(source.offers, options),
-      origins: source.origins,
+      ...generateCreatelloDocument(source.offers, options),
     };
   } catch (error) {
     initialError = error instanceof Error ? error.message : "No se pudieron cargar las ofertas.";
@@ -52,7 +48,7 @@ export default async function OpsTikTokJsonPage() {
               <span className="ops-panel__eyebrow">Contenido social</span>
               <h2>Content generator</h2>
               <p>
-                Elige un formato y genera JSON con las mejores ofertas publicables de 352 Flights.
+                Genera archivos validados para las cinco plantillas de viajes de Creatello.
               </p>
             </div>
           </div>
@@ -60,7 +56,6 @@ export default async function OpsTikTokJsonPage() {
             initialData={initialData}
             initialError={initialError}
             initialMonth={initialMonth}
-            initialTravelOfferData={initialTravelOfferData}
           />
         </section>
       </div>

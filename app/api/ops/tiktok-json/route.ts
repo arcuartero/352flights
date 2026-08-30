@@ -2,17 +2,20 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { ensureOpsAuthorized } from "@/lib/ops-auth";
-import { buildTikTokCarousel, buildTikTokTravelOffers } from "@/lib/tiktok-carousel-data";
+import { CREATELLO_LANGUAGES, CREATELLO_TEMPLATES } from "@/lib/tiktok-carousel";
+import { buildCreatelloDocument } from "@/lib/tiktok-carousel-data";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const requestSchema = z.object({
-  format: z.enum(["travel-offer-1", "travel-offer-2"]).default("travel-offer-1"),
+  template: z.enum(CREATELLO_TEMPLATES).default("travel-offer"),
+  language: z.enum(CREATELLO_LANGUAGES).default("en"),
   originAirport: z.string().trim().min(3).max(4).default("LUX"),
   startMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
-  slideCount: z.coerce.number().int().min(1).max(12).default(5),
-  offersPerSlide: z.coerce.number().int().refine((value) => [3, 4, 5].includes(value)).default(3),
+  slideCount: z.coerce.number().int().min(1).max(20).default(5),
+  offersPerSlide: z.coerce.number().int().min(3).max(10).default(3),
+  maxPrice: z.coerce.number().positive().optional(),
 });
 
 export async function POST(request: Request) {
@@ -21,11 +24,9 @@ export async function POST(request: Request) {
 
   try {
     const input = requestSchema.parse(await request.json());
-    const result = input.format === "travel-offer-2"
-      ? await buildTikTokTravelOffers(input)
-      : await buildTikTokCarousel(input);
+    const result = await buildCreatelloDocument(input);
     return NextResponse.json(
-      { ok: true, format: input.format, ...result },
+      { ok: true, template: input.template, ...result },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   } catch (error) {

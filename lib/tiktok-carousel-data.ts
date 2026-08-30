@@ -1,16 +1,13 @@
 import "server-only";
 
-import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { hasSupabaseAdminEnv } from "@/lib/env";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import {
-  generateTikTokCarousel,
-  generateTikTokTravelOffers,
+  generateCreatelloDocument,
   getTikTokCarouselDateRange,
   resolveTikTokOrigin,
   type TikTokGenerationOptions,
   type TikTokSourceOffer,
-  type TikTokTravelOfferOptions,
 } from "@/lib/tiktok-carousel";
 
 type RouteRow = {
@@ -29,6 +26,7 @@ type SnapshotRow = {
   return_date: string | null;
   max_stops: string;
   scanned_at: string;
+  metadata: Record<string, unknown>;
 };
 
 const PAGE_SIZE = 1000;
@@ -44,7 +42,7 @@ async function fetchEligibleSnapshots(fromDate: string, toDateExclusive: string)
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from("price_snapshots")
-      .select("id,route_id,price,currency,departure_date,return_date,max_stops,scanned_at")
+      .select("id,route_id,price,currency,departure_date,return_date,max_stops,scanned_at,metadata")
       .eq("metadata->>public_fare_eligible", "true")
       .gte("departure_date", fromDate)
       .lt("departure_date", toDateExclusive)
@@ -70,13 +68,12 @@ export async function loadTikTokCarouselSource(options: TikTokSourceOptions) {
     options.slideCount,
     options.now,
   );
-  const [routesResult, snapshots, photoUrls] = await Promise.all([
+  const [routesResult, snapshots] = await Promise.all([
     supabase
       .from("scanned_routes")
       .select("id,origin_airport,destination_airport,destination_city")
       .eq("is_active", true),
     fetchEligibleSnapshots(dateRange.fromDate, dateRange.toDateExclusive),
-    getDestinationPhotoUrlMap(),
   ]);
   if (routesResult.error) throw routesResult.error;
 
@@ -96,6 +93,7 @@ export async function loadTikTokCarouselSource(options: TikTokSourceOptions) {
       currency: snapshot.currency,
       maxStops: snapshot.max_stops,
       scannedAt: snapshot.scanned_at,
+      metadata: snapshot.metadata,
     }];
   });
   const activeOrigins = new Set(routes.map((route) => route.origin_airport.toUpperCase()));
@@ -103,27 +101,16 @@ export async function loadTikTokCarouselSource(options: TikTokSourceOptions) {
     .map(resolveTikTokOrigin)
     .sort((left, right) => left.city.localeCompare(right.city, "es"));
 
-  return { configured: true, origins, offers, photoUrls };
+  return { configured: true, origins, offers };
 }
 
-export async function buildTikTokCarousel(options: TikTokGenerationOptions) {
+export async function buildCreatelloDocument(options: TikTokGenerationOptions) {
   const source = await loadTikTokCarouselSource(options);
   if (!source.configured) {
     throw new Error("Supabase no está configurado.");
   }
   return {
-    ...generateTikTokCarousel(source.offers, source.photoUrls, options),
-    origins: source.origins,
-  };
-}
-
-export async function buildTikTokTravelOffers(options: TikTokTravelOfferOptions) {
-  const source = await loadTikTokCarouselSource(options);
-  if (!source.configured) {
-    throw new Error("Supabase no está configurado.");
-  }
-  return {
-    ...generateTikTokTravelOffers(source.offers, options),
+    ...generateCreatelloDocument(source.offers, options),
     origins: source.origins,
   };
 }

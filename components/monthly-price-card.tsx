@@ -38,17 +38,22 @@ function formatMonth(value: string, format: "short" | "long" = "short") {
 }
 
 function buildAccessibleSummary(data: MonthlyPriceAverageData) {
-  const available = data.months.filter(
-    (month): month is MonthlyPricePoint & { averagePrice: number } => month.averagePrice !== null,
-  );
-  if (available.length === 0) {
-    return "No hay medias mensuales disponibles para esta ruta.";
+  if (data.months.length === 0) {
+    return "Todavía no hay meses explorados para esta ruta.";
   }
 
-  const prices = available
-    .map((month) => `${formatMonth(month.month, "long")}: ${formatPrice(month.averagePrice, data.currency)}`)
+  const months = data.months
+    .map((month) => {
+      if (month.availability === "no_departures") {
+        return `${formatMonth(month.month, "long")}: sin salidas`;
+      }
+      if (month.averagePrice === null) {
+        return `${formatMonth(month.month, "long")}: sin tarifa registrada`;
+      }
+      return `${formatMonth(month.month, "long")}: ${formatPrice(month.averagePrice, data.currency)}`;
+    })
     .join(", ");
-  return `Precios medios mensuales de ${data.originAirport} a ${data.destinationCity}. ${prices}.`;
+  return `Cobertura mensual de ${data.originAirport} a ${data.destinationCity}. ${months}.`;
 }
 
 function MonthlyPriceChart({ currency, detailed = false, months, cheapestMonth }: ChartProps) {
@@ -71,7 +76,9 @@ function MonthlyPriceChart({ currency, detailed = false, months, cheapestMonth }
   const chartHeight = height - padding.top - padding.bottom;
   const points = months.map((month, index) => ({
     ...month,
-    x: padding.left + (index / Math.max(1, months.length - 1)) * chartWidth,
+    x:
+      padding.left +
+      (months.length === 1 ? 0.5 : index / Math.max(1, months.length - 1)) * chartWidth,
     y:
       month.averagePrice === null
         ? null
@@ -105,6 +112,18 @@ function MonthlyPriceChart({ currency, detailed = false, months, cheapestMonth }
         {segments.map((segment) => (
           <path className="monthly-price-chart__line" d={segment} key={segment} />
         ))}
+        {points.map((point) =>
+          point.availability === "no_departures" ? (
+            <g className="monthly-price-chart__no-departures" key={`no-departures-${point.month}`}>
+              <line
+                x1={point.x - (detailed ? 4 : 3)}
+                x2={point.x + (detailed ? 4 : 3)}
+                y1={padding.top + chartHeight - (detailed ? 5 : 3)}
+                y2={padding.top + chartHeight - (detailed ? 5 : 3)}
+              />
+            </g>
+          ) : null,
+        )}
         {points.map((point, index) => {
           if (point.y === null || point.averagePrice === null) {
             return null;
@@ -152,9 +171,17 @@ function MonthlyPriceChart({ currency, detailed = false, months, cheapestMonth }
         )}
       </svg>
       {detailed ? (
-        <div aria-hidden="true" className="monthly-price-chart__month-labels">
+        <div
+          aria-hidden="true"
+          className="monthly-price-chart__month-labels"
+          style={{ gridTemplateColumns: `repeat(${months.length}, minmax(0, 1fr))` }}
+        >
           {points.map((point) => (
-            <span key={`detail-label-${point.month}`}>{formatMonth(point.month)}</span>
+            <span className="monthly-price-chart__month-label" key={`detail-label-${point.month}`}>
+              <span>{formatMonth(point.month)}</span>
+              {point.availability === "no_departures" ? <small>Sin salidas</small> : null}
+              {point.availability === "no_prices" ? <small>Sin tarifa</small> : null}
+            </span>
           ))}
         </div>
       ) : null}
@@ -261,7 +288,7 @@ export function MonthlyPriceCard({
     setIsOpen(false);
     window.requestAnimationFrame(() => cardRef.current?.focus());
   };
-  const hasData = status === "ready" && data !== null && data.totalSamples > 0;
+  const hasCoverage = status === "ready" && data !== null && data.months.length > 0;
   const accessibleSummary = useMemo(() => (data ? buildAccessibleSummary(data) : ""), [data]);
   const titleId = `monthly-price-title-${requestId.replaceAll(":", "")}`;
 
@@ -295,12 +322,12 @@ export function MonthlyPriceCard({
             No se pudieron cargar los precios medios. Inténtalo de nuevo.
           </span>
         ) : null}
-        {status === "ready" && !hasData ? (
+        {status === "ready" && !hasCoverage ? (
           <span className="monthly-price-card__message">
-            No hay suficientes tarifas registradas para calcular la media mensual de esta ruta.
+            Todavía no se ha explorado la ventana de precios de esta ruta.
           </span>
         ) : null}
-        {hasData && data ? (
+        {hasCoverage && data ? (
           <>
             <MonthlyPriceChart
               cheapestMonth={data.cheapestMonth}
@@ -310,8 +337,10 @@ export function MonthlyPriceCard({
             <span className="sr-only">{accessibleSummary}</span>
             <span className="monthly-price-card__footer">
               <span>
-                Media anual
-                <strong>{formatPrice(data.annualAverage!, data.currency)}</strong>
+                Media de tarifas
+                <strong>
+                  {data.annualAverage === null ? "Sin datos" : formatPrice(data.annualAverage, data.currency)}
+                </strong>
               </span>
               <span>Ver detalle →</span>
             </span>
@@ -358,12 +387,12 @@ export function MonthlyPriceCard({
                     No se pudieron cargar los precios medios. Inténtalo de nuevo.
                   </div>
                 ) : null}
-                {status === "ready" && !hasData ? (
+                {status === "ready" && !hasCoverage ? (
                   <div className="monthly-price-modal__state">
-                    No hay suficientes tarifas registradas para calcular la media mensual de esta ruta.
+                    Todavía no se ha explorado la ventana de precios de esta ruta.
                   </div>
                 ) : null}
-                {hasData && data ? (
+                {hasCoverage && data ? (
                   <>
                     <MonthlyPriceChart
                       cheapestMonth={data.cheapestMonth}
@@ -380,8 +409,12 @@ export function MonthlyPriceCard({
                         </strong>
                       </div>
                       <div>
-                        <span>Precio medio anual</span>
-                        <strong>{formatPrice(data.annualAverage!, data.currency)}</strong>
+                        <span>Media de tarifas disponibles</span>
+                        <strong>
+                          {data.annualAverage === null
+                            ? "—"
+                            : formatPrice(data.annualAverage, data.currency)}
+                        </strong>
                       </div>
                       <div>
                         <span>Tarifas analizadas</span>

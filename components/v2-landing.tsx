@@ -692,32 +692,31 @@ export function V2Landing({
       {/* ---------- Section 2 of 8 · Departure board — infinite marquee strip ---------- */}
       {recentDrops.length > 0 ? (
         <section className="v2-ticker" id="v2-board" aria-label={t("home.recentDrops")} ref={tickerRef}>
-          <div className="v2-ticker__track" aria-hidden="true">
+          <div className="v2-ticker__track">
             {[0, 1].map((copy) => (
               <ul className="v2-ticker__group" key={copy} ref={copy === 0 ? tickerGroupRef : undefined}>
-                {tickerFares.map((fare, index) => (
-                  <li key={`${copy}-${index}-${fare.route}`}>
-                    <span className="v2-ticker__route">{fare.route}</span>
-                    <span className="v2-ticker__price">€{Math.round(fare.price)}</span>
-                    {fare.drop !== null ? (
-                      <span className="v2-ticker__drop">−{fare.drop}%</span>
-                    ) : null}
-                  </li>
-                ))}
+                {tickerFares.map((fare, index) => {
+                  const isPrimaryLink = copy === 0 && index < recentDrops.length;
+
+                  return (
+                    <li aria-hidden={isPrimaryLink ? undefined : true} key={`${copy}-${index}-${fare.route}`}>
+                      <Link
+                        aria-label={`${fare.route}, €${Math.round(fare.price)}, ${fare.city}`}
+                        href={`/deals/${toDestinationSlug(fare.city)}`}
+                        tabIndex={isPrimaryLink ? undefined : -1}
+                      >
+                        <span className="v2-ticker__route">{fare.route}</span>
+                        <span className="v2-ticker__price">€{Math.round(fare.price)}</span>
+                        {fare.drop !== null ? (
+                          <span className="v2-ticker__drop">−{fare.drop}%</span>
+                        ) : null}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             ))}
           </div>
-          <p className="sr-only">
-            {t("home.recentDrops")}:{" "}
-            {recentDrops
-              .map(
-                (fare) =>
-                  `${fare.route} €${Math.round(fare.price)}${
-                    fare.drop !== null ? `, −${fare.drop}%` : ""
-                  }`,
-              )
-              .join(", ")}
-          </p>
         </section>
       ) : null}
 
