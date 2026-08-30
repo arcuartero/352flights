@@ -342,7 +342,6 @@ export function PublicDealsDatePicker({
                 setDraftWhenFilter(whenFilter);
                 setDraftFrom(presetRange?.dateFrom ?? null);
                 setDraftTo(presetRange?.dateTo ?? null);
-                onChange({ whenFilter, dateFrom: null, dateTo: null });
               }}
               type="button"
             >
