@@ -4687,16 +4687,18 @@ export function PublicDealsExplorer({
                   <span aria-hidden="true">›</span>
                   <span aria-current="page">{cityHeroTitle}</span>
                 </nav>
-                <h1 className="deals-city-page__hero-seo-title">
-                  {t("deals.cityMetaTitle", { city: cityHeroTitle })}
-                </h1>
                 <p className={`deals-city-page__hero-title${cityHeroTitleLengthClass}`}>
                   {cityHeroTitle}
                 </p>
                 <span className="deals-city-page__hero-wave" aria-hidden="true" />
-                <p className="deals-city-page__hero-desc">
-                  {getDestinationHeroDescription(cityHeroTitle, t)}
-                </p>
+                <div className="deals-city-page__hero-text">
+                  <h1 className="deals-city-page__hero-seo-title">
+                    {t("deals.cityMetaTitle", { city: cityHeroTitle })}
+                  </h1>
+                  <p className="deals-city-page__hero-desc">
+                    {getDestinationHeroDescription(cityHeroTitle, t)}
+                  </p>
+                </div>
                 {opportunityDeals.length > 0 && cityLowestPrice !== null ? (
                   <a className="deals-city-page__hero-cta" href="#destination-fares">
                     {t("deals.cityHeroCta", {
