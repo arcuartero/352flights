@@ -676,6 +676,9 @@ export function V2Landing({
               <ul className="v2-ticker__group" key={copy} ref={copy === 0 ? tickerGroupRef : undefined}>
                 {tickerFares.map((fare, index) => {
                   const isPrimaryLink = copy === 0 && index < recentDrops.length;
+                  const [originLabel = "LUX", destinationLabel = fare.city] = fare.route
+                    .split("→")
+                    .map((segment) => segment.trim());
 
                   return (
                     <li aria-hidden={isPrimaryLink ? undefined : true} key={`${copy}-${index}-${fare.route}`}>
@@ -684,7 +687,10 @@ export function V2Landing({
                         href={`/deals/${toDestinationSlug(fare.city)}`}
                         tabIndex={isPrimaryLink ? undefined : -1}
                       >
-                        <span className="v2-ticker__route">{fare.route}</span>
+                        <span className="v2-ticker__route">
+                          <span className="v2-ticker__origin">{originLabel} →</span>
+                          <span className="v2-ticker__destination">{destinationLabel}</span>
+                        </span>
                         <span className="v2-ticker__price">€{Math.round(fare.price)}</span>
                         {fare.drop !== null ? (
                           <span className="v2-ticker__drop">−{fare.drop}%</span>

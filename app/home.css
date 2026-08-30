@@ -871,12 +871,29 @@ body:has(.v2) .scroll-top-button {
 }
 
 .v2-ticker__route {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
   font-weight: 750;
   font-size: 0.95rem;
   letter-spacing: 0.1em;
 }
 
+.v2-ticker__origin {
+  color: #111820;
+}
+
+.v2-ticker__destination {
+  color: var(--v2-blue-strong);
+  transition: color 160ms ease;
+}
+
+.v2-ticker__group a:hover .v2-ticker__destination {
+  color: #174eb4;
+}
+
 .v2-ticker__price {
+  color: #111820;
   font-family: var(--font-display), serif;
   font-size: 1.25rem;
 }
