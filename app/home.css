@@ -21,7 +21,7 @@
   --v2-cream: #fdfdfb;
   --v2-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --v2-pad: clamp(1.25rem, 4vw, 4.5rem);
-  --v2-page-max: 100rem;
+  --v2-page-max: 112rem;
 
   position: relative;
   z-index: 2;
@@ -1424,7 +1424,128 @@ body:has(.v2) .scroll-top-button {
    Responsive
    ============================================================ */
 
-/* The landing page itself is capped at 1600px, so these closing sections
+/* Desktop hierarchy: give the copy more visual weight than the photograph
+   while preserving the compact mobile composition below. */
+@media (min-width: 901px) {
+  .v2-hero__photo {
+    width: min(76%, 70rem);
+  }
+
+  .v2-hero__overlay {
+    background:
+      linear-gradient(90deg, rgba(225, 237, 252, 0.98) 12%, rgba(225, 237, 252, 0.76) 31%, rgba(225, 237, 252, 0.34) 47%, rgba(225, 237, 252, 0) 65%),
+      linear-gradient(90deg, rgba(108, 152, 210, 0.24) 0%, rgba(108, 152, 210, 0.18) 34%, rgba(108, 152, 210, 0.08) 49%, rgba(108, 152, 210, 0) 65%);
+  }
+
+  .v2-hero__copy {
+    max-width: 46rem;
+  }
+
+  .v2-hero__kicker {
+    font-size: 0.84rem;
+  }
+
+  .v2 .v2-hero__title {
+    font-size: clamp(2.75rem, 5.5vw, 4.05rem);
+    line-height: 1.08;
+  }
+
+  .v2-hero__lede {
+    max-width: 34rem;
+    font-size: 1.16rem;
+    line-height: 1.58;
+  }
+}
+
+/* Medium desktops use two generous search rows instead of squeezing seven
+   controls into a single line. */
+@media (min-width: 901px) and (max-width: 1399px) {
+  .v2-search__bar {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .v2-search__field--budget {
+    grid-column: span 2;
+  }
+}
+
+/* On roomy desktops the search becomes a stronger, more legible action area
+   and the image cards grow with the wider page container. */
+@media (min-width: 1200px) {
+  .v2-search__bar {
+    gap: 1.05rem;
+    padding: 1.3rem 1.45rem;
+    border: 1px solid rgba(29, 39, 51, 0.1);
+    background: #ffffff;
+    box-shadow: 0 24px 58px rgba(8, 13, 20, 0.3);
+  }
+
+  .v2-search__field {
+    gap: 0.42rem;
+  }
+
+  .v2-search__field > span,
+  .v2-search__toggle > span,
+  .v2-search__field.deals-price-range--histogram .deals-price-range__label {
+    font-size: 0.72rem;
+  }
+
+  .v2-search__field--origin strong,
+  .v2-search__field select,
+  .v2-search__destination-select .deals-select__trigger,
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger,
+  .v2-search__toggle {
+    min-height: 3.1rem;
+  }
+
+  .v2-search__field select,
+  .v2-search__destination-select .deals-select__trigger strong,
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger strong {
+    font-size: 0.98rem;
+  }
+
+  .v2-search__field.deals-price-range--histogram {
+    gap: 0.18rem;
+  }
+
+  .v2-search__field.deals-price-range--histogram .deals-price-range__histogram {
+    min-height: 2.25rem;
+  }
+
+  .v2-search__field.deals-price-range--histogram .deals-price-range__values {
+    font-size: 0.84rem;
+  }
+
+  .v2-search__cta {
+    min-height: 3.7rem;
+    padding-inline: 1.8rem;
+    font-size: 0.98rem;
+  }
+
+  .v2-bento__head h2,
+  .v2-rhythms__head h2 {
+    font-size: clamp(2rem, 3.5vw, 3.15rem);
+  }
+
+  .v2-bento__grid {
+    grid-auto-rows: clamp(12rem, 17vw, 17rem);
+  }
+
+  .v2-bento__meta strong {
+    font-size: clamp(1.35rem, 2vw, 1.9rem);
+  }
+
+  .v2-rhythms__slices {
+    height: clamp(21rem, 34vw, 30rem);
+  }
+
+  .v2-rhythms__copy strong {
+    font-size: clamp(1.25rem, 1.9vw, 1.7rem);
+  }
+}
+
+/* The landing page itself is capped at 1792px, so these closing sections
    explicitly break out of that container through 2100 CSS px. */
 @media (max-width: 2100px) {
   .v2-testimonials,
