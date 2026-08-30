@@ -312,6 +312,10 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
   const data = filterCityDealsPageData(await getPublicCityDealsPageData(citySlug), citySlug);
   const cityName = data.deals[0]?.destinationCity ?? getCityNameFromSlug(citySlug);
   const jsonLd = buildCityJsonLd(cityName, citySlug, data.deals);
+  const sharedFareParam = resolvedSearchParams.fare;
+  const initialSharedFareId = Array.isArray(sharedFareParam)
+    ? sharedFareParam[0] ?? null
+    : sharedFareParam ?? null;
 
   return (
     <main className="page-shell page-shell--deals-city">
@@ -323,6 +327,7 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
         data={data}
         destinationPhotoUrls={destinationPhotoUrls}
         initialFilters={parseDealSearchFilters(resolvedSearchParams)}
+        initialSharedFareId={initialSharedFareId}
         initialSort={parseDealSearchSort(resolvedSearchParams)}
         lockedDestinationCity={cityName}
         mode="city"

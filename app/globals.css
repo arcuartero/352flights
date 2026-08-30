@@ -2257,6 +2257,55 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, transparent), color-mix(in srgb, var(--panel-muted) 84%, transparent));
 }
 
+.deals-search-card__booking-actions {
+  display: grid;
+  min-width: 0;
+  gap: 0.55rem;
+}
+
+.deals-share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.8rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 88%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-strong) 94%, transparent);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform var(--ease-standard),
+    border-color var(--ease-standard),
+    background var(--ease-standard);
+}
+
+.deals-share-button:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent-wash) 68%, var(--panel-strong));
+}
+
+.deals-share-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.deals-share-button[data-copied="true"] {
+  border-color: rgba(35, 151, 91, 0.32);
+  background: rgba(221, 247, 232, 0.92);
+  color: #17623d;
+}
+
+.deals-search-card__booking-actions .deals-share-button {
+  width: 100%;
+}
+
 .deals-search-card__price-label,
 .deals-search-card__saving,
 .deals-search-card__pending {
@@ -5173,8 +5222,13 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 .deals-opportunity-modal__footer {
   display: flex;
   justify-content: flex-end;
+  gap: 0.65rem;
   margin-top: auto;
   padding-top: 0.3rem;
+}
+
+.deals-opportunity-modal__footer .deals-share-button {
+  min-height: 3.25rem;
 }
 
 .deals-opportunity-modal__footer-link {
@@ -5410,6 +5464,10 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
   .deals-search-card__booking {
     border-left: 0;
     border-top: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  }
+
+  .deals-search-card__booking-actions {
+    grid-column: 1 / -1;
   }
 
   .deals-search-card__segment,
@@ -5649,6 +5707,10 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 
   .deals-opportunity-modal__footer-link {
     max-width: none;
+    width: 100%;
+  }
+
+  .deals-opportunity-modal__footer .deals-share-button {
     width: 100%;
   }
 

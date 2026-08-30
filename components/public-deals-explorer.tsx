@@ -13,7 +13,17 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpDown, CalendarDays, Info, MapPin, Plane, SlidersHorizontal, X } from "lucide-react";
+import {
+  ArrowUpDown,
+  CalendarDays,
+  Check,
+  Info,
+  MapPin,
+  Plane,
+  Share2,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 
 import { DestinationVisual as LandmarkPhoto } from "@/components/public-destination-visual";
 import { LocalizedPageMetadata } from "@/components/localized-page-metadata";
@@ -61,6 +71,7 @@ type PublicDealsExplorerProps = {
   data: PublicDealsPageData;
   destinationPhotoUrls?: Record<string, string>;
   initialFilters?: DealSearchFilters;
+  initialSharedFareId?: string | null;
   initialSort?: DealSearchSort;
   mode?: "landing" | "results" | "city";
   lockedDestinationCity?: string;
@@ -2088,6 +2099,112 @@ function buildDestinationDealsHref(destinationCity: string) {
   return `/deals/${toDestinationSlug(destinationCity)}`;
 }
 
+function buildSharedFareHref(deal: CampaignPreviewDeal) {
+  const pathname = buildDestinationDealsHref(deal.destinationCity);
+  return `${pathname}?fare=${encodeURIComponent(deal.id)}`;
+}
+
+async function copyTextToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+
+  if (!copied) {
+    throw new Error("Unable to copy share link");
+  }
+}
+
+function DealShareButton({
+  className = "",
+  deal,
+}: {
+  className?: string;
+  deal: CampaignPreviewDeal;
+}) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const resetTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleShare = async () => {
+    const url = new URL(buildSharedFareHref(deal), window.location.origin).toString();
+    const shareData = {
+      title: t("deals.share.title", { city: deal.destinationCity }),
+      text: t("deals.share.text", {
+        city: deal.destinationCity,
+        price: formatCurrency(deal.dealPrice),
+      }),
+      url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await copyTextToClipboard(url);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      try {
+        await copyTextToClipboard(url);
+      } catch {
+        return;
+      }
+    }
+
+    setCopied(true);
+    if (resetTimerRef.current !== null) {
+      window.clearTimeout(resetTimerRef.current);
+    }
+    resetTimerRef.current = window.setTimeout(() => setCopied(false), 2400);
+  };
+
+  return (
+    <button
+      aria-label={copied ? t("deals.share.copied") : t("deals.share.action")}
+      className={`deals-share-button${className ? ` ${className}` : ""}`}
+      data-copied={copied ? "true" : "false"}
+      onClick={(event) => {
+        event.stopPropagation();
+        void handleShare();
+      }}
+      type="button"
+    >
+      {copied ? (
+        <Check aria-hidden="true" size={18} strokeWidth={2.2} />
+      ) : (
+        <Share2 aria-hidden="true" size={18} strokeWidth={2.2} />
+      )}
+      <span aria-live="polite">
+        {copied ? t("deals.share.copied") : t("deals.share.action")}
+      </span>
+    </button>
+  );
+}
+
 function applyQuickChip(
   chip: QuickChip,
   filters: DealSearchFilters,
@@ -2714,19 +2831,22 @@ function DealFlightCard({
               </span>
             ) : null}
           </div>
-          {ctaHref ? (
-            ctaExternal ? (
-              <a className="deals-search-card__cta" href={ctaHref} rel="noreferrer" target="_blank">
-                {resolvedCtaLabel}
-              </a>
+          <div className="deals-search-card__booking-actions">
+            {ctaHref ? (
+              ctaExternal ? (
+                <a className="deals-search-card__cta" href={ctaHref} rel="noreferrer" target="_blank">
+                  {resolvedCtaLabel}
+                </a>
+              ) : (
+                <Link className="deals-search-card__cta" href={ctaHref}>
+                  {resolvedCtaLabel}
+                </Link>
+              )
             ) : (
-              <Link className="deals-search-card__cta" href={ctaHref}>
-                {resolvedCtaLabel}
-              </Link>
-            )
-          ) : (
-            <span className="deals-search-card__pending">{resolvedPendingLabel}</span>
-          )}
+              <span className="deals-search-card__pending">{resolvedPendingLabel}</span>
+            )}
+            <DealShareButton deal={deal} />
+          </div>
         </aside>
       ) : null}
     </article>
@@ -2980,6 +3100,7 @@ function FeaturedOpportunityModal({
           </dl>
 
           <div className="deals-opportunity-modal__footer">
+            <DealShareButton deal={deal} />
             {otherOffersCount > 0 || !deal.bookingUrl ? (
               <Link className="deals-opportunity-modal__footer-link" href={destinationHref}>
                 {modalCtaLabel}
@@ -3078,6 +3199,7 @@ export function PublicDealsExplorer({
   data,
   destinationPhotoUrls,
   initialFilters = DEFAULT_DEAL_SEARCH_FILTERS,
+  initialSharedFareId = null,
   initialSort = DEFAULT_DEAL_SEARCH_SORT,
   mode = "landing",
   lockedDestinationCity,
@@ -3132,6 +3254,7 @@ export function PublicDealsExplorer({
   const compactSidebarRef = useRef<HTMLDivElement | null>(null);
   const resultsBoundaryRef = useRef<HTMLElement | null>(null);
   const mobileResultsPanelTitleId = useId();
+  const hasOpenedSharedFareRef = useRef(false);
   const [showCompactSidebar, setShowCompactSidebar] = useState(false);
   const [compactSidebarPosition, setCompactSidebarPosition] = useState<{
     left: number;
@@ -3938,6 +4061,20 @@ export function PublicDealsExplorer({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!initialSharedFareId || hasOpenedSharedFareRef.current) {
+      return;
+    }
+
+    const sharedDeal = data.deals.find((deal) => deal.id === initialSharedFareId);
+    if (!sharedDeal) {
+      return;
+    }
+
+    hasOpenedSharedFareRef.current = true;
+    openOpportunityModal(data.deals, sharedDeal.id);
+  }, [data.deals, initialSharedFareId, openOpportunityModal]);
 
   const closeOpportunityModal = useCallback(() => {
     setSelectedOpportunityDealId(null);
