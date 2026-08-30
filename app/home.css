@@ -813,7 +813,7 @@ body:has(.v2) .scroll-top-button {
    ============================================================ */
 
 .v2-ticker {
-  margin-block: clamp(3.5rem, 7vw, 6rem);
+  margin-block: clamp(3.5rem, 7vw, 6rem) clamp(1.75rem, 3vw, 2.75rem);
   border-block: 1px solid var(--v2-hairline);
   padding: 0;
   overflow: hidden;
@@ -894,6 +894,135 @@ body:has(.v2) .scroll-top-button {
   to {
     transform: translateX(-50%);
   }
+}
+
+/* ============================================================
+   Section 3 · Smarter flights — three compact product promises
+   ============================================================ */
+
+.v2-smart-flights {
+  margin: 0 var(--v2-pad) clamp(4.5rem, 8vw, 7rem);
+  padding: clamp(2.4rem, 4.5vw, 4.25rem) clamp(1.5rem, 3.8vw, 4rem);
+  border: 1px solid rgba(31, 95, 214, 0.1);
+  border-radius: clamp(1.6rem, 2.8vw, 2.6rem);
+  background:
+    radial-gradient(circle at 50% 5%, rgba(255, 255, 255, 0.86), transparent 40%),
+    linear-gradient(135deg, #edf5ff 0%, #e8f2ff 50%, #f1f7ff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.v2-smart-flights > h2 {
+  margin: 0 0 clamp(2.1rem, 4vw, 3.6rem);
+  color: var(--v2-accent);
+  font-size: clamp(1.25rem, 2.2vw, 2rem);
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.v2-smart-flights__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v2-smart-flights__item {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  min-width: 0;
+  padding: 0 clamp(1.5rem, 3.2vw, 3.5rem);
+  text-align: center;
+}
+
+.v2-smart-flights__item + .v2-smart-flights__item {
+  border-left: 1px solid rgba(29, 39, 51, 0.16);
+}
+
+.v2-smart-flights__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(6rem, 8vw, 8rem);
+  height: clamp(6rem, 8vw, 8rem);
+  margin-bottom: clamp(1.1rem, 2vw, 1.7rem);
+  color: var(--v2-blue-strong);
+}
+
+.v2-smart-flights__icon > svg {
+  width: 86%;
+  height: 86%;
+  stroke-width: 1.45;
+}
+
+.v2-smart-flights__icon--value > svg:first-child {
+  width: 92%;
+  height: 92%;
+}
+
+.v2-smart-flights__icon--value .v2-smart-flights__check {
+  position: absolute;
+  right: -0.1rem;
+  bottom: 0.1rem;
+  width: 34%;
+  height: 34%;
+  padding: 0.12rem;
+  border-radius: 999px;
+  background: #edf5ff;
+  stroke-width: 1.7;
+}
+
+.v2-smart-flights__icon--route {
+  display: flex;
+  width: min(100%, 18rem);
+  gap: 0.25rem;
+}
+
+.v2-smart-flights__lux {
+  display: grid;
+  place-items: center;
+  width: clamp(3.5rem, 4.8vw, 4.6rem);
+  height: clamp(3.5rem, 4.8vw, 4.6rem);
+  flex: 0 0 auto;
+  border: 0.22rem solid currentColor;
+  border-radius: 999px;
+  font-size: clamp(0.88rem, 1.2vw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.v2-smart-flights__icon--route .v2-smart-flights__route {
+  width: clamp(5rem, 7vw, 7rem);
+  height: clamp(3rem, 4.4vw, 4.25rem);
+  flex: 1 1 auto;
+  stroke-width: 1.65;
+}
+
+.v2-smart-flights__icon--route .v2-smart-flights__plane {
+  width: clamp(3.2rem, 4.6vw, 4.5rem);
+  height: clamp(3.2rem, 4.6vw, 4.5rem);
+  flex: 0 0 auto;
+  stroke-width: 1.5;
+  transform: rotate(-12deg);
+}
+
+.v2-smart-flights__item h3 {
+  max-width: 24rem;
+  margin: 0;
+  color: #10294d;
+  font-size: clamp(1.3rem, 2vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+.v2-smart-flights__item p {
+  max-width: 25rem;
+  margin: clamp(0.85rem, 1.5vw, 1.2rem) 0 0;
+  color: #203a63;
+  font-size: clamp(1rem, 1.35vw, 1.25rem);
+  line-height: 1.7;
 }
 
 /* ============================================================
@@ -1648,6 +1777,31 @@ body:has(.v2) .scroll-top-button {
     grid-column: 1 / -1;
   }
 
+  .v2-smart-flights {
+    padding-inline: clamp(1.2rem, 5vw, 2.5rem);
+  }
+
+  .v2-smart-flights__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-smart-flights__item {
+    padding: clamp(1.75rem, 5vw, 2.6rem) 0;
+  }
+
+  .v2-smart-flights__item:first-child {
+    padding-top: 0;
+  }
+
+  .v2-smart-flights__item:last-child {
+    padding-bottom: 0;
+  }
+
+  .v2-smart-flights__item + .v2-smart-flights__item {
+    border-top: 1px solid rgba(29, 39, 51, 0.16);
+    border-left: 0;
+  }
+
   .v2-bento__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: clamp(10rem, 30vw, 14rem);
@@ -1702,6 +1856,32 @@ body:has(.v2) .scroll-top-button {
 
   .v2-topbar__brand img {
     height: 1.9rem;
+  }
+
+  .v2-smart-flights {
+    margin-inline: 0.75rem;
+    padding: 2.1rem 1.2rem;
+    border-radius: 1.5rem;
+  }
+
+  .v2-smart-flights > h2 {
+    margin-bottom: 1.7rem;
+    font-size: 1.12rem;
+    letter-spacing: 0.07em;
+  }
+
+  .v2-smart-flights__icon {
+    width: 5.8rem;
+    height: 5.8rem;
+  }
+
+  .v2-smart-flights__item h3 {
+    font-size: 1.35rem;
+  }
+
+  .v2-smart-flights__item p {
+    max-width: 20rem;
+    font-size: 1rem;
   }
 
   .v2-topbar__actions {

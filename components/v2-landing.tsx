@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarCheck2, CircleCheck, Gauge, Plane, Route } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -719,6 +720,42 @@ export function V2Landing({
           </div>
         </section>
       ) : null}
+
+      <section
+        aria-labelledby="v2-smart-flights-title"
+        className="v2-smart-flights"
+        data-reveal
+      >
+        <h2 id="v2-smart-flights-title">{t("home.smartFlights.title")}</h2>
+        <div className="v2-smart-flights__grid">
+          <article className="v2-smart-flights__item">
+            <span className="v2-smart-flights__icon" aria-hidden="true">
+              <CalendarCheck2 />
+            </span>
+            <h3>{t("home.smartFlights.datesTitle")}</h3>
+            <p>{t("home.smartFlights.datesBody")}</p>
+          </article>
+
+          <article className="v2-smart-flights__item">
+            <span className="v2-smart-flights__icon v2-smart-flights__icon--value" aria-hidden="true">
+              <Gauge />
+              <CircleCheck className="v2-smart-flights__check" />
+            </span>
+            <h3>{t("home.smartFlights.valueTitle")}</h3>
+            <p>{t("home.smartFlights.valueBody")}</p>
+          </article>
+
+          <article className="v2-smart-flights__item">
+            <span className="v2-smart-flights__icon v2-smart-flights__icon--route" aria-hidden="true">
+              <span className="v2-smart-flights__lux">LUX</span>
+              <Route className="v2-smart-flights__route" />
+              <Plane className="v2-smart-flights__plane" />
+            </span>
+            <h3>{t("home.smartFlights.luxTitle")}</h3>
+            <p>{t("home.smartFlights.luxBody")}</p>
+          </article>
+        </div>
+      </section>
 
       {boardDestinations.length > 0 ? (
         <section className="v2-bento" aria-label={t("home.a11y.boardDestinations")}>
