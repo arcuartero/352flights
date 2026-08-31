@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck2, CircleCheck, Gauge, Plane, Route } from "lucide-react";
+import { CalendarCheck2, CircleCheck, Gauge, MapPin, Plane, Route } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -612,6 +612,7 @@ export function V2Landing({
           <PublicDealsSelect
             className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"
             label={t("common.to")}
+            leadingIcon={<MapPin size={18} strokeWidth={2.1} />}
             mobileDestinationSheet
             onChange={(value) =>
               setFilters((current) => ({ ...current, destinationFilter: value }))
@@ -637,6 +638,7 @@ export function V2Landing({
           <PublicDealsSelect
             className="v2-search__field v2-search__field--trip v2-search__custom-select"
             label={t("common.tripType")}
+            leadingIcon={<Plane size={18} strokeWidth={2.1} />}
             onChange={(value) =>
               setFilters((current) => ({
                 ...current,

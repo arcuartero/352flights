@@ -39,6 +39,7 @@ export function PublicDealsSelect({
   options,
   onChange,
   className,
+  leadingIcon,
   mobileDestinationSheet = false,
   popularOptionValues = EMPTY_POPULAR_OPTION_VALUES,
 }: {
@@ -47,6 +48,7 @@ export function PublicDealsSelect({
   options: PublicDealsSelectOption[];
   onChange: (value: string) => void;
   className?: string;
+  leadingIcon?: ReactNode;
   mobileDestinationSheet?: boolean;
   popularOptionValues?: string[];
 }) {
@@ -376,7 +378,7 @@ export function PublicDealsSelect({
         aria-expanded={isOpen}
         aria-haspopup={isMobileSheetViewport && mobileDestinationSheet ? "dialog" : "listbox"}
         aria-labelledby={`${listboxId}-label ${selectedValueId}`}
-        className={`deals-select__trigger${isOpen ? " is-open" : ""}`}
+        className={`deals-select__trigger${leadingIcon ? " has-leading-icon" : ""}${isOpen ? " is-open" : ""}`}
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={(event) => {
           if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key) && !isOpen) {
@@ -387,6 +389,11 @@ export function PublicDealsSelect({
         ref={triggerRef}
         type="button"
       >
+        {leadingIcon ? (
+          <span aria-hidden="true" className="deals-select__leading-icon">
+            {leadingIcon}
+          </span>
+        ) : null}
         <strong id={selectedValueId}>{selectedOption?.label ?? label}</strong>
         <ChevronDown
           aria-hidden="true"

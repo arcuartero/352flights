@@ -2837,6 +2837,28 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   white-space: nowrap;
 }
 
+.deals-select__trigger.has-leading-icon {
+  padding-left: 2.75rem;
+}
+
+.deals-select__leading-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.deals-select__leading-icon svg {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .deals-select__trigger .deals-select__chevron {
   position: absolute;
   right: 1.25rem;
