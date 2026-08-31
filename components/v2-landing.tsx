@@ -296,6 +296,21 @@ function normalizeDestinationKey(value: string) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
+function findDestinationCity(
+  deals: readonly CampaignPreviewDeal[],
+  destinationFilter: string,
+) {
+  if (destinationFilter === "any") {
+    return null;
+  }
+
+  return (
+    deals.find(
+      (deal) => normalizeDestinationKey(deal.destinationCity) === destinationFilter,
+    )?.destinationCity.trim() ?? null
+  );
+}
+
 function matchesWhenFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters, now: Date) {
   const departure = deal.departureDate ? new Date(deal.departureDate) : null;
   if (!departure || Number.isNaN(departure.getTime())) {
@@ -415,10 +430,20 @@ export function V2Landing({
   useReveal(rootRef);
   useParallax(heroMediaRef, 0.1);
 
-  const searchHref = useMemo(
-    () => buildDealsSearchHref(filters, getLocalizedDealsSearchPath(locale)),
-    [filters, locale],
-  );
+  const searchHref = useMemo(() => {
+    const selectedDestinationCity = findDestinationCity(
+      deals,
+      filters.destinationFilter,
+    );
+    const pathname = selectedDestinationCity
+      ? getLocalizedDestinationPath(locale, toDestinationSlug(selectedDestinationCity))
+      : getLocalizedDealsSearchPath(locale);
+    const hrefFilters = selectedDestinationCity
+      ? { ...filters, destinationFilter: "any" }
+      : filters;
+
+    return buildDealsSearchHref(hrefFilters, pathname);
+  }, [deals, filters, locale]);
   const searchWhenOptions = useMemo(
     () =>
       [
@@ -484,8 +509,18 @@ export function V2Landing({
       .filter((deal) => matchesHomeSearchFilters(deal, filtersWithoutDestination, now))
       .map((deal) => deal.destinationCity?.trim() ?? "")
       .filter((city) => city.length > 0);
-    const uniqueCities = [...new Set(availableCities.map((city) => normalizeDestinationKey(city)))]
-      .map((cityKey) => availableCities.find((city) => normalizeDestinationKey(city) === cityKey) ?? cityKey)
+    const selectedDestinationCity = findDestinationCity(
+      deals,
+      filters.destinationFilter,
+    );
+    const visibleCities = selectedDestinationCity
+      ? [selectedDestinationCity, ...availableCities]
+      : availableCities;
+    const uniqueCities = [...new Set(visibleCities.map((city) => normalizeDestinationKey(city)))]
+      .map(
+        (cityKey) =>
+          visibleCities.find((city) => normalizeDestinationKey(city) === cityKey) ?? cityKey,
+      )
       .sort((left, right) => left.localeCompare(right, "en"));
 
     return [
