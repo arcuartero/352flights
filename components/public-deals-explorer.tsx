@@ -4402,7 +4402,7 @@ export function PublicDealsExplorer({
 
       {mode === "results" ? (
         <nav className="deals-breadcrumb" aria-label={t("deals.a11y.breadcrumb")}>
-          <Link href="/">{t("common.home")}</Link>
+          <Link href={getLocalizedHomePath(locale)}>{t("common.home")}</Link>
           <span aria-hidden="true">/</span>
           <span aria-current="page">{breadcrumbCurrentLabel}</span>
         </nav>
@@ -4564,7 +4564,7 @@ export function PublicDealsExplorer({
             <section className="deals-city-page__hero">
               <div className="deals-city-page__hero-copy">
                 <nav className="deals-breadcrumb deals-breadcrumb--city-hero" aria-label={t("deals.a11y.breadcrumb")}>
-                  <Link href="/">{t("common.home")}</Link>
+                  <Link href={getLocalizedHomePath(locale)}>{t("common.home")}</Link>
                   <span aria-hidden="true">›</span>
                   <span aria-current="page">{cityHeroTitle}</span>
                 </nav>
