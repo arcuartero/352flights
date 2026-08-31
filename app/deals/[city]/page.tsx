@@ -95,7 +95,13 @@ export async function generateMetadata({
   const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
   const cityName = getCityNameFromSlug(citySlug);
   if (!cityName) {
-    notFound();
+    return {
+      title: "Destination not found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
   }
 
   return buildCityMetadata(cityName, citySlug, hasSearchParams(resolvedSearchParams));
