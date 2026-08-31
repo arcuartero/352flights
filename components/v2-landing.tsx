@@ -593,12 +593,14 @@ export function V2Landing({
 
       <section className="v2-hero" aria-label={t("home.a11y.introduction")}>
         <div className="v2-hero__canvas" data-reveal ref={heroMediaRef}>
-          <img
-            alt={t("home.a11y.heroImage")}
-            className="v2-hero__photo"
-            src="/deals-hero-airplane-cabin-3.jpeg"
-          />
-          <span className="v2-hero__overlay" aria-hidden="true" />
+          <div className="v2-hero__media">
+            <img
+              alt={t("home.a11y.heroImage")}
+              className="v2-hero__photo"
+              src="/deals-hero-airplane-cabin-3.jpeg"
+            />
+            <span className="v2-hero__overlay" aria-hidden="true" />
+          </div>
 
           <div className="v2-hero__copy">
             <p className="v2-hero__kicker" data-reveal style={{ "--d": "120ms" } as React.CSSProperties}>

@@ -310,12 +310,21 @@ body:has(.v2) .scroll-top-button {
   will-change: auto;
 }
 
+.v2-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
 .v2-hero__photo {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: -2;
+  z-index: 0;
   width: min(80%, 70rem);
   height: 100%;
   object-fit: cover;
@@ -336,7 +345,7 @@ body:has(.v2) .scroll-top-button {
 .v2-hero__overlay {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 1;
   background:
     linear-gradient(90deg, rgba(225, 237, 252, 0.92) 12%, rgba(225, 237, 252, 0.5) 28%, rgba(225, 237, 252, 0.12) 44%, rgba(225, 237, 252, 0) 58%),
     linear-gradient(90deg, rgba(108, 152, 210, 0.2) 0%, rgba(108, 152, 210, 0.16) 30%, rgba(108, 152, 210, 0.06) 45%, rgba(108, 152, 210, 0) 58%);
@@ -2035,17 +2044,26 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-hero__photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    box-sizing: border-box;
+    height: 100%;
+    opacity: 1;
+    object-position: 62% 18%;
+    border-radius: inherit;
+    transform: none;
+  }
+
+  .v2-hero__media {
     position: relative;
+    inset: auto;
     order: 3;
     z-index: 0;
     width: 100%;
-    box-sizing: border-box;
     height: clamp(10rem, 44vw, 13.5rem);
     margin-top: 0.7rem;
-    opacity: 1;
-    object-position: 62% 18%;
     border-radius: 1.35rem;
-    transform: none;
   }
 
   .v2-hero__overlay {
