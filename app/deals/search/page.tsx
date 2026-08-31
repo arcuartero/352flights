@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description:
     "A live shortlist balancing price, timing, directness, and travel shape.",
   alternates: {
-    canonical: "/deals",
+    canonical: "/deals/search",
   },
   robots: {
     index: false,

@@ -29,15 +29,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       ),
     },
   }));
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: `${siteUrl}/deals`,
-      lastModified: now,
-      changeFrequency: "hourly",
-      priority: 0.9,
-    },
-  ];
-
   const cityPages: MetadataRoute.Sitemap = uniqueDestinationSlugs().map((slug) => ({
     url: `${siteUrl}/deals/${slug}`,
     lastModified: now,
@@ -45,5 +36,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: slug === "gran-canaria" ? 0.9 : 0.8,
   }));
 
-  return [...homePages, ...staticPages, ...cityPages];
+  return [...homePages, ...cityPages];
 }

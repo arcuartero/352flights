@@ -151,7 +151,7 @@ function buildCityJsonLd(cityName: string, citySlug: string, deals: CampaignPrev
             "@type": "ListItem",
             position: 2,
             name: "Vuelos baratos",
-            item: getAbsoluteUrl("/deals"),
+            item: getAbsoluteUrl("/deals/search"),
           },
           {
             "@type": "ListItem",
