@@ -561,9 +561,6 @@ export function V2Landing({
     return () => observer.disconnect();
   }, [recentDrops.length, tickerRepeats]);
 
-  const selectedTripLabel =
-    searchTripOptions.find((option) => option.value === filters.tripFilter)?.label ?? t("common.anyTrip");
-
   return (
     <div className="v2" ref={rootRef}>
       {/* ---------- Section 1 of 8 · Hero — giant statement, stacked center ---------- */}
@@ -613,7 +610,7 @@ export function V2Landing({
             <strong>Luxembourg</strong>
           </div>
           <PublicDealsSelect
-            className="v2-search__field v2-search__field--destination v2-search__destination-select"
+            className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"
             label={t("common.to")}
             mobileDestinationSheet
             onChange={(value) =>
@@ -637,24 +634,18 @@ export function V2Landing({
             presetOptions={searchWhenOptions}
             value={filters.whenFilter}
           />
-          <label className="v2-search__field v2-search__field--trip" data-mobile-value={selectedTripLabel}>
-            <span>{t("common.tripType")}</span>
-            <select
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  tripFilter: event.target.value as TripFilter,
-                }))
-              }
-              value={filters.tripFilter}
-            >
-              {searchTripOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PublicDealsSelect
+            className="v2-search__field v2-search__field--trip v2-search__custom-select"
+            label={t("common.tripType")}
+            onChange={(value) =>
+              setFilters((current) => ({
+                ...current,
+                tripFilter: value as TripFilter,
+              }))
+            }
+            options={searchTripOptions}
+            value={filters.tripFilter}
+          />
           <PublicDealsPriceRange
             bounds={priceBounds}
             className="v2-search__field v2-search__field--budget"

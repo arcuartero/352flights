@@ -299,14 +299,14 @@ body:has(.v2) .scroll-top-button {
 }
 
 .v2-hero__canvas:has(.deals-date-picker__popover),
-.v2-hero__canvas:has(.v2-search__destination-select .deals-select__menu) {
+.v2-hero__canvas:has(.v2-search__custom-select .deals-select__menu) {
   z-index: 20;
   overflow: visible;
   will-change: auto;
 }
 
 .v2-search__bar:has(.deals-date-picker__popover),
-.v2-search__bar:has(.v2-search__destination-select .deals-select__menu) {
+.v2-search__bar:has(.v2-search__custom-select .deals-select__menu) {
   will-change: auto;
 }
 
@@ -609,7 +609,7 @@ body:has(.v2) .scroll-top-button {
   outline: none;
 }
 
-.v2-search__destination-select .deals-select__trigger {
+.v2-search__custom-select .deals-select__trigger {
   min-height: 2.7rem;
   padding: 0.55rem 2.35rem 0.55rem 0.8rem;
   border: 1px solid var(--v2-hairline);
@@ -620,28 +620,28 @@ body:has(.v2) .scroll-top-button {
   font-family: inherit;
 }
 
-.v2-search__destination-select .deals-select__trigger:hover,
-.v2-search__destination-select .deals-select__trigger:focus-visible,
-.v2-search__destination-select .deals-select__trigger.is-open {
+.v2-search__custom-select .deals-select__trigger:hover,
+.v2-search__custom-select .deals-select__trigger:focus-visible,
+.v2-search__custom-select .deals-select__trigger.is-open {
   border-color: var(--v2-blue);
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--v2-blue) 12%, transparent);
 }
 
-.v2-search__destination-select .deals-select__trigger strong {
+.v2-search__custom-select .deals-select__trigger strong {
   color: var(--v2-ink);
   font-size: 0.92rem;
   font-weight: 650;
 }
 
-.v2-search__destination-select .deals-select__trigger .deals-select__chevron {
+.v2-search__custom-select .deals-select__trigger .deals-select__chevron {
   right: 0.85rem;
   width: 1rem;
   height: 1rem;
   color: var(--v2-ink);
 }
 
-.v2-search__destination-select .deals-select__menu {
+.v2-search__custom-select .deals-select__menu {
   right: auto;
   width: max(100%, 16rem);
   max-height: min(25rem, 56vh);
@@ -656,7 +656,7 @@ body:has(.v2) .scroll-top-button {
   scrollbar-width: thin;
 }
 
-.v2-search__destination-select .deals-select__option {
+.v2-search__custom-select .deals-select__option {
   min-height: 2.35rem;
   padding: 0.5rem 0.65rem;
   border-radius: 0.55rem;
@@ -666,27 +666,27 @@ body:has(.v2) .scroll-top-button {
   font-weight: 550;
 }
 
-.v2-search__destination-select .deals-select__option span {
+.v2-search__custom-select .deals-select__option span {
   color: inherit;
   letter-spacing: 0;
   opacity: 1;
   text-transform: none;
 }
 
-.v2-search__destination-select .deals-select__option:hover,
-.v2-search__destination-select .deals-select__option:focus-visible {
+.v2-search__custom-select .deals-select__option:hover,
+.v2-search__custom-select .deals-select__option:focus-visible {
   background: color-mix(in srgb, var(--v2-blue) 10%, var(--v2-paper));
   color: var(--v2-blue-strong);
   outline: none;
 }
 
-.v2-search__destination-select .deals-select__option.is-selected {
+.v2-search__custom-select .deals-select__option.is-selected {
   background: color-mix(in srgb, var(--v2-blue) 14%, var(--v2-paper));
   color: var(--v2-blue-strong);
   font-weight: 700;
 }
 
-.v2-search__destination-select .deals-select__option.is-selected i {
+.v2-search__custom-select .deals-select__option.is-selected i {
   color: var(--v2-red);
   font-style: normal;
   font-weight: 800;
@@ -1689,14 +1689,14 @@ body:has(.v2) .scroll-top-button {
 
   .v2-search__field--origin strong,
   .v2-search__field select,
-  .v2-search__destination-select .deals-select__trigger,
+  .v2-search__custom-select .deals-select__trigger,
   .v2-search__field.deals-date-picker .deals-date-picker__trigger,
   .v2-search__toggle {
     min-height: 3.1rem;
   }
 
   .v2-search__field select,
-  .v2-search__destination-select .deals-select__trigger strong,
+  .v2-search__custom-select .deals-select__trigger strong,
   .v2-search__field.deals-date-picker .deals-date-picker__trigger strong {
     font-size: 0.98rem;
   }
@@ -2096,7 +2096,7 @@ body:has(.v2) .scroll-top-button {
     overflow: visible;
   }
 
-  .v2-search__destination-select .deals-select__trigger {
+  .v2-search__custom-select .deals-select__trigger {
     grid-column: 2;
     grid-row: 2;
     min-width: 0;
@@ -2108,19 +2108,19 @@ body:has(.v2) .scroll-top-button {
     box-shadow: none;
   }
 
-  .v2-search__destination-select .deals-select__trigger:hover,
-  .v2-search__destination-select .deals-select__trigger:focus-visible,
-  .v2-search__destination-select .deals-select__trigger.is-open {
+  .v2-search__custom-select .deals-select__trigger:hover,
+  .v2-search__custom-select .deals-select__trigger:focus-visible,
+  .v2-search__custom-select .deals-select__trigger.is-open {
     border: 0;
     box-shadow: none;
   }
 
-  .v2-search__destination-select .deals-select__trigger strong {
+  .v2-search__custom-select .deals-select__trigger strong {
     font-size: 1.08rem;
     font-weight: 750;
   }
 
-  .v2-search__destination-select .deals-select__menu {
+  .v2-search__custom-select .deals-select__menu {
     left: 0.75rem;
     right: 0.75rem;
     top: calc(100% + 0.45rem);
@@ -2128,7 +2128,7 @@ body:has(.v2) .scroll-top-button {
     max-height: min(22rem, 55vh);
   }
 
-  .v2-search__bar:has(.v2-search__destination-select .deals-select__menu) {
+  .v2-search__bar:has(.v2-search__custom-select .deals-select__menu) {
     z-index: 10;
     overflow: visible;
   }
