@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { PublicDealsExplorer } from "@/components/public-deals-explorer";
 import routes from "@/data/lux-routes.json";
@@ -31,13 +32,9 @@ type InternalLinkGroup = {
   }>;
 };
 
-function formatCitySlug(citySlug: string) {
-  return citySlug
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
+const DESTINATION_CITY_BY_SLUG = new Map(
+  routes.map((route) => [toDestinationSlug(route.destination_city), route.destination_city]),
+);
 
 function hasSearchParams(searchParams: Record<string, string | string[] | undefined>) {
   return Object.values(searchParams).some((value) =>
@@ -46,8 +43,7 @@ function hasSearchParams(searchParams: Record<string, string | string[] | undefi
 }
 
 function getCityNameFromSlug(citySlug: string) {
-  const route = routes.find((item) => toDestinationSlug(item.destination_city) === citySlug);
-  return route?.destination_city ?? formatCitySlug(citySlug);
+  return DESTINATION_CITY_BY_SLUG.get(citySlug) ?? null;
 }
 
 function getAbsoluteUrl(pathname: string) {
@@ -98,6 +94,9 @@ export async function generateMetadata({
   const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
   const cityName = getCityNameFromSlug(citySlug);
+  if (!cityName) {
+    notFound();
+  }
 
   return buildCityMetadata(cityName, citySlug, hasSearchParams(resolvedSearchParams));
 }
@@ -303,15 +302,21 @@ function CityInternalLinks({
 }
 
 export default async function DealsCityPage({ params, searchParams }: DealsCityPageProps) {
-  const [resolvedParams, destinationPhotoUrls, resolvedSearchParams] = await Promise.all([
-    params,
+  const resolvedParams = await params;
+  const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
+  const knownCityName = getCityNameFromSlug(citySlug);
+  if (!knownCityName) {
+    notFound();
+  }
+
+  const [destinationPhotoUrls, resolvedSearchParams, data] = await Promise.all([
     getDestinationPhotoUrlMap(),
     searchParams,
+    getPublicCityDealsPageData(citySlug),
   ]);
-  const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
-  const data = filterCityDealsPageData(await getPublicCityDealsPageData(citySlug), citySlug);
-  const cityName = data.deals[0]?.destinationCity ?? getCityNameFromSlug(citySlug);
-  const jsonLd = buildCityJsonLd(cityName, citySlug, data.deals);
+  const cityData = filterCityDealsPageData(data, citySlug);
+  const cityName = cityData.deals[0]?.destinationCity ?? knownCityName;
+  const jsonLd = buildCityJsonLd(cityName, citySlug, cityData.deals);
   const sharedFareParam = resolvedSearchParams.fare;
   const initialSharedFareId = Array.isArray(sharedFareParam)
     ? sharedFareParam[0] ?? null
@@ -324,7 +329,7 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <PublicDealsExplorer
-        data={data}
+        data={cityData}
         destinationPhotoUrls={destinationPhotoUrls}
         initialFilters={parseDealSearchFilters(resolvedSearchParams)}
         initialSharedFareId={initialSharedFareId}
