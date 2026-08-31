@@ -41,6 +41,11 @@ import {
 import { getDestinationTheme } from "@/lib/destination-content";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import { useI18n, type Locale } from "@/lib/i18n";
+import {
+  getLocalizedDealsSearchPath,
+  getLocalizedDestinationPath,
+  getLocalizedHomePath,
+} from "@/lib/locales";
 import type { PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
@@ -2087,12 +2092,12 @@ function getDestinationCountKey(deal: CampaignPreviewDeal) {
   return `${deal.destinationAirport}-${normalizeDestinationKey(deal.destinationCity)}`;
 }
 
-function buildDestinationDealsHref(destinationCity: string) {
-  return `/deals/${toDestinationSlug(destinationCity)}`;
+function buildDestinationDealsHref(destinationCity: string, locale: Locale) {
+  return getLocalizedDestinationPath(locale, toDestinationSlug(destinationCity));
 }
 
-function buildSharedFareHref(deal: CampaignPreviewDeal) {
-  const pathname = buildDestinationDealsHref(deal.destinationCity);
+function buildSharedFareHref(deal: CampaignPreviewDeal, locale: Locale) {
+  const pathname = buildDestinationDealsHref(deal.destinationCity, locale);
   return `${pathname}?fare=${encodeURIComponent(deal.id)}`;
 }
 
@@ -2124,7 +2129,7 @@ function DealShareButton({
   className?: string;
   deal: CampaignPreviewDeal;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [copied, setCopied] = useState(false);
   const resetTimerRef = useRef<number | null>(null);
 
@@ -2138,7 +2143,7 @@ function DealShareButton({
   );
 
   const handleShare = async () => {
-    const url = new URL(buildSharedFareHref(deal), window.location.origin).toString();
+    const url = new URL(buildSharedFareHref(deal, locale), window.location.origin).toString();
     const shareData = {
       title: t("deals.share.title", { city: deal.destinationCity }),
       text: t("deals.share.text", {
@@ -2601,7 +2606,7 @@ function DealFlightCard({
   const strongPrice = isStrongPriceDeal(deal);
   const routeLayout = layout === "route";
   const cardClassName = `${className ?? "deals-search-card"}${strongPrice ? " deals-search-card--strong-price" : ""}${routeLayout ? " deals-search-card--route-layout" : ""}`;
-  const destinationHref = buildDestinationDealsHref(deal.destinationCity);
+  const destinationHref = buildDestinationDealsHref(deal.destinationCity, locale);
 
   return (
     <article className={cardClassName}>
@@ -2942,7 +2947,7 @@ function FeaturedOpportunityModal({
   canGoPrevious: boolean;
   canGoNext: boolean;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -2992,7 +2997,7 @@ function FeaturedOpportunityModal({
   }, [canGoNext, canGoPrevious, onClose, onNext, onPrevious]);
 
   const otherOffersCount = Math.max(0, combinationsCount - 1);
-  const destinationHref = buildDestinationDealsHref(deal.destinationCity);
+  const destinationHref = buildDestinationDealsHref(deal.destinationCity, locale);
   const modalCtaLabel =
     otherOffersCount > 0
       ? t("deals.modal.exploreMore", {
@@ -3132,7 +3137,7 @@ export function PublicDealsDestinationPage({
   destinationPhotoUrls?: DestinationPhotoUrlMap;
   updatedAt: string | null;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const destinationCounts = useMemo(() => countDealsPerDestination(deals), [deals]);
   const heroDeal = deals[0] ?? null;
   const lowestPrice = getLowestPrice(deals);
@@ -3141,7 +3146,10 @@ export function PublicDealsDestinationPage({
     <section className="deals-city-page">
       <div className="deals-city-page__hero">
         <div className="deals-city-page__hero-copy">
-          <Link className="deals-explorer__secondary-link" href="/">
+          <Link
+            className="deals-explorer__secondary-link"
+            href={getLocalizedHomePath(locale)}
+          >
             ← {t("common.home")}
           </Link>
           <p className="deals-explorer__kicker">{t("deals.destinationBoard")}</p>
@@ -3886,11 +3894,12 @@ export function PublicDealsExplorer({
               appliedQuickChips.has(style.chip)
                 ? resetQuickChip(style.chip, appliedFilters)
                 : applyQuickChip(style.chip, appliedFilters),
+              getLocalizedDealsSearchPath(locale),
             )
-          : "/deals/search",
+          : getLocalizedDealsSearchPath(locale),
       ]),
     );
-  }, [appliedFilters, appliedQuickChips, travelStyles]);
+  }, [appliedFilters, appliedQuickChips, locale, travelStyles]);
 
   useEffect(() => {
     if (mode !== "landing") {
@@ -5040,7 +5049,7 @@ export function PublicDealsExplorer({
                       <p className="deals-explorer__kicker">{t("deals.selectedDestination")}</p>
                       <Link
                         className="deals-search-expanded__city-link"
-                        href={buildDestinationDealsHref(selectedSearchGroup.city)}
+                        href={buildDestinationDealsHref(selectedSearchGroup.city, locale)}
                       >
                         {selectedSearchGroup.city}
                       </Link>
@@ -5275,7 +5284,9 @@ export function PublicDealsExplorer({
             {travelStyles.map((style) => (
               <Link
                 className={`deals-style-card${style.chip && appliedQuickChips.has(style.chip) ? " is-active" : ""}`}
-                href={styleNavigationHrefs.get(style.key) ?? "/deals/search"}
+                href={
+                  styleNavigationHrefs.get(style.key) ?? getLocalizedDealsSearchPath(locale)
+                }
                 key={style.key}
               >
                 <div className="deals-style-card__media" aria-hidden="true">

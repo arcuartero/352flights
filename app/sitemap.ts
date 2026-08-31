@@ -1,16 +1,14 @@
 import type { MetadataRoute } from "next";
 
-import routes from "@/data/lux-routes.json";
-import { toDestinationSlug } from "@/lib/destination-slugs";
+import { getDestinationLanguageAlternates } from "@/lib/deals-seo";
+import { getDestinationSlugs } from "@/lib/destination-routes";
 import { getSiteUrl } from "@/lib/env";
 import { getHomeLanguageAlternates } from "@/lib/home-localization";
-import { getLocalizedHomePath, locales } from "@/lib/locales";
-
-function uniqueDestinationSlugs() {
-  return Array.from(
-    new Set(routes.map((route) => toDestinationSlug(route.destination_city))),
-  ).sort((left, right) => left.localeCompare(right));
-}
+import {
+  getLocalizedDestinationPath,
+  getLocalizedHomePath,
+  locales,
+} from "@/lib/locales";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = getSiteUrl();
@@ -29,12 +27,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       ),
     },
   }));
-  const cityPages: MetadataRoute.Sitemap = uniqueDestinationSlugs().map((slug) => ({
-    url: `${siteUrl}/deals/${slug}`,
-    lastModified: now,
-    changeFrequency: "hourly",
-    priority: slug === "gran-canaria" ? 0.9 : 0.8,
-  }));
+  const cityPages: MetadataRoute.Sitemap = getDestinationSlugs().flatMap((slug) =>
+    locales.map((locale) => ({
+      url: new URL(getLocalizedDestinationPath(locale, slug), siteUrl).toString(),
+      lastModified: now,
+      changeFrequency: "hourly" as const,
+      priority: slug === "gran-canaria" ? 0.9 : 0.8,
+      alternates: {
+        languages: Object.fromEntries(
+          Object.entries(getDestinationLanguageAlternates(slug)).map(
+            ([language, pathname]) => [language, new URL(pathname, siteUrl).toString()],
+          ),
+        ),
+      },
+    })),
+  );
 
   return [...homePages, ...cityPages];
 }

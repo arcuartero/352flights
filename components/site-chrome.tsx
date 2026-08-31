@@ -7,6 +7,10 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/lib/i18n";
 import {
+  getLocalizedHomePath,
+  parseLocalizedDealsPathname,
+} from "@/lib/locales";
+import {
   subscriptionErrorMessage,
   subscriptionSuccessMessage,
   type SubscriptionApiPayload,
@@ -710,9 +714,9 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
 
 export function SiteChrome() {
   const pathname = usePathname();
+  const { locale } = useI18n();
   const isOpsRoute = pathname.startsWith("/ops");
-  const showPreferencesEntry = pathname.startsWith("/deals");
-  const isDealsLanding = pathname === "/deals";
+  const showPreferencesEntry = parseLocalizedDealsPathname(pathname) !== null;
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -733,9 +737,12 @@ export function SiteChrome() {
   return (
     <>
       <div
-        className={`site-chrome${isScrolled ? " is-scrolled" : ""}${isDealsLanding ? " site-chrome--deals-landing" : ""}${isOpsRoute ? " site-chrome--ops" : ""}`}
+        className={`site-chrome${isScrolled ? " is-scrolled" : ""}${isOpsRoute ? " site-chrome--ops" : ""}`}
       >
-        <Link className="site-chrome__brand" href="/">
+        <Link
+          className="site-chrome__brand"
+          href={isOpsRoute ? "/" : getLocalizedHomePath(locale)}
+        >
           {isOpsRoute ? (
             <>
               <span className="site-chrome__ops-logo">

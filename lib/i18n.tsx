@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import {
-  getHomeLocaleFromPathname,
+  getLocaleFromPathname,
   htmlLangTags,
   isLocale,
   localeCookieName,
@@ -2396,7 +2396,7 @@ export function LanguageProvider({
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
   useEffect(() => {
-    const pathnameLocale = getHomeLocaleFromPathname(pathname);
+    const pathnameLocale = getLocaleFromPathname(pathname);
     if (pathnameLocale) {
       setLocaleState(pathnameLocale);
       return;

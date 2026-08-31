@@ -10,6 +10,7 @@ import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import type { Locale } from "@/lib/i18n";
+import { getLocalizedDestinationPath } from "@/lib/locales";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 
 export type DealsMapCity = {
@@ -375,7 +376,7 @@ function MapCityPopup({ city, locale }: { city: DealsMapCity; locale: Locale }) 
               </div>
             ))}
         </div>
-        <a href={`/deals/${toDestinationSlug(city.city)}`}>
+        <a href={getLocalizedDestinationPath(locale, toDestinationSlug(city.city))}>
           {copy.viewDestination(city.city)} <span aria-hidden="true">-&gt;</span>
         </a>
       </article>

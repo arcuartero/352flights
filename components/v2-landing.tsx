@@ -11,7 +11,12 @@ import { PublicDealsSelect } from "@/components/public-deals-select";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
 import { useI18n } from "@/lib/i18n";
-import { getLocalizedHomePath } from "@/lib/locales";
+import {
+  getLocalizedDealsSearchPath,
+  getLocalizedDestinationPath,
+  getLocalizedHomePath,
+  type Locale,
+} from "@/lib/locales";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import type { HomeBoardDestination, HomeRecentDrop } from "@/lib/home-board";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
@@ -174,30 +179,31 @@ function useLocalPhotoFallback(event: React.SyntheticEvent<HTMLImageElement>, co
     : "/destinations/european-city.webp";
 }
 
-function buildRhythmSearchHref(key: string) {
+function buildRhythmSearchHref(key: string, locale: Locale) {
+  const pathname = getLocalizedDealsSearchPath(locale);
   switch (key) {
     case "weekend":
       return buildDealsSearchHref({
         ...DEFAULT_DEAL_SEARCH_FILTERS,
         tripFilter: "weekend",
-      });
+      }, pathname);
     case "week":
       return buildDealsSearchHref({
         ...DEFAULT_DEAL_SEARCH_FILTERS,
         tripFilter: "weeklong",
-      });
+      }, pathname);
     case "school":
       return buildDealsSearchHref({
         ...DEFAULT_DEAL_SEARCH_FILTERS,
         whenFilter: "school_holidays",
-      });
+      }, pathname);
     case "beach":
       return buildDealsSearchHref({
         ...DEFAULT_DEAL_SEARCH_FILTERS,
         themeFilter: "beach",
-      });
+      }, pathname);
     default:
-      return "/deals/search";
+      return pathname;
   }
 }
 
@@ -409,7 +415,10 @@ export function V2Landing({
   useReveal(rootRef);
   useParallax(heroMediaRef, 0.1);
 
-  const searchHref = useMemo(() => buildDealsSearchHref(filters), [filters]);
+  const searchHref = useMemo(
+    () => buildDealsSearchHref(filters, getLocalizedDealsSearchPath(locale)),
+    [filters, locale],
+  );
   const searchWhenOptions = useMemo(
     () =>
       [
@@ -603,7 +612,7 @@ export function V2Landing({
             </p>
           </div>
 
-          {/* Search — same engine as the /deals home, docked inside the hero card */}
+          {/* Search — the shared fare engine, docked inside the hero card */}
           <div className="v2-search__bar" data-reveal id="v2-search" style={{ "--d": "440ms" } as React.CSSProperties}>
           <div className="v2-search__field v2-search__field--origin">
             <span>{t("common.from")}</span>
@@ -697,7 +706,7 @@ export function V2Landing({
                     <li aria-hidden={isPrimaryLink ? undefined : true} key={`${copy}-${index}-${fare.route}`}>
                       <Link
                         aria-label={`${fare.route}, €${Math.round(fare.price)}, ${fare.city}`}
-                        href={`/deals/${toDestinationSlug(fare.city)}`}
+                        href={getLocalizedDestinationPath(locale, toDestinationSlug(fare.city))}
                         tabIndex={isPrimaryLink ? undefined : -1}
                       >
                         <span className="v2-ticker__route">
@@ -764,7 +773,7 @@ export function V2Landing({
               <Link
                 className="v2-bento__cell"
                 data-reveal
-                href={`/deals/${toDestinationSlug(dest.city)}`}
+                href={getLocalizedDestinationPath(locale, toDestinationSlug(dest.city))}
                 key={dest.city}
                 style={{ "--d": `${i * 90}ms` } as React.CSSProperties}
               >
@@ -804,7 +813,11 @@ export function V2Landing({
         </div>
         <div className="v2-rhythms__slices" data-reveal>
           {RHYTHMS.map((rhythm) => (
-            <Link className="v2-rhythms__slice" href={buildRhythmSearchHref(rhythm.key)} key={rhythm.key}>
+            <Link
+              className="v2-rhythms__slice"
+              href={buildRhythmSearchHref(rhythm.key, locale)}
+              key={rhythm.key}
+            >
               <img
                 alt={t(`home.rhythm.${rhythm.key === "week" ? "week" : rhythm.key}`)}
                 loading="lazy"

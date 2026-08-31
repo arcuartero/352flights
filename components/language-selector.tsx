@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { localeOptions, useI18n, type Locale } from "@/lib/i18n";
-import { getHomeLocaleFromPathname, getLocalizedHomePath } from "@/lib/locales";
+import { getLocalizedPublicPath } from "@/lib/locales";
 
 export function LanguageSelector() {
   const { locale, setLocale, t } = useI18n();
@@ -80,9 +80,10 @@ export function LanguageSelector() {
                   setLocale(nextLocale);
                   setIsOpen(false);
 
-                  if (getHomeLocaleFromPathname(pathname)) {
+                  const localizedPath = getLocalizedPublicPath(pathname, nextLocale);
+                  if (localizedPath) {
                     const suffix = `${window.location.search}${window.location.hash}`;
-                    router.push(`${getLocalizedHomePath(nextLocale)}${suffix}`);
+                    router.push(`${localizedPath}${suffix}`);
                   }
                 }}
                 role="option"

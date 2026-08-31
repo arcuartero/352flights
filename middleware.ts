@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  getHomeLocaleFromPathname,
+  getLocaleFromPathname,
   localeRequestHeader,
 } from "@/lib/locales";
 
@@ -15,7 +15,7 @@ function unauthorizedResponse() {
 }
 
 function localizedResponse(request: NextRequest) {
-  const locale = getHomeLocaleFromPathname(request.nextUrl.pathname) ?? "en";
+  const locale = getLocaleFromPathname(request.nextUrl.pathname) ?? "en";
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(localeRequestHeader, locale);
 
@@ -64,5 +64,19 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/fr", "/de", "/pt", "/it", "/es", "/ops/:path*"],
+  matcher: [
+    "/",
+    "/deals/:path*",
+    "/fr",
+    "/fr/:path*",
+    "/de",
+    "/de/:path*",
+    "/pt",
+    "/pt/:path*",
+    "/it",
+    "/it/:path*",
+    "/es",
+    "/es/:path*",
+    "/ops/:path*",
+  ],
 };
