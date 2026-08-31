@@ -5044,38 +5044,13 @@ export function PublicDealsExplorer({
                 </div>
               ) : selectedSearchGroup ? (
                 <div className="deals-search-expanded">
-                  <div className="deals-search-expanded__header">
-                    <div className="deals-search-expanded__copy">
-                      <p className="deals-explorer__kicker">{t("deals.selectedDestination")}</p>
-                      <Link
-                        className="deals-search-expanded__city-link"
-                        href={buildDestinationDealsHref(selectedSearchGroup.city, locale)}
-                      >
-                        {selectedSearchGroup.city}
-                      </Link>
-                      <p>
-                        {selectedSearchGroup.deals.length}{" "}
-                        {selectedSearchGroup.deals.length === 1 ? t("deals.deal") : t("deals.deals")} · {t("common.from").toLowerCase()}{" "}
-                        {formatCurrency(selectedSearchGroup.lowestPrice)}
-                      </p>
-                    </div>
-                    <div className="deals-search-expanded__actions">
-                      <button
-                        className="deals-explorer__secondary-link"
-                        onClick={() => setOpenSearchCityGroups(new Set())}
-                        type="button"
-                      >
-                        ← {t("deals.backToDestinations")}
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="deals-search-expanded__results">
                     {paginatedResultDeals.map((deal) => (
                       <SearchResultCard
                         combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
                         key={`results-${selectedSearchGroup.key}-${deal.id}`}
                         deal={deal}
+                        showCityLabel
                       />
                     ))}
                   </div>
