@@ -2514,18 +2514,45 @@ body:has(.page-shell--deals-city)::before {
   background: #ffffff;
 }
 
-.page-shell--deals-search .deals-results-pagination__page-size select,
-.page-shell--deals-city .deals-results-pagination__page-size select {
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__trigger,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__trigger {
   border-color: rgba(29, 39, 51, 0.14);
   background: #ffffff;
   color: var(--v2-ink);
+  box-shadow: none;
 }
 
-.page-shell--deals-search .deals-results-pagination__page-size select:focus-visible,
-.page-shell--deals-city .deals-results-pagination__page-size select:focus-visible {
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__trigger:hover,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__trigger:hover,
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__trigger:focus-visible,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__trigger:focus-visible,
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__trigger.is-open,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__trigger.is-open {
   border-color: var(--v2-accent);
   outline: 2px solid rgba(225, 50, 44, 0.16);
   outline-offset: 2px;
+  box-shadow: none;
+}
+
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__menu,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__menu {
+  border-color: rgba(29, 39, 51, 0.14);
+  background: #ffffff;
+  box-shadow: 0 16px 34px rgba(12, 34, 56, 0.18);
+  backdrop-filter: none;
+}
+
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__option,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__option {
+  color: var(--v2-ink);
+}
+
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__option:hover,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__option:hover,
+.page-shell--deals-search .deals-results-pagination__page-size .deals-select__option.is-selected,
+.page-shell--deals-city .deals-results-pagination__page-size .deals-select__option.is-selected {
+  background: rgba(31, 95, 214, 0.1);
+  color: var(--v2-blue-strong);
 }
 
 .page-shell--deals-search .deals-results-pagination__load-more,

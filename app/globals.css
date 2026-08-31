@@ -2418,7 +2418,7 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
 }
 
 .deals-results-pagination__settings,
-.deals-results-pagination__page-size {
+.deals-results-pagination .deals-results-pagination__page-size {
   display: flex;
   gap: 0.6rem;
   align-items: center;
@@ -2429,13 +2429,16 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   justify-content: flex-end;
 }
 
-.deals-results-pagination__page-size span {
+.deals-results-pagination .deals-results-pagination__page-size > span {
   color: var(--muted);
   font-size: 0.88rem;
   font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-.deals-results-pagination__page-size select {
+.deals-results-pagination .deals-results-pagination__page-size .deals-select__trigger {
+  width: 4.5rem;
   min-width: 4.5rem;
   min-height: 2.55rem;
   padding: 0 1.9rem 0 0.75rem;
@@ -2443,20 +2446,48 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   border-radius: 0.65rem;
   background-color: var(--panel);
   background-color: color-mix(in srgb, var(--panel) 88%, transparent);
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23f4eee3' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-position: right 0.7rem center;
-  background-repeat: no-repeat;
-  background-size: 10px 6px;
   color: var(--text-strong);
   font: inherit;
   font-size: 0.9rem;
   font-weight: 700;
-  appearance: none;
+  text-align: left;
   cursor: pointer;
 }
 
-html[data-theme="light"] .deals-results-pagination__page-size select {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%231d2733' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+.deals-results-pagination
+  .deals-results-pagination__page-size
+  .deals-select__trigger
+  .deals-select__chevron {
+  right: 0.65rem;
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.deals-results-pagination .deals-results-pagination__page-size .deals-select__menu {
+  left: auto;
+  right: 0;
+  top: auto;
+  bottom: calc(100% + 0.45rem);
+  width: 4.5rem;
+  min-width: 4.5rem;
+  padding: 0.3rem;
+  border-radius: 0.75rem;
+}
+
+.deals-results-pagination .deals-results-pagination__page-size .deals-select__option {
+  min-height: 2.2rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.deals-results-pagination .deals-results-pagination__page-size .deals-select__option span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .deals-results-pagination__controls {

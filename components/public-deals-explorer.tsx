@@ -2899,20 +2899,16 @@ function ResultsLoadMore({
         {t("deals.pagination.showing", { end, total })}
       </p>
       <div className="deals-results-pagination__settings">
-        <label className="deals-results-pagination__page-size">
-          <span>{t("deals.pagination.show")}</span>
-          <select
-            aria-label={t("deals.a11y.visibleFareCount")}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            value={pageSize}
-          >
-            {pageSizeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
+        <DealsSelect
+          className="deals-results-pagination__page-size"
+          label={t("deals.pagination.show")}
+          onChange={(value) => onPageSizeChange(Number(value))}
+          options={pageSizeOptions.map((option) => ({
+            label: String(option),
+            value: String(option),
+          }))}
+          value={String(pageSize)}
+        />
         {hasMore ? (
           <button
             className="deals-results-pagination__load-more"
