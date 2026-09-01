@@ -189,22 +189,12 @@
   justify-self: end;
 }
 
-.v2-not-found__illustration::before {
-  position: absolute;
-  inset: 6%;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(222, 235, 255, 0.88), rgba(238, 245, 255, 0.24) 66%, transparent 72%);
-  content: "";
-}
-
 .v2-not-found__illustration img {
   display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
   filter: none;
-  mix-blend-mode: multiply;
 }
 
 .v2-not-found__footer {
