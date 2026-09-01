@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import DealsCityPage from "@/app/deals/[city]/page";
-import DealsSearchPage from "@/app/deals/search/page";
+import { DealsCityPageContent } from "@/components/deals-city-page-content";
+import { DealsSearchPageContent } from "@/components/deals-search-page-content";
 import { getDealsCityMetadata, getDealsSearchMetadata } from "@/lib/deals-seo";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
 import {
@@ -80,11 +80,12 @@ export default async function LocalizedDealsPage({
   const route = await resolveLocalizedDealsRoute(params);
 
   if (route.kind === "search") {
-    return <DealsSearchPage searchParams={searchParams} />;
+    return <DealsSearchPageContent locale={route.locale} searchParams={searchParams} />;
   }
 
   return (
-    <DealsCityPage
+    <DealsCityPageContent
+      locale={route.locale}
       params={Promise.resolve({ city: route.citySlug })}
       searchParams={searchParams}
     />

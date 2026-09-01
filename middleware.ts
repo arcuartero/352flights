@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   parseLocalizedDealsPathname,
-  getLocaleFromPathname,
-  localeRequestHeader,
 } from "@/lib/locales";
 
 const CACHE_SECONDS = {
@@ -62,16 +60,7 @@ function unauthorizedResponse() {
 }
 
 function localizedResponse(request: NextRequest) {
-  const locale = getLocaleFromPathname(request.nextUrl.pathname) ?? "en";
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(localeRequestHeader, locale);
-
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
+  const response = NextResponse.next();
   return applyCachePolicy(response, request.nextUrl.pathname);
 }
 

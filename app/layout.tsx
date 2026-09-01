@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { Suspense } from "react";
 
 import { GlobalFlightRouteLoader } from "@/components/flight-route-loader";
@@ -8,7 +7,7 @@ import { SiteChrome } from "@/components/site-chrome";
 import { WebActivityLog } from "@/components/web-activity-log";
 import { getSiteUrl } from "@/lib/env";
 import { LanguageProvider } from "@/lib/i18n";
-import { htmlLangTags, isLocale, localeRequestHeader } from "@/lib/locales";
+import { htmlLangTags } from "@/lib/locales";
 import { getSocialImageMetadata } from "@/lib/social-image";
 
 import "./globals.css";
@@ -61,25 +60,21 @@ const themeBootScript = `
 })();
 `;
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const requestHeaders = await headers();
-  const requestLocale = requestHeaders.get(localeRequestHeader);
-  const initialLocale = isLocale(requestLocale) ? requestLocale : "en";
-
   return (
     <html
-      data-locale={initialLocale}
+      data-locale="en"
       data-theme="dark"
-      lang={htmlLangTags[initialLocale]}
+      lang={htmlLangTags.en}
       suppressHydrationWarning
     >
       <body>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
-        <LanguageProvider initialLocale={initialLocale}>
+        <LanguageProvider initialLocale="en">
           <Suspense fallback={null}>
             <GlobalFlightRouteLoader />
           </Suspense>

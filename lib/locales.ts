@@ -7,7 +7,6 @@ export const localizedHomeLocales = ["fr", "de", "pt", "it", "es"] as const;
 export type LocalizedHomeLocale = (typeof localizedHomeLocales)[number];
 
 export const localeCookieName = "luxflightdeals-locale";
-export const localeRequestHeader = "x-352flights-locale";
 
 export const htmlLangTags: Record<Locale, string> = {
   en: "en-LU",
