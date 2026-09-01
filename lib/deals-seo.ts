@@ -9,6 +9,7 @@ import {
   locales,
   type Locale,
 } from "@/lib/locales";
+import { getSocialImageMetadata } from "@/lib/social-image";
 
 type DealsSeoCopy = {
   searchTitle: string;
@@ -166,6 +167,7 @@ export function getDestinationLanguageAlternates(citySlug: string): Record<strin
 export function getDealsSearchMetadata(locale: Locale): Metadata {
   const copy = dealsSeoCopy[locale];
   const pathname = getLocalizedDealsSearchPath(locale);
+  const socialImage = getSocialImageMetadata();
 
   return {
     title: copy.searchTitle,
@@ -178,6 +180,13 @@ export function getDealsSearchMetadata(locale: Locale): Metadata {
       type: "website",
       url: pathname,
       locale: htmlLangTags[locale].replace("-", "_"),
+      images: [socialImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: copy.searchTitle,
+      description: copy.searchDescription,
+      images: [socialImage],
     },
   };
 }
@@ -192,6 +201,10 @@ export function getDealsCityMetadata(
   const pathname = getLocalizedDestinationPath(locale, citySlug);
   const title = copy.cityTitle(cityName);
   const description = copy.cityDescription(cityName);
+  const socialImage = getSocialImageMetadata(
+    citySlug,
+    `+352 Flights — ${cityName}`,
+  );
 
   return {
     title,
@@ -206,9 +219,16 @@ export function getDealsCityMetadata(
       url: new URL(pathname, getSiteUrl()),
       type: "website",
       locale: htmlLangTags[locale].replace("-", "_"),
+      images: [socialImage],
       alternateLocale: locales
         .filter((candidate) => candidate !== locale)
         .map((candidate) => htmlLangTags[candidate].replace("-", "_")),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [socialImage],
     },
     robots: noindex ? { index: false, follow: true } : { index: true, follow: true },
   };

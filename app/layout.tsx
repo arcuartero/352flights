@@ -9,10 +9,13 @@ import { WebActivityLog } from "@/components/web-activity-log";
 import { getSiteUrl } from "@/lib/env";
 import { LanguageProvider } from "@/lib/i18n";
 import { htmlLangTags, isLocale, localeRequestHeader } from "@/lib/locales";
+import { getSocialImageMetadata } from "@/lib/social-image";
 
 import "./globals.css";
 import "./public-deals-date-picker.css";
 import "./public-deals-price-range.css";
+
+const defaultSocialImage = getSocialImageMetadata();
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -24,6 +27,21 @@ export const metadata: Metadata = {
     "We watch every fare out of LUX and write to you only when it's genuinely cheap. No noise — just the right deals, at the right time.",
   alternates: {
     canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "+352 Flights",
+    title: "You know when to fly. We'll find where. | +352 Flights",
+    description:
+      "We watch every fare out of LUX and write to you only when it's genuinely cheap. No noise — just the right deals, at the right time.",
+    images: [defaultSocialImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "You know when to fly. We'll find where. | +352 Flights",
+    description:
+      "We watch every fare out of LUX and write to you only when it's genuinely cheap. No noise — just the right deals, at the right time.",
+    images: [defaultSocialImage],
   },
 };
 

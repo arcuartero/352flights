@@ -14,6 +14,7 @@ import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
 import { matchesDestinationSlug, toDestinationSlug } from "@/lib/destination-slugs";
 import { getSiteUrl } from "@/lib/env";
+import { getAirportCountryCode } from "@/lib/airport-countries";
 import { getLocalizedDestinationPath, type Locale } from "@/lib/locales";
 import { getPublicCityDealsPageData, type PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
@@ -33,12 +34,68 @@ type DealsCityPageProps = {
 };
 
 type InternalLinkGroup = {
+  kind: "country" | "beach" | "filters";
   title: string;
   links: Array<{
     href: string;
     label: string;
   }>;
 };
+
+function normalizeDestinationValue(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+}
+
+function buildDestinationCatalog() {
+  const destinations = new Map<
+    string,
+    { label: string; countryCode?: string; routeCount: number }
+  >();
+
+  for (const route of routes) {
+    const label = route.destination_city.trim();
+    if (!label) continue;
+    const value = normalizeDestinationValue(label);
+    const existing = destinations.get(value);
+    if (existing) {
+      existing.routeCount += 1;
+      if (!existing.countryCode) {
+        existing.countryCode = getAirportCountryCode(route.destination_airport);
+      }
+      continue;
+    }
+
+    destinations.set(value, {
+      label,
+      countryCode: getAirportCountryCode(route.destination_airport),
+      routeCount: 1,
+    });
+  }
+
+  const options = [...destinations.entries()]
+    .map(([value, destination]) => ({
+      value,
+      label: destination.label,
+      countryCode: destination.countryCode,
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label, "en"));
+  const popularOptionValues = [...destinations.entries()]
+    .sort(
+      (left, right) =>
+        right[1].routeCount - left[1].routeCount ||
+        left[1].label.localeCompare(right[1].label, "en"),
+    )
+    .slice(0, 6)
+    .map(([value]) => value);
+
+  return { options, popularOptionValues };
+}
+
+const DESTINATION_CATALOG = buildDestinationCatalog();
 
 function hasSearchParams(searchParams: Record<string, string | string[] | undefined>) {
   return Object.values(searchParams).some((value) =>
@@ -202,14 +259,17 @@ function buildInternalLinkGroups(
 
   return [
     {
+      kind: "country" as const,
       title: copy.countryGroup(content.country),
       links: countryLinks,
     },
     {
+      kind: "beach" as const,
       title: copy.beachGroup,
       links: beachLinks,
     },
     {
+      kind: "filters" as const,
       title: copy.filtersGroup(content.titleLabel),
       links: [
         {
@@ -273,7 +333,10 @@ function CityInternalLinks({
         </div>
         <div className="deals-city-internal-links__groups">
           {linkGroups.map((group) => (
-            <div className="deals-city-internal-links__group" key={group.title}>
+            <div
+              className={`deals-city-internal-links__group deals-city-internal-links__group--${group.kind}`}
+              key={group.title}
+            >
               <h3>{group.title}</h3>
               <ul>
                 {group.links.map((link) => (
@@ -320,6 +383,7 @@ export default async function DealsCityPage({ params, searchParams }: DealsCityP
       />
       <PublicDealsExplorer
         data={cityData}
+        destinationCatalog={DESTINATION_CATALOG}
         destinationPhotoUrls={destinationPhotoUrls}
         initialFilters={parseDealSearchFilters(resolvedSearchParams)}
         initialSharedFareId={initialSharedFareId}

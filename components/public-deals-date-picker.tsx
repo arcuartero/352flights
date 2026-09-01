@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  X,
 } from "lucide-react";
 import {
   useEffect,
@@ -34,6 +35,7 @@ type PublicDealsDatePickerProps = {
   presetOptions: PublicDealsSelectOption[];
   onChange: (selection: DatePickerSelection) => void;
   className?: string;
+  popoverClassName?: string;
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -117,6 +119,7 @@ export function PublicDealsDatePicker({
   presetOptions,
   onChange,
   className,
+  popoverClassName,
 }: PublicDealsDatePickerProps) {
   const { locale, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
@@ -270,6 +273,16 @@ export function PublicDealsDatePicker({
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen || !usesViewportLayer) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, usesViewportLayer]);
+
+  useEffect(() => {
     if (!isOpen) {
       return;
     }
@@ -316,7 +329,8 @@ export function PublicDealsDatePicker({
   const popover = isOpen ? (
     <div
       aria-label={t("deals.datePicker.selectRange")}
-      className={`deals-date-picker__popover${opensAbove ? " is-above" : ""}${usesViewportLayer ? " is-viewport-layer" : ""}`}
+      aria-modal={usesViewportLayer ? true : undefined}
+      className={`deals-date-picker__popover${opensAbove ? " is-above" : ""}${usesViewportLayer ? " is-viewport-layer" : ""}${popoverClassName ? ` ${popoverClassName}` : ""}`}
       id={`${pickerId}-popover`}
       ref={popoverRef}
       role="dialog"
@@ -327,6 +341,20 @@ export function PublicDealsDatePicker({
       }
     >
       <div className="deals-date-picker__presets">
+        <div className="deals-date-picker__mobile-header">
+          <span>{t("deals.datePicker.quickOptions")}</span>
+          <button
+            aria-label={t("deals.mobile.close")}
+            className="deals-date-picker__mobile-close"
+            onClick={() => {
+              setIsOpen(false);
+              requestAnimationFrame(() => triggerRef.current?.focus());
+            }}
+            type="button"
+          >
+            <X aria-hidden="true" />
+          </button>
+        </div>
         <span>{t("deals.datePicker.quickOptions")}</span>
         {presetOptions.map((option) => {
           const isSelected = option.value === draftWhenFilter;

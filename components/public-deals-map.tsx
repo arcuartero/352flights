@@ -11,13 +11,13 @@ import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import type { Locale } from "@/lib/i18n";
 import { getLocalizedDestinationPath } from "@/lib/locales";
-import type { CampaignPreviewDeal } from "@/lib/ops-shared";
+import type { PublicDealsSearchMapFare } from "@/lib/public-deals-query";
 
 export type DealsMapCity = {
   key: string;
   city: string;
   airport: string;
-  deals: CampaignPreviewDeal[];
+  deals: PublicDealsSearchMapFare[];
   lowestPrice: number;
 };
 
@@ -310,7 +310,7 @@ function formatCurrency(price: number, locale: Locale) {
   }).format(price);
 }
 
-function formatDateRange(deal: CampaignPreviewDeal, locale: Locale) {
+function formatDateRange(deal: PublicDealsSearchMapFare, locale: Locale) {
   if (!deal.departureDate) {
     return deal.routeLabel;
   }

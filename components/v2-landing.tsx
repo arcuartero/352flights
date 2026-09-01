@@ -10,6 +10,7 @@ import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import { PublicDealsSelect } from "@/components/public-deals-select";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
+import { getAirportCountryCode } from "@/lib/airport-countries";
 import { useI18n } from "@/lib/i18n";
 import {
   getLocalizedDealsSearchPath,
@@ -526,10 +527,13 @@ export function V2Landing({
     const source = matchingPrices.length > 0 ? matchingPrices : fallbackPrices;
 
     return {
+      distinctPriceCount: new Set(source.map((price) => price.toFixed(2))).size,
       min: source.length > 0 ? Math.floor(Math.min(...source)) : 0,
       max: source.length > 0 ? Math.ceil(Math.max(...source)) : 1,
     };
   }, [deals, filters, now]);
+  const hasVariablePriceRange =
+    priceBounds.distinctPriceCount > 1 && priceBounds.min < priceBounds.max;
   const destinationOptions = useMemo(() => {
     const filtersWithoutDestination = {
       ...filters,
@@ -546,6 +550,14 @@ export function V2Landing({
     const visibleCities = selectedDestinationCity
       ? [selectedDestinationCity, ...availableCities]
       : availableCities;
+    const countryCodeByCity = new Map<string, string>();
+    for (const deal of deals) {
+      const city = deal.destinationCity?.trim();
+      const countryCode = getAirportCountryCode(deal.destinationAirport);
+      if (!city || !countryCode) continue;
+      const cityKey = normalizeDestinationKey(city);
+      if (!countryCodeByCity.has(cityKey)) countryCodeByCity.set(cityKey, countryCode);
+    }
     const uniqueCities = [...new Set(visibleCities.map((city) => normalizeDestinationKey(city)))]
       .map(
         (cityKey) =>
@@ -558,6 +570,7 @@ export function V2Landing({
       ...uniqueCities.map((city) => ({
         value: normalizeDestinationKey(city),
         label: city,
+        countryCode: countryCodeByCity.get(normalizeDestinationKey(city)),
       })),
     ];
   }, [deals, filters, now, t]);
@@ -594,6 +607,26 @@ export function V2Landing({
 
     setFilters((current) => ({ ...current, destinationFilter: "any" }));
   }, [destinationOptions, filters.destinationFilter]);
+
+  useEffect(() => {
+    if (
+      hasVariablePriceRange ||
+      (filters.priceMin === null && filters.priceMax === null)
+    ) {
+      return;
+    }
+
+    setFilters((current) =>
+      current.priceMin === null && current.priceMax === null
+        ? current
+        : {
+            ...current,
+            budgetFilter: "any",
+            priceMin: null,
+            priceMax: null,
+          },
+    );
+  }, [filters.priceMax, filters.priceMin, hasVariablePriceRange]);
 
   useEffect(() => {
     if (filters.tripFilter === "any") {
@@ -686,98 +719,114 @@ export function V2Landing({
             <span className="v2-hero__overlay" aria-hidden="true" />
           </div>
 
-          <div className="v2-hero__copy">
-            <p className="v2-hero__kicker" data-reveal style={{ "--d": "120ms" } as React.CSSProperties}>
-              {t("home.kicker")}
-            </p>
-            <h1 className="v2-hero__title" data-reveal style={{ "--d": "200ms" } as React.CSSProperties}>
-              {t("home.title.before")} <em>{t("home.title.em")}</em>
-            </h1>
-            <p className="v2-hero__lede" data-reveal style={{ "--d": "300ms" } as React.CSSProperties}>
-              {t("home.lede")}
-            </p>
-          </div>
+          <div className="v2-hero__panel">
+            <div className="v2-hero__copy">
+              <p className="v2-hero__kicker" data-reveal style={{ "--d": "120ms" } as React.CSSProperties}>
+                {t("home.kicker")}
+              </p>
+              <h1 className="v2-hero__title" data-reveal style={{ "--d": "200ms" } as React.CSSProperties}>
+                {t("home.title.before")} <em>{t("home.title.em")}</em>
+              </h1>
+              <p className="v2-hero__lede" data-reveal style={{ "--d": "300ms" } as React.CSSProperties}>
+                {t("home.lede")}
+              </p>
+            </div>
 
-          {/* Search — the shared fare engine, docked inside the hero card */}
-          <div className="v2-search__bar" data-reveal id="v2-search" style={{ "--d": "440ms" } as React.CSSProperties}>
-          <div className="v2-search__field v2-search__field--origin">
-            <span>{t("common.from")}</span>
-            <strong>Luxembourg</strong>
-          </div>
-          <PublicDealsSelect
-            className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"
-            label={t("common.to")}
-            leadingIcon={<MapPin size={18} strokeWidth={2.1} />}
-            mobileDestinationSheet
-            onChange={(value) =>
-              setFilters((current) => ({ ...current, destinationFilter: value }))
-            }
-            options={destinationOptions}
-            popularOptionValues={popularDestinationValues}
-            value={filters.destinationFilter}
-          />
-          <PublicDealsDatePicker
-            className="v2-search__field v2-search__field--when"
-            dateFrom={filters.dateFrom}
-            dateTo={filters.dateTo}
-            label={t("common.when")}
-            onChange={(selection) =>
-              setFilters((current) => ({
-                ...current,
-                ...selection,
-              }))
-            }
-            presetOptions={searchWhenOptions}
-            value={filters.whenFilter}
-          />
-          <PublicDealsSelect
-            className="v2-search__field v2-search__field--trip v2-search__custom-select"
-            label={t("common.tripType")}
-            leadingIcon={<Plane size={18} strokeWidth={2.1} />}
-            onChange={(value) =>
-              setFilters((current) => ({
-                ...current,
-                tripFilter: value as TripFilter,
-              }))
-            }
-            options={searchTripOptions}
-            value={filters.tripFilter}
-          />
-          <PublicDealsPriceRange
-            bounds={priceBounds}
-            className="v2-search__field v2-search__field--budget"
-            label={t("common.priceRange")}
-            onChange={(priceMin, priceMax) =>
-              setFilters((current) => ({
-                ...current,
-                budgetFilter: "any",
-                priceMin,
-                priceMax,
-              }))
-            }
-            priceMax={filters.priceMax}
-            priceMin={filters.priceMin}
-            showHistogram
-          />
-          <label className="v2-search__toggle">
-            <input
-              checked={filters.directOnly}
-              onChange={(event) =>
-                setFilters((current) => ({ ...current, directOnly: event.target.checked }))
-              }
-              type="checkbox"
-            />
-            <span>{t("common.directOnly")}</span>
-          </label>
-          {hasMatchingDeals ? (
-            <Link className="v2-search__cta" href={searchHref}>
-              {t("common.viewDeals")}
-            </Link>
-          ) : (
-            <button className="v2-search__cta" disabled type="button">
-              {t("common.viewDeals")}
-            </button>
-          )}
+            {/* Search — the shared fare engine, docked inside the hero card */}
+            <div
+              className="v2-search__bar"
+              data-reveal
+              id="v2-search"
+              style={{ "--d": "440ms" } as React.CSSProperties}
+            >
+              <div className="v2-search__field v2-search__field--origin">
+                <span>{t("common.from")}</span>
+                <strong>Luxembourg</strong>
+              </div>
+              <PublicDealsSelect
+                className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"
+                label={t("common.to")}
+                leadingIcon={<MapPin size={18} strokeWidth={2.1} />}
+                mobileDestinationSheet
+                mobileValueLabel={
+                  filters.destinationFilter === "any"
+                    ? t("common.destination")
+                    : undefined
+                }
+                onChange={(value) =>
+                  setFilters((current) => ({ ...current, destinationFilter: value }))
+                }
+                options={destinationOptions}
+                popularOptionValues={popularDestinationValues}
+                value={filters.destinationFilter}
+              />
+              <PublicDealsDatePicker
+                className="v2-search__field v2-search__field--when"
+                dateFrom={filters.dateFrom}
+                dateTo={filters.dateTo}
+                label={t("common.when")}
+                onChange={(selection) =>
+                  setFilters((current) => ({
+                    ...current,
+                    ...selection,
+                  }))
+                }
+                popoverClassName="deals-date-picker__popover--home"
+                presetOptions={searchWhenOptions}
+                value={filters.whenFilter}
+              />
+              <PublicDealsSelect
+                className="v2-search__field v2-search__field--trip v2-search__custom-select"
+                label={t("common.tripType")}
+                leadingIcon={<Plane size={18} strokeWidth={2.1} />}
+                mobileSheetTitle={t("home.searchChooseTripType")}
+                onChange={(value) =>
+                  setFilters((current) => ({
+                    ...current,
+                    tripFilter: value as TripFilter,
+                  }))
+                }
+                options={searchTripOptions}
+                value={filters.tripFilter}
+              />
+              {hasVariablePriceRange ? (
+                <PublicDealsPriceRange
+                  bounds={priceBounds}
+                  className="v2-search__field v2-search__field--budget"
+                  label={t("common.priceRange")}
+                  onChange={(priceMin, priceMax) =>
+                    setFilters((current) => ({
+                      ...current,
+                      budgetFilter: "any",
+                      priceMin,
+                      priceMax,
+                    }))
+                  }
+                  priceMax={filters.priceMax}
+                  priceMin={filters.priceMin}
+                  showHistogram
+                />
+              ) : null}
+              <label className="v2-search__toggle">
+                <input
+                  checked={filters.directOnly}
+                  onChange={(event) =>
+                    setFilters((current) => ({ ...current, directOnly: event.target.checked }))
+                  }
+                  type="checkbox"
+                />
+                <span>{t("common.directOnly")}</span>
+              </label>
+              {hasMatchingDeals ? (
+                <Link className="v2-search__cta" href={searchHref}>
+                  {t("common.viewDeals")}
+                </Link>
+              ) : (
+                <button className="v2-search__cta" disabled type="button">
+                  {t("common.viewDeals")}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </section>

@@ -2984,6 +2984,11 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     animation: destination-sheet-dialog-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .deals-destination-sheet__dialog--simple {
+    grid-template-rows: auto auto;
+    max-height: min(78dvh, 32rem);
+  }
+
   .deals-destination-sheet__header {
     display: flex;
     min-height: 4.8rem;
@@ -3103,6 +3108,15 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     -webkit-overflow-scrolling: touch;
   }
 
+  .deals-destination-sheet__body--simple {
+    padding-top: 0.45rem;
+  }
+
+  .deals-destination-sheet__simple-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+
   .deals-destination-sheet__section {
     display: grid;
     gap: 0.65rem;
@@ -3179,6 +3193,19 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     color: #184fbd;
   }
 
+  .deals-destination-sheet__option--simple {
+    min-height: 3.7rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.8rem 0.9rem;
+    font-size: 1rem;
+  }
+
+  .deals-destination-sheet__option--simple:disabled {
+    color: #9ba6b3;
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+
   .deals-destination-sheet__option-icon {
     display: grid;
     width: 2rem;
@@ -3192,6 +3219,20 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   .deals-destination-sheet__option-icon svg {
     width: 1.05rem;
     height: 1.05rem;
+  }
+
+  .deals-destination-sheet__option-icon--flag {
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .deals-destination-sheet__option-icon--flag img {
+    display: block;
+    width: 1.5rem;
+    height: 1.125rem;
+    border-radius: 0.2rem;
+    box-shadow: 0 0 0 1px rgba(12, 25, 43, 0.1);
+    object-fit: cover;
   }
 
   .deals-destination-sheet__check {

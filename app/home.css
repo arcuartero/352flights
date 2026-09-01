@@ -319,6 +319,10 @@ body:has(.v2) .scroll-top-button {
   pointer-events: none;
 }
 
+.v2-hero__panel {
+  display: contents;
+}
+
 .v2-hero__photo {
   position: absolute;
   top: 0;
@@ -467,6 +471,16 @@ body:has(.v2) .scroll-top-button {
   background: var(--v2-cream);
   box-shadow: 0 22px 50px rgba(8, 13, 20, 0.35);
   scroll-margin-top: 5rem;
+}
+
+.v2-search__bar:where(:not(:has(.v2-search__field--budget))) {
+  grid-template-columns:
+    minmax(7.5rem, 0.9fr)
+    minmax(7.5rem, 1.08fr)
+    minmax(10rem, 1.25fr)
+    minmax(7.5rem, 1fr)
+    minmax(11rem, auto)
+    minmax(9rem, auto);
 }
 
 .v2-search__field {
@@ -734,6 +748,158 @@ body:has(.v2) .scroll-top-button {
 .v2-search__field.deals-date-picker .deals-date-picker__popover {
   color: var(--v2-ink);
   font-family: var(--font-sans), sans-serif;
+}
+
+/* On mobile, the home calendar keeps its white canvas but shares the blue
+   interaction language of the destination and trip-type sheets. */
+@media (max-width: 560px) {
+  .deals-date-picker__popover.deals-date-picker__popover--home {
+    --v2-accent: #2364df;
+    background: #fff;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__presets > span {
+    display: none;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__mobile-header {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 2.75rem;
+    margin: 0 0.25rem 0.35rem 0.55rem;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__mobile-header > span {
+    min-width: 0;
+    overflow: hidden;
+    color: #667386;
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0.13em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__mobile-close {
+    display: grid;
+    flex: 0 0 2.75rem;
+    grid-template-columns: 1fr;
+    width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    place-items: center;
+    border: 1px solid rgba(35, 100, 223, 0.24);
+    border-radius: 999px;
+    background: #fff;
+    color: #102035;
+    cursor: pointer;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__mobile-close svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__presets,
+  .deals-date-picker__popover--home .deals-date-picker__calendar,
+  .deals-date-picker__popover--home .deals-date-picker__actions,
+  .deals-date-picker__popover--home .deals-date-picker__fields > div,
+  .deals-date-picker__popover--home .deals-date-picker__cancel {
+    background: #fff;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__presets,
+  .deals-date-picker__popover--home .deals-date-picker__month + .deals-date-picker__month,
+  .deals-date-picker__popover--home .deals-date-picker__actions {
+    border-color: rgba(35, 100, 223, 0.14);
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__fields > div,
+  .deals-date-picker__popover--home .deals-date-picker__cancel {
+    border-color: rgba(35, 100, 223, 0.34);
+  }
+
+  .deals-date-picker__popover--home
+    .deals-date-picker__presets
+    button:hover:not(:disabled),
+  .deals-date-picker__popover--home .deals-date-picker__presets button.is-selected {
+    background: #eef4ff;
+    color: #184fbd;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__preset-check,
+  .deals-date-picker__popover--home .deals-date-picker__cancel {
+    color: #2364df;
+  }
+
+  .deals-date-picker__popover--home
+    .deals-date-picker__days
+    button:hover:not(:disabled) {
+    background: #eef4ff;
+    color: #184fbd;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__days button.is-in-range,
+  .deals-date-picker__popover--home
+    .deals-date-picker__days
+    button.is-preset-selected {
+    background: #e3ecff;
+    color: #184fbd;
+  }
+
+  .deals-date-picker__popover--home
+    .deals-date-picker__days
+    button.is-range-start,
+  .deals-date-picker__popover--home
+    .deals-date-picker__days
+    button.is-range-end,
+  .deals-date-picker__popover--home .deals-date-picker__apply {
+    border-color: #2364df;
+    background: #2364df;
+    color: #fff;
+  }
+
+  .deals-date-picker__popover--home
+    .deals-date-picker__days
+    button.is-today:not(.is-range-start):not(.is-range-end) {
+    box-shadow: inset 0 0 0 1px #2364df;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__apply:disabled {
+    border-color: #d8dde3;
+    background: #e8ebef;
+    color: #929aa3;
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__actions {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    width: 100%;
+    padding-top: 0.9rem;
+    padding-right: calc(0.75rem + env(safe-area-inset-right, 0px));
+    padding-bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(0.75rem + env(safe-area-inset-left, 0px));
+  }
+
+  .deals-date-picker__popover--home .deals-date-picker__actions button {
+    width: 100%;
+    min-height: 3.25rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.85rem;
+    font-size: 1rem;
+  }
+
+  .deals-date-picker__popover--home button:focus-visible {
+    outline: 3px solid rgba(35, 100, 223, 0.28);
+    outline-offset: 2px;
+  }
 }
 
 .v2-search__toggle {
@@ -1698,6 +1864,10 @@ body:has(.v2) .scroll-top-button {
     align-items: stretch;
   }
 
+  .v2-search__bar:where(:not(:has(.v2-search__field--budget))) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .v2-search__field--budget {
     grid-column: span 2;
   }
@@ -2020,6 +2190,20 @@ body:has(.v2) .scroll-top-button {
     box-shadow: none;
   }
 
+  .v2-hero__panel {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    order: 2;
+    width: calc(100% - 1.3rem);
+    box-sizing: border-box;
+    margin: -2.3rem 0.65rem 0;
+    overflow: visible;
+    border-radius: 1.5rem;
+    background: #fff;
+    box-shadow: 0 24px 56px rgba(12, 34, 56, 0.14);
+  }
+
   .v2-hero__copy {
     display: grid;
     order: 1;
@@ -2027,10 +2211,10 @@ body:has(.v2) .scroll-top-button {
     box-sizing: border-box;
     max-width: none;
     margin: 0;
-    padding: 1rem;
-    border-radius: 1.35rem;
-    background: linear-gradient(145deg, #dcecff 0%, #edf5ff 100%);
-    box-shadow: 0 20px 45px rgba(31, 95, 214, 0.13);
+    padding: 1.65rem 1.2rem 1rem;
+    border-radius: 1.5rem 1.5rem 0 0;
+    background: #fff;
+    box-shadow: none;
     overflow: hidden;
   }
 
@@ -2070,11 +2254,11 @@ body:has(.v2) .scroll-top-button {
   .v2-hero__media {
     position: relative;
     inset: auto;
-    order: 3;
+    order: 1;
     z-index: 0;
     width: 100%;
-    height: clamp(10rem, 44vw, 13.5rem);
-    margin-top: 0.7rem;
+    height: clamp(13.5rem, 64vw, 16rem);
+    margin-top: 0;
     border-radius: 1.35rem;
   }
 
@@ -2099,13 +2283,13 @@ body:has(.v2) .scroll-top-button {
     opacity: 1 !important;
     transform: none !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.7rem;
-    margin-top: 0.7rem;
-    padding: 0.85rem;
+    gap: 0.5rem;
+    margin-top: 0;
+    padding: 0.2rem 1.2rem 1.1rem;
     border: 0;
-    border-radius: 1.75rem;
-    background: #fff;
-    box-shadow: 0 24px 56px rgba(12, 34, 56, 0.12);
+    border-radius: 0 0 1.5rem 1.5rem;
+    background: transparent;
+    box-shadow: none;
     overflow: visible;
   }
 
@@ -2113,29 +2297,49 @@ body:has(.v2) .scroll-top-button {
     width: 100%;
     box-sizing: border-box;
     display: grid;
-    grid-template-columns: 2.15rem minmax(0, 1fr);
-    grid-template-rows: auto auto;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
     align-content: center;
-    column-gap: 0.75rem;
-    row-gap: 0.15rem;
-    min-height: 4.65rem;
-    padding: 0.75rem 0.9rem;
-    border: 1px solid #dfe5ec;
-    border-radius: 1.05rem;
+    column-gap: 0.45rem;
+    row-gap: 0;
+    min-height: 3.35rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba(43, 61, 82, 0.09);
+    border-radius: 1rem;
     background: #fff;
+    box-shadow: 0 6px 18px rgba(29, 48, 73, 0.075);
     overflow: visible;
   }
 
   .v2-search__field--origin,
-  .v2-search__field--destination {
+  .v2-search__field--when {
     grid-column: 1 / -1;
   }
 
   .v2-search__field--origin {
-    min-height: 3.55rem;
-    padding-block: 0.55rem;
-    border: 0;
-    border-radius: 0;
+    order: 1;
+  }
+
+  .v2-search__field--when {
+    order: 2;
+  }
+
+  .v2-search__field--destination {
+    order: 3;
+    grid-column: 1;
+  }
+
+  .v2-search__field--destination,
+  .v2-search__field--trip {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+    padding-inline: 0.6rem;
+  }
+
+  .v2-search__field--trip {
+    order: 4;
+    grid-column: 2;
   }
 
   .v2-search__destination-select {
@@ -2144,7 +2348,7 @@ body:has(.v2) .scroll-top-button {
 
   .v2-search__custom-select .deals-select__trigger {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     min-width: 0;
     min-height: auto;
     padding: 0;
@@ -2152,6 +2356,16 @@ body:has(.v2) .scroll-top-button {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+  }
+
+  .v2-search__field--destination .deals-select__trigger,
+  .v2-search__field--trip .deals-select__trigger {
+    display: grid;
+    grid-column: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: clamp(0.25rem, 1.5vw, 0.45rem);
+    width: 100%;
   }
 
   .v2-search__custom-select .deals-select__trigger.has-leading-icon {
@@ -2174,6 +2388,35 @@ body:has(.v2) .scroll-top-button {
     font-weight: 750;
   }
 
+  .v2-search__field--destination .deals-select__trigger strong,
+  .v2-search__field--trip .deals-select__trigger strong {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    padding-right: 0;
+    font-size: clamp(0.68rem, 3.35vw, 0.9rem);
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .v2-search__field--destination .deals-select__trigger .deals-select__chevron,
+  .v2-search__field--trip .deals-select__trigger .deals-select__chevron {
+    position: static;
+    right: auto;
+    top: auto;
+    display: block;
+    width: clamp(0.7rem, 3vw, 0.85rem);
+    height: clamp(0.7rem, 3vw, 0.85rem);
+    flex: 0 0 auto;
+    transform: none;
+  }
+
+  .v2-search__field--destination .deals-select__trigger.is-open .deals-select__chevron,
+  .v2-search__field--trip .deals-select__trigger.is-open .deals-select__chevron {
+    transform: rotate(180deg);
+  }
+
   .v2-search__custom-select .deals-select__menu {
     left: 0.75rem;
     right: 0.75rem;
@@ -2192,23 +2435,23 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-search__field--budget {
+    order: 5;
     grid-column: 1 / -1;
   }
 
   .v2-search__field--budget.deals-price-range {
     display: grid;
-    gap: 0.5rem;
-    min-height: 6.25rem;
-    padding: 0.75rem 0.95rem 0.85rem;
+    gap: 0.3rem 0.5rem;
+    min-height: 4.1rem;
+    padding: 0.55rem 0.75rem 0.6rem;
   }
 
   .v2-search__field--budget.deals-price-range--histogram {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "label"
       "values"
       "visual";
-    grid-template-rows: auto auto 1.7rem;
+    grid-template-rows: auto 1.15rem;
     border-left: 0;
   }
 
@@ -2218,28 +2461,25 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-search__field--budget.deals-price-range .deals-price-range__label {
-    width: auto;
-    height: auto;
-    color: #66707a;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0;
-    text-transform: none;
+    display: none;
   }
 
   .v2-search__field--budget.deals-price-range .deals-price-range__values {
-    font-size: 1.15rem;
+    min-width: 0;
+    font-size: 1rem;
     font-weight: 800;
   }
 
   .v2-search__toggle {
+    order: 6;
     display: none;
   }
 
   .v2-search__cta {
+    order: 7;
     grid-column: 1 / -1;
     width: 100%;
-    min-height: 3.75rem;
+    min-height: 3.35rem;
     margin: 0;
     border-radius: 1rem;
     font-size: 1.05rem;
@@ -2247,35 +2487,29 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-search__field > span {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
     width: auto;
     height: auto;
-    overflow: hidden;
+    overflow: visible;
     color: #687589;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0;
     line-height: 1.2;
-    text-overflow: ellipsis;
+    text-overflow: clip;
     text-transform: none;
     white-space: nowrap;
   }
 
+  .v2-search__field--destination > span,
+  .v2-search__field--trip > span {
+    display: none;
+  }
+
   .v2-search__field::before {
-    content: "";
-    grid-column: 1;
-    grid-row: 1 / span 2;
-    align-self: center;
-    width: 1.85rem;
-    height: 1.85rem;
-    background: var(--v2-blue-strong);
-    -webkit-mask-position: center;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-size: contain;
-    mask-position: center;
-    mask-repeat: no-repeat;
-    mask-size: contain;
+    content: none;
+    display: none;
   }
 
   .v2-search__field--destination::before,
@@ -2311,14 +2545,14 @@ body:has(.v2) .scroll-top-button {
 
   .v2-search__field--origin strong {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     min-width: 0;
     min-height: auto;
     padding: 0;
     justify-content: flex-start;
     overflow: hidden;
     color: var(--v2-ink);
-    font-size: 1.08rem;
+    font-size: 1rem;
     font-weight: 750;
     text-align: left;
     text-overflow: ellipsis;
@@ -2343,7 +2577,7 @@ body:has(.v2) .scroll-top-button {
 
   .v2-search__field--when.deals-date-picker .deals-date-picker__trigger {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
     min-height: auto;
@@ -2360,8 +2594,21 @@ body:has(.v2) .scroll-top-button {
     display: none;
   }
 
+  .v2-search__field--when.deals-date-picker .deals-date-picker__chevron {
+    display: block;
+    width: 0.85rem;
+    height: 0.85rem;
+    transform: none;
+  }
+
+  .v2-search__field--when.deals-date-picker
+    .deals-date-picker__trigger.is-open
+    .deals-date-picker__chevron {
+    transform: rotate(180deg);
+  }
+
   .v2-search__field--when.deals-date-picker .deals-date-picker__trigger strong {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 750;
   }
 
@@ -2373,7 +2620,7 @@ body:has(.v2) .scroll-top-button {
     content: attr(data-mobile-value);
     position: static;
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     min-width: 0;
     max-width: none;
     overflow: hidden;
@@ -2395,6 +2642,42 @@ body:has(.v2) .scroll-top-button {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+}
+
+@media (max-width: 350px) {
+  .v2-search__field--destination,
+  .v2-search__field--trip {
+    padding-inline: 0.35rem;
+  }
+
+  .v2-search__field--destination > span,
+  .v2-search__field--trip > span {
+    font-size: 0.58rem;
+  }
+
+  .v2-search__field--destination .deals-select__trigger strong,
+  .v2-search__field--trip .deals-select__trigger strong {
+    font-size: 0.68rem;
+  }
+
+  .v2-search__field--destination .deals-select__trigger .deals-select__chevron,
+  .v2-search__field--trip .deals-select__trigger .deals-select__chevron {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+
+  .v2-search__field--when > span {
+    font-size: 0.65rem;
+  }
+
+  .v2-search__field--when.deals-date-picker .deals-date-picker__trigger strong {
+    font-size: 0.78rem;
+  }
+
+  .v2-search__field--when.deals-date-picker .deals-date-picker__chevron {
+    width: 0.7rem;
+    height: 0.7rem;
   }
 }
 

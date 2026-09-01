@@ -7,6 +7,7 @@ import {
   locales,
   type Locale,
 } from "@/lib/locales";
+import { getSocialImageMetadata } from "@/lib/social-image";
 
 type HomeMetadataCopy = {
   title: string;
@@ -58,6 +59,7 @@ export function getHomeMetadata(locale: Locale): Metadata {
   const pathname = getLocalizedHomePath(locale);
   const siteUrl = getSiteUrl();
   const title = `${copy.title} | +352 Flights`;
+  const socialImage = getSocialImageMetadata();
 
   return {
     title: { absolute: title },
@@ -73,14 +75,16 @@ export function getHomeMetadata(locale: Locale): Metadata {
       description: copy.description,
       url: new URL(pathname, siteUrl),
       locale: htmlLangTags[locale].replace("-", "_"),
+      images: [socialImage],
       alternateLocale: locales
         .filter((candidate) => candidate !== locale)
         .map((candidate) => htmlLangTags[candidate].replace("-", "_")),
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description: copy.description,
+      images: [socialImage],
     },
   };
 }

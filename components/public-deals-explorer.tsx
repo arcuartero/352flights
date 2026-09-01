@@ -14,14 +14,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowUpDown,
-  CalendarDays,
   Check,
+  ChevronRight,
   Info,
   MapPin,
   Plane,
   Share2,
-  SlidersHorizontal,
   X,
 } from "lucide-react";
 
@@ -29,15 +27,16 @@ import { DestinationVisual as LandmarkPhoto } from "@/components/public-destinat
 import { LocalizedPageMetadata } from "@/components/localized-page-metadata";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { MonthlyPriceCard } from "@/components/monthly-price-card";
+import type { DealsMapCity } from "@/components/public-deals-map";
 import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import {
   PublicDealsSelect as DealsSelect,
   type PublicDealsSelectOption as SelectOption,
 } from "@/components/public-deals-select";
 import {
-  formatPublicDealDateRange,
   PublicDealsDatePicker as DealsDatePicker,
 } from "@/components/public-deals-date-picker";
+import { getAirportCountryCode } from "@/lib/airport-countries";
 import { getDestinationTheme } from "@/lib/destination-content";
 import { toDestinationSlug } from "@/lib/destination-slugs";
 import { useI18n, type Locale } from "@/lib/i18n";
@@ -48,6 +47,12 @@ import {
 } from "@/lib/locales";
 import type { PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
+import {
+  getPublicDealsSearchQueryKey,
+  PUBLIC_DEALS_SEARCH_MAX_LIMIT,
+  PUBLIC_DEALS_SEARCH_PAGE_SIZE,
+  type PublicDealsSearchResult,
+} from "@/lib/public-deals-query";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 import {
   buildDealsSearchHref,
@@ -74,8 +79,13 @@ const PublicDealsMap = dynamic(
 
 type PublicDealsExplorerProps = {
   data: PublicDealsPageData;
+  destinationCatalog?: {
+    options: SelectOption[];
+    popularOptionValues: string[];
+  };
   destinationPhotoUrls?: Record<string, string>;
   initialFilters?: DealSearchFilters;
+  initialSearchResult?: PublicDealsSearchResult;
   initialSharedFareId?: string | null;
   initialSort?: DealSearchSort;
   mode?: "landing" | "results" | "city";
@@ -1971,6 +1981,14 @@ function buildDestinationOptions(
   now: Date,
 ) {
   const seen = new Set<string>();
+  const countryCodeByCity = new Map<string, string>();
+  for (const deal of deals) {
+    const city = deal.destinationCity?.trim();
+    const countryCode = getAirportCountryCode(deal.destinationAirport);
+    if (!city || !countryCode) continue;
+    const cityKey = normalizeDestinationKey(city);
+    if (!countryCodeByCity.has(cityKey)) countryCodeByCity.set(cityKey, countryCode);
+  }
   const cityOptions = deals
     .map((deal) => deal.destinationCity?.trim() ?? "")
     .filter((city) => city.length > 0)
@@ -1988,6 +2006,7 @@ function buildDestinationOptions(
       return {
         value: normalizedCity,
         label: city,
+        countryCode: countryCodeByCity.get(normalizedCity),
         disabled: !hasMatchingDealsForFilters(
           deals,
           {
@@ -2045,10 +2064,6 @@ function buildDurationOptions(
 
 function getActiveQuickChips(filters: DealSearchFilters) {
   return new Set(QUICK_CHIP_OPTIONS.filter((chip) => getQuickChipState(chip, filters)));
-}
-
-function findOptionLabel(options: SelectOption[], value: string) {
-  return options.find((option) => option.value === value)?.label ?? value;
 }
 
 function groupSearchCityDeals(deals: CampaignPreviewDeal[]) {
@@ -3193,8 +3208,10 @@ export function PublicDealsDestinationPage({
 
 export function PublicDealsExplorer({
   data,
+  destinationCatalog,
   destinationPhotoUrls,
   initialFilters = DEFAULT_DEAL_SEARCH_FILTERS,
+  initialSearchResult,
   initialSharedFareId = null,
   initialSort = DEFAULT_DEAL_SEARCH_SORT,
   mode = "landing",
@@ -3242,6 +3259,10 @@ export function PublicDealsExplorer({
   const [styleVisibleCount, setStyleVisibleCount] = useState(5);
   const [resultsPage, setResultsPage] = useState(1);
   const [resultsPageSize, setResultsPageSize] = useState<number>(DEFAULT_RESULTS_PAGE_SIZE);
+  const [serverSearchResult, setServerSearchResult] = useState<PublicDealsSearchResult | null>(
+    initialSearchResult ?? null,
+  );
+  const [isServerSearchPending, setIsServerSearchPending] = useState(false);
   const [mobileResultsPanel, setMobileResultsPanel] = useState<MobileResultsPanel>(null);
   const fullSidebarRef = useRef<HTMLDivElement | null>(null);
   const compactSidebarFrameRef = useRef<number | null>(null);
@@ -3265,6 +3286,73 @@ export function PublicDealsExplorer({
         ? mobileFilterBaseline
         : coerceFiltersForMode(draftFilters)
       : appliedFilters;
+  const serverSearchFilters = useMemo(
+    () => coerceFiltersForMode(draftFilters),
+    [coerceFiltersForMode, draftFilters],
+  );
+  const requestedServerSearchLimit = Math.min(
+    PUBLIC_DEALS_SEARCH_MAX_LIMIT,
+    Math.max(PUBLIC_DEALS_SEARCH_PAGE_SIZE, resultsPage * resultsPageSize),
+  );
+  const serverSearchQueryKey = getPublicDealsSearchQueryKey(
+    serverSearchFilters,
+    sortOrder,
+    requestedServerSearchLimit,
+  );
+  const sourceDeals =
+    mode === "results" && serverSearchResult ? serverSearchResult.deals : data.deals;
+
+  useEffect(() => {
+    if (mode !== "results" || !initialSearchResult) return;
+    setServerSearchResult(initialSearchResult);
+  }, [initialSearchResult, mode]);
+
+  useEffect(() => {
+    if (mode !== "results" || serverSearchResult?.queryKey === serverSearchQueryKey) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      const href = buildDealsSearchHref(
+        serverSearchFilters,
+        "/api/public-deals/search",
+        sortOrder,
+      );
+      const url = new URL(href, window.location.origin);
+      url.searchParams.set("limit", String(requestedServerSearchLimit));
+      setIsServerSearchPending(true);
+
+      void fetch(`${url.pathname}${url.search}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`Public deal search failed with ${response.status}`);
+          return response.json() as Promise<PublicDealsSearchResult>;
+        })
+        .then((result) => setServerSearchResult(result))
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          console.error("[public-deal-search] Could not refresh results.", error);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsServerSearchPending(false);
+        });
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [
+    mode,
+    requestedServerSearchLimit,
+    serverSearchFilters,
+    serverSearchQueryKey,
+    serverSearchResult?.queryKey,
+    sortOrder,
+  ]);
   const buildDealsHrefForMode = useCallback(
     (filters: DealSearchFilters) => {
       const coercedFilters = coerceFiltersForMode(filters);
@@ -3431,17 +3519,21 @@ export function PublicDealsExplorer({
       priceMax: null,
       excludedAirlines: [],
     });
-    return data.deals.filter((deal) => matchesDealSearchFilters(deal, facetFilters, now));
-  }, [coerceFiltersForMode, data.deals, draftFilters, now]);
+    return sourceDeals.filter((deal) => matchesDealSearchFilters(deal, facetFilters, now));
+  }, [coerceFiltersForMode, draftFilters, now, sourceDeals]);
   const priceHistogramValues = useMemo(
-    () =>
-      filterFacetDeals
+    () => {
+      if (mode === "results" && serverSearchResult) {
+        return serverSearchResult.facets.prices;
+      }
+      return filterFacetDeals
         .map((deal) => deal.dealPrice)
-        .filter((price) => Number.isFinite(price) && price > 0),
-    [filterFacetDeals],
+        .filter((price) => Number.isFinite(price) && price > 0);
+    },
+    [filterFacetDeals, mode, serverSearchResult],
   );
   const priceBounds = useMemo(() => {
-    const fallbackPrices = data.deals
+    const fallbackPrices = sourceDeals
       .map((deal) => deal.dealPrice)
       .filter((price) => Number.isFinite(price) && price > 0);
     const source = priceHistogramValues.length > 0 ? priceHistogramValues : fallbackPrices;
@@ -3449,9 +3541,12 @@ export function PublicDealsExplorer({
       min: source.length > 0 ? Math.floor(Math.min(...source)) : 0,
       max: source.length > 0 ? Math.ceil(Math.max(...source)) : 1,
     };
-  }, [data.deals, priceHistogramValues]);
+  }, [priceHistogramValues, sourceDeals]);
   const shouldShowPriceRangeFilter = mode !== "city" || priceBounds.min < priceBounds.max;
   const airlineOptions = useMemo<AirlineFilterOption[]>(() => {
+    if (mode === "results" && serverSearchResult) {
+      return serverSearchResult.facets.airlines;
+    }
     const labelsByKey = new Map<string, string>();
     filterFacetDeals.forEach((deal) => {
       getDealAirlineNames(deal).forEach((label) => {
@@ -3464,7 +3559,7 @@ export function PublicDealsExplorer({
     return [...labelsByKey]
       .map(([key, label]) => ({ key, label }))
       .sort((left, right) => left.label.localeCompare(right.label, locale));
-  }, [filterFacetDeals, locale]);
+  }, [filterFacetDeals, locale, mode, serverSearchResult]);
   const shouldShowAirlineFilter = mode !== "city" || airlineOptions.length > 1;
   const legacyPriceMaximum =
     draftFilters.budgetFilter === "any" ? null : Number(draftFilters.budgetFilter);
@@ -3478,17 +3573,19 @@ export function PublicDealsExplorer({
   }, []);
 
   const filteredDeals = useMemo(() => {
-    const nextDeals = data.deals.filter((deal) => matchesDealSearchFilters(deal, effectiveFilters, now));
+    if (mode === "results") return sourceDeals;
+    const nextDeals = sourceDeals.filter((deal) => matchesDealSearchFilters(deal, effectiveFilters, now));
 
     return [...nextDeals].sort((left, right) => compareDealsBySort(left, right, sortOrder, now));
-  }, [data.deals, effectiveFilters, now, sortOrder]);
+  }, [effectiveFilters, mode, now, sortOrder, sourceDeals]);
   const draftFilteredDealsCount = useMemo(() => {
+    if (mode === "results" && serverSearchResult) return serverSearchResult.total;
     const filters = coerceFiltersForMode(draftFilters);
-    return data.deals.reduce(
+    return sourceDeals.reduce(
       (count, deal) => count + (matchesDealSearchFilters(deal, filters, now) ? 1 : 0),
       0,
     );
-  }, [coerceFiltersForMode, data.deals, draftFilters, now]);
+  }, [coerceFiltersForMode, draftFilters, mode, now, serverSearchResult, sourceDeals]);
 
   const draftQuickChips = useMemo(() => getActiveQuickChips(draftFilters), [draftFilters]);
   const appliedQuickChips = useMemo(() => getActiveQuickChips(effectiveFilters), [effectiveFilters]);
@@ -3501,9 +3598,14 @@ export function PublicDealsExplorer({
   );
   const spotlightDeal =
     featuredNow[0] ??
-    data.deals.find((deal) => deal.dealPrice > 0) ??
+    sourceDeals.find((deal) => deal.dealPrice > 0) ??
     null;
-  const destinationCounts = useMemo(() => countDealsPerDestination(filteredDeals), [filteredDeals]);
+  const destinationCounts = useMemo(() => {
+    if (mode === "results" && serverSearchResult) {
+      return new Map(Object.entries(serverSearchResult.destinationCounts));
+    }
+    return countDealsPerDestination(filteredDeals);
+  }, [filteredDeals, mode, serverSearchResult]);
   const groupedOpportunityDeals = useMemo<SearchCityGroup[]>(() => {
     if (mode !== "results" && mode !== "city") {
       return [];
@@ -3511,6 +3613,13 @@ export function PublicDealsExplorer({
 
     return groupSearchCityDeals(filteredDeals);
   }, [filteredDeals, mode]);
+  const mapCities = useMemo<DealsMapCity[]>(
+    () =>
+      mode === "results" && serverSearchResult
+        ? serverSearchResult.mapCities
+        : groupedOpportunityDeals,
+    [groupedOpportunityDeals, mode, serverSearchResult],
+  );
   const showResultsMap =
     mode !== "results" || effectiveFilters.destinationFilter === "any";
   const [openSearchCityGroups, setOpenSearchCityGroups] = useState<Set<string>>(() => new Set());
@@ -3522,8 +3631,10 @@ export function PublicDealsExplorer({
         ? groupedOpportunityDeals.find((group) => openSearchCityGroups.has(group.key)) ?? null
         : null;
   const resultsSourceDeals = selectedSearchGroup?.deals ?? opportunityDeals;
+  const resultsTotal =
+    mode === "results" && serverSearchResult ? serverSearchResult.total : resultsSourceDeals.length;
   const availableResultsPageSizes = RESULTS_PAGE_SIZE_OPTIONS.filter(
-    (option, index) => index === 0 || option <= resultsSourceDeals.length,
+    (option, index) => index === 0 || option <= resultsTotal,
   );
   const effectiveResultsPageSize = availableResultsPageSizes.includes(
     resultsPageSize as (typeof RESULTS_PAGE_SIZE_OPTIONS)[number],
@@ -3532,17 +3643,15 @@ export function PublicDealsExplorer({
     : availableResultsPageSizes.at(-1) ?? DEFAULT_RESULTS_PAGE_SIZE;
   const resultsPageCount = Math.max(
     1,
-    Math.ceil(resultsSourceDeals.length / effectiveResultsPageSize),
+    Math.ceil(resultsTotal / effectiveResultsPageSize),
   );
   const clampedResultsPage = Math.min(resultsPage, resultsPageCount);
-  const visibleResultsCount = Math.min(
-    resultsSourceDeals.length,
-    clampedResultsPage * effectiveResultsPageSize,
-  );
-  const paginatedResultDeals = resultsSourceDeals.slice(
-    0,
-    visibleResultsCount,
-  );
+  const visibleResultsCount =
+    mode === "results"
+      ? resultsSourceDeals.length
+      : Math.min(resultsTotal, clampedResultsPage * effectiveResultsPageSize);
+  const paginatedResultDeals =
+    mode === "results" ? resultsSourceDeals : resultsSourceDeals.slice(0, visibleResultsCount);
   const selectedOpportunityDeal =
     selectedOpportunityDeals.find((deal) => deal.id === selectedOpportunityDealId) ?? null;
   const selectedOpportunityDealIndex = selectedOpportunityDealId
@@ -3654,19 +3763,53 @@ export function PublicDealsExplorer({
   }, [featuredNow.length, featuredWindowSize, mode]);
 
   const destinationCount = useMemo(
-    () => new Set(data.deals.map((deal) => `${deal.destinationAirport}-${deal.destinationCity}`)).size,
-    [data.deals],
+    () =>
+      mode === "results" && serverSearchResult
+        ? serverSearchResult.facets.destinations.length
+        : new Set(sourceDeals.map((deal) => `${deal.destinationAirport}-${deal.destinationCity}`)).size,
+    [mode, serverSearchResult, sourceDeals],
   );
   const destinationOptions = useMemo<SelectOption[]>(
-    () =>
-      buildDestinationOptions(data.deals, draftFilters, now).map((option) =>
+    () => {
+      if (destinationCatalog) {
+        return [
+          {
+            value: "any",
+            label: t("common.anyDestination"),
+          },
+          ...destinationCatalog.options,
+        ];
+      }
+
+      if (mode === "results" && serverSearchResult) {
+        return [
+          { value: "any", label: t("common.anyDestination") },
+          ...serverSearchResult.facets.destinations.map((destination) => ({
+            value: destination.value,
+            label: destination.label,
+            countryCode: getAirportCountryCode(destination.airport),
+            disabled: destination.disabled,
+          })),
+        ];
+      }
+
+      return buildDestinationOptions(sourceDeals, draftFilters, now).map((option) =>
         option.value === "any" ? { ...option, label: t("common.anyDestination") } : option,
-      ),
-    [data.deals, draftFilters, now, t],
+      );
+    },
+    [destinationCatalog, draftFilters, mode, now, serverSearchResult, sourceDeals, t],
   );
   const popularDestinationValues = useMemo(() => {
+    if (destinationCatalog) {
+      return destinationCatalog.popularOptionValues;
+    }
+
+    if (mode === "results" && serverSearchResult) {
+      return serverSearchResult.facets.popularDestinationValues;
+    }
+
     const destinationCounts = new Map<string, number>();
-    for (const deal of data.deals) {
+    for (const deal of sourceDeals) {
       const city = deal.destinationCity?.trim();
       if (!city) continue;
       const key = normalizeDestinationKey(city);
@@ -3677,12 +3820,19 @@ export function PublicDealsExplorer({
       .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
       .slice(0, 6)
       .map(([destination]) => destination);
-  }, [data.deals]);
+  }, [destinationCatalog, mode, serverSearchResult, sourceDeals]);
   const departureWeekdayOptions = useMemo<SelectOption[]>(
-    () =>
+    () => {
+      if (mode === "results" && serverSearchResult) {
+        return serverSearchResult.facets.departureWeekdays.map((value) => ({
+          value,
+          label: t(`deals.weekday.${value}`),
+        }));
+      }
+      return (
       buildAvailabilityOptions(
         DEPARTURE_WEEKDAY_OPTIONS,
-        data.deals,
+        sourceDeals,
         draftFilters,
         now,
         (value) => ({
@@ -3691,30 +3841,55 @@ export function PublicDealsExplorer({
         }),
       )
         .map((option) => ({ ...option, label: t(`deals.weekday.${option.value}`) }))
-        .filter((option) => option.value === "any" || !option.disabled),
-    [data.deals, draftFilters, now, t],
+        .filter((option) => option.value === "any" || !option.disabled)
+      );
+    },
+    [draftFilters, mode, now, serverSearchResult, sourceDeals, t],
   );
   const resultsWhenOptions = useMemo<SelectOption[]>(
-    () =>
-      buildAvailabilityOptions(WHEN_OPTIONS, data.deals, draftFilters, now, (value) => ({
+    () => {
+      if (mode === "results" && serverSearchResult) {
+        return serverSearchResult.facets.whenValues.map((value) => ({
+          value,
+          label: t(`deals.when.${value}`),
+        }));
+      }
+      return buildAvailabilityOptions(WHEN_OPTIONS, sourceDeals, draftFilters, now, (value) => ({
         ...draftFilters,
         whenFilter: value as WhenFilter,
         dateFrom: null,
         dateTo: null,
-      })).map((option) => ({ ...option, label: t(`deals.when.${option.value}`) })),
-    [data.deals, draftFilters, now, t],
+      })).map((option) => ({ ...option, label: t(`deals.when.${option.value}`) }));
+    },
+    [draftFilters, mode, now, serverSearchResult, sourceDeals, t],
   );
   const resultsTripOptions = useMemo<SelectOption[]>(
-    () =>
-      buildAvailabilityOptions(TRIP_OPTIONS, data.deals, draftFilters, now, (value) => ({
+    () => {
+      if (mode === "results" && serverSearchResult) {
+        return serverSearchResult.facets.tripValues.map((value) => ({
+          value,
+          label: t(`deals.trip.${value}`),
+        }));
+      }
+      return buildAvailabilityOptions(TRIP_OPTIONS, sourceDeals, draftFilters, now, (value) => ({
         ...draftFilters,
         tripFilter: value as TripFilter,
-      })).map((option) => ({ ...option, label: t(`deals.trip.${option.value}`) })),
-    [data.deals, draftFilters, now, t],
+      })).map((option) => ({ ...option, label: t(`deals.trip.${option.value}`) }));
+    },
+    [draftFilters, mode, now, serverSearchResult, sourceDeals, t],
   );
   const resultsDurationOptions = useMemo<SelectOption[]>(
-    () => buildDurationOptions(data.deals, draftFilters, now, t),
-    [data.deals, draftFilters, now, t],
+    () =>
+      mode === "results" && serverSearchResult
+        ? [
+            { value: "any", label: t("deals.duration.any") },
+            ...serverSearchResult.facets.durationValues.map((value) => ({
+              value,
+              label: t(`deals.duration.${value}`),
+            })),
+          ]
+        : buildDurationOptions(sourceDeals, draftFilters, now, t),
+    [draftFilters, mode, now, serverSearchResult, sourceDeals, t],
   );
   const dealSortOptions = useMemo<SelectOption[]>(
     () =>
@@ -3725,17 +3900,23 @@ export function PublicDealsExplorer({
     [t],
   );
   const directOnlyOptionAvailable = useMemo(
-    () =>
+    () => {
+      if (mode === "results" && serverSearchResult) {
+        return serverSearchResult.facets.directOnlyAvailable;
+      }
+      return (
       draftFilters.directOnly ||
       hasMatchingDealsForFilters(
-        data.deals,
+        sourceDeals,
         {
           ...draftFilters,
           directOnly: true,
         },
         now,
-      ),
-    [data.deals, draftFilters, now],
+      )
+      );
+    },
+    [draftFilters, mode, now, serverSearchResult, sourceDeals],
   );
 
   useEffect(() => {
@@ -3749,14 +3930,47 @@ export function PublicDealsExplorer({
     setDraftFilters((current) => ({ ...current, durationFilter: "any" }));
   }, [draftFilters.durationFilter, resultsDurationOptions]);
 
-  const mobileDestinationLabel =
-    lockedDestinationCity ??
-    findOptionLabel(destinationOptions, effectiveFilters.destinationFilter);
-  const mobileDateLabel =
-    effectiveFilters.whenFilter === "custom"
-      ? formatPublicDealDateRange(effectiveFilters.dateFrom, effectiveFilters.dateTo, locale)
-      : findOptionLabel(resultsWhenOptions, effectiveFilters.whenFilter);
-  const mobileTripLabel = findOptionLabel(resultsTripOptions, effectiveFilters.tripFilter);
+  const selectMobileDestination = useCallback(
+    (nextValue: string) => {
+      if (mode !== "city") {
+        setDraftFilters((current) => ({
+          ...current,
+          destinationFilter: nextValue,
+        }));
+        return;
+      }
+
+      if (nextValue === lockedDestinationFilter) {
+        return;
+      }
+
+      const selectedDestination = destinationOptions.find(
+        (option) => option.value === nextValue,
+      );
+      const pathname =
+        nextValue === "any" || !selectedDestination
+          ? getLocalizedDealsSearchPath(locale)
+          : getLocalizedDestinationPath(
+              locale,
+              toDestinationSlug(selectedDestination.label),
+            );
+      const nextFilters = {
+        ...draftFilters,
+        destinationFilter: "any",
+      };
+
+      router.push(buildDealsSearchHref(nextFilters, pathname, sortOrder));
+    },
+    [
+      destinationOptions,
+      draftFilters,
+      locale,
+      lockedDestinationFilter,
+      mode,
+      router,
+      sortOrder,
+    ],
+  );
 
   const openMobileResultsPanel = useCallback(
     (panel: Exclude<MobileResultsPanel, null>, trigger: HTMLButtonElement) => {
@@ -3780,9 +3994,25 @@ export function PublicDealsExplorer({
     window.requestAnimationFrame(() => mobileResultsReturnFocusRef.current?.focus());
   }, []);
   const resetMobileResults = useCallback(() => {
-    setDraftFilters(coerceFiltersForMode({ ...DEFAULT_DEAL_SEARCH_FILTERS }));
-    setSortOrder(DEFAULT_DEAL_SEARCH_SORT);
-  }, [coerceFiltersForMode]);
+    if (mobileResultsPanel === "sort") {
+      setSortOrder(DEFAULT_DEAL_SEARCH_SORT);
+      return;
+    }
+
+    setDraftFilters((current) =>
+      coerceFiltersForMode({
+        ...current,
+        budgetFilter: DEFAULT_DEAL_SEARCH_FILTERS.budgetFilter,
+        priceMin: DEFAULT_DEAL_SEARCH_FILTERS.priceMin,
+        priceMax: DEFAULT_DEAL_SEARCH_FILTERS.priceMax,
+        excludedAirlines: DEFAULT_DEAL_SEARCH_FILTERS.excludedAirlines,
+        directOnly: DEFAULT_DEAL_SEARCH_FILTERS.directOnly,
+        themeFilter: DEFAULT_DEAL_SEARCH_FILTERS.themeFilter,
+        departureWeekdayFilter: DEFAULT_DEAL_SEARCH_FILTERS.departureWeekdayFilter,
+        durationFilter: DEFAULT_DEAL_SEARCH_FILTERS.durationFilter,
+      }),
+    );
+  }, [coerceFiltersForMode, mobileResultsPanel]);
 
   const searchHref = buildDealsHrefForMode(draftFilters);
 
@@ -3943,62 +4173,91 @@ export function PublicDealsExplorer({
       return;
     }
 
-    const sharedDeal = data.deals.find((deal) => deal.id === initialSharedFareId);
+    const sharedDeal = sourceDeals.find((deal) => deal.id === initialSharedFareId);
     if (!sharedDeal) {
       return;
     }
 
     hasOpenedSharedFareRef.current = true;
-    openOpportunityModal(data.deals, sharedDeal.id);
-  }, [data.deals, initialSharedFareId, openOpportunityModal]);
+    openOpportunityModal(sourceDeals, sharedDeal.id);
+  }, [initialSharedFareId, openOpportunityModal, sourceDeals]);
 
   const closeOpportunityModal = useCallback(() => {
     setSelectedOpportunityDealId(null);
     setSelectedOpportunityDeals([]);
   }, []);
 
-  const quickChipAvailability = useMemo(
-    () =>
-      new Map(
-        SEARCH_QUICK_CHIPS.map((chip) => [chip, isQuickChipAvailable(chip, draftFilters, data.deals, now)]),
-      ),
-    [data.deals, draftFilters, now],
-  );
+  const quickChipAvailability = useMemo(() => {
+    if (mode === "results" && serverSearchResult) {
+      return new Map(
+        SEARCH_QUICK_CHIPS.map((chip) => [
+          chip,
+          serverSearchResult.facets.quickChips[
+            chip as keyof typeof serverSearchResult.facets.quickChips
+          ] ?? false,
+        ]),
+      );
+    }
+    return new Map(
+      SEARCH_QUICK_CHIPS.map((chip) => [
+        chip,
+        isQuickChipAvailable(chip, draftFilters, sourceDeals, now),
+      ]),
+    );
+  }, [draftFilters, mode, now, serverSearchResult, sourceDeals]);
 
-  const renderMobileResultsControls = (includeDestination: boolean) => (
+  const renderMobileResultsControls = () => (
     <>
       <section
         aria-label={t("deals.mobile.summaryLabel")}
         className="deals-mobile-results-controls"
       >
+        <div className="deals-mobile-search-summary">
+          <DealsSelect
+            className="deals-mobile-search-control deals-mobile-search-control--destination"
+            label={t("common.destination")}
+            mobileDestinationSheet
+            onChange={selectMobileDestination}
+            options={destinationOptions}
+            popularOptionValues={popularDestinationValues}
+            value={draftFilters.destinationFilter}
+          />
+          <div className="deals-mobile-search-summary__details">
+            <DealsDatePicker
+              className="deals-mobile-search-control deals-mobile-search-control--when"
+              dateFrom={draftFilters.dateFrom}
+              dateTo={draftFilters.dateTo}
+              label={t("common.when")}
+              onChange={(selection) =>
+                setDraftFilters((current) => ({ ...current, ...selection }))
+              }
+              popoverClassName="deals-date-picker__popover--home"
+              presetOptions={resultsWhenOptions}
+              value={draftFilters.whenFilter}
+            />
+            <DealsSelect
+              className="deals-mobile-search-control deals-mobile-search-control--trip"
+              label={t("common.tripType")}
+              mobileSheetTitle={t("home.searchChooseTripType")}
+              onChange={(nextValue) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  tripFilter: nextValue as TripFilter,
+                }))
+              }
+              options={resultsTripOptions}
+              value={draftFilters.tripFilter}
+            />
+          </div>
+        </div>
+
         <button
-          className="deals-mobile-search-summary"
+          className="deals-mobile-other-filters"
           onClick={(event) => openMobileResultsPanel("filters", event.currentTarget)}
           type="button"
         >
-          <span className="deals-mobile-search-summary__destination">
-            <MapPin aria-hidden="true" />
-            <span>
-              <small>{t("common.destination")}</small>
-              <strong>{mobileDestinationLabel}</strong>
-            </span>
-          </span>
-          <span className="deals-mobile-search-summary__details">
-            <span>
-              <CalendarDays aria-hidden="true" />
-              <span>
-                <small>{t("common.when")}</small>
-                <strong>{mobileDateLabel}</strong>
-              </span>
-            </span>
-            <span>
-              <Plane aria-hidden="true" />
-              <span>
-                <small>{t("common.tripType")}</small>
-                <strong>{mobileTripLabel}</strong>
-              </span>
-            </span>
-          </span>
+          <span>{t("deals.mobile.otherFilters")}</span>
+          <ChevronRight aria-hidden="true" />
         </button>
 
         <div className="deals-mobile-results-bar">
@@ -4007,27 +4266,16 @@ export function PublicDealsExplorer({
             onClick={(event) => openMobileResultsPanel("sort", event.currentTarget)}
             type="button"
           >
-            <ArrowUpDown aria-hidden="true" />
             <span>{t("deals.mobile.sort")}</span>
           </button>
-          <button
-            className="deals-mobile-results-bar__action"
-            onClick={(event) => openMobileResultsPanel("filters", event.currentTarget)}
-            type="button"
-          >
-            <SlidersHorizontal aria-hidden="true" />
-            <span>{t("deals.mobile.filter")}</span>
-          </button>
-          {showResultsMap ? (
-            <PublicDealsMap
-              cities={groupedOpportunityDeals}
-              locale={locale}
-              presentation="toolbar"
-            />
-          ) : null}
+          <PublicDealsMap
+            cities={mapCities}
+            locale={locale}
+            presentation="toolbar"
+          />
         </div>
         <p className="deals-mobile-results-count">
-          {t("deals.mobile.resultsFound", { count: opportunityDeals.length })}
+          {t("deals.mobile.resultsFound", { count: resultsTotal })}
         </p>
       </section>
 
@@ -4048,24 +4296,24 @@ export function PublicDealsExplorer({
               >
                 <header className="deals-mobile-results-sheet__header">
                   <button
+                    className="deals-mobile-results-sheet__reset"
+                    onClick={resetMobileResults}
+                    type="button"
+                  >
+                    {t("deals.mobile.reset")}
+                  </button>
+                  <h2 id={mobileResultsPanelTitleId}>
+                    {mobileResultsPanel === "sort"
+                      ? t("deals.mobile.sort")
+                      : t("deals.mobile.otherFilters")}
+                  </h2>
+                  <button
                     aria-label={t("deals.mobile.close")}
                     className="deals-mobile-results-sheet__close"
                     onClick={closeMobileResultsPanel}
                     type="button"
                   >
                     <X aria-hidden="true" />
-                  </button>
-                  <h2 id={mobileResultsPanelTitleId}>
-                    {mobileResultsPanel === "sort"
-                      ? t("deals.mobile.sort")
-                      : t("deals.mobile.filters")}
-                  </h2>
-                  <button
-                    className="deals-mobile-results-sheet__reset"
-                    onClick={resetMobileResults}
-                    type="button"
-                  >
-                    {t("deals.mobile.reset")}
                   </button>
                 </header>
 
@@ -4089,34 +4337,7 @@ export function PublicDealsExplorer({
                   ) : (
                     <div className="deals-mobile-filter-groups">
                       <section>
-                        <h3>{t("deals.mobile.routeAndDates")}</h3>
-                        <div className="deals-control deals-control--static deals-control--origin-fixed">
-                          <span className="deals-control__label-with-icon">
-                            <MapPin aria-hidden="true" />
-                            {t("deals.searchFrom")}
-                          </span>
-                          <strong>Luxembourg</strong>
-                        </div>
-                        {includeDestination ? (
-                          <DealsSelect
-                            label={t("common.destination")}
-                            mobileDestinationSheet
-                            onChange={(nextValue) =>
-                              setDraftFilters((current) => ({
-                                ...current,
-                                destinationFilter: nextValue,
-                              }))
-                            }
-                            options={destinationOptions}
-                            popularOptionValues={popularDestinationValues}
-                            value={draftFilters.destinationFilter}
-                          />
-                        ) : (
-                          <div className="deals-control deals-control--static">
-                            <span>{t("common.destination")}</span>
-                            <strong>{mobileDestinationLabel}</strong>
-                          </div>
-                        )}
+                        <h3>{t("deals.mobile.otherFilters")}</h3>
                         <DealsSelect
                           label={t("deals.departureDay")}
                           onChange={(nextValue) =>
@@ -4127,31 +4348,6 @@ export function PublicDealsExplorer({
                           }
                           options={departureWeekdayOptions}
                           value={draftFilters.departureWeekdayFilter}
-                        />
-                        <DealsDatePicker
-                          dateFrom={draftFilters.dateFrom}
-                          dateTo={draftFilters.dateTo}
-                          label={t("common.when")}
-                          onChange={(selection) =>
-                            setDraftFilters((current) => ({ ...current, ...selection }))
-                          }
-                          presetOptions={resultsWhenOptions}
-                          value={draftFilters.whenFilter}
-                        />
-                      </section>
-
-                      <section>
-                        <h3>{t("deals.mobile.tripPreferences")}</h3>
-                        <DealsSelect
-                          label={t("common.tripType")}
-                          onChange={(nextValue) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              tripFilter: nextValue as TripFilter,
-                            }))
-                          }
-                          options={resultsTripOptions}
-                          value={draftFilters.tripFilter}
                         />
                         <DealsSelect
                           label={t("deals.tripDuration")}
@@ -4246,7 +4442,7 @@ export function PublicDealsExplorer({
                   >
                     {mobileResultsPanel === "filters"
                       ? t("deals.mobile.showResults", { count: draftFilteredDealsCount })
-                      : t("deals.mobile.showResults", { count: opportunityDeals.length })}
+                      : t("deals.mobile.showResults", { count: resultsTotal })}
                   </button>
                 </footer>
               </div>
@@ -4637,7 +4833,7 @@ export function PublicDealsExplorer({
               </div>
             </section>
 
-            {renderMobileResultsControls(false)}
+            {renderMobileResultsControls()}
 
             <section className="deals-search-layout" id="destination-fares" ref={resultsBoundaryRef}>
               <aside className="deals-search-layout__filters">
@@ -4842,7 +5038,7 @@ export function PublicDealsExplorer({
                           setResultsPage(1);
                         }}
                         pageSize={effectiveResultsPageSize}
-                        total={resultsSourceDeals.length}
+                        total={resultsTotal}
                         visibleCount={visibleResultsCount}
                       />
                     </div>
@@ -4853,18 +5049,18 @@ export function PublicDealsExplorer({
           </div>
         </section>
       ) : (
-        <div className="deals-search-page-card">
+        <div aria-busy={isServerSearchPending} className="deals-search-page-card">
           <div className="deals-mobile-results-heading">
             <h2>{searchResultsCopy.title}</h2>
             <p>{searchResultsCopy.description}</p>
           </div>
-          {renderMobileResultsControls(true)}
+          {renderMobileResultsControls()}
           <section className="deals-search-layout" ref={resultsBoundaryRef}>
             <aside className="deals-search-layout__filters">
               <div className="deals-search-sidebar" ref={fullSidebarRef}>
                 {showResultsMap ? (
                   <div className="deals-search-sidebar__section">
-                    <PublicDealsMap cities={groupedOpportunityDeals} locale={locale} />
+                    <PublicDealsMap cities={mapCities} locale={locale} />
                   </div>
                 ) : null}
 
@@ -5033,7 +5229,7 @@ export function PublicDealsExplorer({
                     options={dealSortOptions}
                     value={sortOrder}
                   />
-                  <span>{opportunityDeals.length} {opportunityDeals.length === 1 ? t("deals.fare") : t("deals.fares")}</span>
+                  <span>{resultsTotal} {resultsTotal === 1 ? t("deals.fare") : t("deals.fares")}</span>
                 </div>
               </div>
 
@@ -5063,7 +5259,7 @@ export function PublicDealsExplorer({
                       setResultsPage(1);
                     }}
                     pageSize={effectiveResultsPageSize}
-                    total={resultsSourceDeals.length}
+                    total={resultsTotal}
                     visibleCount={visibleResultsCount}
                   />
                 </div>
@@ -5088,7 +5284,7 @@ export function PublicDealsExplorer({
                       setResultsPage(1);
                     }}
                     pageSize={effectiveResultsPageSize}
-                    total={resultsSourceDeals.length}
+                    total={resultsTotal}
                     visibleCount={visibleResultsCount}
                   />
                 </div>
