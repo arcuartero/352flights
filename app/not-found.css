@@ -33,19 +33,6 @@
     inset 0 1px 0 #fff;
 }
 
-.v2-not-found__panel::after {
-  position: absolute;
-  right: 2.5%;
-  bottom: 9%;
-  z-index: 0;
-  width: 44%;
-  height: 5rem;
-  border-bottom: 2px dashed rgba(31, 95, 214, 0.3);
-  border-radius: 50%;
-  content: "";
-  transform: rotate(4deg);
-}
-
 .v2-not-found__copy {
   position: relative;
   z-index: 2;
@@ -216,7 +203,7 @@
   width: 100%;
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 1.4rem 1.8rem rgba(11, 37, 93, 0.1));
+  filter: none;
   mix-blend-mode: multiply;
 }
 
@@ -251,10 +238,6 @@
     min-height: 0;
     padding: 1.35rem;
     border-radius: 1.5rem;
-  }
-
-  .v2-not-found__panel::after {
-    display: none;
   }
 
   .v2-not-found__copy {
