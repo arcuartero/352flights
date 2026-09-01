@@ -444,6 +444,10 @@ export function V2Landing({
 
     return buildDealsSearchHref(hrefFilters, pathname);
   }, [deals, filters, locale]);
+  const hasMatchingDeals = useMemo(
+    () => deals.some((deal) => matchesHomeSearchFilters(deal, filters, now)),
+    [deals, filters, now],
+  );
   const searchWhenOptions = useMemo(
     () =>
       [
@@ -473,12 +477,28 @@ export function V2Landing({
       })),
     [deals, filters, now, t],
   );
-  const searchTripOptions: Array<{ value: TripFilter; label: string }> = [
-    { value: "any", label: t("common.anyTrip") },
-    { value: "weekend", label: t("common.weekend") },
-    { value: "weeklong", label: t("common.weeklong") },
-    { value: "long_stay", label: t("common.longStay") },
-  ];
+  const searchTripOptions = useMemo(
+    () =>
+      [
+        { value: "any" as TripFilter, label: t("common.anyTrip") },
+        { value: "weekend" as TripFilter, label: t("common.weekend") },
+        { value: "weeklong" as TripFilter, label: t("common.weeklong") },
+        { value: "long_stay" as TripFilter, label: t("common.longStay") },
+      ].map((option) => ({
+        ...option,
+        disabled: !deals.some((deal) =>
+          matchesHomeSearchFilters(
+            deal,
+            {
+              ...filters,
+              tripFilter: option.value,
+            },
+            now,
+          ),
+        ),
+      })),
+    [deals, filters, now, t],
+  );
   const priceBounds = useMemo(() => {
     const filtersWithoutPrice = {
       ...filters,
@@ -491,6 +511,16 @@ export function V2Landing({
       .map((deal) => deal.dealPrice)
       .filter((price) => Number.isFinite(price) && price > 0);
     const fallbackPrices = deals
+      .filter((deal) => {
+        if (
+          filters.destinationFilter !== "any" &&
+          normalizeDestinationKey(deal.destinationCity) !== filters.destinationFilter
+        ) {
+          return false;
+        }
+
+        return !filters.directOnly || deal.maxStops === "NON_STOP";
+      })
       .map((deal) => deal.dealPrice)
       .filter((price) => Number.isFinite(price) && price > 0);
     const source = matchingPrices.length > 0 ? matchingPrices : fallbackPrices;
@@ -564,6 +594,25 @@ export function V2Landing({
 
     setFilters((current) => ({ ...current, destinationFilter: "any" }));
   }, [destinationOptions, filters.destinationFilter]);
+
+  useEffect(() => {
+    if (filters.tripFilter === "any") {
+      return;
+    }
+
+    const selectedTripOption = searchTripOptions.find(
+      (option) => option.value === filters.tripFilter,
+    );
+    if (!selectedTripOption?.disabled) {
+      return;
+    }
+
+    setFilters((current) =>
+      current.tripFilter === filters.tripFilter
+        ? { ...current, tripFilter: "any" }
+        : current,
+    );
+  }, [filters.tripFilter, searchTripOptions]);
 
   useEffect(() => {
     setTickerRepeats(
@@ -720,9 +769,15 @@ export function V2Landing({
             />
             <span>{t("common.directOnly")}</span>
           </label>
-          <Link className="v2-search__cta" href={searchHref}>
-            {t("common.viewDeals")}
-          </Link>
+          {hasMatchingDeals ? (
+            <Link className="v2-search__cta" href={searchHref}>
+              {t("common.viewDeals")}
+            </Link>
+          ) : (
+            <button className="v2-search__cta" disabled type="button">
+              {t("common.viewDeals")}
+            </button>
+          )}
           </div>
         </div>
       </section>
