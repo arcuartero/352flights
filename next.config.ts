@@ -2,6 +2,22 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    qualities: [80, 82],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "byehmkysjqrhpdrtdkjk.supabase.co",
+        pathname: "/storage/v1/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+    ],
+  },
   async headers() {
     const publicDealsCacheHeaders = [
       {

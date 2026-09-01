@@ -1,10 +1,12 @@
 "use client";
 
 import { CalendarCheck2, CircleCheck, Gauge, MapPin, Plane, Route } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { LanguageSelector } from "@/components/language-selector";
+import { DestinationVisual } from "@/components/public-destination-visual";
 import { PublicDealsDatePicker } from "@/components/public-deals-date-picker";
 import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import { PublicDealsSelect } from "@/components/public-deals-select";
@@ -170,14 +172,6 @@ const TESTIMONIALS_ROW_B: Testimonial[] = [
 function landmarkSrc(city: string, landmark: string) {
   const params = new URLSearchParams({ city, landmark, v: "2" });
   return `/api/landmark-photo?${params.toString()}`;
-}
-
-function useLocalPhotoFallback(event: React.SyntheticEvent<HTMLImageElement>, coastal = false) {
-  const image = event.currentTarget;
-  image.onerror = null;
-  image.src = coastal
-    ? "/destinations/coastal-town.webp"
-    : "/destinations/european-city.webp";
 }
 
 function buildRhythmSearchHref(key: string, locale: Locale) {
@@ -711,9 +705,13 @@ export function V2Landing({
       <section className="v2-hero" aria-label={t("home.a11y.introduction")}>
         <div className="v2-hero__canvas" data-reveal ref={heroMediaRef}>
           <div className="v2-hero__media">
-            <img
+            <Image
               alt={t("home.a11y.heroImage")}
               className="v2-hero__photo"
+              fill
+              priority
+              quality={82}
+              sizes="100vw"
               src="/deals-hero-airplane-cabin-3.jpeg"
             />
             <span className="v2-hero__overlay" aria-hidden="true" />
@@ -918,14 +916,15 @@ export function V2Landing({
                 key={dest.city}
                 style={{ "--d": `${i * 90}ms` } as React.CSSProperties}
               >
-                <img
+                <DestinationVisual
                   alt={t("home.a11y.destinationImage", {
                     destination: dest.city,
                     landmark: dest.landmark,
                   })}
-                  loading="lazy"
-                  onError={(event) => useLocalPhotoFallback(event)}
-                  src={destinationPhotoUrls[toDestinationSlug(dest.city)] ?? landmarkSrc(dest.city, dest.landmark)}
+                  destinationCity={dest.city}
+                  fallbackPhotoSrc={landmarkSrc(dest.city, dest.landmark)}
+                  photoSrc={destinationPhotoUrls[toDestinationSlug(dest.city)]}
+                  sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 <span className="v2-bento__shade" aria-hidden="true" />
                 <span className="v2-bento__meta">
@@ -959,11 +958,12 @@ export function V2Landing({
               href={buildRhythmSearchHref(rhythm.key, locale)}
               key={rhythm.key}
             >
-              <img
+              <DestinationVisual
                 alt={t(`home.rhythm.${rhythm.key === "week" ? "week" : rhythm.key}`)}
-                loading="lazy"
-                onError={(event) => useLocalPhotoFallback(event, rhythm.key === "beach")}
-                src={destinationPhotoUrls[toDestinationSlug(rhythm.city)] ?? landmarkSrc(rhythm.city, rhythm.landmark)}
+                destinationCity={rhythm.city}
+                fallbackPhotoSrc={landmarkSrc(rhythm.city, rhythm.landmark)}
+                photoSrc={destinationPhotoUrls[toDestinationSlug(rhythm.city)]}
+                sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 33vw"
               />
               <span className="v2-rhythms__shade" aria-hidden="true" />
               <span className="v2-rhythms__copy">

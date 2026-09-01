@@ -1,8 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { toDestinationSlug } from "@/lib/destination-slugs";
+import {
+  isSupabaseStorageImage,
+  supabaseImageLoader,
+} from "@/lib/supabase-image-loader";
 
 type DestinationVisualProps = {
   destinationCity: string;
@@ -12,6 +17,7 @@ type DestinationVisualProps = {
   alt?: string;
   landmarkTitle?: string;
   photoSrc?: string | null;
+  fallbackPhotoSrc?: string | null;
 };
 
 const COASTAL_DESTINATIONS = new Set([
@@ -79,8 +85,9 @@ export function DestinationVisual({
   alt,
   landmarkTitle,
   photoSrc,
+  fallbackPhotoSrc,
 }: DestinationVisualProps) {
-  const fallbackSrc = getDestinationVisual(destinationCity);
+  const fallbackSrc = fallbackPhotoSrc?.trim() || getDestinationVisual(destinationCity);
   const resolvedPhotoSrc = photoSrc?.trim() || null;
   const [src, setSrc] = useState(resolvedPhotoSrc ?? fallbackSrc);
 
@@ -107,7 +114,7 @@ export function DestinationVisual({
   }, [destinationCity, fallbackSrc, resolvedPhotoSrc]);
 
   return (
-    <img
+    <Image
       alt={
         alt ??
         (landmarkTitle
@@ -115,9 +122,17 @@ export function DestinationVisual({
           : `Travel inspiration for ${destinationCity}`)
       }
       className={className}
-      fetchPriority={priority ? "high" : "auto"}
-      loading={priority ? "eager" : "lazy"}
-      sizes={sizes}
+      fill
+      loader={isSupabaseStorageImage(src) ? supabaseImageLoader : undefined}
+      loading={priority ? undefined : "lazy"}
+      onError={() => {
+        if (src !== fallbackSrc) {
+          setSrc(fallbackSrc);
+        }
+      }}
+      priority={priority}
+      quality={80}
+      sizes={sizes ?? "(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 33vw"}
       src={src}
       style={{ objectFit: "cover" }}
     />
