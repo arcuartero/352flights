@@ -21,8 +21,8 @@
   grid-template-columns: minmax(0, 1.02fr) minmax(20rem, 0.98fr);
   align-items: center;
   gap: clamp(2rem, 5vw, 5rem);
-  width: min(100%, 76rem);
-  min-height: clamp(32rem, 60vh, 38rem);
+  width: min(100%, 96rem);
+  min-height: clamp(38rem, 72vh, 46rem);
   padding: clamp(2.25rem, 5vw, 5rem);
   overflow: hidden;
   border: 1px solid rgba(12, 25, 43, 0.13);
