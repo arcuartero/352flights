@@ -48,8 +48,8 @@
   max-width: 12ch;
   margin-top: 1.1rem;
   color: #0c1933;
-  font-size: clamp(2.7rem, 5.2vw, 4.65rem);
-  font-weight: 700;
+  font-size: clamp(2.35rem, 4.2vw, 3.9rem);
+  font-weight: 600;
   letter-spacing: -0.045em;
   line-height: 0.98;
   text-wrap: balance;
@@ -212,7 +212,7 @@
   }
 
   .v2-not-found__copy h1 {
-    font-size: clamp(2.5rem, 6vw, 3.7rem);
+    font-size: clamp(2.2rem, 5.2vw, 3.15rem);
   }
 }
 
@@ -243,7 +243,7 @@
   .v2-not-found__copy h1 {
     max-width: 13ch;
     margin-top: 0.75rem;
-    font-size: clamp(2.35rem, 11vw, 3.35rem);
+    font-size: clamp(2.05rem, 9.5vw, 2.85rem);
   }
 
   .v2-not-found__body {
