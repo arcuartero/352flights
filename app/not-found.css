@@ -182,7 +182,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  width: min(100%, 34rem);
+  width: min(100%, 38rem);
   aspect-ratio: 1;
   margin: 0;
   place-items: center;
@@ -231,11 +231,11 @@
   }
 
   .v2-not-found__copy {
-    order: 2;
+    order: 1;
   }
 
   .v2-not-found__illustration {
-    order: 1;
+    order: 2;
     width: min(78vw, 19rem);
     justify-self: center;
   }
