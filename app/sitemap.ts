@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { getDestinationLanguageAlternates } from "@/lib/deals-seo";
 import { getDestinationSlugs } from "@/lib/destination-routes";
+import { isDestinationIndexable } from "@/lib/destination-seo-policy";
 import { getSiteUrl } from "@/lib/env";
 import { getHomeLanguageAlternates } from "@/lib/home-localization";
 import {
@@ -9,10 +10,14 @@ import {
   getLocalizedHomePath,
   locales,
 } from "@/lib/locales";
+import { getPublicSearchDealsPageData } from "@/lib/ops";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 1800;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
   const now = new Date();
+  const publicDeals = await getPublicSearchDealsPageData();
   const homePages: MetadataRoute.Sitemap = locales.map((locale) => ({
     url: new URL(getLocalizedHomePath(locale), siteUrl).toString(),
     lastModified: now,
@@ -27,7 +32,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       ),
     },
   }));
-  const cityPages: MetadataRoute.Sitemap = getDestinationSlugs().flatMap((slug) =>
+  const indexableDestinationSlugs = getDestinationSlugs().filter((slug) =>
+    isDestinationIndexable(slug, publicDeals),
+  );
+  const cityPages: MetadataRoute.Sitemap = indexableDestinationSlugs.flatMap((slug) =>
     locales.map((locale) => ({
       url: new URL(getLocalizedDestinationPath(locale, slug), siteUrl).toString(),
       lastModified: now,

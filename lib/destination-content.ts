@@ -138,6 +138,11 @@ const DESTINATION_CONTENT_OVERRIDES: Record<string, Partial<DestinationContent>>
   },
 };
 
+export function hasDestinationEditorialContent(destination: string) {
+  const slug = toDestinationSlug(destination);
+  return Object.prototype.hasOwnProperty.call(DESTINATION_CONTENT_OVERRIDES, slug);
+}
+
 function humanizeDestination(value: string) {
   return value
     .split("-")

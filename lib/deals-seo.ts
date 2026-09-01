@@ -211,7 +211,7 @@ export function getDealsCityMetadata(
     description,
     alternates: {
       canonical: pathname,
-      languages: getDestinationLanguageAlternates(citySlug),
+      ...(noindex ? {} : { languages: getDestinationLanguageAlternates(citySlug) }),
     },
     openGraph: {
       title,

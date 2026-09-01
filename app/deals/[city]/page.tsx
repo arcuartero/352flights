@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { DealsCityPageContent } from "@/components/deals-city-page-content";
 import { getDealsCityMetadata } from "@/lib/deals-seo";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
+import { isDestinationIndexable } from "@/lib/destination-seo-policy";
 import { toDestinationSlug } from "@/lib/destination-slugs";
+import { getPublicCityDealsPageData } from "@/lib/ops";
 
 export const revalidate = 1800;
 
@@ -32,12 +34,12 @@ export async function generateMetadata({
     };
   }
 
-  return getDealsCityMetadata(
-    "en",
-    cityName,
-    citySlug,
-    hasSearchParams(resolvedSearchParams),
-  );
+  const isFilteredPage = hasSearchParams(resolvedSearchParams);
+  const cityData = isFilteredPage ? null : await getPublicCityDealsPageData(citySlug);
+  const noindex =
+    isFilteredPage || (cityData !== null && !isDestinationIndexable(citySlug, cityData));
+
+  return getDealsCityMetadata("en", cityName, citySlug, noindex);
 }
 
 export default function DealsCityPage({ params, searchParams }: DealsCityPageProps) {

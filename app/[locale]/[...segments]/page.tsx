@@ -5,11 +5,13 @@ import { DealsCityPageContent } from "@/components/deals-city-page-content";
 import { DealsSearchPageContent } from "@/components/deals-search-page-content";
 import { getDealsCityMetadata, getDealsSearchMetadata } from "@/lib/deals-seo";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
+import { isDestinationIndexable } from "@/lib/destination-seo-policy";
 import {
   dealsPathSegments,
   isLocalizedHomeLocale,
   type LocalizedHomeLocale,
 } from "@/lib/locales";
+import { getPublicCityDealsPageData } from "@/lib/ops";
 
 export const revalidate = 1800;
 
@@ -63,14 +65,21 @@ export async function generateMetadata({
     searchParams,
   ]);
 
-  return route.kind === "search"
-    ? getDealsSearchMetadata(route.locale)
-    : getDealsCityMetadata(
-        route.locale,
-        route.cityName,
-        route.citySlug,
-        hasSearchParams(resolvedSearchParams),
-      );
+  if (route.kind === "search") {
+    return getDealsSearchMetadata(route.locale);
+  }
+
+  const isFilteredPage = hasSearchParams(resolvedSearchParams);
+  const cityData = isFilteredPage ? null : await getPublicCityDealsPageData(route.citySlug);
+  const noindex =
+    isFilteredPage || (cityData !== null && !isDestinationIndexable(route.citySlug, cityData));
+
+  return getDealsCityMetadata(
+    route.locale,
+    route.cityName,
+    route.citySlug,
+    noindex,
+  );
 }
 
 export default async function LocalizedDealsPage({
