@@ -55,6 +55,7 @@ export UV_CACHE_DIR="/tmp/uv-cache"
 export SCANNER_STORAGE_MODE="local"
 export SCANNER_STATE_FILE="${SCANNER_STATE_FILE:-$SCANNER_DIR/state.json}"
 export SCANNER_RUN_SOURCE="${SCANNER_RUN_SOURCE:-mac}"
+export PUBLIC_CACHE_REVALIDATION_URL="${PUBLIC_CACHE_REVALIDATION_URL:-https://www.352flights.com/api/public-deals/revalidate}"
 
 cd "$SCANNER_DIR"
 

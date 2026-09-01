@@ -64,6 +64,7 @@ cd "$SCANNER_DIR"
 export SCANNER_STORAGE_MODE=local
 export SCANNER_STATE_FILE="${SCANNER_STATE_FILE:-$SCANNER_DIR/state.json}"
 export SCANNER_RUN_SOURCE="${SCANNER_RUN_SOURCE:-vps}"
+export PUBLIC_CACHE_REVALIDATION_URL="${PUBLIC_CACHE_REVALIDATION_URL:-https://www.352flights.com/api/public-deals/revalidate}"
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Refreshing monthly scan configuration from Supabase."
 uv run luxflight-scan --pull-supabase-configuration --json > "$LOG_DIR/vps-config-$RUN_ID.json"

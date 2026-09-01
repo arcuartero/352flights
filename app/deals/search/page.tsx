@@ -10,7 +10,7 @@ import {
 import { parseDealSearchFilters, parseDealSearchSort } from "@/lib/public-deals-search";
 import { getRequestLocale } from "@/lib/request-locale";
 
-export const revalidate = 300;
+export const revalidate = 1800;
 
 export const metadata = getDealsSearchMetadata("en");
 

@@ -5,7 +5,7 @@ import { getHomeMetadata } from "@/lib/home-localization";
 
 import "./home.css";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export const metadata: Metadata = getHomeMetadata("en");
 

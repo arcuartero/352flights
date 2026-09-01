@@ -1,14 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
+  parseLocalizedDealsPathname,
   getLocaleFromPathname,
   localeRequestHeader,
 } from "@/lib/locales";
+
+const CACHE_SECONDS = {
+  home: 60 * 60,
+  publicDeals: 30 * 60,
+} as const;
+
+function isHomePathname(pathname: string) {
+  return pathname === "/" || /^\/(?:fr|de|pt|it|es)$/.test(pathname);
+}
+
+function isPrivatePathname(pathname: string) {
+  return (
+    pathname === "/ops" ||
+    pathname.startsWith("/ops/") ||
+    pathname === "/preferences" ||
+    pathname.startsWith("/preferences/") ||
+    pathname === "/api/preferences" ||
+    pathname === "/confirm" ||
+    pathname === "/unsubscribe"
+  );
+}
+
+function applyCachePolicy(response: NextResponse, pathname: string) {
+  if (isPrivatePathname(pathname)) {
+    response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+    response.headers.set("Vercel-CDN-Cache-Control", "no-store");
+    return response;
+  }
+
+  const seconds = isHomePathname(pathname)
+    ? CACHE_SECONDS.home
+    : parseLocalizedDealsPathname(pathname)
+      ? CACHE_SECONDS.publicDeals
+      : null;
+
+  if (seconds !== null) {
+    response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+    response.headers.set(
+      "Vercel-CDN-Cache-Control",
+      `public, s-maxage=${seconds}, stale-while-revalidate=${seconds}`,
+    );
+  }
+
+  return response;
+}
 
 function unauthorizedResponse() {
   return new NextResponse("Authentication required.", {
     status: 401,
     headers: {
+      "Cache-Control": "private, no-store, max-age=0, must-revalidate",
       "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
     },
   });
@@ -19,11 +66,13 @@ function localizedResponse(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(localeRequestHeader, locale);
 
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: requestHeaders,
     },
   });
+
+  return applyCachePolicy(response, request.nextUrl.pathname);
 }
 
 export function middleware(request: NextRequest) {
@@ -78,5 +127,9 @@ export const config = {
     "/es",
     "/es/:path*",
     "/ops/:path*",
+    "/preferences/:path*",
+    "/api/preferences",
+    "/confirm",
+    "/unsubscribe",
   ],
 };

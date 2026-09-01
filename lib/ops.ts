@@ -42,6 +42,11 @@ import {
   type WeekdayValue,
 } from "@/lib/preferences-shared";
 import {
+  getDestinationFaresCacheTag,
+  HOME_FARES_CACHE_TAG,
+  SEARCH_FARES_CACHE_TAG,
+} from "@/lib/public-fare-cache";
+import {
   deriveStayBucketFromNights,
   formatStayBucketListLabel,
 } from "@/lib/stay-buckets";
@@ -4859,8 +4864,8 @@ const getCachedPublicDealsPageData = unstable_cache(
   getPublicDealsPageDataUncached,
   ["public-deals-page-data-v3"],
   {
-    revalidate: 300,
-    tags: ["public-deals"],
+    revalidate: 3600,
+    tags: [HOME_FARES_CACHE_TAG],
   },
 );
 
@@ -4868,8 +4873,8 @@ const getCachedPublicSearchDealsPageData = unstable_cache(
   getPublicSearchDealsPageDataUncached,
   ["public-search-deals-page-data-v3"],
   {
-    revalidate: 300,
-    tags: ["public-deals"],
+    revalidate: 1800,
+    tags: [SEARCH_FARES_CACHE_TAG],
   },
 );
 
@@ -4926,7 +4931,10 @@ export async function getPublicCityDealsPageData(citySlug: string): Promise<Publ
   const getCachedCityData = unstable_cache(
     () => getPublicCityDealsPageDataUncached(normalizedSlug),
     ["public-city-deals-page-data-v3", normalizedSlug],
-    { revalidate: 300, tags: ["public-deals", `public-city-deals-${normalizedSlug}`] },
+    {
+      revalidate: 1800,
+      tags: [getDestinationFaresCacheTag(normalizedSlug)],
+    },
   );
 
   try {

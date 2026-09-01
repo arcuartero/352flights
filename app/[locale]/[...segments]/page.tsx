@@ -11,7 +11,7 @@ import {
   type LocalizedHomeLocale,
 } from "@/lib/locales";
 
-export const revalidate = 300;
+export const revalidate = 1800;
 
 type LocalizedDealsPageProps = {
   params: Promise<{ locale: string; segments: string[] }>;

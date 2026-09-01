@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
+
+import httpx
 
 from luxflight_scanner.config import ScannerConfig
 from luxflight_scanner.models import (
@@ -245,6 +248,7 @@ class LocalSupabaseSync:
             for snapshot in state["snapshots"]
         }
         processed = 0
+        changed_destinations: set[str] = set()
 
         # Create or refresh the run records before uploading their snapshots so
         # every new remote price can carry a real foreign-key relationship.
@@ -358,6 +362,7 @@ class LocalSupabaseSync:
                 }
                 local_to_remote_snapshot_ids[local_snapshot_id] = remote_snapshot_id
                 report["snapshots_synced"] += 1
+                changed_destinations.add(route.destination_city)
                 processed += 1
                 _persist_state(self.state_path, state)
             except Exception as error:  # pragma: no cover - depends on live Supabase
@@ -452,4 +457,38 @@ class LocalSupabaseSync:
         report["remote_routes_touched"] = len(self.remote_route_ids)
         report["configured_routes"] = len(self.routes_by_key)
         report["storage_mode"] = self.config.storage_mode
+        report["cache_revalidation"] = self._revalidate_public_destinations(
+            changed_destinations
+        )
         return report
+
+    def _revalidate_public_destinations(self, cities: set[str]) -> dict[str, Any]:
+        endpoint = os.getenv("PUBLIC_CACHE_REVALIDATION_URL", "").strip()
+        if not endpoint or not cities:
+            return {
+                "status": "skipped",
+                "destinations": sorted(cities),
+            }
+
+        try:
+            response = httpx.post(
+                endpoint,
+                headers={
+                    "Authorization": f"Bearer {self.config.supabase_service_role_key}",
+                    "Content-Type": "application/json",
+                },
+                json={"cities": sorted(cities)},
+                timeout=15.0,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            return {
+                "status": "revalidated",
+                "destinations": payload.get("revalidated", sorted(cities)),
+            }
+        except (httpx.HTTPError, ValueError) as error:
+            return {
+                "status": "failed",
+                "destinations": sorted(cities),
+                "error": str(error),
+            }
