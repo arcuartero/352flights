@@ -1,73 +1,125 @@
 "use client";
 
-import { ArrowRight, Heart, House, MapPinOff, Plane } from "lucide-react";
+import { Heart, House, Plane } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { LanguageSelector } from "@/components/language-selector";
 import { V2AlertsButton } from "@/components/v2-alerts";
 import { useI18n, type Locale } from "@/lib/i18n";
-import { getLocalizedHomePath } from "@/lib/locales";
+import {
+  getLocalizedDealsSearchPath,
+  getLocalizedDestinationPath,
+  getLocalizedHomePath,
+} from "@/lib/locales";
 
 const copy: Record<
   Locale,
   {
     eyebrow: string;
     title: string;
-    body: string;
+    body: [string, string];
     search: string;
     home: string;
+    popular: string;
     illustration: string;
   }
 > = {
   en: {
-    eyebrow: "Off the route map",
-    title: "Destination not found",
-    body: "We couldn't find a route from Luxembourg with that name. Go back to the results and try another city.",
-    search: "Search again",
+    eyebrow: "Route not found",
+    title: "It looks like this route doesn't exist",
+    body: [
+      "The page you're looking for doesn't exist or has moved.",
+      "But there are still plenty of deals taking off from Luxembourg.",
+    ],
+    search: "Find cheap flights",
     home: "Back to home",
-    illustration: "A plane flying away from an unavailable destination",
+    popular: "Or explore popular destinations",
+    illustration: "Three luggage tags marked LUX and 404",
   },
   fr: {
-    eyebrow: "Hors de la carte",
-    title: "Destination introuvable",
-    body: "Nous n'avons trouvé aucun itinéraire depuis Luxembourg portant ce nom. Revenez aux résultats et essayez une autre ville.",
-    search: "Relancer la recherche",
+    eyebrow: "Route introuvable",
+    title: "On dirait que cette route n'existe pas",
+    body: [
+      "La page que vous recherchez n'existe pas ou a changé d'adresse.",
+      "Mais de nombreuses offres décollent toujours du Luxembourg.",
+    ],
+    search: "Rechercher des vols pas chers",
     home: "Retour à l'accueil",
-    illustration: "Un avion s'éloignant d'une destination indisponible",
+    popular: "Ou explorez des destinations populaires",
+    illustration: "Trois étiquettes de bagage marquées LUX et 404",
   },
   de: {
-    eyebrow: "Nicht auf der Routenkarte",
-    title: "Reiseziel nicht gefunden",
-    body: "Wir konnten keine Route ab Luxemburg mit diesem Namen finden. Kehren Sie zu den Ergebnissen zurück und versuchen Sie eine andere Stadt.",
-    search: "Erneut suchen",
+    eyebrow: "Route nicht gefunden",
+    title: "Diese Route scheint nicht zu existieren",
+    body: [
+      "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+      "Aber es starten weiterhin viele Angebote ab Luxemburg.",
+    ],
+    search: "Günstige Flüge suchen",
     home: "Zur Startseite",
-    illustration: "Ein Flugzeug fliegt von einem nicht verfügbaren Reiseziel weg",
+    popular: "Oder beliebte Reiseziele entdecken",
+    illustration: "Drei Gepäckanhänger mit den Aufschriften LUX und 404",
   },
   pt: {
-    eyebrow: "Fora do mapa de rotas",
-    title: "Destino não encontrado",
-    body: "Não encontrámos uma rota a partir do Luxemburgo com esse nome. Volte aos resultados e experimente outra cidade.",
-    search: "Pesquisar novamente",
+    eyebrow: "Rota não encontrada",
+    title: "Parece que esta rota não existe",
+    body: [
+      "A página que procura não existe ou mudou de endereço.",
+      "Mas ainda há muitas ofertas a descolar do Luxemburgo.",
+    ],
+    search: "Procurar voos baratos",
     home: "Voltar ao início",
-    illustration: "Um avião a afastar-se de um destino indisponível",
+    popular: "Ou explore destinos populares",
+    illustration: "Três etiquetas de bagagem com LUX e 404",
   },
   it: {
-    eyebrow: "Fuori dalla mappa delle rotte",
-    title: "Destinazione non trovata",
-    body: "Non abbiamo trovato una rotta dal Lussemburgo con questo nome. Torna ai risultati e prova un'altra città.",
-    search: "Cerca di nuovo",
+    eyebrow: "Rotta non trovata",
+    title: "Sembra che questa rotta non esista",
+    body: [
+      "La pagina che cerchi non esiste o ha cambiato indirizzo.",
+      "Ma ci sono ancora molte offerte in partenza dal Lussemburgo.",
+    ],
+    search: "Cerca voli economici",
     home: "Torna alla home",
-    illustration: "Un aereo si allontana da una destinazione non disponibile",
+    popular: "Oppure esplora le destinazioni più popolari",
+    illustration: "Tre etichette per bagagli con le scritte LUX e 404",
   },
   es: {
-    eyebrow: "Fuera del mapa de rutas",
-    title: "Destino no encontrado",
-    body: "No hemos encontrado una ruta desde Luxemburgo con ese nombre. Vuelve a los resultados y prueba con otra ciudad.",
-    search: "Volver a buscar",
-    home: "Ir al inicio",
-    illustration: "Un avión alejándose de un destino no disponible",
+    eyebrow: "Ruta no encontrada",
+    title: "Parece que esta ruta no existe",
+    body: [
+      "La página que buscas no existe o ha cambiado de ruta.",
+      "Pero todavía hay muchas ofertas despegando desde Luxemburgo.",
+    ],
+    search: "Buscar vuelos baratos",
+    home: "Volver al inicio",
+    popular: "O explora destinos populares",
+    illustration: "Tres etiquetas de equipaje con LUX y 404",
   },
 };
+
+const popularDestinations: Array<{
+  slug: string;
+  labels: Record<Locale, string>;
+}> = [
+  {
+    slug: "barcelona",
+    labels: { en: "Barcelona", fr: "Barcelone", de: "Barcelona", pt: "Barcelona", it: "Barcellona", es: "Barcelona" },
+  },
+  {
+    slug: "lisbon",
+    labels: { en: "Lisbon", fr: "Lisbonne", de: "Lissabon", pt: "Lisboa", it: "Lisbona", es: "Lisboa" },
+  },
+  {
+    slug: "rome",
+    labels: { en: "Rome", fr: "Rome", de: "Rom", pt: "Roma", it: "Roma", es: "Roma" },
+  },
+  {
+    slug: "london",
+    labels: { en: "London", fr: "Londres", de: "London", pt: "Londres", it: "Londra", es: "Londres" },
+  },
+];
 
 export function V2NotFound() {
   const { locale, t } = useI18n();
@@ -89,16 +141,20 @@ export function V2NotFound() {
         <section aria-labelledby="not-found-title" className="v2-not-found__panel">
           <div className="v2-not-found__copy">
             <p className="v2-eyebrow">{content.eyebrow}</p>
-            <h1 id="not-found-title">
-              <span>404</span>
-              {content.title}
-            </h1>
-            <p className="v2-not-found__body">{content.body}</p>
+            <h1 id="not-found-title">{content.title}</h1>
+            <p className="v2-not-found__body">
+              {content.body[0]}
+              <br />
+              {content.body[1]}
+            </p>
 
             <div className="v2-not-found__actions">
-              <Link className="v2-not-found__action v2-not-found__action--primary" href="/deals/search">
+              <Link
+                className="v2-not-found__action v2-not-found__action--primary"
+                href={getLocalizedDealsSearchPath(locale)}
+              >
                 {content.search}
-                <ArrowRight aria-hidden="true" strokeWidth={2} />
+                <Plane aria-hidden="true" strokeWidth={2} />
               </Link>
               <Link
                 className="v2-not-found__action v2-not-found__action--secondary"
@@ -108,20 +164,31 @@ export function V2NotFound() {
                 {content.home}
               </Link>
             </div>
+
+            <nav aria-label={content.popular} className="v2-not-found__popular">
+              <p>{content.popular}</p>
+              <ul>
+                {popularDestinations.map((destination) => (
+                  <li key={destination.slug}>
+                    <Link href={getLocalizedDestinationPath(locale, destination.slug)}>
+                      {destination.labels[locale]}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
 
-          <div aria-label={content.illustration} className="v2-not-found__illustration" role="img">
-            <span aria-hidden="true" className="v2-not-found__route" />
-            <span aria-hidden="true" className="v2-not-found__plane">
-              <Plane strokeWidth={1.8} />
-            </span>
-            <span aria-hidden="true" className="v2-not-found__pin">
-              <MapPinOff strokeWidth={1.7} />
-            </span>
-            <span aria-hidden="true" className="v2-not-found__code">
-              404
-            </span>
-          </div>
+          <figure className="v2-not-found__illustration">
+            <Image
+              alt={content.illustration}
+              height={1254}
+              priority
+              sizes="(max-width: 760px) 84vw, 42vw"
+              src="/404-luggage-tags.jpg"
+              width={1254}
+            />
+          </figure>
         </section>
       </main>
 
