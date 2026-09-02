@@ -2473,7 +2473,8 @@ body:has(.v2) .scroll-top-button {
       "values"
       "visual";
     grid-template-rows: auto 1.15rem;
-    border-left: 0;
+    border-top: 1px solid rgba(43, 61, 82, 0.09);
+    border-left: 1px solid rgba(43, 61, 82, 0.09);
   }
 
   .v2-search__field--budget.deals-price-range--histogram
