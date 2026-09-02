@@ -9,7 +9,9 @@ import { useI18n } from "@/lib/i18n";
 
 function CountUp({ value, suffix = "", prefix = "" }: { value: number; suffix?: string; prefix?: string }) {
   const ref = useRef<HTMLSpanElement | null>(null);
-  const [display, setDisplay] = useState(0);
+  // Keep the truthful value in server-rendered HTML. Motion is only a visual
+  // enhancement after hydration and never changes the accessible value.
+  const [display, setDisplay] = useState(value);
 
   useEffect(() => {
     const el = ref.current;
@@ -29,6 +31,7 @@ function CountUp({ value, suffix = "", prefix = "" }: { value: number; suffix?: 
           return;
         }
         observer.disconnect();
+        setDisplay(0);
         const start = performance.now();
         const duration = 1400;
         function tick(now: number) {
@@ -54,7 +57,7 @@ function CountUp({ value, suffix = "", prefix = "" }: { value: number; suffix?: 
   }, [value]);
 
   return (
-    <span ref={ref}>
+    <span aria-hidden="true" ref={ref}>
       {prefix}
       {display.toLocaleString("en-US")}
       {suffix}
@@ -74,7 +77,7 @@ export function V2BottomSections() {
             <span className="v2-metrics__icon" aria-hidden="true">
               <Tag strokeWidth={1.7} />
             </span>
-            <dd>
+            <dd aria-label="1,400+">
               <CountUp suffix="+" value={1400} />
             </dd>
             <dt>{t("bottom.faresChecked")}</dt>
@@ -83,7 +86,7 @@ export function V2BottomSections() {
             <span className="v2-metrics__icon" aria-hidden="true">
               <Send strokeWidth={1.7} />
             </span>
-            <dd>
+            <dd aria-label="−38%">
               <CountUp prefix="−" suffix="%" value={38} />
             </dd>
             <dt>{t("bottom.averageDrop")}</dt>
@@ -99,7 +102,7 @@ export function V2BottomSections() {
             <span className="v2-metrics__icon" aria-hidden="true">
               <Heart strokeWidth={1.7} />
             </span>
-            <dd>
+            <dd aria-label="100%">
               <CountUp suffix="%" value={100} />
             </dd>
             <dt>{t("bottom.handpicked")}</dt>

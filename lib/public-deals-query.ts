@@ -3,6 +3,10 @@ import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 import type { PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
+  getPublicAirlineNames,
+  normalizePublicAirlineName,
+} from "@/lib/public-airlines";
+import {
   doesTripIncludeWeekend,
   getWhenFilterDateRange,
   isTripInCurrentWeekend,
@@ -124,27 +128,6 @@ function normalizeDestination(value: string) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
-function normalizeAirline(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/&/g, "and")
-    .replace(/\s+/g, " ");
-}
-
-function getAirlineNames(deal: CampaignPreviewDeal) {
-  return [
-    ...new Set(
-      (deal.airlineSummary ?? "")
-        .split(/,|\+/)
-        .map((item) => item.trim())
-        .filter((item) => item && !/^\d+\s+more$/i.test(item)),
-    ),
-  ];
-}
-
 function getStayDurationDays(deal: CampaignPreviewDeal) {
   if (deal.destinationStayHours !== null) {
     return Math.max(1, Math.floor(deal.destinationStayHours / 24));
@@ -234,7 +217,7 @@ export function matchesPublicDealSearchFilters(
   if (filters.priceMin !== null && deal.dealPrice < filters.priceMin) return false;
   if (filters.priceMax !== null && deal.dealPrice > filters.priceMax) return false;
 
-  const airlineKeys = getAirlineNames(deal).map(normalizeAirline);
+  const airlineKeys = getPublicAirlineNames(deal.airlineSummary).map(normalizePublicAirlineName);
   if (filters.excludedAirlines.some((airline) => airlineKeys.includes(airline))) return false;
   if (filters.durationFilter !== "any" && getDurationValue(deal) !== filters.durationFilter) {
     return false;
@@ -461,8 +444,8 @@ export function buildPublicDealsSearchResult(
 
   const labelsByAirline = new Map<string, string>();
   facetDeals.forEach((deal) => {
-    getAirlineNames(deal).forEach((label) => {
-      const key = normalizeAirline(label);
+    getPublicAirlineNames(deal.airlineSummary).forEach((label) => {
+      const key = normalizePublicAirlineName(label);
       if (key && !labelsByAirline.has(key)) labelsByAirline.set(key, label);
     });
   });

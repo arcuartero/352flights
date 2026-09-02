@@ -48,6 +48,10 @@ import {
 import type { PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
+  getPublicAirlineNames,
+  normalizePublicAirlineName,
+} from "@/lib/public-airlines";
+import {
   getPublicDealsSearchQueryKey,
   PUBLIC_DEALS_SEARCH_MAX_LIMIT,
   PUBLIC_DEALS_SEARCH_PAGE_SIZE,
@@ -522,7 +526,6 @@ const AIRLINE_LOGO_CODE_BY_NAME: Record<string, string> = {
   lot: "LO",
   "lot polish airlines": "LO",
   lufthansa: "LH",
-  "lufthansa cargo": "LH",
   luxair: "LG",
   norwegian: "DY",
   "norwegian air shuttle": "DY",
@@ -1095,13 +1098,7 @@ function formatLocalizedStayBucket(bucket: string, t: Translate) {
 }
 
 function normalizeAirlineName(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/&/g, "and")
-    .replace(/\s+/g, " ");
+  return normalizePublicAirlineName(value);
 }
 
 function getPrimaryAirlineName(deal: CampaignPreviewDeal) {
@@ -1115,12 +1112,7 @@ function getPrimaryAirlineName(deal: CampaignPreviewDeal) {
 }
 
 function getDealAirlineNames(deal: CampaignPreviewDeal) {
-  const names = (deal.airlineSummary ?? "")
-    .split(/,|\+/)
-    .map((item) => item.trim())
-    .filter((item) => item && !/^\d+\s+more$/i.test(item));
-
-  return [...new Set(names)];
+  return getPublicAirlineNames(deal.airlineSummary);
 }
 
 function getAirlineLogoCode(airlineName: string, primaryAirlineCode: string | null) {
@@ -5074,7 +5066,7 @@ export function PublicDealsExplorer({
       ) : (
         <div aria-busy={isServerSearchPending} className="deals-search-page-card">
           <div className="deals-mobile-results-heading">
-            <h2>{searchResultsCopy.title}</h2>
+            <h1>{searchResultsCopy.title}</h1>
             <p>{searchResultsCopy.description}</p>
           </div>
           {renderMobileResultsControls()}
@@ -5241,7 +5233,7 @@ export function PublicDealsExplorer({
             <section className="deals-explorer__featured">
               <div className="deals-explorer__section-head deals-search-results-heading--desktop">
                 <div>
-                  <h2>{searchResultsCopy.title}</h2>
+                  <h1>{searchResultsCopy.title}</h1>
                   <p>{searchResultsCopy.description}</p>
                 </div>
                 <div className="deals-explorer__section-actions">
