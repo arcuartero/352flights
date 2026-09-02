@@ -2313,7 +2313,7 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-search__field--origin,
-  .v2-search__field--when {
+  .v2-search__field--destination {
     grid-column: 1 / -1;
   }
 
@@ -2321,16 +2321,16 @@ body:has(.v2) .scroll-top-button {
     order: 1;
   }
 
-  .v2-search__field--when {
+  .v2-search__field--destination {
     order: 2;
   }
 
-  .v2-search__field--destination {
+  .v2-search__field--when {
     order: 3;
     grid-column: 1;
   }
 
-  .v2-search__field--destination,
+  .v2-search__field--when,
   .v2-search__field--trip {
     grid-template-columns: minmax(0, 1fr);
     column-gap: 0;
@@ -2358,7 +2358,6 @@ body:has(.v2) .scroll-top-button {
     box-shadow: none;
   }
 
-  .v2-search__field--destination .deals-select__trigger,
   .v2-search__field--trip .deals-select__trigger {
     display: grid;
     grid-column: 1;
@@ -2388,7 +2387,6 @@ body:has(.v2) .scroll-top-button {
     font-weight: 750;
   }
 
-  .v2-search__field--destination .deals-select__trigger strong,
   .v2-search__field--trip .deals-select__trigger strong {
     width: 100%;
     min-width: 0;
@@ -2400,7 +2398,6 @@ body:has(.v2) .scroll-top-button {
     white-space: nowrap;
   }
 
-  .v2-search__field--destination .deals-select__trigger .deals-select__chevron,
   .v2-search__field--trip .deals-select__trigger .deals-select__chevron {
     position: static;
     right: auto;
@@ -2412,7 +2409,6 @@ body:has(.v2) .scroll-top-button {
     transform: none;
   }
 
-  .v2-search__field--destination .deals-select__trigger.is-open .deals-select__chevron,
   .v2-search__field--trip .deals-select__trigger.is-open .deals-select__chevron {
     transform: rotate(180deg);
   }
@@ -2502,7 +2498,7 @@ body:has(.v2) .scroll-top-button {
     white-space: nowrap;
   }
 
-  .v2-search__field--destination > span,
+  .v2-search__field--when > span,
   .v2-search__field--trip > span {
     display: none;
   }
@@ -2576,7 +2572,7 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-search__field--when.deals-date-picker .deals-date-picker__trigger {
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
     grid-template-columns: minmax(0, 1fr) auto;
     min-width: 0;
@@ -2608,8 +2604,10 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-search__field--when.deals-date-picker .deals-date-picker__trigger strong {
-    font-size: 0.95rem;
+    font-size: clamp(0.72rem, 3.25vw, 0.84rem);
     font-weight: 750;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
   }
 
   .v2-search__field[data-mobile-value] select {
@@ -2646,22 +2644,20 @@ body:has(.v2) .scroll-top-button {
 }
 
 @media (max-width: 350px) {
-  .v2-search__field--destination,
+  .v2-search__field--when,
   .v2-search__field--trip {
     padding-inline: 0.35rem;
   }
 
-  .v2-search__field--destination > span,
+  .v2-search__field--when > span,
   .v2-search__field--trip > span {
     font-size: 0.58rem;
   }
 
-  .v2-search__field--destination .deals-select__trigger strong,
   .v2-search__field--trip .deals-select__trigger strong {
     font-size: 0.68rem;
   }
 
-  .v2-search__field--destination .deals-select__trigger .deals-select__chevron,
   .v2-search__field--trip .deals-select__trigger .deals-select__chevron {
     width: 0.7rem;
     height: 0.7rem;

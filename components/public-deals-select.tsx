@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Clock3, MapPin, Search, Sparkles, X } from "lucide-react";
+import { Check, ChevronDown, Clock3, MapPin, Plane, Search, Sparkles, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -44,7 +44,10 @@ export function PublicDealsSelect({
   leadingIcon,
   mobileValueLabel,
   mobileDestinationSheet = false,
+  mobileDirectOnly,
+  mobileDirectOnlyLabel,
   mobileSheetTitle,
+  onMobileDirectOnlyChange,
   popularOptionValues = EMPTY_POPULAR_OPTION_VALUES,
 }: {
   label: string;
@@ -55,7 +58,10 @@ export function PublicDealsSelect({
   leadingIcon?: ReactNode;
   mobileValueLabel?: string;
   mobileDestinationSheet?: boolean;
+  mobileDirectOnly?: boolean;
+  mobileDirectOnlyLabel?: string;
   mobileSheetTitle?: string;
+  onMobileDirectOnlyChange?: (checked: boolean) => void;
   popularOptionValues?: string[];
 }) {
   const { t } = useI18n();
@@ -389,6 +395,31 @@ export function PublicDealsSelect({
                               <Sparkles />,
                             )
                           : null}
+
+                        {typeof mobileDirectOnly === "boolean" &&
+                        mobileDirectOnlyLabel &&
+                        onMobileDirectOnlyChange ? (
+                          <button
+                            aria-pressed={mobileDirectOnly}
+                            className={`deals-destination-sheet__filter${mobileDirectOnly ? " is-active" : ""}`}
+                            onClick={() => onMobileDirectOnlyChange(!mobileDirectOnly)}
+                            type="button"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="deals-destination-sheet__filter-icon"
+                            >
+                              <Plane />
+                            </span>
+                            <span>{mobileDirectOnlyLabel}</span>
+                            <span
+                              aria-hidden="true"
+                              className="deals-destination-sheet__filter-switch"
+                            >
+                              <i />
+                            </span>
+                          </button>
+                        ) : null}
 
                         {recentOptions.length > 0 ? (
                           <section className="deals-destination-sheet__section">

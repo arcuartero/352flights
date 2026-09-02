@@ -3181,6 +3181,83 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     margin: 0.15rem 0 0.45rem;
   }
 
+  .deals-destination-sheet__filter {
+    display: grid;
+    width: 100%;
+    min-height: 3.25rem;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+    margin: 0 0 0.7rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #d7e0ec;
+    border-radius: 0.9rem;
+    background: #fff;
+    color: #102035;
+    font: inherit;
+    font-size: 0.94rem;
+    font-weight: 680;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .deals-destination-sheet__filter.is-active {
+    border-color: #2364df;
+    background: #eef4ff;
+    color: #184fbd;
+  }
+
+  .deals-destination-sheet__filter-icon {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.62rem;
+    background: #edf4ff;
+    color: #2364df;
+  }
+
+  .deals-destination-sheet__filter-icon svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .deals-destination-sheet__filter-switch {
+    position: relative;
+    width: 2.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    background: #cbd4df;
+    transition: background-color 160ms ease;
+  }
+
+  .deals-destination-sheet__filter-switch i {
+    position: absolute;
+    top: 0.17rem;
+    left: 0.17rem;
+    width: 1.01rem;
+    height: 1.01rem;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(16, 32, 53, 0.28);
+    transition: transform 160ms ease;
+  }
+
+  .deals-destination-sheet__filter.is-active
+    .deals-destination-sheet__filter-switch {
+    background: #2364df;
+  }
+
+  .deals-destination-sheet__filter.is-active
+    .deals-destination-sheet__filter-switch i {
+    transform: translateX(1rem);
+  }
+
   .deals-destination-sheet__chips .deals-destination-sheet__option {
     min-height: 3.65rem;
     grid-template-columns: 1.8rem minmax(0, 1fr) auto;

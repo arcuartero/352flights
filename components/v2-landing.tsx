@@ -446,7 +446,7 @@ export function V2Landing({
   const searchWhenOptions = useMemo(
     () =>
       [
-        { value: "any" as WhenFilter, label: t("common.anytime") },
+        { value: "any" as WhenFilter, label: t("deals.when.any") },
         { value: "this_weekend" as WhenFilter, label: t("common.thisWeekend") },
         { value: "weekends" as WhenFilter, label: t("deals.when.weekends") },
         { value: "next_30" as WhenFilter, label: t("common.next30") },
@@ -532,10 +532,6 @@ export function V2Landing({
     const filtersWithoutDestination = {
       ...filters,
       destinationFilter: "any",
-      // The direct-only control is intentionally hidden in the compact home form.
-      // Keep destinations with connecting inventory discoverable and relax that
-      // filter when the user selects one of them (see the select handler below).
-      directOnly: false,
     };
     const availableCities = deals
       .filter((deal) => matchesHomeSearchFilters(deal, filtersWithoutDestination, now))
@@ -750,35 +746,13 @@ export function V2Landing({
                 label={t("common.to")}
                 leadingIcon={<MapPin size={18} strokeWidth={2.1} />}
                 mobileDestinationSheet
-                mobileValueLabel={
-                  filters.destinationFilter === "any"
-                    ? t("common.destination")
-                    : undefined
-                }
+                mobileDirectOnly={filters.directOnly}
+                mobileDirectOnlyLabel={t("destinationPicker.directOnly")}
                 onChange={(value) =>
-                  setFilters((current) => {
-                    if (value === "any" || !current.directOnly) {
-                      return { ...current, destinationFilter: value };
-                    }
-
-                    const hasMatchingDirectFare = deals.some((deal) =>
-                      matchesHomeSearchFilters(
-                        deal,
-                        {
-                          ...current,
-                          destinationFilter: value,
-                          directOnly: true,
-                        },
-                        now,
-                      ),
-                    );
-
-                    return {
-                      ...current,
-                      destinationFilter: value,
-                      directOnly: hasMatchingDirectFare,
-                    };
-                  })
+                  setFilters((current) => ({ ...current, destinationFilter: value }))
+                }
+                onMobileDirectOnlyChange={(checked) =>
+                  setFilters((current) => ({ ...current, directOnly: checked }))
                 }
                 options={destinationOptions}
                 popularOptionValues={popularDestinationValues}
