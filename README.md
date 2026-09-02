@@ -63,7 +63,10 @@ Required for production capture:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
+
+Customer emails use fixed, purpose-specific senders: transactional messages are sent
+from `+352 Flights <noreply@352flights.com>` and flight-deal campaigns are sent from
+`+352 Flights Alerts <alerts@352flights.com>`.
 
 Optional scanner tuning:
 

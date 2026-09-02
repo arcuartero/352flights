@@ -21,6 +21,7 @@ import {
   normalizeEmailLocale,
   renderCampaignEmail,
   sendResendEmail,
+  getResendFromEmail,
   type EmailLocale,
 } from "@/lib/email";
 import {
@@ -3173,7 +3174,7 @@ function buildCampaignPreview(
 
   let blockedReason: string | null = null;
   if (!hasResendEnv()) {
-    blockedReason = "Add RESEND_API_KEY and RESEND_FROM_EMAIL before sending live emails.";
+    blockedReason = "Add RESEND_API_KEY before sending live emails.";
   } else if (deals.length === 0) {
     blockedReason =
       sendType === "flash"
@@ -5139,7 +5140,7 @@ export async function deleteSubscriber(input: { id: string }) {
 
 export async function sendApprovedDealCampaign(input: { sendType: CampaignSendType }) {
   if (!hasResendEnv()) {
-    throw new Error("Add RESEND_API_KEY and RESEND_FROM_EMAIL before sending live emails.");
+    throw new Error("Add RESEND_API_KEY before sending live emails.");
   }
 
   const supabase = getSupabaseAdminClient();
@@ -5172,7 +5173,7 @@ export async function sendApprovedDealCampaign(input: { sendType: CampaignSendTy
       send_type: input.sendType,
       subject: genericSubject,
       preview_text: previewText,
-      from_email: process.env.RESEND_FROM_EMAIL ?? "",
+      from_email: getResendFromEmail("campaign"),
       reply_to_email: process.env.RESEND_REPLY_TO_EMAIL ?? null,
       recipient_count: matchedRecipients.length,
       sent_count: 0,
@@ -5344,7 +5345,7 @@ export async function sendCampaignTestEmail(input: {
   testEmail?: string | null;
 }) {
   if (!hasResendEnv()) {
-    throw new Error("Add RESEND_API_KEY and RESEND_FROM_EMAIL before sending live emails.");
+    throw new Error("Add RESEND_API_KEY before sending live emails.");
   }
 
   const fallbackEmail = process.env.RESEND_REPLY_TO_EMAIL ?? null;
@@ -5387,7 +5388,7 @@ export async function sendOpsAutomatedAlertsEmail(input: { force?: boolean } = {
   if (!hasResendEnv()) {
     return {
       status: "skipped" as const,
-      reason: "Add RESEND_API_KEY and RESEND_FROM_EMAIL before sending ops alert emails.",
+      reason: "Add RESEND_API_KEY before sending ops alert emails.",
       email: OPS_ALERT_RECIPIENT_EMAIL,
     };
   }

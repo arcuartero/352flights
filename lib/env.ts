@@ -7,7 +7,6 @@ const supabaseAdminSchema = z.object({
 
 const resendSchema = z.object({
   RESEND_API_KEY: z.string().min(1),
-  RESEND_FROM_EMAIL: z.string().min(1),
   RESEND_REPLY_TO_EMAIL: z.string().email().optional(),
 });
 
@@ -36,13 +35,12 @@ export function getSupabaseAdminEnv() {
 }
 
 export function hasResendEnv() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+  return Boolean(process.env.RESEND_API_KEY);
 }
 
 export function getResendEnv() {
   return resendSchema.parse({
     RESEND_API_KEY: process.env.RESEND_API_KEY,
-    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     RESEND_REPLY_TO_EMAIL: emptyToUndefined(process.env.RESEND_REPLY_TO_EMAIL),
   });
 }

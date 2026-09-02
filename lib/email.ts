@@ -76,6 +76,15 @@ type SendResendEmailInput = {
   idempotencyKey: string;
 };
 
+const RESEND_NOREPLY_FROM = "+352 Flights <noreply@352flights.com>";
+const RESEND_ALERTS_FROM = "+352 Flights Alerts <alerts@352flights.com>";
+
+export function getResendFromEmail(emailType: SendResendEmailInput["emailType"]) {
+  return emailType === "campaign" || emailType === "campaign_test"
+    ? RESEND_ALERTS_FROM
+    : RESEND_NOREPLY_FROM;
+}
+
 type EmailCopy = {
   htmlLang: string;
   intlLocale: string;
@@ -1705,7 +1714,7 @@ export async function sendResendEmail(input: SendResendEmailInput) {
       "Idempotency-Key": input.idempotencyKey,
     },
     body: JSON.stringify({
-      from: env.RESEND_FROM_EMAIL,
+      from: getResendFromEmail(input.emailType),
       to: [input.to],
       subject: input.subject,
       html: input.html,
