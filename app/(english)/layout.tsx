@@ -4,23 +4,13 @@ import { RootDocument } from "@/components/root-document";
 import { getSiteUrl } from "@/lib/env";
 
 import "../globals.css";
-import "../home.css";
 import "../public-deals-date-picker.css";
 import "../public-deals-price-range.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "Confirm your flight alerts | +352 Flights",
-  description: "Confirm your private +352 Flights alert subscription.",
-  robots: { index: false, follow: false },
 };
 
-export const dynamic = "force-dynamic";
-
-export default function ConfirmLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function EnglishRootLayout({ children }: { children: React.ReactNode }) {
   return <RootDocument locale="en">{children}</RootDocument>;
 }

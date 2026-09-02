@@ -1,10 +1,16 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { LanguageProvider } from "@/lib/i18n";
+import { RootDocument } from "@/components/root-document";
+import { getSiteUrl } from "@/lib/env";
+import { getHomeMetadata } from "@/lib/home-localization";
 import {
-  htmlLangTags,
   isLocalizedHomeLocale,
 } from "@/lib/locales";
+
+import "../globals.css";
+import "../public-deals-date-picker.css";
+import "../public-deals-price-range.css";
 
 type LocalizedLayoutProps = {
   children: React.ReactNode;
@@ -13,6 +19,18 @@ type LocalizedLayoutProps = {
 
 export function generateStaticParams() {
   return ["fr", "de", "pt", "it", "es"].map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({ params }: LocalizedLayoutProps): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocalizedHomeLocale(locale)) {
+    notFound();
+  }
+
+  return {
+    ...getHomeMetadata(locale),
+    metadataBase: new URL(getSiteUrl()),
+  };
 }
 
 export default async function LocalizedLayout({
@@ -24,13 +42,5 @@ export default async function LocalizedLayout({
     notFound();
   }
 
-  const htmlLang = htmlLangTags[locale];
-  const localeScript = `document.documentElement.lang=${JSON.stringify(htmlLang)};document.documentElement.dataset.locale=${JSON.stringify(locale)};`;
-
-  return (
-    <LanguageProvider initialLocale={locale}>
-      <script dangerouslySetInnerHTML={{ __html: localeScript }} />
-      {children}
-    </LanguageProvider>
-  );
+  return <RootDocument locale={locale}>{children}</RootDocument>;
 }

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { HomePageContent } from "@/components/home-page-content";
 import { getHomeMetadata } from "@/lib/home-localization";
 
-import "./home.css";
+import "../home.css";
 
 export const revalidate = 3600;
 

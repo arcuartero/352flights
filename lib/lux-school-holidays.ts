@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/locales";
+
 export type LuxSchoolHoliday = {
   id: string;
   label: string;
@@ -115,6 +117,20 @@ export const luxSchoolHolidays: LuxSchoolHoliday[] = [
     endsOn: "2028-09-14",
   },
 ];
+
+const holidayLabels: Record<string, Record<Locale, string>> = {
+  easter: { en: "Easter holidays", fr: "vacances de Pâques", de: "Osterferien", pt: "férias da Páscoa", it: "vacanze di Pasqua", es: "vacaciones de Semana Santa" },
+  pentecost: { en: "Pentecost holidays", fr: "vacances de la Pentecôte", de: "Pfingstferien", pt: "férias do Pentecostes", it: "vacanze di Pentecoste", es: "vacaciones de Pentecostés" },
+  summer: { en: "summer holidays", fr: "vacances d’été", de: "Sommerferien", pt: "férias de verão", it: "vacanze estive", es: "vacaciones de verano" },
+  "all-saints": { en: "All Saints holidays", fr: "vacances de la Toussaint", de: "Allerheiligenferien", pt: "férias de Todos os Santos", it: "vacanze di Ognissanti", es: "vacaciones de Todos los Santos" },
+  christmas: { en: "Christmas holidays", fr: "vacances de Noël", de: "Weihnachtsferien", pt: "férias de Natal", it: "vacanze di Natale", es: "vacaciones de Navidad" },
+  carnival: { en: "Carnival holidays", fr: "vacances de Carnaval", de: "Karnevalsferien", pt: "férias de Carnaval", it: "vacanze di Carnevale", es: "vacaciones de Carnaval" },
+};
+
+export function getLocalizedLuxSchoolHolidayLabel(holiday: LuxSchoolHoliday, locale: Locale) {
+  const key = holiday.id.replace(/-\d{4}$/, "");
+  return holidayLabels[key]?.[locale] ?? holiday.label;
+}
 
 function normalizeDateKey(value: string | null) {
   if (!value) {

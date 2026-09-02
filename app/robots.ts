@@ -9,7 +9,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/ops/", "/preferences", "/confirm", "/unsubscribe"],
+      // Personal pages return an explicit noindex response. They stay crawlable so
+      // search engines can see that directive instead of retaining a URL-only entry.
+      disallow: ["/api/", "/ops/"],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
     host: siteUrl,

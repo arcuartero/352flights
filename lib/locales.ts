@@ -84,13 +84,36 @@ export function getLocalizedPublicPath(pathname: string, locale: Locale) {
   }
 
   const dealsRoute = parseLocalizedDealsPathname(pathname);
-  if (!dealsRoute) {
-    return null;
+  if (dealsRoute) {
+    return dealsRoute.kind === "search"
+      ? getLocalizedDealsSearchPath(locale)
+      : getLocalizedDestinationPath(locale, dealsRoute.citySlug);
   }
 
-  return dealsRoute.kind === "search"
-    ? getLocalizedDealsSearchPath(locale)
-    : getLocalizedDestinationPath(locale, dealsRoute.citySlug);
+  const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  const currentLocale = isLocalizedHomeLocale(segments[0]) ? segments[0] : "en";
+  const routeSegments = currentLocale === "en" ? segments : segments.slice(1);
+  if (routeSegments.length === 1) {
+    // Kept as a lazy import-free lookup to avoid coupling the core locale helpers
+    // to the metadata module.
+    const legalSegments: Record<Locale, Record<string, string>> = {
+      en: { privacy: "privacy", cookies: "cookies", terms: "terms" },
+      fr: { privacy: "confidentialite", cookies: "cookies", terms: "conditions" },
+      de: { privacy: "datenschutz", cookies: "cookies", terms: "nutzungsbedingungen" },
+      pt: { privacy: "privacidade", cookies: "cookies", terms: "termos" },
+      it: { privacy: "privacy", cookies: "cookie", terms: "termini" },
+      es: { privacy: "privacidad", cookies: "cookies", terms: "terminos" },
+    };
+    const page = Object.entries(legalSegments[currentLocale]).find(
+      ([, segment]) => segment === routeSegments[0],
+    )?.[0];
+    if (page) {
+      const segment = legalSegments[locale][page];
+      return locale === "en" ? `/${segment}` : `/${locale}/${segment}`;
+    }
+  }
+
+  return null;
 }
 
 export function getLocaleFromPathname(pathname: string): Locale | null {

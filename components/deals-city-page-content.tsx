@@ -13,6 +13,10 @@ import { getDestinationCityFromSlug } from "@/lib/destination-routes";
 import { matchesDestinationSlug, toDestinationSlug } from "@/lib/destination-slugs";
 import { getSiteUrl } from "@/lib/env";
 import { getAirportCountryCode } from "@/lib/airport-countries";
+import {
+  getLocalizedCountryName,
+  getLocalizedDestinationName,
+} from "@/lib/destination-localization";
 import { getLocalizedDestinationPath, type Locale } from "@/lib/locales";
 import { getPublicCityDealsPageData, type PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
@@ -104,13 +108,14 @@ function buildCityJsonLd(
   deals: CampaignPreviewDeal[],
 ) {
   const copy = dealsSeoCopy[locale];
+  const localizedCityName = getLocalizedDestinationName(cityName, locale);
   const breadcrumb = getLocalizedDealsBreadcrumb(locale, citySlug);
   const canonicalUrl = getAbsoluteUrl(breadcrumb.city);
   const topDeals = deals.slice(0, 10);
   const offers = topDeals.map((deal, index) => ({
     "@type": "Offer",
     "@id": `${canonicalUrl}#offer-${encodeURIComponent(deal.id)}`,
-    name: copy.offerName(deal.destinationCity, Math.round(deal.dealPrice)),
+    name: copy.offerName(localizedCityName, Math.round(deal.dealPrice)),
     url: deal.bookingUrl ?? canonicalUrl,
     price: deal.dealPrice,
     priceCurrency: "EUR",
@@ -118,7 +123,7 @@ function buildCityJsonLd(
     validFrom: deal.verifiedAt ?? undefined,
     itemOffered: {
       "@type": "Flight",
-      name: copy.flightName(deal.destinationCity),
+      name: copy.flightName(localizedCityName),
       flightNumber: deal.airlineSummary ?? undefined,
       departureAirport: {
         "@type": "Airport",
@@ -127,7 +132,7 @@ function buildCityJsonLd(
       },
       arrivalAirport: {
         "@type": "Airport",
-        name: `${deal.destinationCity} Airport`,
+        name: `${localizedCityName} Airport`,
         iataCode: deal.destinationAirport,
       },
       departureTime: deal.outboundDepartureAt ?? deal.departureDate ?? undefined,
@@ -158,7 +163,7 @@ function buildCityJsonLd(
           {
             "@type": "ListItem",
             position: 3,
-            name: cityName,
+            name: localizedCityName,
             item: canonicalUrl,
           },
         ],
@@ -166,7 +171,7 @@ function buildCityJsonLd(
       {
         "@type": "ItemList",
         "@id": `${canonicalUrl}#offers`,
-        name: copy.itemListName(cityName),
+        name: copy.itemListName(localizedCityName),
         itemListElement: offers.map((offer) => ({
           "@type": "ListItem",
           position: offer.position,
@@ -187,7 +192,7 @@ function getUniqueDestinations() {
     .map((route) => ({
       city: route.destination_city,
       slug: toDestinationSlug(route.destination_city),
-      country: getDestinationContent(route.destination_city).country,
+      countryCode: getAirportCountryCode(route.destination_airport),
       theme: getDestinationTheme(route.destination_city),
     }))
     .filter((item) => {
@@ -207,25 +212,30 @@ function buildInternalLinkGroups(
   const copy = dealsSeoCopy[locale];
   const content = getDestinationContent(cityName);
   const destinations = getUniqueDestinations();
+  const cityCountryCode = routes.find((route) =>
+    matchesDestinationSlug(route.destination_city, citySlug),
+  )?.destination_airport;
+  const countryCode = getAirportCountryCode(cityCountryCode ?? "");
+  const countryName = getLocalizedCountryName(countryCode, locale) ?? content.country;
   const countryLinks = destinations
-    .filter((item) => item.country === content.country && item.slug !== citySlug)
+    .filter((item) => item.countryCode === countryCode && item.slug !== citySlug)
     .slice(0, 8)
     .map((item) => ({
       href: getLocalizedDestinationPath(locale, item.slug),
-      label: item.city,
+      label: getLocalizedDestinationName(item.city, locale),
     }));
   const beachLinks = destinations
     .filter((item) => item.theme === "beach" && item.slug !== citySlug)
     .slice(0, 8)
     .map((item) => ({
       href: getLocalizedDestinationPath(locale, item.slug),
-      label: item.city,
+      label: getLocalizedDestinationName(item.city, locale),
     }));
 
   return [
     {
       kind: "country" as const,
-      title: copy.countryGroup(content.country),
+      title: copy.countryGroup(countryName),
       links: countryLinks,
     },
     {
@@ -235,7 +245,7 @@ function buildInternalLinkGroups(
     },
     {
       kind: "filters" as const,
-      title: copy.filtersGroup(content.titleLabel),
+      title: copy.filtersGroup(getLocalizedDestinationName(content.titleLabel, locale)),
       links: [
         {
           href: `${getLocalizedDestinationPath(locale, citySlug)}?trip=weekend`,

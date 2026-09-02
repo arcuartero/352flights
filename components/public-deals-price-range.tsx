@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
+import { useI18n } from "@/lib/i18n";
+
 const HISTOGRAM_BUCKET_COUNT = 18;
 const EMPTY_PRICES: readonly number[] = [];
 
@@ -32,6 +34,7 @@ export function PublicDealsPriceRange({
   prices = EMPTY_PRICES,
   showLabel = true,
 }: PublicDealsPriceRangeProps) {
+  const { t } = useI18n();
   const minimum = Math.floor(bounds.min);
   const maximum = Math.max(minimum, Math.ceil(bounds.max));
   const controlledMin = Math.min(maximum, Math.max(minimum, priceMin ?? minimum));
@@ -130,7 +133,7 @@ export function PublicDealsPriceRange({
         <span className="deals-price-range__track" aria-hidden="true" />
         <span className="deals-price-range__fill" aria-hidden="true" />
         <input
-          aria-label={`${label} - minimum`}
+          aria-label={`${label} - ${t("common.minimum")}`}
           disabled={minimum === maximum}
           max={maximum}
           min={minimum}
@@ -145,7 +148,7 @@ export function PublicDealsPriceRange({
           value={selectedMin}
         />
         <input
-          aria-label={`${label} - maximum`}
+          aria-label={`${label} - ${t("common.maximum")}`}
           disabled={minimum === maximum}
           max={maximum}
           min={minimum}

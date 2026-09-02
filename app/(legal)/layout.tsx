@@ -10,17 +10,8 @@ import "../public-deals-price-range.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "Confirm your flight alerts | +352 Flights",
-  description: "Confirm your private +352 Flights alert subscription.",
-  robots: { index: false, follow: false },
 };
 
-export const dynamic = "force-dynamic";
-
-export default function ConfirmLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function LegalRootLayout({ children }: { children: React.ReactNode }) {
   return <RootDocument locale="en">{children}</RootDocument>;
 }

@@ -7,7 +7,26 @@ import {
 const CACHE_SECONDS = {
   home: 60 * 60,
   publicDeals: 30 * 60,
+  legal: 24 * 60 * 60,
 } as const;
+
+const LOCALIZED_LEGAL_PATHS = new Set([
+  "/fr/confidentialite",
+  "/fr/cookies",
+  "/fr/conditions",
+  "/de/datenschutz",
+  "/de/cookies",
+  "/de/nutzungsbedingungen",
+  "/pt/privacidade",
+  "/pt/cookies",
+  "/pt/termos",
+  "/it/privacy",
+  "/it/cookie",
+  "/it/termini",
+  "/es/privacidad",
+  "/es/cookies",
+  "/es/terminos",
+]);
 
 function isHomePathname(pathname: string) {
   return pathname === "/" || /^\/(?:fr|de|pt|it|es)$/.test(pathname);
@@ -34,6 +53,8 @@ function applyCachePolicy(response: NextResponse, pathname: string) {
 
   const seconds = isHomePathname(pathname)
     ? CACHE_SECONDS.home
+    : LOCALIZED_LEGAL_PATHS.has(pathname)
+      ? CACHE_SECONDS.legal
     : parseLocalizedDealsPathname(pathname)
       ? CACHE_SECONDS.publicDeals
       : null;

@@ -13,6 +13,7 @@ import { PublicDealsSelect } from "@/components/public-deals-select";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
 import { getAirportCountryCode } from "@/lib/airport-countries";
+import { getLocalizedDestinationName } from "@/lib/destination-localization";
 import { useI18n } from "@/lib/i18n";
 import {
   getLocalizedDealsSearchPath,
@@ -557,17 +558,22 @@ export function V2Landing({
         (cityKey) =>
           visibleCities.find((city) => normalizeDestinationKey(city) === cityKey) ?? cityKey,
       )
-      .sort((left, right) => left.localeCompare(right, "en"));
+      .sort((left, right) =>
+        getLocalizedDestinationName(left, locale).localeCompare(
+          getLocalizedDestinationName(right, locale),
+          locale,
+        ),
+      );
 
     return [
       { value: "any", label: t("common.anyDestination") },
       ...uniqueCities.map((city) => ({
         value: normalizeDestinationKey(city),
-        label: city,
+        label: getLocalizedDestinationName(city, locale),
         countryCode: countryCodeByCity.get(normalizeDestinationKey(city)),
       })),
     ];
-  }, [deals, filters, now, t]);
+  }, [deals, filters, locale, now, t]);
   const popularDestinationValues = useMemo(() => {
     const destinationCounts = new Map<string, number>();
     for (const deal of deals) {
@@ -739,7 +745,7 @@ export function V2Landing({
             >
               <div className="v2-search__field v2-search__field--origin">
                 <span>{t("common.from")}</span>
-                <strong>Luxembourg</strong>
+                <strong>{t("common.luxembourg")}</strong>
               </div>
               <PublicDealsSelect
                 className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"

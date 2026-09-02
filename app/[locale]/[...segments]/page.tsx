@@ -3,9 +3,16 @@ import { notFound } from "next/navigation";
 
 import { DealsCityPageContent } from "@/components/deals-city-page-content";
 import { DealsSearchPageContent } from "@/components/deals-search-page-content";
+import { V2Legal } from "@/components/v2-legal";
 import { getDealsCityMetadata, getDealsSearchMetadata } from "@/lib/deals-seo";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
+import { getLocalizedDestinationName } from "@/lib/destination-localization";
 import { isDestinationIndexable } from "@/lib/destination-seo-policy";
+import {
+  getLegalMetadata,
+  getLegalPageFromSegment,
+  type LegalPageKey,
+} from "@/lib/legal-localization";
 import {
   dealsPathSegments,
   isLocalizedHomeLocale,
@@ -22,7 +29,8 @@ type LocalizedDealsPageProps = {
 
 type ResolvedLocalizedDealsRoute =
   | { locale: LocalizedHomeLocale; kind: "search" }
-  | { locale: LocalizedHomeLocale; kind: "destination"; citySlug: string; cityName: string };
+  | { locale: LocalizedHomeLocale; kind: "destination"; citySlug: string; cityName: string }
+  | { locale: LocalizedHomeLocale; kind: "legal"; page: LegalPageKey };
 
 function hasSearchParams(searchParams: Record<string, string | string[] | undefined>) {
   return Object.values(searchParams).some((value) =>
@@ -34,7 +42,19 @@ async function resolveLocalizedDealsRoute(
   params: LocalizedDealsPageProps["params"],
 ): Promise<ResolvedLocalizedDealsRoute> {
   const { locale, segments } = await params;
-  if (!isLocalizedHomeLocale(locale) || segments.length !== 2) {
+  if (!isLocalizedHomeLocale(locale)) {
+    notFound();
+  }
+
+  if (segments.length === 1) {
+    const legalPage = getLegalPageFromSegment(locale, segments[0]);
+    if (legalPage) {
+      return { locale, kind: "legal", page: legalPage };
+    }
+    notFound();
+  }
+
+  if (segments.length !== 2) {
     notFound();
   }
 
@@ -69,6 +89,10 @@ export async function generateMetadata({
     return getDealsSearchMetadata(route.locale);
   }
 
+  if (route.kind === "legal") {
+    return getLegalMetadata(route.locale, route.page);
+  }
+
   const isFilteredPage = hasSearchParams(resolvedSearchParams);
   const cityData = isFilteredPage ? null : await getPublicCityDealsPageData(route.citySlug);
   const noindex =
@@ -76,7 +100,7 @@ export async function generateMetadata({
 
   return getDealsCityMetadata(
     route.locale,
-    route.cityName,
+    getLocalizedDestinationName(route.cityName, route.locale),
     route.citySlug,
     noindex,
   );
@@ -90,6 +114,10 @@ export default async function LocalizedDealsPage({
 
   if (route.kind === "search") {
     return <DealsSearchPageContent locale={route.locale} searchParams={searchParams} />;
+  }
+
+  if (route.kind === "legal") {
+    return <V2Legal locale={route.locale} page={route.page} />;
   }
 
   return (

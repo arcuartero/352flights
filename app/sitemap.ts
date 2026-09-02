@@ -6,6 +6,11 @@ import { isDestinationIndexable } from "@/lib/destination-seo-policy";
 import { getSiteUrl } from "@/lib/env";
 import { getHomeLanguageAlternates } from "@/lib/home-localization";
 import {
+  getLegalLanguageAlternates,
+  getLocalizedLegalPath,
+  type LegalPageKey,
+} from "@/lib/legal-localization";
+import {
   getLocalizedDestinationPath,
   getLocalizedHomePath,
   locales,
@@ -13,6 +18,8 @@ import {
 import { getPublicSearchDealsPageData } from "@/lib/ops";
 
 export const revalidate = 1800;
+
+const legalPages: LegalPageKey[] = ["privacy", "cookies", "terms"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
@@ -50,6 +57,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     })),
   );
+  const localizedLegalPages: MetadataRoute.Sitemap = legalPages.flatMap((page) =>
+    locales.map((locale) => ({
+      url: new URL(getLocalizedLegalPath(locale, page), siteUrl).toString(),
+      lastModified: now,
+      changeFrequency: "yearly" as const,
+      priority: 0.2,
+      alternates: {
+        languages: Object.fromEntries(
+          Object.entries(getLegalLanguageAlternates(page)).map(([language, pathname]) => [
+            language,
+            new URL(pathname, siteUrl).toString(),
+          ]),
+        ),
+      },
+    })),
+  );
 
-  return [...homePages, ...cityPages];
+  return [...homePages, ...cityPages, ...localizedLegalPages];
 }
