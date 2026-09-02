@@ -673,6 +673,11 @@ body:has(.v2) .scroll-top-button {
   font-weight: 650;
 }
 
+.v2-search__field--destination .deals-select__trigger strong {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .v2-search__custom-select .deals-select__trigger .deals-select__chevron {
   right: 0.85rem;
   width: 1rem;
@@ -2384,6 +2389,11 @@ body:has(.v2) .scroll-top-button {
 
   .v2-search__custom-select .deals-select__trigger strong {
     font-size: 1.08rem;
+    font-weight: 750;
+  }
+
+  .v2-search__field--destination .deals-select__trigger strong {
+    font-size: 1rem;
     font-weight: 750;
   }
 
