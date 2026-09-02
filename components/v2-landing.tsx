@@ -532,6 +532,10 @@ export function V2Landing({
     const filtersWithoutDestination = {
       ...filters,
       destinationFilter: "any",
+      // The direct-only control is intentionally hidden in the compact home form.
+      // Keep destinations with connecting inventory discoverable and relax that
+      // filter when the user selects one of them (see the select handler below).
+      directOnly: false,
     };
     const availableCities = deals
       .filter((deal) => matchesHomeSearchFilters(deal, filtersWithoutDestination, now))
@@ -752,7 +756,29 @@ export function V2Landing({
                     : undefined
                 }
                 onChange={(value) =>
-                  setFilters((current) => ({ ...current, destinationFilter: value }))
+                  setFilters((current) => {
+                    if (value === "any" || !current.directOnly) {
+                      return { ...current, destinationFilter: value };
+                    }
+
+                    const hasMatchingDirectFare = deals.some((deal) =>
+                      matchesHomeSearchFilters(
+                        deal,
+                        {
+                          ...current,
+                          destinationFilter: value,
+                          directOnly: true,
+                        },
+                        now,
+                      ),
+                    );
+
+                    return {
+                      ...current,
+                      destinationFilter: value,
+                      directOnly: hasMatchingDirectFare,
+                    };
+                  })
                 }
                 options={destinationOptions}
                 popularOptionValues={popularDestinationValues}
