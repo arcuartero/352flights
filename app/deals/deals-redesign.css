@@ -3501,16 +3501,16 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__content,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__content {
     position: relative;
-    gap: 0.9rem;
-    padding: 1.2rem 1.05rem 1rem;
+    gap: 0.45rem;
+    padding: 0.85rem 1rem 0.75rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__meta-bar {
     align-items: center;
-    justify-content: space-between;
-    min-height: 3.35rem;
-    padding-right: 0.1rem;
+    justify-content: flex-start;
+    gap: 0.7rem;
+    min-height: 2.75rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__city-link,
@@ -3518,8 +3518,8 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__city-link--mobile-only,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__city-link--mobile-only {
     display: inline-flex;
-    max-width: calc(100% - 4.5rem);
-    font-size: clamp(1.75rem, 8vw, 2.15rem);
+    max-width: calc(100% - 3.5rem);
+    font-size: clamp(1.6rem, 7.2vw, 1.95rem);
     font-weight: 700;
     line-height: 1;
   }
@@ -3529,18 +3529,20 @@ body:has(.page-shell--deals-city)::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 3.35rem;
-    height: 3.35rem;
+    order: -1;
+    flex: 0 0 2.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
   .page-shell--deals-search .deals-search-card__mobile-airline-logo .deals-airline-logo,
   .page-shell--deals-city .deals-search-card__mobile-airline-logo .deals-airline-logo,
   .page-shell--deals-search .deals-search-card__mobile-airline-logo .deals-airline-logo img,
   .page-shell--deals-city .deals-search-card__mobile-airline-logo .deals-airline-logo img {
-    width: 3.35rem;
-    max-width: 3.35rem;
-    height: 3.35rem;
-    max-height: 3.35rem;
+    width: 2.75rem;
+    max-width: 2.75rem;
+    height: 2.75rem;
+    max-height: 2.75rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segments,
@@ -3551,14 +3553,14 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segment,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__segment {
     grid-template-columns: 1.6rem minmax(0, 1fr);
-    gap: 0.7rem;
-    min-height: 10.25rem;
-    padding-block: 0.75rem 0.95rem;
+    gap: 0.55rem;
+    min-height: 8rem;
+    padding-block: 0.35rem 0.65rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segment + .deals-search-card__segment,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__segment + .deals-search-card__segment {
-    padding-top: 1.15rem;
+    padding-top: 0.75rem;
     border-top: 1px solid rgba(29, 39, 51, 0.13);
   }
 
@@ -3578,7 +3580,7 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__journey,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__journey {
     grid-column: 2;
-    gap: 0.75rem;
+    gap: 0.4rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__leg-heading,
@@ -3588,7 +3590,7 @@ body:has(.page-shell--deals-city)::before {
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__leg-heading strong,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__leg-heading strong {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     letter-spacing: 0.055em;
   }
 
@@ -3601,12 +3603,12 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timeline {
     grid-template-columns: minmax(4.8rem, 0.8fr) minmax(7.5rem, 1.35fr) minmax(4.8rem, 0.8fr);
     gap: 0.45rem;
-    align-items: start;
+    align-items: center;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__timepoint strong,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timepoint strong {
-    font-size: clamp(1.75rem, 7.6vw, 2.1rem);
+    font-size: clamp(1.55rem, 7vw, 1.9rem);
     font-weight: 680;
   }
 
@@ -3617,7 +3619,13 @@ body:has(.page-shell--deals-city)::before {
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration {
-    gap: 0.3rem;
+    display: flex;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.18rem;
+    text-align: center;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration::before,
@@ -3627,19 +3635,19 @@ body:has(.page-shell--deals-city)::before {
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration span,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration span {
-    font-size: 0.88rem;
+    font-size: 0.82rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration strong,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration strong {
-    font-size: 0.88rem;
+    font-size: 0.82rem;
   }
 
   .page-shell--deals-search .deals-search-card__mobile-date,
   .page-shell--deals-city .deals-search-card__mobile-date {
     display: block;
     color: #667180;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-weight: 400;
     line-height: 1.1;
     white-space: nowrap;
@@ -3648,7 +3656,7 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__facts,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__facts {
     gap: 0.45rem;
-    padding-top: 0.2rem;
+    padding-top: 0;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__fact--bucket,
