@@ -2630,6 +2630,9 @@ function DealFlightCard({
 
   return (
     <article className={cardClassName}>
+      {showBooking ? (
+        <DealShareButton className="deals-share-button--card-corner" deal={deal} />
+      ) : null}
       <div className="deals-search-card__content">
         {showCityLabel || showMobileCityLabel || showAirlineLogo ? (
           <div
@@ -2894,7 +2897,6 @@ function DealFlightCard({
                   </span>
                 </span>
               ) : null}
-              <DealShareButton className="deals-share-button--mobile-inline" deal={deal} />
             </div>
           </div>
           <div className="deals-search-card__booking-actions">
@@ -2911,7 +2913,6 @@ function DealFlightCard({
             ) : (
               <span className="deals-search-card__pending">{resolvedPendingLabel}</span>
             )}
-            <DealShareButton className="deals-share-button--booking" deal={deal} />
           </div>
         </aside>
       ) : null}
