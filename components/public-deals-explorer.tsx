@@ -2828,25 +2828,28 @@ function DealFlightCard({
             <p className={`deals-search-card__saving${strongPrice ? " is-positive" : " is-neutral"}`}>
               {savingsLabel}
             </p>
-            {usualPriceExplanation ? (
-              <span className="deals-search-card__usual-tooltip">
-                <button
-                  aria-describedby={usualTooltipId}
-                  aria-label={usualPriceExplanation}
-                  className="deals-search-card__usual-tooltip-trigger"
-                  type="button"
-                >
-                  <Info aria-hidden="true" size={15} strokeWidth={2} />
-                </button>
-                <span
-                  className="deals-search-card__usual-tooltip-bubble"
-                  id={usualTooltipId}
-                  role="tooltip"
-                >
-                  {usualPriceExplanation}
+            <div className="deals-search-card__secondary-actions">
+              {usualPriceExplanation ? (
+                <span className="deals-search-card__usual-tooltip">
+                  <button
+                    aria-describedby={usualTooltipId}
+                    aria-label={usualPriceExplanation}
+                    className="deals-search-card__usual-tooltip-trigger"
+                    type="button"
+                  >
+                    <Info aria-hidden="true" size={15} strokeWidth={2} />
+                  </button>
+                  <span
+                    className="deals-search-card__usual-tooltip-bubble"
+                    id={usualTooltipId}
+                    role="tooltip"
+                  >
+                    {usualPriceExplanation}
+                  </span>
                 </span>
-              </span>
-            ) : null}
+              ) : null}
+              <DealShareButton className="deals-share-button--mobile-inline" deal={deal} />
+            </div>
           </div>
           <div className="deals-search-card__booking-actions">
             {ctaHref ? (
@@ -2862,7 +2865,7 @@ function DealFlightCard({
             ) : (
               <span className="deals-search-card__pending">{resolvedPendingLabel}</span>
             )}
-            <DealShareButton deal={deal} />
+            <DealShareButton className="deals-share-button--booking" deal={deal} />
           </div>
         </aside>
       ) : null}

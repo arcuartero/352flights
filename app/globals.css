@@ -2263,6 +2263,13 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   gap: 0.55rem;
 }
 
+.deals-search-card__secondary-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0.4rem;
+}
+
 .deals-share-button {
   display: inline-flex;
   align-items: center;
@@ -2304,6 +2311,16 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
 
 .deals-search-card__booking-actions .deals-share-button {
   width: 100%;
+}
+
+.deals-share-button--mobile-inline {
+  display: inline-flex;
+}
+
+@media (min-width: 981px) {
+  .deals-share-button--mobile-inline {
+    display: none;
+  }
 }
 
 .deals-search-card__price-label,
