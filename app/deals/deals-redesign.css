@@ -2728,6 +2728,12 @@ body:has(.page-shell--deals-city)::before {
 
 /* Flight results use the itinerary-first composition from the supplied
    reference. The opportunity modal keeps its compact layout. */
+.deals-search-card__mobile-airline-logo,
+.deals-search-card__mobile-date,
+.deals-search-card__city-link--mobile-only {
+  display: none;
+}
+
 .page-shell--deals-search .deals-search-card--route-layout,
 .page-shell--deals-city .deals-search-card--route-layout {
   grid-template-columns: minmax(0, 1fr) minmax(15.5rem, 0.38fr);
@@ -3475,6 +3481,257 @@ body:has(.page-shell--deals-city)::before {
   .page-shell--deals-search .deals-search-group__header-meta {
     margin-top: 0.65rem;
   }
+
+  /* Mobile fare card: one airline identity, two leg rows and a dedicated
+     booking footer, matching the compact ticket reference. */
+  .page-shell--deals-search .deals-search-card--route-layout,
+  .page-shell--deals-city .deals-search-card--route-layout {
+    grid-template-columns: 1fr;
+    border: 1px solid rgba(29, 39, 51, 0.15);
+    border-radius: 1.5rem;
+    box-shadow: 0 12px 30px rgba(17, 32, 46, 0.055);
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout.deals-search-card--strong-price,
+  .page-shell--deals-city .deals-search-card--route-layout.deals-search-card--strong-price {
+    border-color: rgba(29, 39, 51, 0.15);
+    border-width: 1px;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__content,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__content {
+    position: relative;
+    gap: 0.9rem;
+    padding: 1.2rem 1.05rem 1rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__meta-bar {
+    align-items: center;
+    justify-content: space-between;
+    min-height: 3.35rem;
+    padding-right: 0.1rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__city-link,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__city-link,
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__city-link--mobile-only,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__city-link--mobile-only {
+    display: inline-flex;
+    max-width: calc(100% - 4.5rem);
+    font-size: clamp(1.75rem, 8vw, 2.15rem);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .page-shell--deals-search .deals-search-card__mobile-airline-logo,
+  .page-shell--deals-city .deals-search-card__mobile-airline-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.35rem;
+    height: 3.35rem;
+  }
+
+  .page-shell--deals-search .deals-search-card__mobile-airline-logo .deals-airline-logo,
+  .page-shell--deals-city .deals-search-card__mobile-airline-logo .deals-airline-logo,
+  .page-shell--deals-search .deals-search-card__mobile-airline-logo .deals-airline-logo img,
+  .page-shell--deals-city .deals-search-card__mobile-airline-logo .deals-airline-logo img {
+    width: 3.35rem;
+    max-width: 3.35rem;
+    height: 3.35rem;
+    max-height: 3.35rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segments,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__segments {
+    gap: 0;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segment,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__segment {
+    grid-template-columns: 1.6rem minmax(0, 1fr);
+    gap: 0.7rem;
+    min-height: 10.25rem;
+    padding-block: 0.75rem 0.95rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segment + .deals-search-card__segment,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__segment + .deals-search-card__segment {
+    padding-top: 1.15rem;
+    border-top: 1px solid rgba(29, 39, 51, 0.13);
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__airline,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__airline {
+    display: none;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__direction-icon,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__direction-icon {
+    grid-column: 1;
+    align-self: center;
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__journey,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__journey {
+    grid-column: 2;
+    gap: 0.75rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__leg-heading,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__leg-heading {
+    padding-left: 0.15rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__leg-heading strong,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__leg-heading strong {
+    font-size: 0.9rem;
+    letter-spacing: 0.055em;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__leg-heading time,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__leg-heading time {
+    display: none;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__timeline,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timeline {
+    grid-template-columns: minmax(4.8rem, 0.8fr) minmax(7.5rem, 1.35fr) minmax(4.8rem, 0.8fr);
+    gap: 0.45rem;
+    align-items: start;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__timepoint strong,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timepoint strong {
+    font-size: clamp(1.75rem, 7.6vw, 2.1rem);
+    font-weight: 680;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__timepoint span,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timepoint span {
+    font-size: 0.88rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration {
+    gap: 0.3rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration::before,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration::before {
+    top: 0.45rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration span,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration span {
+    font-size: 0.88rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__duration strong,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__duration strong {
+    font-size: 0.88rem;
+  }
+
+  .page-shell--deals-search .deals-search-card__mobile-date,
+  .page-shell--deals-city .deals-search-card__mobile-date {
+    display: block;
+    color: #667180;
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__facts,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__facts {
+    gap: 0.45rem;
+    padding-top: 0.2rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__fact--bucket,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__fact--bucket,
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__fact--holiday,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__fact--holiday {
+    display: none;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__facts span,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__facts span {
+    min-height: 2rem;
+    padding: 0.36rem 0.65rem;
+    font-size: 0.76rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__booking,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__booking {
+    position: static;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.75rem 0.8rem;
+    padding: 1rem;
+    border-top: 1px solid rgba(35, 151, 91, 0.22);
+    background: linear-gradient(180deg, rgba(225, 247, 234, 0.96), rgba(207, 239, 221, 0.94));
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__price,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__price {
+    grid-row: 1;
+    grid-column: 1;
+    font-size: clamp(2.7rem, 12vw, 3.25rem);
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__saving-row,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__saving-row {
+    display: contents;
+    padding-right: 0;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__saving,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__saving {
+    display: block;
+    overflow: visible;
+    grid-row: 1;
+    grid-column: 2;
+    align-self: center;
+    font-size: 0.88rem;
+    line-height: 1.25;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__secondary-actions,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__secondary-actions {
+    position: static;
+    grid-row: 1;
+    grid-column: 3;
+    gap: 0.45rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__secondary-actions .deals-search-card__usual-tooltip-trigger,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__secondary-actions .deals-search-card__usual-tooltip-trigger,
+  .page-shell--deals-search .deals-search-card--route-layout .deals-share-button--mobile-inline,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-share-button--mobile-inline {
+    width: 3rem;
+    min-width: 3rem;
+    height: 3rem;
+    min-height: 3rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__booking-actions,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__booking-actions {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__cta,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__cta {
+    min-height: 3.15rem;
+    border-radius: 999px;
+    font-size: 0.98rem;
+  }
 }
 
 @media (max-height: 800px) and (min-width: 561px) {
@@ -3555,8 +3812,8 @@ body:has(.page-shell--deals-city)::before {
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segment,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__segment {
-    grid-template-columns: 2.5rem 1.35rem minmax(0, 1fr);
-    gap: 0.35rem;
+    grid-template-columns: 1.45rem minmax(0, 1fr);
+    gap: 0.45rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-airline-logo,
@@ -3574,13 +3831,45 @@ body:has(.page-shell--deals-city)::before {
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__direction-icon,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__direction-icon {
-    width: 1.35rem;
-    height: 1.35rem;
+    width: 1.45rem;
+    height: 1.45rem;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__timepoint strong,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__timepoint strong {
-    font-size: 1.28rem;
+    font-size: clamp(1.65rem, 7.6vw, 1.95rem);
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__booking,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__booking {
+    grid-template-columns: auto minmax(6.7rem, 1fr) auto;
+    gap: 0.7rem 0.3rem;
+    padding: 0.85rem 0.7rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__price,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__price {
+    font-size: clamp(2.35rem, 11vw, 2.7rem);
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__saving,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__saving {
+    font-size: 0.76rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__secondary-actions,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__secondary-actions {
+    gap: 0.3rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__secondary-actions .deals-search-card__usual-tooltip-trigger,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__secondary-actions .deals-search-card__usual-tooltip-trigger,
+  .page-shell--deals-search .deals-search-card--route-layout .deals-share-button--mobile-inline,
+  .page-shell--deals-city .deals-search-card--route-layout .deals-share-button--mobile-inline {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    min-height: 2.75rem;
   }
 }
 

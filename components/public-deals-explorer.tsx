@@ -2627,11 +2627,22 @@ function DealFlightCard({
   return (
     <article className={cardClassName}>
       <div className="deals-search-card__content">
-        {showCityLabel ? (
+        {showCityLabel || showAirlineLogo ? (
           <div className="deals-search-card__meta-bar">
-            <Link className="deals-search-card__city-link" href={destinationHref}>
+            <Link
+              className={`deals-search-card__city-link${showCityLabel ? "" : " deals-search-card__city-link--mobile-only"}`}
+              href={destinationHref}
+            >
               {destinationName}
             </Link>
+            {showAirlineLogo ? (
+              <div aria-hidden="true" className="deals-search-card__mobile-airline-logo">
+                <AirlineLogo
+                  airlineName={airlineName}
+                  primaryAirlineCode={deal.primaryAirlineCode}
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -2688,6 +2699,14 @@ function DealFlightCard({
                   className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
                 >
                   <span>{outboundDuration ?? `${deal.tripNights} ${t("deals.nights")}`}</span>
+                  {routeLayout ? (
+                    <time
+                      className="deals-search-card__mobile-date"
+                      dateTime={deal.departureDate ?? undefined}
+                    >
+                      {formatLegDate(deal.departureDate, locale)}
+                    </time>
+                  ) : null}
                   <strong>{outboundStopsLabel}</strong>
                 </div>
                 <div
@@ -2773,6 +2792,14 @@ function DealFlightCard({
                   className={`deals-search-card__duration${shiftDurationLeft ? " deals-search-card__duration--shifted" : ""}`}
                 >
                   <span>{returnDuration ?? formatStayHours(deal.destinationStayHours, deal.tripNights, t)}</span>
+                  {routeLayout ? (
+                    <time
+                      className="deals-search-card__mobile-date"
+                      dateTime={deal.returnDate ?? undefined}
+                    >
+                      {formatLegDate(deal.returnDate, locale)}
+                    </time>
+                  ) : null}
                   <strong>{returnStopsLabel}</strong>
                 </div>
                 <div
@@ -2809,11 +2836,17 @@ function DealFlightCard({
 
         {showFacts ? (
           <div className="deals-search-card__facts">
-            <span>{formatDestinationStay(deal.destinationStayHours, deal.tripNights, t)}</span>
-            <span>{formatLocalizedStayBucket(deal.routeBucket, t)}</span>
-            <span>{formatVerifiedAge(deal.verifiedAt, t)}</span>
+            <span className="deals-search-card__fact deals-search-card__fact--stay">
+              {formatDestinationStay(deal.destinationStayHours, deal.tripNights, t)}
+            </span>
+            <span className="deals-search-card__fact deals-search-card__fact--bucket">
+              {formatLocalizedStayBucket(deal.routeBucket, t)}
+            </span>
+            <span className="deals-search-card__fact deals-search-card__fact--verified">
+              {formatVerifiedAge(deal.verifiedAt, t)}
+            </span>
             {holidayMatch ? (
-              <span>
+              <span className="deals-search-card__fact deals-search-card__fact--holiday">
                 {t("deals.matches")} {getLocalizedLuxSchoolHolidayLabel(holidayMatch, locale)}
               </span>
             ) : null}
@@ -3208,6 +3241,11 @@ export function PublicDealsDestinationPage({
             combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
             key={`city-deal-${deal.id}`}
             deal={deal}
+            layout="route"
+            shiftDurationLeft
+            showAirlineLogo
+            showArrivalDate
+            showWeekdayInDate={false}
           />
         ))}
       </div>
