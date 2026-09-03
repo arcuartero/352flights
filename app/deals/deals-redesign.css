@@ -2730,7 +2730,8 @@ body:has(.page-shell--deals-city)::before {
    reference. The opportunity modal keeps its compact layout. */
 .deals-search-card__mobile-airline-logo,
 .deals-search-card__mobile-date,
-.deals-search-card__city-link--mobile-only {
+.deals-search-card__city-link--mobile-only,
+.deals-search-card__meta-bar--mobile-only {
   display: none;
 }
 
@@ -3509,6 +3510,7 @@ body:has(.page-shell--deals-city)::before {
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar,
   .page-shell--deals-city .deals-search-card--route-layout .deals-search-card__meta-bar {
+    display: flex;
     align-items: center;
     justify-content: flex-start;
     gap: 0.7rem;

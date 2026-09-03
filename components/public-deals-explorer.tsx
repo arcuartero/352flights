@@ -2570,6 +2570,7 @@ function DealFlightCard({
   showWeekdayInDate = true,
   shiftDurationLeft = false,
   showAirlineLogo = false,
+  showMobileCityLabel = false,
   layout = "default",
 }: {
   deal: CampaignPreviewDeal;
@@ -2586,6 +2587,7 @@ function DealFlightCard({
   showWeekdayInDate?: boolean;
   shiftDurationLeft?: boolean;
   showAirlineLogo?: boolean;
+  showMobileCityLabel?: boolean;
   layout?: "default" | "route";
 }) {
   const { locale, t } = useI18n();
@@ -2627,14 +2629,18 @@ function DealFlightCard({
   return (
     <article className={cardClassName}>
       <div className="deals-search-card__content">
-        {showCityLabel || showAirlineLogo ? (
-          <div className="deals-search-card__meta-bar">
-            <Link
-              className={`deals-search-card__city-link${showCityLabel ? "" : " deals-search-card__city-link--mobile-only"}`}
-              href={destinationHref}
-            >
-              {destinationName}
-            </Link>
+        {showCityLabel || showMobileCityLabel || showAirlineLogo ? (
+          <div
+            className={`deals-search-card__meta-bar${showCityLabel ? "" : " deals-search-card__meta-bar--mobile-only"}`}
+          >
+            {showCityLabel || showMobileCityLabel ? (
+              <Link
+                className={`deals-search-card__city-link${showCityLabel ? "" : " deals-search-card__city-link--mobile-only"}`}
+                href={destinationHref}
+              >
+                {destinationName}
+              </Link>
+            ) : null}
             {showAirlineLogo ? (
               <div aria-hidden="true" className="deals-search-card__mobile-airline-logo">
                 <AirlineLogo
@@ -2910,10 +2916,12 @@ function SearchResultCard({
   deal,
   combinationsCount,
   showCityLabel = false,
+  showMobileCityLabel = true,
 }: {
   deal: CampaignPreviewDeal;
   combinationsCount: number;
   showCityLabel?: boolean;
+  showMobileCityLabel?: boolean;
 }) {
   return (
     <DealFlightCard
@@ -2923,6 +2931,7 @@ function SearchResultCard({
       showCityLabel={showCityLabel}
       showAirlineLogo
       showArrivalDate
+      showMobileCityLabel={showMobileCityLabel}
       showWeekdayInDate={false}
       layout="route"
     />
@@ -3243,6 +3252,7 @@ export function PublicDealsDestinationPage({
             deal={deal}
             layout="route"
             shiftDurationLeft
+            showCityLabel={false}
             showAirlineLogo
             showArrivalDate
             showWeekdayInDate={false}
@@ -5082,6 +5092,7 @@ export function PublicDealsExplorer({
                             combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
                             key={`results-${selectedSearchGroup.key}-${deal.id}`}
                             deal={deal}
+                            showMobileCityLabel={false}
                           />
                         ))}
                       </div>
