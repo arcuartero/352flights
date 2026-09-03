@@ -3294,12 +3294,31 @@ body:has(.page-shell--deals-city)::before {
 
   .page-shell--deals-search .deals-search-card__cta,
   .page-shell--deals-city .deals-search-card__cta {
+    grid-row: 2;
     grid-column: 1 / -1;
     min-width: 0;
     max-width: 100%;
     min-height: 2.45rem;
     padding-inline: 0.85rem;
     font-size: 0.84rem;
+  }
+
+  .page-shell--deals-search .deals-search-card__booking-actions,
+  .page-shell--deals-city .deals-search-card__booking-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-shell--deals-search .deals-search-card__booking-actions .deals-share-button,
+  .page-shell--deals-city .deals-search-card__booking-actions .deals-share-button {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .page-shell--deals-search .deals-search-card__booking-actions .deals-search-card__pending,
+  .page-shell--deals-city .deals-search-card__booking-actions .deals-search-card__pending {
+    grid-row: 2;
+    grid-column: 1;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout,
