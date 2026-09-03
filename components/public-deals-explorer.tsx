@@ -2570,6 +2570,7 @@ function DealFlightCard({
   showWeekdayInDate = true,
   shiftDurationLeft = false,
   showAirlineLogo = false,
+  showMobileAirlineName = false,
   showMobileCityLabel = false,
   layout = "default",
 }: {
@@ -2587,6 +2588,7 @@ function DealFlightCard({
   showWeekdayInDate?: boolean;
   shiftDurationLeft?: boolean;
   showAirlineLogo?: boolean;
+  showMobileAirlineName?: boolean;
   showMobileCityLabel?: boolean;
   layout?: "default" | "route";
 }) {
@@ -2648,6 +2650,11 @@ function DealFlightCard({
                   primaryAirlineCode={deal.primaryAirlineCode}
                 />
               </div>
+            ) : null}
+            {showMobileAirlineName ? (
+              <span className="deals-search-card__mobile-airline-name" title={airlineName}>
+                {airlineName}
+              </span>
             ) : null}
           </div>
         ) : null}
@@ -2916,11 +2923,13 @@ function SearchResultCard({
   deal,
   combinationsCount,
   showCityLabel = false,
+  showMobileAirlineName = false,
   showMobileCityLabel = true,
 }: {
   deal: CampaignPreviewDeal;
   combinationsCount: number;
   showCityLabel?: boolean;
+  showMobileAirlineName?: boolean;
   showMobileCityLabel?: boolean;
 }) {
   return (
@@ -2931,6 +2940,7 @@ function SearchResultCard({
       showCityLabel={showCityLabel}
       showAirlineLogo
       showArrivalDate
+      showMobileAirlineName={showMobileAirlineName}
       showMobileCityLabel={showMobileCityLabel}
       showWeekdayInDate={false}
       layout="route"
@@ -3255,6 +3265,7 @@ export function PublicDealsDestinationPage({
             showCityLabel={false}
             showAirlineLogo
             showArrivalDate
+            showMobileAirlineName
             showWeekdayInDate={false}
           />
         ))}
@@ -5092,6 +5103,7 @@ export function PublicDealsExplorer({
                             combinationsCount={destinationCounts.get(getDestinationCountKey(deal)) ?? 1}
                             key={`results-${selectedSearchGroup.key}-${deal.id}`}
                             deal={deal}
+                            showMobileAirlineName
                             showMobileCityLabel={false}
                           />
                         ))}

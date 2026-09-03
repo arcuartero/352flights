@@ -2729,6 +2729,7 @@ body:has(.page-shell--deals-city)::before {
 /* Flight results use the itinerary-first composition from the supplied
    reference. The opportunity modal keeps its compact layout. */
 .deals-search-card__mobile-airline-logo,
+.deals-search-card__mobile-airline-name,
 .deals-search-card__mobile-date,
 .deals-search-card__city-link--mobile-only,
 .deals-search-card__meta-bar--mobile-only {
@@ -3547,6 +3548,19 @@ body:has(.page-shell--deals-city)::before {
     max-width: 2.75rem;
     height: 2.75rem;
     max-height: 2.75rem;
+  }
+
+  .page-shell--deals-search .deals-search-card__mobile-airline-name,
+  .page-shell--deals-city .deals-search-card__mobile-airline-name {
+    display: block;
+    overflow: hidden;
+    min-width: 0;
+    color: var(--v2-ink);
+    font-size: clamp(1.15rem, 5.2vw, 1.4rem);
+    font-weight: 700;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segments,
