@@ -76,8 +76,8 @@ type SendResendEmailInput = {
   idempotencyKey: string;
 };
 
-const RESEND_NOREPLY_FROM = "+352 Flights <noreply@352flights.com>";
-const RESEND_ALERTS_FROM = "+352 Flights Alerts <alerts@352flights.com>";
+const RESEND_NOREPLY_FROM = "352 Flights <noreply@352flights.com>";
+const RESEND_ALERTS_FROM = "352 Flights <alerts@352flights.com>";
 
 export function getResendFromEmail(emailType: SendResendEmailInput["emailType"]) {
   return emailType === "campaign" || emailType === "campaign_test"

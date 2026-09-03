@@ -65,8 +65,8 @@ Required for production capture:
 - `RESEND_API_KEY`
 
 Customer emails use fixed, purpose-specific senders: transactional messages are sent
-from `+352 Flights <noreply@352flights.com>` and flight-deal campaigns are sent from
-`+352 Flights Alerts <alerts@352flights.com>`.
+from `352 Flights <noreply@352flights.com>` and flight-deal campaigns are sent from
+`352 Flights <alerts@352flights.com>`.
 
 Optional scanner tuning:
 
