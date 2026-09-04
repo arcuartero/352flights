@@ -18,6 +18,7 @@ import { useI18n } from "@/lib/i18n";
 export type PublicDealsSelectOption = {
   value: string;
   label: string;
+  displayLabel?: string;
   countryCode?: string;
   disabled?: boolean;
 };
@@ -47,6 +48,7 @@ export function PublicDealsSelect({
   mobileDirectOnly,
   mobileDirectOnlyLabel,
   mobileSheetTitle,
+  clearValue,
   onMobileDirectOnlyChange,
   popularOptionValues = EMPTY_POPULAR_OPTION_VALUES,
 }: {
@@ -61,6 +63,7 @@ export function PublicDealsSelect({
   mobileDirectOnly?: boolean;
   mobileDirectOnlyLabel?: string;
   mobileSheetTitle?: string;
+  clearValue?: string;
   onMobileDirectOnlyChange?: (checked: boolean) => void;
   popularOptionValues?: string[];
 }) {
@@ -79,8 +82,11 @@ export function PublicDealsSelect({
   const sheetTitleId = useId();
   const searchLabelId = useId();
   const selectedValueId = `${listboxId}-value`;
-  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
-  const selectedOption = options[selectedIndex] ?? options[0];
+  const valueIndex = options.findIndex((option) => option.value === value);
+  const selectedIndex = valueIndex >= 0
+    ? valueIndex
+    : Math.max(0, options.findIndex((option) => !option.disabled));
+  const selectedOption = valueIndex >= 0 ? options[valueIndex] : undefined;
   const usesMobileSheet = mobileDestinationSheet || Boolean(mobileSheetTitle);
 
   useEffect(() => {
@@ -234,7 +240,7 @@ export function PublicDealsSelect({
       });
     }
 
-    onChange(option.value);
+    onChange(option.value === value && clearValue !== undefined ? clearValue : option.value);
     closeSelect();
   };
 
@@ -293,6 +299,7 @@ export function PublicDealsSelect({
     const isSelected = option.value === value;
     return (
       <button
+        aria-label={option.displayLabel ? option.label : undefined}
         aria-pressed={isSelected}
         className={`deals-destination-sheet__option deals-destination-sheet__option--simple${isSelected ? " is-selected" : ""}`}
         disabled={option.disabled}
@@ -300,7 +307,7 @@ export function PublicDealsSelect({
         onClick={() => selectOption(option)}
         type="button"
       >
-        <span>{option.label}</span>
+        <span>{option.displayLabel ?? option.label}</span>
         {isSelected ? <Check aria-hidden="true" className="deals-destination-sheet__check" /> : null}
       </button>
     );
@@ -324,7 +331,7 @@ export function PublicDealsSelect({
             >
               <header className="deals-destination-sheet__header">
                 <div>
-                  <span>{label}</span>
+                  {mobileDestinationSheet || label !== mobileSheetTitle ? <span>{label}</span> : null}
                   <h2 id={sheetTitleId}>
                     {mobileDestinationSheet
                       ? t("destinationPicker.title")
@@ -476,7 +483,7 @@ export function PublicDealsSelect({
         aria-controls={isMobileSheetViewport && usesMobileSheet ? undefined : listboxId}
         aria-expanded={isOpen}
         aria-haspopup={isMobileSheetViewport && usesMobileSheet ? "dialog" : "listbox"}
-        aria-labelledby={`${listboxId}-label ${selectedValueId}`}
+        aria-labelledby={selectedOption ? `${listboxId}-label ${selectedValueId}` : `${listboxId}-label`}
         className={`deals-select__trigger${leadingIcon ? " has-leading-icon" : ""}${isOpen ? " is-open" : ""}`}
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={(event) => {
@@ -512,6 +519,7 @@ export function PublicDealsSelect({
             const isSelected = option.value === value;
             return (
               <button
+                aria-label={option.displayLabel ? option.label : undefined}
                 aria-selected={isSelected}
                 className={`deals-select__option${isSelected ? " is-selected" : ""}${option.disabled ? " is-disabled" : ""}`}
                 disabled={option.disabled}
@@ -536,7 +544,7 @@ export function PublicDealsSelect({
                 tabIndex={index === activeIndex ? 0 : -1}
                 type="button"
               >
-                <span>{option.label}</span>
+                <span>{option.displayLabel ?? option.label}</span>
                 {isSelected ? <i aria-hidden="true">✓</i> : null}
               </button>
             );
