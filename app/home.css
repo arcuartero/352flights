@@ -2180,7 +2180,7 @@ body:has(.v2) .scroll-top-button {
   .v2-hero {
     width: 100%;
     box-sizing: border-box;
-    padding: 0.35rem 0.55rem 0;
+    padding: 0;
   }
 
   .v2-hero__canvas {
@@ -2190,7 +2190,7 @@ body:has(.v2) .scroll-top-button {
     min-height: 0;
     padding: 0;
     overflow: visible;
-    border-radius: 1.35rem;
+    border-radius: 0;
     background: transparent;
     box-shadow: none;
   }
@@ -2200,11 +2200,11 @@ body:has(.v2) .scroll-top-button {
     z-index: 2;
     display: grid;
     order: 2;
-    width: calc(100% - 1.3rem);
+    width: calc(100% - 1rem);
     box-sizing: border-box;
-    margin: -2.3rem 0.65rem 0;
+    margin: -2rem 0.5rem 0;
     overflow: visible;
-    border-radius: 1.5rem;
+    border-radius: 2rem 2rem 1.5rem 1.5rem;
     background: #fff;
     box-shadow: 0 24px 56px rgba(12, 34, 56, 0.14);
   }
@@ -2217,7 +2217,7 @@ body:has(.v2) .scroll-top-button {
     max-width: none;
     margin: 0;
     padding: 1.65rem 1.2rem 1rem;
-    border-radius: 1.5rem 1.5rem 0 0;
+    border-radius: 2rem 2rem 0 0;
     background: #fff;
     box-shadow: none;
     overflow: hidden;
@@ -2262,9 +2262,9 @@ body:has(.v2) .scroll-top-button {
     order: 1;
     z-index: 0;
     width: 100%;
-    height: clamp(13.5rem, 64vw, 16rem);
+    height: clamp(19rem, 78vw, 28rem);
     margin-top: 0;
-    border-radius: 1.35rem;
+    border-radius: 0;
   }
 
   .v2-hero__overlay {
