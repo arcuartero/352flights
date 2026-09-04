@@ -4289,15 +4289,24 @@ export function PublicDealsExplorer({
         className="deals-mobile-results-controls"
       >
         <div className="deals-mobile-search-summary">
-          <DealsSelect
-            className="deals-mobile-search-control deals-mobile-search-control--destination"
-            label={t("common.destination")}
-            mobileDestinationSheet
-            onChange={selectMobileDestination}
-            options={destinationOptions}
-            popularOptionValues={popularDestinationValues}
-            value={draftFilters.destinationFilter}
-          />
+          <div className="deals-mobile-search-summary__route">
+            <div className="deals-mobile-search-origin">
+              <span>{t("common.from")}</span>
+              <strong>LUX</strong>
+            </div>
+            <span className="deals-mobile-search-plane" aria-hidden="true">
+              <Plane fill="currentColor" size={22} strokeWidth={1.25} />
+            </span>
+            <DealsSelect
+              className={`deals-mobile-search-control deals-mobile-search-control--destination${draftFilters.destinationFilter === "any" ? " is-default-selected" : ""}`}
+              label={t("common.to")}
+              mobileDestinationSheet
+              onChange={selectMobileDestination}
+              options={destinationOptions}
+              popularOptionValues={popularDestinationValues}
+              value={draftFilters.destinationFilter}
+            />
+          </div>
           <div className="deals-mobile-search-summary__details">
             <DealsDatePicker
               className="deals-mobile-search-control deals-mobile-search-control--when"
@@ -4324,6 +4333,46 @@ export function PublicDealsExplorer({
               options={resultsTripOptions}
               value={draftFilters.tripFilter}
             />
+          </div>
+        </div>
+
+        <div className="deals-mobile-quick-budget" aria-label={t("common.budget")}>
+          <span>{t("common.budget")}</span>
+          <div>
+            {[
+              { key: "under-100", label: "<100€", priceMin: null, priceMax: 100 },
+              { key: "under-250", label: "<250€", priceMin: null, priceMax: 250 },
+              { key: "over-500", label: ">500€", priceMin: 500, priceMax: null },
+              {
+                key: "all",
+                label: t("common.allPrices"),
+                priceMin: null,
+                priceMax: null,
+              },
+            ].map((option) => {
+              const isSelected =
+                draftFilters.priceMin === option.priceMin &&
+                draftFilters.priceMax === option.priceMax;
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={isSelected ? "is-selected" : undefined}
+                  key={option.key}
+                  onClick={() =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      budgetFilter: "any",
+                      priceMin: option.priceMin,
+                      priceMax: option.priceMax,
+                    }))
+                  }
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -4924,7 +4973,7 @@ export function PublicDealsExplorer({
                     directOnly={effectiveFilters.directOnly}
                     tripType={effectiveFilters.tripFilter}
                   />
-                  <div className="deals-search-sidebar__section">
+                  <div className="deals-search-sidebar__section deals-search-sidebar__section--home-route">
                     <div className="deals-search-fixed-route">
                       <div className="deals-control deals-control--static deals-control--origin-fixed">
                         <span className="deals-control__label-with-icon">
@@ -4940,7 +4989,7 @@ export function PublicDealsExplorer({
                     </div>
                   </div>
 
-                  <div className="deals-search-sidebar__section">
+                  <div className="deals-search-sidebar__section deals-search-sidebar__section--home-controls">
                     <DealsSelect
                       label={t("deals.departureDay")}
                       onChange={(nextValue) =>
@@ -5144,7 +5193,7 @@ export function PublicDealsExplorer({
                   </div>
                 ) : null}
 
-              <div className="deals-search-sidebar__section">
+              <div className="deals-search-sidebar__section deals-search-sidebar__section--home-route">
                 <div className="deals-control deals-control--static deals-control--origin-fixed">
                   <span className="deals-control__label-with-icon">
                     <MapPin aria-hidden="true" />
@@ -5154,8 +5203,9 @@ export function PublicDealsExplorer({
                 </div>
               </div>
 
-              <div className="deals-search-sidebar__section">
+              <div className="deals-search-sidebar__section deals-search-sidebar__section--home-controls">
                 <DealsSelect
+                  className={draftFilters.destinationFilter === "any" ? "is-default-selected" : undefined}
                   label={t("common.destination")}
                   mobileDestinationSheet
                   onChange={(nextValue) =>
