@@ -4014,6 +4014,9 @@ export function PublicDealsExplorer({
         matchesDealSearchFilters(deal, filtersWithoutDirectOnly, now),
     );
   }, [draftFilters, mode, now, serverSearchResult, sourceDeals]);
+  const visibleSearchQuickChips = shouldShowDirectOnlyOption
+    ? SEARCH_QUICK_CHIPS
+    : SEARCH_QUICK_CHIPS.filter((chip) => chip !== "direct");
 
   useEffect(() => {
     if (
@@ -4551,7 +4554,7 @@ export function PublicDealsExplorer({
                       <section>
                         <h3>{t("deals.quickFilters")}</h3>
                         <div className="deals-search-sidebar__chips">
-                          {SEARCH_QUICK_CHIPS.map((chip) => (
+                          {visibleSearchQuickChips.map((chip) => (
                             <button
                               aria-pressed={draftQuickChips.has(chip)}
                               className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
@@ -4860,7 +4863,7 @@ export function PublicDealsExplorer({
           </div>
 
           <div className="deals-explorer__chips">
-            {SEARCH_QUICK_CHIPS.map((chip) => (
+            {visibleSearchQuickChips.map((chip) => (
               <button
                 aria-pressed={draftQuickChips.has(chip)}
                 className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
@@ -5140,7 +5143,7 @@ export function PublicDealsExplorer({
                   <div className="deals-search-sidebar__section">
                     <p className="deals-explorer__kicker">{t("deals.quickFilters")}</p>
                     <div className="deals-search-sidebar__chips">
-                      {SEARCH_QUICK_CHIPS.map((chip) => (
+                      {visibleSearchQuickChips.map((chip) => (
                         <button
                           aria-pressed={draftQuickChips.has(chip)}
                           className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
@@ -5364,7 +5367,7 @@ export function PublicDealsExplorer({
               <div className="deals-search-sidebar__section">
                 <p className="deals-explorer__kicker">{t("deals.quickFilters")}</p>
                 <div className="deals-search-sidebar__chips">
-                  {SEARCH_QUICK_CHIPS.map((chip) => (
+                  {visibleSearchQuickChips.map((chip) => (
                     <button
                       aria-pressed={draftQuickChips.has(chip)}
                       className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
