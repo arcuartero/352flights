@@ -754,7 +754,9 @@ export function V2Landing({
                 <Plane size={22} strokeWidth={1.25} fill="currentColor" />
               </span>
               <PublicDealsSelect
-                className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"
+                className={`v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select${
+                  filters.destinationFilter === "any" ? " is-default-selected" : ""
+                }`}
                 label={t("common.to")}
                 leadingIcon={<MapPin size={18} strokeWidth={2.1} />}
                 mobileDestinationSheet
