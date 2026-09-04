@@ -751,7 +751,7 @@ export function V2Landing({
                 </strong>
               </div>
               <span className="v2-search__route-plane" aria-hidden="true">
-                <Plane size={22} strokeWidth={2.2} />
+                <Plane size={22} strokeWidth={1.25} fill="currentColor" />
               </span>
               <PublicDealsSelect
                 className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"

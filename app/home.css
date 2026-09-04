@@ -2358,7 +2358,7 @@ body:has(.v2) .scroll-top-button {
     width: 2.75rem;
     height: 2.75rem;
     place-items: center;
-    border: 2px solid var(--v2-blue-strong);
+    border: 1px solid var(--v2-blue-strong);
     border-radius: 999px;
     background: #fff;
     color: var(--v2-blue-strong);
