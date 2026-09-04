@@ -15,7 +15,6 @@ import {
 import { createPortal } from "react-dom";
 import {
   Check,
-  ChevronRight,
   Info,
   MapPin,
   Plane,
@@ -4341,15 +4340,6 @@ export function PublicDealsExplorer({
           </div>
         </div>
 
-        <button
-          className="deals-mobile-other-filters"
-          onClick={(event) => openMobileResultsPanel("filters", event.currentTarget)}
-          type="button"
-        >
-          <span>{t("deals.mobile.otherFilters")}</span>
-          <ChevronRight aria-hidden="true" />
-        </button>
-
         <div className="deals-mobile-results-bar">
           <button
             className="deals-mobile-results-bar__action"
@@ -4357,6 +4347,13 @@ export function PublicDealsExplorer({
             type="button"
           >
             <span>{t("deals.mobile.sort")}</span>
+          </button>
+          <button
+            className="deals-mobile-results-bar__action"
+            onClick={(event) => openMobileResultsPanel("filters", event.currentTarget)}
+            type="button"
+          >
+            <span>{t("deals.mobile.otherFilters")}</span>
           </button>
           <PublicDealsMap
             cities={mapCities}
