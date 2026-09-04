@@ -4301,6 +4301,11 @@ export function PublicDealsExplorer({
               className={`deals-mobile-search-control deals-mobile-search-control--destination${draftFilters.destinationFilter === "any" ? " is-default-selected" : ""}`}
               label={t("common.to")}
               mobileDestinationSheet
+              mobileValueLabel={
+                draftFilters.destinationFilter === "any"
+                  ? t("deals.mobile.everywhere")
+                  : undefined
+              }
               onChange={selectMobileDestination}
               options={destinationOptions}
               popularOptionValues={popularDestinationValues}
