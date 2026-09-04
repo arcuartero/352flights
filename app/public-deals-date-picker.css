@@ -373,6 +373,38 @@
   color: #929aa3;
 }
 
+/* Preset periods do not need the calendar column or its reserved height. */
+.deals-date-picker__popover.is-presets-only,
+.deals-date-picker__popover.is-presets-only.is-above,
+.deals-redesign .deals-date-picker__popover.is-presets-only {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  width: min(28rem, calc(100vw - 2rem));
+  height: auto;
+  max-height: min(var(--deals-date-picker-max-height, 40rem), calc(100dvh - 2rem));
+}
+
+.deals-date-picker__popover.is-presets-only .deals-date-picker__presets {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  border-right: 0;
+}
+
+.is-presets-only .deals-date-picker__intro--desktop {
+  grid-column: 1 / -1;
+}
+
+.deals-date-picker__popover.is-presets-only .deals-date-picker__calendar {
+  padding: 0.75rem;
+  border-top: 1px solid rgba(29, 39, 51, 0.09);
+}
+
+.deals-date-picker__popover.is-presets-only .deals-date-picker__actions {
+  margin: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 @media (max-height: 800px) and (min-width: 561px) {
   .deals-date-picker__popover,
   .deals-date-picker__popover.is-above {
@@ -409,6 +441,22 @@
   .deals-date-picker__popover.is-above {
     top: 0;
     bottom: 0;
+  }
+
+  .deals-date-picker__popover.is-presets-only,
+  .deals-date-picker__popover.is-presets-only.is-above,
+  .deals-redesign .deals-date-picker__popover.is-presets-only {
+    inset: auto 0 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+    width: 100dvw;
+    height: auto;
+    min-height: 0;
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top, 0px));
+    border-radius: 1rem 1rem 0 0;
+  }
+
+  .deals-date-picker__popover.is-presets-only .deals-date-picker__calendar {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .deals-date-picker__presets {

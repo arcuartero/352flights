@@ -18,7 +18,6 @@ import { createPortal } from "react-dom";
 
 import type { PublicDealsSelectOption } from "@/components/public-deals-select";
 import { useI18n, type Locale } from "@/lib/i18n";
-import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 import { getWhenFilterDateRange, type WhenFilter } from "@/lib/public-deals-search";
 
 type DatePickerSelection = {
@@ -126,6 +125,7 @@ export function PublicDealsDatePicker({
   const [draftWhenFilter, setDraftWhenFilter] = useState<WhenFilter>(value);
   const [draftFrom, setDraftFrom] = useState<string | null>(dateFrom);
   const [draftTo, setDraftTo] = useState<string | null>(dateTo);
+  const showsCalendar = draftWhenFilter === "custom";
   const today = useMemo(() => {
     const current = new Date();
     return new Date(Date.UTC(current.getFullYear(), current.getMonth(), current.getDate(), 12));
@@ -283,14 +283,14 @@ export function PublicDealsDatePicker({
   }, [isOpen, usesViewportLayer]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !showsCalendar) {
       return;
     }
 
     const selectedMonth = startOfMonth(visualFrom ? dateFromKey(visualFrom) : today);
     const targetIndex = calendarMonths.findIndex((month) => isSameMonth(month, selectedMonth));
 
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
       const scrollContainer = monthsScrollRef.current;
       const targetMonth = monthRefs.current[Math.max(0, targetIndex)];
       const firstMonth = monthRefs.current[0];
@@ -298,7 +298,8 @@ export function PublicDealsDatePicker({
         scrollContainer.scrollTop = targetMonth.offsetTop - firstMonth.offsetTop;
       }
     });
-  }, [calendarMonths, isOpen, today, visualFrom]);
+    return () => cancelAnimationFrame(frame);
+  }, [calendarMonths, isOpen, showsCalendar, today, visualFrom]);
 
   const selectDate = (dateKey: string) => {
     setDraftWhenFilter("custom");
@@ -330,7 +331,7 @@ export function PublicDealsDatePicker({
     <div
       aria-label={t("deals.datePicker.selectRange")}
       aria-modal={usesViewportLayer ? true : undefined}
-      className={`deals-date-picker__popover${opensAbove ? " is-above" : ""}${usesViewportLayer ? " is-viewport-layer" : ""}${popoverClassName ? ` ${popoverClassName}` : ""}`}
+      className={`deals-date-picker__popover${showsCalendar ? "" : " is-presets-only"}${opensAbove ? " is-above" : ""}${usesViewportLayer ? " is-viewport-layer" : ""}${popoverClassName ? ` ${popoverClassName}` : ""}`}
       id={`${pickerId}-popover`}
       ref={popoverRef}
       role="dialog"
@@ -414,87 +415,84 @@ export function PublicDealsDatePicker({
       </div>
 
       <div className="deals-date-picker__calendar">
-        <div className="deals-date-picker__fields" aria-live="polite">
-          <div>
-            <span>{t("deals.datePicker.startDate")}</span>
-            <strong>{formatDateField(visualFrom, locale) ?? "—"}</strong>
-          </div>
-          <i aria-hidden="true">–</i>
-          <div>
-            <span>{t("deals.datePicker.endDate")}</span>
-            <strong>{formatDateField(visualTo, locale) ?? "—"}</strong>
-          </div>
-        </div>
+        {showsCalendar ? (
+          <>
+            <div className="deals-date-picker__fields" aria-live="polite">
+              <div>
+                <span>{t("deals.datePicker.startDate")}</span>
+                <strong>{formatDateField(visualFrom, locale) ?? "—"}</strong>
+              </div>
+              <i aria-hidden="true">–</i>
+              <div>
+                <span>{t("deals.datePicker.endDate")}</span>
+                <strong>{formatDateField(visualTo, locale) ?? "—"}</strong>
+              </div>
+            </div>
 
-        <div
-          aria-label={t("deals.datePicker.selectRange")}
-          className="deals-date-picker__months"
-          ref={monthsScrollRef}
-        >
-          {calendarMonths.map((month, monthIndex) => {
-            const monthKey = dateToKey(month).slice(0, 7);
-            return (
-              <section
-                className="deals-date-picker__month"
-                key={monthKey}
-                ref={(element) => {
-                  monthRefs.current[monthIndex] = element;
-                }}
-              >
-                <strong className="deals-date-picker__month-title">
-                  {monthFormatter.format(month)}
-                </strong>
-                <div className="deals-date-picker__weekdays" aria-hidden="true">
-                  {weekdayLabels.map((weekday) => (
-                    <span key={`${monthKey}-${weekday}`}>{weekday}</span>
-                  ))}
-                </div>
-                <div className="deals-date-picker__days">
-                  {getCalendarDays(month).map((day) => {
-                    const key = dateToKey(day);
-                    const isOutside = !isSameMonth(day, month);
-                    const isDisabled = isOutside || key < minDate || key > maxDate;
-                    const isStart = !isOutside && key === visualFrom;
-                    const isEnd = !isOutside && key === visualTo;
-                    const isInRange = Boolean(
-                      !isOutside && visualFrom && visualTo && key > visualFrom && key < visualTo,
-                    );
-                    const isPresetSelected =
-                      !isOutside &&
-                      ((draftWhenFilter === "weekends" &&
-                        (day.getUTCDay() === 0 || day.getUTCDay() === 6)) ||
-                        (draftWhenFilter === "school_holidays" &&
-                          Boolean(getMatchingLuxSchoolHoliday(key, key))));
-                    const isToday = key === minDate;
+            <div
+              aria-label={t("deals.datePicker.selectRange")}
+              className="deals-date-picker__months"
+              ref={monthsScrollRef}
+            >
+              {calendarMonths.map((month, monthIndex) => {
+                const monthKey = dateToKey(month).slice(0, 7);
+                return (
+                  <section
+                    className="deals-date-picker__month"
+                    key={monthKey}
+                    ref={(element) => {
+                      monthRefs.current[monthIndex] = element;
+                    }}
+                  >
+                    <strong className="deals-date-picker__month-title">
+                      {monthFormatter.format(month)}
+                    </strong>
+                    <div className="deals-date-picker__weekdays" aria-hidden="true">
+                      {weekdayLabels.map((weekday) => (
+                        <span key={`${monthKey}-${weekday}`}>{weekday}</span>
+                      ))}
+                    </div>
+                    <div className="deals-date-picker__days">
+                      {getCalendarDays(month).map((day) => {
+                        const key = dateToKey(day);
+                        const isOutside = !isSameMonth(day, month);
+                        const isDisabled = isOutside || key < minDate || key > maxDate;
+                        const isStart = !isOutside && key === visualFrom;
+                        const isEnd = !isOutside && key === visualTo;
+                        const isInRange = Boolean(
+                          !isOutside && visualFrom && visualTo && key > visualFrom && key < visualTo,
+                        );
+                        const isToday = key === minDate;
 
-                    return (
-                      <button
-                        aria-current={isToday ? "date" : undefined}
-                        aria-label={fullDateFormatter.format(day)}
-                        className={[
-                          isOutside ? "is-outside" : "",
-                          isStart ? "is-range-start" : "",
-                          isEnd ? "is-range-end" : "",
-                          isInRange ? "is-in-range" : "",
-                          isPresetSelected ? "is-preset-selected" : "",
-                          isToday ? "is-today" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        disabled={isDisabled}
-                        key={`${monthKey}-${key}`}
-                        onClick={() => selectDate(key)}
-                        type="button"
-                      >
-                        {day.getUTCDate()}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+                        return (
+                          <button
+                            aria-current={isToday ? "date" : undefined}
+                            aria-label={fullDateFormatter.format(day)}
+                            className={[
+                              isOutside ? "is-outside" : "",
+                              isStart ? "is-range-start" : "",
+                              isEnd ? "is-range-end" : "",
+                              isInRange ? "is-in-range" : "",
+                              isToday ? "is-today" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            disabled={isDisabled}
+                            key={`${monthKey}-${key}`}
+                            onClick={() => selectDate(key)}
+                            type="button"
+                          >
+                            {day.getUTCDate()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
 
         <div className="deals-date-picker__actions">
           <button
