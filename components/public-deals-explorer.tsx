@@ -4346,6 +4346,7 @@ export function PublicDealsExplorer({
                 className="deals-mobile-search-control deals-mobile-search-control--duration"
                 label={t("deals.duration.any")}
                 clearValue="any"
+                columns={3}
                 mobileSheetTitle={t("deals.duration.any")}
                 onChange={(nextValue) =>
                   setDraftFilters((current) => ({
@@ -4614,6 +4615,7 @@ export function PublicDealsExplorer({
             <DealsSelect
               label={t("deals.duration.any")}
               clearValue="any"
+              columns={3}
               onChange={(nextValue) =>
                 setDraftFilters((current) => ({
                   ...current,
@@ -4982,6 +4984,7 @@ export function PublicDealsExplorer({
                     <DealsSelect
                       label={t("deals.duration.any")}
                       clearValue="any"
+                      columns={3}
                       onChange={(nextValue) =>
                         setDraftFilters((current) => ({
                           ...current,
@@ -5172,6 +5175,7 @@ export function PublicDealsExplorer({
                 <DealsSelect
                   label={t("deals.duration.any")}
                   clearValue="any"
+                  columns={3}
                   onChange={(nextValue) =>
                     setDraftFilters((current) => ({
                       ...current,

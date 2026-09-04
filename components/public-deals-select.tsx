@@ -49,6 +49,7 @@ export function PublicDealsSelect({
   mobileDirectOnlyLabel,
   mobileSheetTitle,
   clearValue,
+  columns = 1,
   onMobileDirectOnlyChange,
   popularOptionValues = EMPTY_POPULAR_OPTION_VALUES,
 }: {
@@ -64,6 +65,7 @@ export function PublicDealsSelect({
   mobileDirectOnlyLabel?: string;
   mobileSheetTitle?: string;
   clearValue?: string;
+  columns?: 1 | 3;
   onMobileDirectOnlyChange?: (checked: boolean) => void;
   popularOptionValues?: string[];
 }) {
@@ -462,7 +464,7 @@ export function PublicDealsSelect({
                 </>
               ) : (
                 <div className="deals-destination-sheet__body deals-destination-sheet__body--simple">
-                  <div className="deals-destination-sheet__simple-list">
+                  <div className={`deals-destination-sheet__simple-list${columns === 3 ? " deals-destination-sheet__simple-list--three-columns" : ""}`}>
                     {options.map((option) => renderSimpleSheetOption(option))}
                   </div>
                 </div>
@@ -514,7 +516,7 @@ export function PublicDealsSelect({
       </button>
 
       {isOpen && (!usesMobileSheet || !isMobileSheetViewport) ? (
-        <div aria-labelledby={`${listboxId}-label`} className="deals-select__menu" id={listboxId} role="listbox">
+        <div aria-labelledby={`${listboxId}-label`} className={`deals-select__menu${columns === 3 ? " deals-select__menu--three-columns" : ""}`} id={listboxId} role="listbox">
           {options.map((option, index) => {
             const isSelected = option.value === value;
             return (

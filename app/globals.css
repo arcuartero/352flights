@@ -2969,6 +2969,31 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   line-height: 1;
 }
 
+.deals-select__menu.deals-select__menu--three-columns {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 15rem;
+  gap: 0.4rem;
+}
+
+.deals-select__menu.deals-select__menu--three-columns .deals-select__option {
+  position: relative;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.65rem 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-align: center;
+  text-transform: none;
+}
+
+.deals-select__menu--three-columns .deals-select__option i {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  font-size: 0.7rem;
+}
+
 .deals-destination-sheet {
   display: none;
 }
@@ -3132,6 +3157,26 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   .deals-destination-sheet__simple-list {
     display: grid;
     gap: 0.55rem;
+  }
+
+  .deals-destination-sheet__simple-list--three-columns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .deals-destination-sheet__simple-list--three-columns .deals-destination-sheet__option {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    padding-inline: 0.4rem;
+    text-align: center;
+  }
+
+  .deals-destination-sheet__simple-list--three-columns .deals-destination-sheet__check {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    width: 0.8rem;
+    height: 0.8rem;
   }
 
   .deals-destination-sheet__section {

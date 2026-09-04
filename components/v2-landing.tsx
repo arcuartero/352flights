@@ -32,6 +32,7 @@ import {
   getWhenFilterDateRange,
   isTripInCurrentWeekend,
   type DealSearchFilters,
+  type DurationFilter,
   type TripFilter,
   type WhenFilter,
 } from "@/lib/public-deals-search";
@@ -381,6 +382,16 @@ function matchesHomeSearchFilters(
     return false;
   }
 
+  const nights = Math.max(1, deal.tripNights);
+  if (
+    filters.durationFilter !== "any" &&
+    (filters.durationFilter === "6_plus"
+      ? nights < 6
+      : nights !== Number(filters.durationFilter))
+  ) {
+    return false;
+  }
+
   if (filters.priceMin !== null && deal.dealPrice < filters.priceMin) {
     return false;
   }
@@ -473,21 +484,19 @@ export function V2Landing({
       })),
     [deals, filters, now, t],
   );
-  const searchTripOptions = useMemo(
+  const searchDurationOptions = useMemo(
     () =>
-      [
-        { value: "any" as TripFilter, label: t("common.anyTrip") },
-        { value: "weekend" as TripFilter, label: t("common.weekend") },
-        { value: "weeklong" as TripFilter, label: t("common.weeklong") },
-        { value: "long_stay" as TripFilter, label: t("common.longStay") },
-      ].map((option) => ({
-        ...option,
+      (["1", "2", "3", "4", "5", "6_plus"] as const).map((value) => ({
+        value,
+        label: t(`deals.duration.${value}`),
+        displayLabel: value === "1" ? t("deals.duration.1") : value === "6_plus" ? "6+" : value,
         disabled: !deals.some((deal) =>
           matchesHomeSearchFilters(
             deal,
             {
               ...filters,
-              tripFilter: option.value,
+              durationFilter: value,
+              tripFilter: "any",
             },
             now,
           ),
@@ -629,23 +638,23 @@ export function V2Landing({
   }, [filters.priceMax, filters.priceMin, hasVariablePriceRange]);
 
   useEffect(() => {
-    if (filters.tripFilter === "any") {
+    if (filters.durationFilter === "any") {
       return;
     }
 
-    const selectedTripOption = searchTripOptions.find(
-      (option) => option.value === filters.tripFilter,
+    const selectedDurationOption = searchDurationOptions.find(
+      (option) => option.value === filters.durationFilter,
     );
-    if (!selectedTripOption?.disabled) {
+    if (!selectedDurationOption?.disabled) {
       return;
     }
 
     setFilters((current) =>
-      current.tripFilter === filters.tripFilter
-        ? { ...current, tripFilter: "any" }
+      current.durationFilter === filters.durationFilter
+        ? { ...current, durationFilter: "any" }
         : current,
     );
-  }, [filters.tripFilter, searchTripOptions]);
+  }, [filters.durationFilter, searchDurationOptions]);
 
   useEffect(() => {
     setTickerRepeats(
@@ -794,17 +803,20 @@ export function V2Landing({
               />
               <PublicDealsSelect
                 className="v2-search__field v2-search__field--trip v2-search__custom-select"
-                label={t("common.tripType")}
+                label={t("deals.duration.any")}
+                clearValue="any"
+                columns={3}
                 leadingIcon={<Plane size={18} strokeWidth={2.1} />}
-                mobileSheetTitle={t("home.searchChooseTripType")}
+                mobileSheetTitle={t("deals.duration.any")}
                 onChange={(value) =>
                   setFilters((current) => ({
                     ...current,
-                    tripFilter: value as TripFilter,
+                    durationFilter: value as DurationFilter,
+                    tripFilter: "any",
                   }))
                 }
-                options={searchTripOptions}
-                value={filters.tripFilter}
+                options={searchDurationOptions}
+                value={filters.durationFilter}
               />
               {hasVariablePriceRange ? (
                 <PublicDealsPriceRange
