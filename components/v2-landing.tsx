@@ -891,7 +891,7 @@ export function V2Landing({
                 </Link>
               ) : (
                 <button className="v2-search__cta" disabled type="button">
-                  {t("common.viewDeals")}
+                  {t("home.searchNoMatchingDeals")}
                 </button>
               )}
             </div>

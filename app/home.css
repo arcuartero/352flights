@@ -1023,6 +1023,9 @@ body:has(.v2) .scroll-top-button {
   cursor: not-allowed;
   opacity: 0.5;
   transform: none;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.3;
 }
 
 /* ============================================================
