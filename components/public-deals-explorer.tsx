@@ -325,7 +325,14 @@ const DEPARTURE_WEEKDAY_OPTIONS: SelectOption[] = [
   { value: "sunday", label: "Sunday" },
 ];
 
-const DURATION_FILTER_VALUES: Exclude<DurationFilter, "any">[] = ["1", "2", "3", "4_plus"];
+const DURATION_FILTER_VALUES: Exclude<DurationFilter, "any">[] = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6_plus",
+];
 
 const DEAL_SORT_OPTIONS: SelectOption[] = [
   { value: "best", label: "Best deals" },
@@ -894,17 +901,11 @@ function isStrongPriceDeal(deal: CampaignPreviewDeal) {
   return deal.dropRatio !== null && deal.dropRatio <= STRONG_PRICE_VISUAL_RATIO;
 }
 
-function getStayDurationDays(deal: CampaignPreviewDeal) {
-  if (deal.destinationStayHours !== null) {
-    return Math.max(1, Math.floor(deal.destinationStayHours / 24));
-  }
-
-  return Math.max(1, deal.tripNights);
-}
-
 function getDurationFilterValue(deal: CampaignPreviewDeal): Exclude<DurationFilter, "any"> {
-  const days = getStayDurationDays(deal);
-  return days >= 4 ? "4_plus" : String(days) as Exclude<DurationFilter, "any">;
+  const nights = Math.max(1, deal.tripNights);
+  return nights >= 6
+    ? "6_plus"
+    : String(nights) as Exclude<DurationFilter, "any">;
 }
 
 function getDepartureWeekdayFilterValue(value: string | null): DepartureWeekdayFilter {
@@ -3953,16 +3954,22 @@ export function PublicDealsExplorer({
     [draftFilters, mode, now, serverSearchResult, sourceDeals, t],
   );
   const resultsDurationOptions = useMemo<SelectOption[]>(
-    () =>
-      mode === "results" && serverSearchResult
-        ? [
-            { value: "any", label: t("deals.duration.any") },
-            ...serverSearchResult.facets.durationValues.map((value) => ({
-              value,
-              label: t(`deals.duration.${value}`),
-            })),
-          ]
-        : buildDurationOptions(sourceDeals, draftFilters, now, t),
+    () => {
+      if (mode !== "results" || !serverSearchResult) {
+        return buildDurationOptions(sourceDeals, draftFilters, now, t);
+      }
+
+      const availableDurations = new Set(serverSearchResult.facets.durationValues);
+      return [
+        { value: "any", label: t("deals.duration.any") },
+        ...DURATION_FILTER_VALUES.map((value) => ({
+          value,
+          label: t(`deals.duration.${value}`),
+          disabled:
+            value !== draftFilters.durationFilter && !availableDurations.has(value),
+        })),
+      ];
+    },
     [draftFilters, mode, now, serverSearchResult, sourceDeals, t],
   );
   const dealSortOptions = useMemo<SelectOption[]>(
@@ -3992,6 +3999,21 @@ export function PublicDealsExplorer({
     },
     [draftFilters, mode, now, serverSearchResult, sourceDeals],
   );
+  const shouldShowDirectOnlyOption = useMemo(() => {
+    if (mode === "results" && serverSearchResult) {
+      return serverSearchResult.facets.connectingFlightsAvailable;
+    }
+
+    const filtersWithoutDirectOnly = {
+      ...draftFilters,
+      directOnly: false,
+    };
+    return sourceDeals.some(
+      (deal) =>
+        deal.maxStops !== "NON_STOP" &&
+        matchesDealSearchFilters(deal, filtersWithoutDirectOnly, now),
+    );
+  }, [draftFilters, mode, now, serverSearchResult, sourceDeals]);
 
   useEffect(() => {
     if (
@@ -4083,10 +4105,17 @@ export function PublicDealsExplorer({
         directOnly: DEFAULT_DEAL_SEARCH_FILTERS.directOnly,
         themeFilter: DEFAULT_DEAL_SEARCH_FILTERS.themeFilter,
         departureWeekdayFilter: DEFAULT_DEAL_SEARCH_FILTERS.departureWeekdayFilter,
-        durationFilter: DEFAULT_DEAL_SEARCH_FILTERS.durationFilter,
+        tripFilter:
+          mode === "results"
+            ? DEFAULT_DEAL_SEARCH_FILTERS.tripFilter
+            : current.tripFilter,
+        durationFilter:
+          mode === "results"
+            ? current.durationFilter
+            : DEFAULT_DEAL_SEARCH_FILTERS.durationFilter,
       }),
     );
-  }, [coerceFiltersForMode, mobileResultsPanel]);
+  }, [coerceFiltersForMode, mobileResultsPanel, mode]);
 
   const searchHref = buildDealsHrefForMode(draftFilters);
 
@@ -4324,19 +4353,35 @@ export function PublicDealsExplorer({
               presetOptions={resultsWhenOptions}
               value={draftFilters.whenFilter}
             />
-            <DealsSelect
-              className="deals-mobile-search-control deals-mobile-search-control--trip"
-              label={t("common.tripType")}
-              mobileSheetTitle={t("home.searchChooseTripType")}
-              onChange={(nextValue) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  tripFilter: nextValue as TripFilter,
-                }))
-              }
-              options={resultsTripOptions}
-              value={draftFilters.tripFilter}
-            />
+            {mode === "results" ? (
+              <DealsSelect
+                className="deals-mobile-search-control deals-mobile-search-control--duration"
+                label={t("deals.duration.any")}
+                mobileSheetTitle={t("deals.duration.any")}
+                onChange={(nextValue) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    durationFilter: nextValue as DurationFilter,
+                  }))
+                }
+                options={resultsDurationOptions}
+                value={draftFilters.durationFilter}
+              />
+            ) : (
+              <DealsSelect
+                className="deals-mobile-search-control deals-mobile-search-control--trip"
+                label={t("common.tripType")}
+                mobileSheetTitle={t("home.searchChooseTripType")}
+                onChange={(nextValue) =>
+                  setDraftFilters((current) => ({
+                    ...current,
+                    tripFilter: nextValue as TripFilter,
+                  }))
+                }
+                options={resultsTripOptions}
+                value={draftFilters.tripFilter}
+              />
+            )}
           </div>
         </div>
 
@@ -4438,17 +4483,31 @@ export function PublicDealsExplorer({
                           options={departureWeekdayOptions}
                           value={draftFilters.departureWeekdayFilter}
                         />
-                        <DealsSelect
-                          label={t("deals.tripDuration")}
-                          onChange={(nextValue) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              durationFilter: nextValue as DurationFilter,
-                            }))
-                          }
-                          options={resultsDurationOptions}
-                          value={draftFilters.durationFilter}
-                        />
+                        {mode === "results" ? (
+                          <DealsSelect
+                            label={t("common.tripType")}
+                            onChange={(nextValue) =>
+                              setDraftFilters((current) => ({
+                                ...current,
+                                tripFilter: nextValue as TripFilter,
+                              }))
+                            }
+                            options={resultsTripOptions}
+                            value={draftFilters.tripFilter}
+                          />
+                        ) : (
+                          <DealsSelect
+                            label={t("deals.tripDuration")}
+                            onChange={(nextValue) =>
+                              setDraftFilters((current) => ({
+                                ...current,
+                                durationFilter: nextValue as DurationFilter,
+                              }))
+                            }
+                            options={resultsDurationOptions}
+                            value={draftFilters.durationFilter}
+                          />
+                        )}
                         {shouldShowPriceRangeFilter ? (
                           <PublicDealsPriceRange
                             bounds={priceBounds}
@@ -4472,22 +4531,21 @@ export function PublicDealsExplorer({
                             t={t}
                           />
                         ) : null}
-                        <label
-                          className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
-                        >
-                          <input
-                            checked={draftFilters.directOnly}
-                            disabled={!directOnlyOptionAvailable && !draftFilters.directOnly}
-                            onChange={(event) =>
-                              setDraftFilters((current) => ({
-                                ...current,
-                                directOnly: event.target.checked,
-                              }))
-                            }
-                            type="checkbox"
-                          />
-                          <span>{t("common.directOnly")}</span>
-                        </label>
+                        {shouldShowDirectOnlyOption ? (
+                          <label className="deals-toggle">
+                            <input
+                              checked={draftFilters.directOnly}
+                              onChange={(event) =>
+                                setDraftFilters((current) => ({
+                                  ...current,
+                                  directOnly: event.target.checked,
+                                }))
+                              }
+                              type="checkbox"
+                            />
+                            <span>{t("common.directOnly")}</span>
+                          </label>
+                        ) : null}
                       </section>
 
                       <section>
@@ -4602,29 +4660,57 @@ export function PublicDealsExplorer({
           value={draftFilters.whenFilter}
         />
 
-        <DealsSelect
-          label={t("common.tripType")}
-          onChange={(nextValue) =>
-            setDraftFilters((current) => ({
-              ...current,
-              tripFilter: nextValue as TripFilter,
-            }))
-          }
-          options={resultsTripOptions}
-          value={draftFilters.tripFilter}
-        />
-
-        <DealsSelect
-          label={t("deals.tripDuration")}
-          onChange={(nextValue) =>
-            setDraftFilters((current) => ({
-              ...current,
-              durationFilter: nextValue as DurationFilter,
-            }))
-          }
-          options={resultsDurationOptions}
-          value={draftFilters.durationFilter}
-        />
+        {mode === "results" ? (
+          <>
+            <DealsSelect
+              label={t("deals.duration.any")}
+              onChange={(nextValue) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  durationFilter: nextValue as DurationFilter,
+                }))
+              }
+              options={resultsDurationOptions}
+              value={draftFilters.durationFilter}
+            />
+            <DealsSelect
+              label={t("common.tripType")}
+              onChange={(nextValue) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  tripFilter: nextValue as TripFilter,
+                }))
+              }
+              options={resultsTripOptions}
+              value={draftFilters.tripFilter}
+            />
+          </>
+        ) : (
+          <>
+            <DealsSelect
+              label={t("common.tripType")}
+              onChange={(nextValue) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  tripFilter: nextValue as TripFilter,
+                }))
+              }
+              options={resultsTripOptions}
+              value={draftFilters.tripFilter}
+            />
+            <DealsSelect
+              label={t("deals.tripDuration")}
+              onChange={(nextValue) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  durationFilter: nextValue as DurationFilter,
+                }))
+              }
+              options={resultsDurationOptions}
+              value={draftFilters.durationFilter}
+            />
+          </>
+        )}
       </div>,
       document.body,
     );
@@ -5208,6 +5294,18 @@ export function PublicDealsExplorer({
                 />
 
                 <DealsSelect
+                  label={t("deals.duration.any")}
+                  onChange={(nextValue) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      durationFilter: nextValue as DurationFilter,
+                    }))
+                  }
+                  options={resultsDurationOptions}
+                  value={draftFilters.durationFilter}
+                />
+
+                <DealsSelect
                   label={t("common.tripType")}
                   onChange={(nextValue) =>
                     setDraftFilters((current) => ({
@@ -5217,18 +5315,6 @@ export function PublicDealsExplorer({
                   }
                   options={resultsTripOptions}
                   value={draftFilters.tripFilter}
-                />
-
-                <DealsSelect
-                  label={t("deals.tripDuration")}
-                  onChange={(nextValue) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      durationFilter: nextValue as DurationFilter,
-                    }))
-                  }
-                  options={resultsDurationOptions}
-                  value={draftFilters.durationFilter}
                 />
 
                 <div className="deals-search-sidebar__filter-group">
@@ -5258,22 +5344,21 @@ export function PublicDealsExplorer({
                   />
                 </div>
 
-                <label
-                  className={`deals-toggle deals-toggle--untitled-field${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
-                >
-                  <input
-                    checked={draftFilters.directOnly}
-                    disabled={!directOnlyOptionAvailable && !draftFilters.directOnly}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        directOnly: event.target.checked,
-                      }))
-                    }
-                    type="checkbox"
-                  />
-                  <span>{t("common.directOnly")}</span>
-                </label>
+                {shouldShowDirectOnlyOption ? (
+                  <label className="deals-toggle deals-toggle--untitled-field">
+                    <input
+                      checked={draftFilters.directOnly}
+                      onChange={(event) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          directOnly: event.target.checked,
+                        }))
+                      }
+                      type="checkbox"
+                    />
+                    <span>{t("common.directOnly")}</span>
+                  </label>
+                ) : null}
               </div>
 
               <div className="deals-search-sidebar__section">

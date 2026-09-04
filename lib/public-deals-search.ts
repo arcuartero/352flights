@@ -12,7 +12,7 @@ export type WhenFilter =
 export type TripFilter = "any" | "weekend" | "weeklong" | "long_stay";
 export type BudgetFilter = "any" | "50" | "80" | "120" | "200";
 export type ThemeFilter = "any" | "beach" | "city" | "nature";
-export type DurationFilter = "any" | "1" | "2" | "3" | "4_plus";
+export type DurationFilter = "any" | "1" | "2" | "3" | "4" | "5" | "6_plus";
 export type DepartureWeekdayFilter =
   | "any"
   | "monday"
@@ -79,7 +79,15 @@ const WHEN_FILTERS = new Set<WhenFilter>([
 const TRIP_FILTERS = new Set<TripFilter>(["any", "weekend", "weeklong", "long_stay"]);
 const BUDGET_FILTERS = new Set<BudgetFilter>(["any", "50", "80", "120", "200"]);
 const THEME_FILTERS = new Set<ThemeFilter>(["any", "beach", "city", "nature"]);
-const DURATION_FILTERS = new Set<DurationFilter>(["any", "1", "2", "3", "4_plus"]);
+const DURATION_FILTERS = new Set<DurationFilter>([
+  "any",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6_plus",
+]);
 const DEPARTURE_WEEKDAY_FILTERS = new Set<DepartureWeekdayFilter>([
   "any",
   "monday",

@@ -67,6 +67,7 @@ export type PublicDealsSearchFacets = {
   airlines: Array<{ key: string; label: string }>;
   prices: number[];
   directOnlyAvailable: boolean;
+  connectingFlightsAvailable: boolean;
   quickChips: Record<PublicDealsSearchQuickChip, boolean>;
 };
 
@@ -106,7 +107,14 @@ const DEPARTURE_WEEKDAYS: DepartureWeekdayFilter[] = [
   "saturday",
   "sunday",
 ];
-const DURATION_VALUES: Exclude<DurationFilter, "any">[] = ["1", "2", "3", "4_plus"];
+const DURATION_VALUES: Exclude<DurationFilter, "any">[] = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6_plus",
+];
 const QUICK_CHIPS: PublicDealsSearchQuickChip[] = [
   "this_weekend",
   "weeklong",
@@ -128,16 +136,9 @@ function normalizeDestination(value: string) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
-function getStayDurationDays(deal: CampaignPreviewDeal) {
-  if (deal.destinationStayHours !== null) {
-    return Math.max(1, Math.floor(deal.destinationStayHours / 24));
-  }
-  return Math.max(1, deal.tripNights);
-}
-
 function getDurationValue(deal: CampaignPreviewDeal): Exclude<DurationFilter, "any"> {
-  const days = getStayDurationDays(deal);
-  return days >= 4 ? "4_plus" : (String(days) as Exclude<DurationFilter, "any">);
+  const nights = Math.max(1, deal.tripNights);
+  return nights >= 6 ? "6_plus" : (String(nights) as Exclude<DurationFilter, "any">);
 }
 
 function getDepartureWeekday(value: string | null): DepartureWeekdayFilter {
@@ -484,6 +485,11 @@ export function buildPublicDealsSearchResult(
         .sort((left, right) => left.label.localeCompare(right.label, "en")),
       prices: facetDeals.map((deal) => deal.dealPrice),
       directOnlyAvailable: filters.directOnly || hasMatches({ ...filters, directOnly: true }),
+      connectingFlightsAvailable: allDeals.some(
+        (deal) =>
+          deal.maxStops !== "NON_STOP" &&
+          matchesPublicDealSearchFilters(deal, { ...filters, directOnly: false }, now),
+      ),
       quickChips: Object.fromEntries(
         QUICK_CHIPS.map((chip) => [
           chip,
