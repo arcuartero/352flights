@@ -102,13 +102,33 @@
   background: #f7f9fc;
 }
 
-.deals-date-picker__presets > span {
+.deals-date-picker__intro {
+  min-width: 0;
+}
+
+.deals-date-picker__intro--desktop {
   margin: 0 0.55rem 0.55rem;
+}
+
+.deals-date-picker__intro h2 {
+  margin: 0;
   color: #6a7480;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
   text-transform: uppercase;
+}
+
+.deals-date-picker__intro p {
+  margin: 0.4rem 0 0;
+  color: #6a7480;
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.45;
+  text-transform: none;
+  white-space: normal;
 }
 
 .deals-date-picker__mobile-header {
@@ -399,7 +419,7 @@
     background: #ffffff;
   }
 
-  .deals-date-picker__presets > span {
+  .deals-date-picker__intro--desktop {
     grid-column: 1 / -1;
   }
 

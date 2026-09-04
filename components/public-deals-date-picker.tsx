@@ -342,7 +342,10 @@ export function PublicDealsDatePicker({
     >
       <div className="deals-date-picker__presets">
         <div className="deals-date-picker__mobile-header">
-          <span>{t("deals.datePicker.quickOptions")}</span>
+          <div className="deals-date-picker__intro">
+            <h2>{t("deals.datePicker.travelHeading")}</h2>
+            <p>{t("deals.datePicker.travelDescription")}</p>
+          </div>
           <button
             aria-label={t("deals.mobile.close")}
             className="deals-date-picker__mobile-close"
@@ -355,7 +358,10 @@ export function PublicDealsDatePicker({
             <X aria-hidden="true" />
           </button>
         </div>
-        <span>{t("deals.datePicker.quickOptions")}</span>
+        <div className="deals-date-picker__intro deals-date-picker__intro--desktop">
+          <h2>{t("deals.datePicker.travelHeading")}</h2>
+          <p>{t("deals.datePicker.travelDescription")}</p>
+        </div>
         {presetOptions.map((option) => {
           const isSelected = option.value === draftWhenFilter;
           return (
