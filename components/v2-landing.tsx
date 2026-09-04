@@ -747,6 +747,9 @@ export function V2Landing({
                 <span>{t("common.from")}</span>
                 <strong>{t("common.luxembourg")}</strong>
               </div>
+              <span className="v2-search__route-plane" aria-hidden="true">
+                <Plane size={22} strokeWidth={2.2} />
+              </span>
               <PublicDealsSelect
                 className="v2-search__field v2-search__field--destination v2-search__destination-select v2-search__custom-select"
                 label={t("common.to")}
@@ -811,6 +814,45 @@ export function V2Landing({
                   showHistogram
                 />
               ) : null}
+              <div className="v2-search__quick-budget" aria-label={t("common.budget")}>
+                <span className="v2-search__quick-budget-label">{t("common.budget")}</span>
+                <div className="v2-search__quick-budget-options">
+                  {[
+                    { key: "under-100", label: "<100€", priceMin: null, priceMax: 100 },
+                    { key: "under-250", label: "<250€", priceMin: null, priceMax: 250 },
+                    { key: "over-500", label: ">500€", priceMin: 500, priceMax: null },
+                    {
+                      key: "all",
+                      label: t("common.allPrices"),
+                      priceMin: null,
+                      priceMax: null,
+                    },
+                  ].map((option) => {
+                    const isSelected =
+                      filters.priceMin === option.priceMin &&
+                      filters.priceMax === option.priceMax;
+
+                    return (
+                      <button
+                        aria-pressed={isSelected}
+                        className={isSelected ? "is-selected" : undefined}
+                        key={option.key}
+                        onClick={() =>
+                          setFilters((current) => ({
+                            ...current,
+                            budgetFilter: "any",
+                            priceMin: option.priceMin,
+                            priceMax: option.priceMax,
+                          }))
+                        }
+                        type="button"
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <label className="v2-search__toggle">
                 <input
                   checked={filters.directOnly}

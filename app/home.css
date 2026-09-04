@@ -483,6 +483,11 @@ body:has(.v2) .scroll-top-button {
     minmax(9rem, auto);
 }
 
+.v2-search__route-plane,
+.v2-search__quick-budget {
+  display: none;
+}
+
 .v2-search__field {
   position: relative;
   display: grid;
@@ -2319,25 +2324,51 @@ body:has(.v2) .scroll-top-button {
 
   .v2-search__field--origin,
   .v2-search__field--destination {
-    grid-column: 1 / -1;
+    min-height: 4rem;
   }
 
   .v2-search__field--origin {
     order: 1;
-    border-radius: 1rem 1rem 0 0;
-    border-bottom: 0;
+    grid-column: 1;
+    padding-right: 1.7rem;
+    border-right: 0;
+    border-radius: 1rem 0 0 1rem;
   }
 
   .v2-search__field--destination {
     order: 2;
-    border-bottom: 0;
+    grid-column: 2;
+    padding-left: 1.9rem;
+    border-radius: 0 1rem 1rem 0;
+  }
+
+  .v2-search__route-plane {
+    position: absolute;
+    top: 0.82rem;
+    left: 50%;
+    z-index: 5;
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border: 2px solid var(--v2-blue-strong);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--v2-blue-strong);
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  .v2-search__route-plane svg {
+    transform: rotate(-8deg);
   }
 
   .v2-search__field--when {
     order: 3;
     grid-column: 1;
+    margin-top: 0.65rem;
     border-right: 0;
-    border-bottom: 0;
+    border-radius: 1rem 0 0 1rem;
   }
 
   .v2-search__field--when,
@@ -2350,7 +2381,8 @@ body:has(.v2) .scroll-top-button {
   .v2-search__field--trip {
     order: 4;
     grid-column: 2;
-    border-bottom: 0;
+    margin-top: 0.65rem;
+    border-radius: 0 1rem 1rem 0;
   }
 
   .v2-search__field--destination:has(:focus-visible),
@@ -2407,7 +2439,7 @@ body:has(.v2) .scroll-top-button {
   }
 
   .v2-search__field--destination .deals-select__trigger strong {
-    font-size: 1rem;
+    font-size: clamp(0.76rem, 3.45vw, 0.95rem);
     font-weight: 750;
   }
 
@@ -2457,6 +2489,7 @@ body:has(.v2) .scroll-top-button {
   .v2-search__field--budget {
     order: 5;
     grid-column: 1 / -1;
+    display: none !important;
   }
 
   .v2-search__field--budget.deals-price-range {
@@ -2492,6 +2525,57 @@ body:has(.v2) .scroll-top-button {
     font-weight: 800;
   }
 
+  .v2-search__quick-budget {
+    order: 5;
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 0.55rem;
+    margin-top: 0.85rem;
+  }
+
+  .v2-search__quick-budget-label {
+    color: var(--v2-ink);
+    font-size: 0.78rem;
+    font-weight: 750;
+  }
+
+  .v2-search__quick-budget-options {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .v2-search__quick-budget-options button {
+    min-width: 0;
+    min-height: 3.2rem;
+    padding: 0.55rem 0.25rem;
+    border: 1px solid rgba(35, 100, 223, 0.2);
+    border-radius: 0.75rem;
+    background: #fff;
+    color: var(--v2-ink);
+    cursor: pointer;
+    font: inherit;
+    font-size: clamp(0.72rem, 3.4vw, 0.92rem);
+    font-weight: 750;
+    transition:
+      border-color 0.2s var(--v2-ease),
+      background 0.2s var(--v2-ease),
+      color 0.2s var(--v2-ease);
+  }
+
+  .v2-search__quick-budget-options button:hover,
+  .v2-search__quick-budget-options button:focus-visible,
+  .v2-search__quick-budget-options button.is-selected {
+    border-color: rgba(35, 100, 223, 0.42);
+    background: #edf4ff;
+    color: var(--v2-blue-strong);
+    outline: none;
+  }
+
+  .v2-search__quick-budget-options button:focus-visible {
+    box-shadow: 0 0 0 3px rgba(35, 100, 223, 0.18);
+  }
+
   .v2-search__toggle {
     order: 6;
     display: none;
@@ -2511,13 +2595,13 @@ body:has(.v2) .scroll-top-button {
   .v2-search__bar:not(:has(.v2-search__field--budget))
     .v2-search__field--when {
     border-bottom: 1px solid rgba(43, 61, 82, 0.09);
-    border-radius: 0 0 0 1rem;
+    border-radius: 1rem 0 0 1rem;
   }
 
   .v2-search__bar:not(:has(.v2-search__field--budget))
     .v2-search__field--trip {
     border-bottom: 1px solid rgba(43, 61, 82, 0.09);
-    border-radius: 0 0 1rem 0;
+    border-radius: 0 1rem 1rem 0;
   }
 
   .v2-search__field > span {
