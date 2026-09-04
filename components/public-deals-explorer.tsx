@@ -2049,11 +2049,10 @@ function buildDurationOptions(
       value: "any",
       label: t("deals.duration.any"),
     },
-    ...DURATION_FILTER_VALUES
-      .filter((value) => availableValues.has(value))
-      .map((value) => ({
+    ...DURATION_FILTER_VALUES.map((value) => ({
         value,
         label: t(`deals.duration.${value}`),
+        disabled: value !== filters.durationFilter && !availableValues.has(value),
       })),
   ];
 }
@@ -4108,17 +4107,11 @@ export function PublicDealsExplorer({
         directOnly: DEFAULT_DEAL_SEARCH_FILTERS.directOnly,
         themeFilter: DEFAULT_DEAL_SEARCH_FILTERS.themeFilter,
         departureWeekdayFilter: DEFAULT_DEAL_SEARCH_FILTERS.departureWeekdayFilter,
-        tripFilter:
-          mode === "results"
-            ? DEFAULT_DEAL_SEARCH_FILTERS.tripFilter
-            : current.tripFilter,
-        durationFilter:
-          mode === "results"
-            ? current.durationFilter
-            : DEFAULT_DEAL_SEARCH_FILTERS.durationFilter,
+        tripFilter: DEFAULT_DEAL_SEARCH_FILTERS.tripFilter,
+        durationFilter: current.durationFilter,
       }),
     );
-  }, [coerceFiltersForMode, mobileResultsPanel, mode]);
+  }, [coerceFiltersForMode, mobileResultsPanel]);
 
   const searchHref = buildDealsHrefForMode(draftFilters);
 
@@ -4356,7 +4349,6 @@ export function PublicDealsExplorer({
               presetOptions={resultsWhenOptions}
               value={draftFilters.whenFilter}
             />
-            {mode === "results" ? (
               <DealsSelect
                 className="deals-mobile-search-control deals-mobile-search-control--duration"
                 label={t("deals.duration.any")}
@@ -4370,21 +4362,6 @@ export function PublicDealsExplorer({
                 options={resultsDurationOptions}
                 value={draftFilters.durationFilter}
               />
-            ) : (
-              <DealsSelect
-                className="deals-mobile-search-control deals-mobile-search-control--trip"
-                label={t("common.tripType")}
-                mobileSheetTitle={t("home.searchChooseTripType")}
-                onChange={(nextValue) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    tripFilter: nextValue as TripFilter,
-                  }))
-                }
-                options={resultsTripOptions}
-                value={draftFilters.tripFilter}
-              />
-            )}
           </div>
         </div>
 
@@ -4486,7 +4463,6 @@ export function PublicDealsExplorer({
                           options={departureWeekdayOptions}
                           value={draftFilters.departureWeekdayFilter}
                         />
-                        {mode === "results" ? (
                           <DealsSelect
                             label={t("common.tripType")}
                             onChange={(nextValue) =>
@@ -4498,19 +4474,6 @@ export function PublicDealsExplorer({
                             options={resultsTripOptions}
                             value={draftFilters.tripFilter}
                           />
-                        ) : (
-                          <DealsSelect
-                            label={t("deals.tripDuration")}
-                            onChange={(nextValue) =>
-                              setDraftFilters((current) => ({
-                                ...current,
-                                durationFilter: nextValue as DurationFilter,
-                              }))
-                            }
-                            options={resultsDurationOptions}
-                            value={draftFilters.durationFilter}
-                          />
-                        )}
                         {shouldShowPriceRangeFilter ? (
                           <PublicDealsPriceRange
                             bounds={priceBounds}
@@ -4551,7 +4514,7 @@ export function PublicDealsExplorer({
                         ) : null}
                       </section>
 
-                      <section>
+                      {mode !== "city" ? <section>
                         <h3>{t("deals.quickFilters")}</h3>
                         <div className="deals-search-sidebar__chips">
                           {visibleSearchQuickChips.map((chip) => (
@@ -4576,7 +4539,7 @@ export function PublicDealsExplorer({
                             </button>
                           ))}
                         </div>
-                      </section>
+                      </section> : null}
                     </div>
                   )}
                 </div>
@@ -4663,7 +4626,6 @@ export function PublicDealsExplorer({
           value={draftFilters.whenFilter}
         />
 
-        {mode === "results" ? (
           <>
             <DealsSelect
               label={t("deals.duration.any")}
@@ -4688,32 +4650,6 @@ export function PublicDealsExplorer({
               value={draftFilters.tripFilter}
             />
           </>
-        ) : (
-          <>
-            <DealsSelect
-              label={t("common.tripType")}
-              onChange={(nextValue) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  tripFilter: nextValue as TripFilter,
-                }))
-              }
-              options={resultsTripOptions}
-              value={draftFilters.tripFilter}
-            />
-            <DealsSelect
-              label={t("deals.tripDuration")}
-              onChange={(nextValue) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  durationFilter: nextValue as DurationFilter,
-                }))
-              }
-              options={resultsDurationOptions}
-              value={draftFilters.durationFilter}
-            />
-          </>
-        )}
       </div>,
       document.body,
     );
@@ -5068,6 +5004,18 @@ export function PublicDealsExplorer({
                     />
 
                     <DealsSelect
+                      label={t("deals.duration.any")}
+                      onChange={(nextValue) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          durationFilter: nextValue as DurationFilter,
+                        }))
+                      }
+                      options={resultsDurationOptions}
+                      value={draftFilters.durationFilter}
+                    />
+
+                    <DealsSelect
                       label={t("common.tripType")}
                       onChange={(nextValue) =>
                         setDraftFilters((current) => ({
@@ -5077,18 +5025,6 @@ export function PublicDealsExplorer({
                       }
                       options={resultsTripOptions}
                       value={draftFilters.tripFilter}
-                    />
-
-                    <DealsSelect
-                      label={t("deals.tripDuration")}
-                      onChange={(nextValue) =>
-                        setDraftFilters((current) => ({
-                          ...current,
-                          durationFilter: nextValue as DurationFilter,
-                        }))
-                      }
-                      options={resultsDurationOptions}
-                      value={draftFilters.durationFilter}
                     />
 
                     {shouldShowPriceRangeFilter ? (
@@ -5122,12 +5058,9 @@ export function PublicDealsExplorer({
                       </div>
                     ) : null}
 
-                    <label
-                      className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
-                    >
+                    {shouldShowDirectOnlyOption ? <label className="deals-toggle">
                       <input
                         checked={draftFilters.directOnly}
-                        disabled={!directOnlyOptionAvailable && !draftFilters.directOnly}
                         onChange={(event) =>
                           setDraftFilters((current) => ({
                             ...current,
@@ -5137,35 +5070,9 @@ export function PublicDealsExplorer({
                         type="checkbox"
                       />
                       <span>{t("common.directOnly")}</span>
-                    </label>
+                    </label> : null}
                   </div>
 
-                  <div className="deals-search-sidebar__section">
-                    <p className="deals-explorer__kicker">{t("deals.quickFilters")}</p>
-                    <div className="deals-search-sidebar__chips">
-                      {visibleSearchQuickChips.map((chip) => (
-                        <button
-                          aria-pressed={draftQuickChips.has(chip)}
-                          className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
-                          disabled={!quickChipAvailability.get(chip)}
-                          key={chip}
-                          onClick={() => {
-                            if (!quickChipAvailability.get(chip)) {
-                              return;
-                            }
-                            setDraftFilters((current) =>
-                              draftQuickChips.has(chip)
-                                ? resetQuickChip(chip, current)
-                                : applyQuickChip(chip, current),
-                            );
-                          }}
-                          type="button"
-                        >
-                          {getChipTitle(chip, t)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
                 {renderCompactSidebar(false)}
               </aside>
