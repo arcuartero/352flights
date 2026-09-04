@@ -19,7 +19,7 @@ import {
   Info,
   MapPin,
   Plane,
-  Share2,
+  Share,
   X,
 } from "lucide-react";
 
@@ -2205,7 +2205,7 @@ function DealShareButton({
       {copied ? (
         <Check aria-hidden="true" size={18} strokeWidth={2.2} />
       ) : (
-        <Share2 aria-hidden="true" size={18} strokeWidth={2.2} />
+        <Share aria-hidden="true" size={21} strokeWidth={2.15} />
       )}
       <span aria-live="polite">
         {copied ? t("deals.share.copied") : t("deals.share.action")}
