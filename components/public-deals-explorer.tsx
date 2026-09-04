@@ -4336,46 +4336,6 @@ export function PublicDealsExplorer({
           </div>
         </div>
 
-        <div className="deals-mobile-quick-budget" aria-label={t("common.budget")}>
-          <span>{t("common.budget")}</span>
-          <div>
-            {[
-              { key: "under-100", label: "<100€", priceMin: null, priceMax: 100 },
-              { key: "under-250", label: "<250€", priceMin: null, priceMax: 250 },
-              { key: "over-500", label: ">500€", priceMin: 500, priceMax: null },
-              {
-                key: "all",
-                label: t("common.allPrices"),
-                priceMin: null,
-                priceMax: null,
-              },
-            ].map((option) => {
-              const isSelected =
-                draftFilters.priceMin === option.priceMin &&
-                draftFilters.priceMax === option.priceMax;
-
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className={isSelected ? "is-selected" : undefined}
-                  key={option.key}
-                  onClick={() =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      budgetFilter: "any",
-                      priceMin: option.priceMin,
-                      priceMax: option.priceMax,
-                    }))
-                  }
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         <button
           className="deals-mobile-other-filters"
           onClick={(event) => openMobileResultsPanel("filters", event.currentTarget)}
