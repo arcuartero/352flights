@@ -2188,6 +2188,98 @@ body:has(.page-shell--deals-city)::before {
   }
 }
 
+/* Mobile destination hero: edge-to-edge photography and an overlapping
+   information card, matching the home hero without altering desktop. */
+@media (max-width: 767px) {
+  .page-shell--deals-city > .deals-explorer,
+  .page-shell--deals-city .deals-city-page {
+    margin-top: 0;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    padding: 0;
+    gap: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero::after,
+  .page-shell--deals-city .deals-city-page__media::after {
+    display: none;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero-visual {
+    order: 0;
+    width: 100%;
+    height: clamp(19rem, 78vw, 28rem);
+    padding: 0;
+  }
+
+  .page-shell--deals-city .deals-city-page__media {
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero-copy {
+    order: 1;
+    width: calc(100% - 1rem);
+    max-width: none;
+    margin: -2rem 0.5rem 0;
+    padding: 1.5rem 1.25rem 1.65rem;
+    border-radius: 2rem 2rem 1.5rem 1.5rem;
+    background: #ffffff;
+    box-shadow: 0 18px 40px rgba(12, 34, 56, 0.1);
+  }
+
+  .page-shell--deals-city .deals-breadcrumb--city-hero {
+    margin-bottom: 1rem;
+    font-size: 0.75rem;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero-title {
+    font-size: clamp(2.5rem, 11vw, 4rem);
+    line-height: 1.02;
+    overflow-wrap: anywhere;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero-summary {
+    top: 1rem;
+    left: auto;
+    right: 1rem;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.93);
+    box-shadow: 0 4px 16px rgba(12, 34, 56, 0.12);
+  }
+
+  .page-shell--deals-city .deals-city-page__hero-summary strong {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    color: #0b203d;
+    font-size: 1.65rem;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero-summary strong .deals-city-page__hero-summary-prefix {
+    font-size: 0.8rem;
+  }
+
+  .page-shell--deals-city .deals-city-page__hero-summary small {
+    margin-top: 0.35rem;
+    font-size: 0.7rem;
+  }
+}
+
 @keyframes deals-mobile-results-sheet-backdrop-in {
   from {
     opacity: 0;

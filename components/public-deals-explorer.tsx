@@ -4878,19 +4878,20 @@ export function PublicDealsExplorer({
               </div>
 
               <div className="deals-city-page__hero-visual">
-                {cityHeroDeal ? (
+                {lockedDestinationCity || cityHeroDeal ? (
                   <figure className="deals-city-page__media" aria-hidden="true">
                     <LandmarkPhoto
                       alt={t("deals.a11y.destinationLandmark", {
-                        destination: lockedDestinationCity ?? cityHeroDeal.destinationCity,
+                        destination: rawCityHeroTitle,
                       })}
-                      destinationCity={lockedDestinationCity ?? cityHeroDeal.destinationCity}
-                      landmarkTitle={getLandmarkTitle(cityHeroDeal)}
+                      destinationCity={rawCityHeroTitle}
+                      landmarkTitle={cityHeroDeal ? getLandmarkTitle(cityHeroDeal) : undefined}
                       photoSrc={getDestinationPhotoSrc(
                         destinationPhotoUrls,
-                        lockedDestinationCity ?? cityHeroDeal.destinationCity,
+                        rawCityHeroTitle,
                       )}
                       priority
+                      sizes="(max-width: 767px) 100vw, (max-width: 860px) 90vw, 45vw"
                     />
                   </figure>
                 ) : null}
