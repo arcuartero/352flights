@@ -745,7 +745,10 @@ export function V2Landing({
             >
               <div className="v2-search__field v2-search__field--origin">
                 <span>{t("common.from")}</span>
-                <strong>{t("common.luxembourg")}</strong>
+                <strong>
+                  <span className="v2-search__origin-desktop">{t("common.luxembourg")}</span>
+                  <span className="v2-search__origin-mobile">LUX</span>
+                </strong>
               </div>
               <span className="v2-search__route-plane" aria-hidden="true">
                 <Plane size={22} strokeWidth={2.2} />
@@ -757,6 +760,11 @@ export function V2Landing({
                 mobileDestinationSheet
                 mobileDirectOnly={filters.directOnly}
                 mobileDirectOnlyLabel={t("destinationPicker.directOnly")}
+                mobileValueLabel={
+                  filters.destinationFilter === "any"
+                    ? t("home.searchEverywhere")
+                    : undefined
+                }
                 onChange={(value) =>
                   setFilters((current) => ({ ...current, destinationFilter: value }))
                 }
