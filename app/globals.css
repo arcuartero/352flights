@@ -926,7 +926,7 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   position: fixed;
   right: 1.4rem;
   bottom: calc(1.35rem + env(safe-area-inset-bottom, 0px));
-  z-index: 28;
+  z-index: 80;
   display: inline-flex;
   align-items: center;
   gap: 0.58rem;

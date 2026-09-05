@@ -44,10 +44,21 @@ body:has(.v2)::before {
   display: none;
 }
 
-/* This page carries its own chrome; hide the global one here only. */
-body:has(.v2) .site-chrome,
-body:has(.v2) .scroll-top-button {
+/* This page carries its own chrome; hide only the global header. */
+body:has(.v2) .site-chrome {
   display: none;
+}
+
+body:has(.v2) .scroll-top-button {
+  border-color: rgba(31, 95, 214, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--v2-ink);
+  box-shadow: 0 8px 22px rgba(17, 32, 46, 0.16);
+}
+
+body:has(.v2) .scroll-top-button__arrow {
+  background: var(--v2-blue-strong);
+  color: #fff;
 }
 
 .v2 ::selection {

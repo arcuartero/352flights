@@ -51,10 +51,22 @@ html:has(.page-shell--deals-city) {
 
 /* The old global header is replaced by the v2 topbar on deals pages. */
 body:has(.page-shell--deals-search) .site-chrome,
-body:has(.page-shell--deals-city) .site-chrome,
+body:has(.page-shell--deals-city) .site-chrome {
+  display: none;
+}
+
 body:has(.page-shell--deals-search) .scroll-top-button,
 body:has(.page-shell--deals-city) .scroll-top-button {
-  display: none;
+  border-color: rgba(31, 95, 214, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--v2-ink);
+  box-shadow: 0 8px 22px rgba(17, 32, 46, 0.16);
+}
+
+body:has(.page-shell--deals-search) .scroll-top-button__arrow,
+body:has(.page-shell--deals-city) .scroll-top-button__arrow {
+  background: var(--v2-blue-strong);
+  color: #fff;
 }
 
 .deals-redesign__topbar {
