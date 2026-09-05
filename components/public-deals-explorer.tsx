@@ -14,6 +14,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  ArrowRight,
   Check,
   Info,
   MapPin,
@@ -4391,7 +4392,7 @@ export function PublicDealsExplorer({
       {mobileResultsPanel
         ? createPortal(
             <div
-              className="deals-redesign deals-mobile-results-sheet"
+              className={`deals-redesign deals-mobile-results-sheet${mobileResultsPanel === "filters" ? " deals-filter-sheet" : ""}`}
               onMouseDown={closeMobileResultsPanel}
             >
               <div
@@ -4414,7 +4415,7 @@ export function PublicDealsExplorer({
                   <h2 id={mobileResultsPanelTitleId}>
                     {mobileResultsPanel === "sort"
                       ? t("deals.mobile.sort")
-                      : t("deals.mobile.otherFilters")}
+                      : t("deals.mobile.filters")}
                   </h2>
                   <button
                     aria-label={t("deals.mobile.close")}
@@ -4445,20 +4446,49 @@ export function PublicDealsExplorer({
                     </fieldset>
                   ) : (
                     <div className="deals-mobile-filter-groups">
+                      {shouldShowDirectOnlyOption ? (
+                        <section className="deals-filter-sheet__direct">
+                          <div>
+                            <h3 id={`${mobileResultsPanelTitleId}-direct`}>{t("common.directOnly")}</h3>
+                            <p>{t("deals.filters.directHelp")}</p>
+                          </div>
+                          <input
+                            aria-labelledby={`${mobileResultsPanelTitleId}-direct`}
+                            checked={draftFilters.directOnly}
+                            className="deals-filter-sheet__switch"
+                            onChange={(event) => setDraftFilters((current) => ({ ...current, directOnly: event.target.checked }))}
+                            role="switch"
+                            type="checkbox"
+                          />
+                        </section>
+                      ) : null}
                       <section>
-                        <h3>{t("deals.mobile.otherFilters")}</h3>
-                        <DealsSelect
-                          label={t("deals.departureDay")}
-                          onChange={(nextValue) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              departureWeekdayFilter: nextValue as DepartureWeekdayFilter,
-                            }))
-                          }
-                          options={departureWeekdayOptions}
-                          value={draftFilters.departureWeekdayFilter}
-                        />
+                        <div>
+                          <h3 id={`${mobileResultsPanelTitleId}-day`}>{t("deals.departureDay")}</h3>
+                          <p>{t("deals.filters.dayHelp")}</p>
+                        </div>
+                        <div className="deals-filter-sheet__days" role="group" aria-labelledby={`${mobileResultsPanelTitleId}-day`}>
+                          {DEPARTURE_WEEKDAY_OPTIONS.map((option, index) => {
+                            const selected = draftFilters.departureWeekdayFilter === option.value;
+                            const available = option.value === "any" || departureWeekdayOptions.some((item) => item.value === option.value && !item.disabled);
+                            return (
+                              <button
+                                aria-label={t(`deals.weekday.${option.value}`)}
+                                aria-pressed={selected}
+                                disabled={!available && !selected}
+                                key={option.value}
+                                onClick={() => setDraftFilters((current) => ({ ...current, departureWeekdayFilter: option.value as DepartureWeekdayFilter }))}
+                                type="button"
+                              >
+                                {option.value === "any" ? t("deals.weekday.any") : new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 4 + index))).replace(/\.$/, "")}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
                         {shouldShowPriceRangeFilter ? (
+                        <section>
+                          <div><h3>{t("common.priceRange")}</h3><p>{t("deals.filters.priceHelp")}</p></div>
                           <PublicDealsPriceRange
                             bounds={priceBounds}
                             deferChanges
@@ -4469,61 +4499,33 @@ export function PublicDealsExplorer({
                             priceMin={draftFilters.priceMin}
                             prices={priceHistogramValues}
                             showHistogram
+                            showLabel={false}
                           />
+                        </section>
                         ) : null}
                         {shouldShowAirlineFilter ? (
-                          <DealsAirlineFilter
-                            excludedAirlines={draftFilters.excludedAirlines}
-                            onChange={(excludedAirlines) =>
-                              setDraftFilters((current) => ({ ...current, excludedAirlines }))
-                            }
-                            options={airlineOptions}
-                            t={t}
-                          />
-                        ) : null}
-                        {shouldShowDirectOnlyOption ? (
-                          <label className="deals-toggle">
-                            <input
-                              checked={draftFilters.directOnly}
-                              onChange={(event) =>
-                                setDraftFilters((current) => ({
-                                  ...current,
-                                  directOnly: event.target.checked,
-                                }))
-                              }
-                              type="checkbox"
-                            />
-                            <span>{t("common.directOnly")}</span>
-                          </label>
-                        ) : null}
-                      </section>
-
-                      {mode !== "city" ? <section>
-                        <h3>{t("deals.quickFilters")}</h3>
-                        <div className="deals-search-sidebar__chips">
-                          {visibleSearchQuickChips.map((chip) => (
-                            <button
-                              aria-pressed={draftQuickChips.has(chip)}
-                              className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
-                              disabled={!quickChipAvailability.get(chip)}
-                              key={chip}
-                              onClick={() => {
-                                if (!quickChipAvailability.get(chip)) {
-                                  return;
-                                }
-                                setDraftFilters((current) =>
-                                  draftQuickChips.has(chip)
-                                    ? resetQuickChip(chip, current)
-                                    : applyQuickChip(chip, current),
-                                );
-                              }}
-                              type="button"
-                            >
-                              {getChipTitle(chip, t)}
-                            </button>
-                          ))}
+                        <section>
+                          <div><h3 id={`${mobileResultsPanelTitleId}-airlines`}>{t("deals.airlines")}</h3><p>{t("deals.filters.airlinesHelp")}</p></div>
+                          <div className="deals-filter-sheet__airlines" role="group" aria-labelledby={`${mobileResultsPanelTitleId}-airlines`}>
+                            {airlineOptions.map((option) => (
+                              <label key={option.key}>
+                                <span aria-hidden="true"><AirlineLogo airlineName={option.label} primaryAirlineCode={null} /></span>
+                                <span className="deals-filter-sheet__airline-name">{option.label}</span>
+                                <input
+                                  aria-label={option.label}
+                                  checked={!draftFilters.excludedAirlines.includes(option.key)}
+                                  onChange={(event) => {
+                                    const checked = event.target.checked;
+                                    setDraftFilters((current) => ({ ...current, excludedAirlines: checked ? current.excludedAirlines.filter((key) => key !== option.key) : [...new Set([...current.excludedAirlines, option.key])] }));
+                                  }}
+                                  type="checkbox"
+                                />
+                                <Check aria-hidden="true" className="deals-filter-sheet__check" />
+                              </label>
+                            ))}
                         </div>
-                      </section> : null}
+                        </section>
+                        ) : null}
                     </div>
                   )}
                 </div>
@@ -4540,6 +4542,7 @@ export function PublicDealsExplorer({
                     {mobileResultsPanel === "filters"
                       ? t("deals.mobile.showResults", { count: draftFilteredDealsCount })
                       : t("deals.mobile.showResults", { count: resultsTotal })}
+                    {mobileResultsPanel === "filters" ? <ArrowRight aria-hidden="true" size={22} /> : null}
                   </button>
                 </footer>
               </div>
