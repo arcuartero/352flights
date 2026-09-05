@@ -109,7 +109,7 @@ body:has(.page-shell--deals-city)::before {
 }
 
 /* Section headings adopt the v2 blue + sans look. */
-.page-shell--deals-search .deals-explorer__section-head :is(h1, h2),
+.page-shell--deals-search .deals-explorer__section-head :is(h1, h2, .deals-search-results-visual-title),
 .page-shell--deals-city .deals-explorer__section-head h2,
 .page-shell--deals-city .deals-city-page__hero-title {
   margin: 0;
@@ -120,7 +120,7 @@ body:has(.page-shell--deals-city)::before {
 }
 
 /* Bigger section title, smaller city-card names. */
-.page-shell--deals-search .deals-explorer__section-head :is(h1, h2),
+.page-shell--deals-search .deals-explorer__section-head :is(h1, h2, .deals-search-results-visual-title),
 .page-shell--deals-city .deals-explorer__section-head h2 {
   font-size: clamp(2rem, 4.4vw, 3.3rem);
   line-height: 1.05;
@@ -1071,7 +1071,7 @@ body:has(.page-shell--deals-city)::before {
     padding: 0.35rem 0.25rem 0;
   }
 
-  .page-shell--deals-search .deals-mobile-results-heading h1 {
+  .page-shell--deals-search .deals-mobile-results-heading .deals-search-results-visual-title {
     max-width: 100%;
     margin: 0;
     color: var(--v2-ink);
@@ -3061,7 +3061,7 @@ body:has(.page-shell--deals-city)::before {
   margin-bottom: 0.85rem;
 }
 
-.page-shell--deals-search .deals-explorer__section-head :is(h1, h2),
+.page-shell--deals-search .deals-explorer__section-head :is(h1, h2, .deals-search-results-visual-title),
 .page-shell--deals-city .deals-explorer__section-head h2,
 .page-shell--deals-city .deals-explorer__featured h2 {
   max-width: 14ch;
@@ -3072,7 +3072,7 @@ body:has(.page-shell--deals-city)::before {
 }
 
 @media (min-width: 981px) {
-  .page-shell--deals-search .deals-explorer__section-head :is(h1, h2) {
+  .page-shell--deals-search .deals-explorer__section-head :is(h1, h2, .deals-search-results-visual-title) {
     max-width: 28ch;
   }
 
@@ -3807,7 +3807,7 @@ body:has(.page-shell--deals-city)::before {
     gap: 0.75rem;
   }
 
-  .page-shell--deals-search .deals-explorer__section-head :is(h1, h2),
+  .page-shell--deals-search .deals-explorer__section-head :is(h1, h2, .deals-search-results-visual-title),
   .page-shell--deals-city .deals-explorer__section-head h2,
   .page-shell--deals-city .deals-explorer__featured h2 {
     max-width: 12ch;

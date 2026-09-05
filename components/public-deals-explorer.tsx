@@ -5188,8 +5188,11 @@ export function PublicDealsExplorer({
         </section>
       ) : (
         <div aria-busy={isServerSearchPending} className="deals-search-page-card">
+          <h1 className="sr-only">{searchResultsCopy.title}</h1>
           <div className="deals-mobile-results-heading">
-            <h1>{searchResultsCopy.title}</h1>
+            <div aria-hidden="true" className="deals-search-results-visual-title">
+              {searchResultsCopy.title}
+            </div>
             <p>{searchResultsCopy.description}</p>
           </div>
           {renderMobileResultsControls()}
@@ -5210,7 +5213,9 @@ export function PublicDealsExplorer({
             <section className="deals-explorer__featured">
               <div className="deals-explorer__section-head deals-search-results-heading--desktop">
                 <div>
-                  <h1>{searchResultsCopy.title}</h1>
+                  <div aria-hidden="true" className="deals-search-results-visual-title">
+                    {searchResultsCopy.title}
+                  </div>
                   <p>{searchResultsCopy.description}</p>
                 </div>
                 <div className="deals-explorer__section-actions">
