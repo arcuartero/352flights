@@ -57,8 +57,8 @@ body:has(.v2) .scroll-top-button {
 }
 
 body:has(.v2) .scroll-top-button__arrow {
-  background: #1f5fd6;
-  color: #fff;
+  background: #edf4ff;
+  color: #1f5fd6;
 }
 
 .v2 ::selection {

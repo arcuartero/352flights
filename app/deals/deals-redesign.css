@@ -65,8 +65,8 @@ body:has(.page-shell--deals-city) .scroll-top-button {
 
 body:has(.page-shell--deals-search) .scroll-top-button__arrow,
 body:has(.page-shell--deals-city) .scroll-top-button__arrow {
-  background: var(--v2-blue-strong);
-  color: #fff;
+  background: #edf4ff;
+  color: var(--v2-blue-strong);
 }
 
 .deals-redesign__topbar {
