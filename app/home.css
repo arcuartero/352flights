@@ -1389,6 +1389,7 @@ body:has(.v2) .scroll-top-button__arrow {
   display: flex;
   gap: 0.6rem;
   height: clamp(20rem, 34vw, 28rem);
+  container-type: inline-size;
 }
 
 .v2-rhythms__slice {
@@ -1404,21 +1405,29 @@ body:has(.v2) .scroll-top-button__arrow {
   flex: 2.4;
 }
 
-.v2-rhythms__slice img {
+.v2-rhythms__media {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: calc((100cqw - 2.4rem) * 0.375);
+  min-width: 100%;
+  transform: translateX(-50%);
   transition: transform 1.1s var(--v2-ease);
 }
 
-.v2-rhythms__slice:hover img {
-  transform: scale(1.015);
+.v2-rhythms__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.v2-rhythms__slice[data-rhythm="week"]:hover img {
-  transform: scale(1.05);
+.v2-rhythms__slice:hover .v2-rhythms__media {
+  transform: translateX(-50%) scale(1.015);
+}
+
+.v2-rhythms__slice[data-rhythm="week"]:hover .v2-rhythms__media {
+  transform: translateX(-50%) scale(1.05);
 }
 
 .v2-rhythms__shade {
@@ -2068,6 +2077,17 @@ body:has(.v2) .scroll-top-button__arrow {
 
   .v2-rhythms__slice {
     min-height: 7.5rem;
+  }
+
+  .v2-rhythms__media {
+    left: 0;
+    width: 100%;
+    transform: none;
+  }
+
+  .v2-rhythms__slice:hover .v2-rhythms__media,
+  .v2-rhythms__slice[data-rhythm="week"]:hover .v2-rhythms__media {
+    transform: none;
   }
 
   .v2-rhythms__slices:hover .v2-rhythms__slice:hover {
@@ -2873,7 +2893,7 @@ body:has(.v2) .scroll-top-button__arrow {
 
   .v2-bento__cell img,
   .v2-rhythms__slice,
-  .v2-rhythms__slice img {
+  .v2-rhythms__media {
     transition: none;
   }
 }

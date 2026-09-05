@@ -1064,13 +1064,15 @@ export function V2Landing({
               href={buildRhythmSearchHref(rhythm.key, locale)}
               key={rhythm.key}
             >
-              <DestinationVisual
-                alt={t(`home.rhythm.${rhythm.key === "week" ? "week" : rhythm.key}`)}
-                destinationCity={rhythm.city}
-                fallbackPhotoSrc={landmarkSrc(rhythm.city, rhythm.landmark)}
-                photoSrc={destinationPhotoUrls[toDestinationSlug(rhythm.city)]}
-                sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 20vw"
-              />
+              <span className="v2-rhythms__media">
+                <DestinationVisual
+                  alt={t(`home.rhythm.${rhythm.key === "week" ? "week" : rhythm.key}`)}
+                  destinationCity={rhythm.city}
+                  fallbackPhotoSrc={landmarkSrc(rhythm.city, rhythm.landmark)}
+                  photoSrc={destinationPhotoUrls[toDestinationSlug(rhythm.city)]}
+                  sizes="(max-width: 900px) 92vw, 38vw"
+                />
+              </span>
               <span className="v2-rhythms__shade" aria-hidden="true" />
               <span className="v2-rhythms__copy">
                 <strong>{t(`home.rhythm.${rhythm.key === "week" ? "week" : rhythm.key}`)}</strong>
