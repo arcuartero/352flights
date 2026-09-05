@@ -486,10 +486,10 @@ export function V2Landing({
   );
   const searchDurationOptions = useMemo(
     () =>
-      (["1", "2", "3", "4", "5", "6_plus"] as const).map((value) => ({
+      (["2", "3", "4", "5", "6_plus"] as const).map((value) => ({
         value,
         label: t(`deals.duration.${value}`),
-        displayLabel: value === "1" ? t("deals.duration.1") : value === "6_plus" ? "6+" : value,
+        displayLabel: value === "6_plus" ? "6+" : value,
         disabled: !deals.some((deal) =>
           matchesHomeSearchFilters(
             deal,
@@ -807,7 +807,7 @@ export function V2Landing({
                 clearValue="any"
                 columns={3}
                 leadingIcon={<Plane size={18} strokeWidth={2.1} />}
-                mobileSheetTitle={t("deals.duration.any")}
+                mobileSheetTitle={t("deals.duration.sheetTitle")}
                 onChange={(value) =>
                   setFilters((current) => ({
                     ...current,

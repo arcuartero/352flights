@@ -326,7 +326,6 @@ const DEPARTURE_WEEKDAY_OPTIONS: SelectOption[] = [
 ];
 
 const DURATION_FILTER_VALUES: Exclude<DurationFilter, "any">[] = [
-  "1",
   "2",
   "3",
   "4",
@@ -2047,7 +2046,7 @@ function buildDurationOptions(
   return DURATION_FILTER_VALUES.map((value) => ({
     value,
     label: t(`deals.duration.${value}`),
-    displayLabel: value === "1" ? t("deals.duration.1") : value === "6_plus" ? "6+" : value,
+    displayLabel: value === "6_plus" ? "6+" : value,
     disabled: value !== filters.durationFilter && !availableValues.has(value),
   }));
 }
@@ -3957,7 +3956,7 @@ export function PublicDealsExplorer({
       return DURATION_FILTER_VALUES.map((value) => ({
         value,
         label: t(`deals.duration.${value}`),
-        displayLabel: value === "1" ? t("deals.duration.1") : value === "6_plus" ? "6+" : value,
+        displayLabel: value === "6_plus" ? "6+" : value,
         disabled:
           value !== draftFilters.durationFilter && !availableDurations.has(value),
       }));
@@ -4347,7 +4346,7 @@ export function PublicDealsExplorer({
                 label={t("deals.duration.any")}
                 clearValue="any"
                 columns={3}
-                mobileSheetTitle={t("deals.duration.any")}
+                mobileSheetTitle={t("deals.duration.sheetTitle")}
                 onChange={(nextValue) =>
                   setDraftFilters((current) => ({
                     ...current,
