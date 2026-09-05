@@ -214,7 +214,6 @@ export function MonthlyPriceCard({
   const [data, setData] = useState<MonthlyPriceAverageData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [isOpen, setIsOpen] = useState(false);
-  const [reloadToken, setReloadToken] = useState(0);
   const cardRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const requestId = useId();
@@ -249,7 +248,7 @@ export function MonthlyPriceCard({
       });
 
     return () => controller.abort();
-  }, [destinationSlug, directOnly, originAirport, reloadToken, tripType]);
+  }, [destinationSlug, directOnly, originAirport, tripType]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -276,10 +275,7 @@ export function MonthlyPriceCard({
   const pricedMonthCount =
     data?.months.filter((month) => month.averagePrice !== null).length ?? 0;
   const hasUsefulChart = hasCoverage && pricedMonthCount >= MIN_MONTHS_FOR_CHART;
-  const shouldHideCard =
-    status === "loading" ||
-    (status === "ready" && pricedMonthCount > 0 && pricedMonthCount < MIN_MONTHS_FOR_CHART);
-  const canOpenDetails = status !== "ready" || hasUsefulChart;
+  const shouldHideCard = status !== "ready" || !hasUsefulChart;
 
   useEffect(() => {
     if (isOpen && status === "ready" && !hasUsefulChart) {
@@ -301,18 +297,9 @@ export function MonthlyPriceCard({
   return (
     <>
       <button
-        aria-haspopup={canOpenDetails ? "dialog" : undefined}
+        aria-haspopup="dialog"
         className="monthly-price-card"
-        disabled={!canOpenDetails}
-        onClick={() => {
-          if (!canOpenDetails) {
-            return;
-          }
-          if (status === "error") {
-            setReloadToken((current) => current + 1);
-          }
-          setIsOpen(true);
-        }}
+        onClick={() => setIsOpen(true)}
         ref={cardRef}
         type="button"
       >
@@ -326,16 +313,6 @@ export function MonthlyPriceCard({
             size={17}
           />
         </span>
-        {status === "error" ? (
-          <span className="monthly-price-card__message">
-            No se pudieron cargar los precios medios. Inténtalo de nuevo.
-          </span>
-        ) : null}
-        {status === "ready" && !hasCoverage ? (
-          <span className="monthly-price-card__message">
-            Todavía no se ha explorado la ventana de precios de esta ruta.
-          </span>
-        ) : null}
         {hasUsefulChart && data ? (
           <>
             <MonthlyPriceChart
@@ -357,7 +334,7 @@ export function MonthlyPriceCard({
         ) : null}
       </button>
 
-      {isOpen && canOpenDetails && typeof document !== "undefined"
+      {isOpen && typeof document !== "undefined"
         ? createPortal(
             <div
               className="monthly-price-modal"
@@ -390,16 +367,6 @@ export function MonthlyPriceCard({
                     {directOnly ? "Vuelos directos" : "Todos los vuelos"} desde Luxemburgo ({originAirport})
                   </span>
                 </header>
-                {status === "error" ? (
-                  <div className="monthly-price-modal__state">
-                    No se pudieron cargar los precios medios. Inténtalo de nuevo.
-                  </div>
-                ) : null}
-                {status === "ready" && !hasCoverage ? (
-                  <div className="monthly-price-modal__state">
-                    Todavía no se ha explorado la ventana de precios de esta ruta.
-                  </div>
-                ) : null}
                 {hasUsefulChart && data ? (
                   <>
                     <MonthlyPriceChart

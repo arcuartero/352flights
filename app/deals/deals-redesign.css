@@ -4794,6 +4794,10 @@ body:has(.page-shell--deals-city)::before {
     box-shadow: 0 10px 28px rgba(29, 39, 51, 0.035);
   }
 
+  .deals-desktop-monthly-card:empty {
+    display: none;
+  }
+
   .deals-desktop-monthly-card {
     padding: 1.05rem 1.05rem 0.85rem;
   }
@@ -4813,11 +4817,12 @@ body:has(.page-shell--deals-city)::before {
   }
 
   .deals-desktop-filter-route {
+    --desktop-filter-route-split: 40%;
     position: relative;
     display: grid;
     min-width: 0;
     min-height: 4.15rem;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: var(--desktop-filter-route-split) minmax(0, 1fr);
     border: 1px solid var(--desktop-filter-border-strong);
     border-radius: 1rem;
     background: #ffffff;
@@ -4827,7 +4832,7 @@ body:has(.page-shell--deals-city)::before {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 50%;
+    left: var(--desktop-filter-route-split);
     width: 1px;
     background: rgba(35, 100, 223, 0.24);
     content: "";
@@ -4863,7 +4868,7 @@ body:has(.page-shell--deals-city)::before {
   .deals-desktop-filter-route__plane {
     position: absolute;
     top: 50%;
-    left: 50%;
+    left: var(--desktop-filter-route-split);
     z-index: 3;
     display: grid;
     width: 3.15rem;
@@ -5005,7 +5010,7 @@ body:has(.page-shell--deals-city)::before {
     padding: 0.7rem 0.9rem;
     border: 1px solid var(--desktop-filter-border);
     border-radius: 1rem;
-    background: #f9fbff;
+    background: #ffffff;
     cursor: pointer;
   }
 
