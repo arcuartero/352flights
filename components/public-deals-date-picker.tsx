@@ -298,6 +298,7 @@ export function PublicDealsDatePicker({
   const selectedDraftPreset = presetOptions.find(
     (option) => option.value === draftWhenFilter,
   );
+  const visiblePresetOptions = presetOptions.filter((option) => option.value !== "any");
   const canApply =
     draftWhenFilter === "custom"
       ? Boolean(draftFrom && draftTo)
@@ -339,7 +340,7 @@ export function PublicDealsDatePicker({
           <h2>{t("deals.datePicker.travelHeading")}</h2>
           <p>{t("deals.datePicker.travelDescription")}</p>
         </div>
-        {presetOptions.map((option) => {
+        {visiblePresetOptions.map((option) => {
           const isSelected = option.value === draftWhenFilter;
           return (
             <button
