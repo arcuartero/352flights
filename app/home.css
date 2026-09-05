@@ -1414,6 +1414,10 @@ body:has(.v2) .scroll-top-button__arrow {
 }
 
 .v2-rhythms__slice:hover img {
+  transform: scale(1.015);
+}
+
+.v2-rhythms__slice[data-rhythm="week"]:hover img {
   transform: scale(1.05);
 }
 

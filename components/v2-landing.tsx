@@ -1060,6 +1060,7 @@ export function V2Landing({
           {RHYTHMS.map((rhythm) => (
             <Link
               className="v2-rhythms__slice"
+              data-rhythm={rhythm.key}
               href={buildRhythmSearchHref(rhythm.key, locale)}
               key={rhythm.key}
             >
