@@ -3335,7 +3335,7 @@ export function PublicDealsExplorer({
   );
   const [isServerSearchPending, setIsServerSearchPending] = useState(false);
   const [mobileResultsPanel, setMobileResultsPanel] = useState<MobileResultsPanel>(null);
-  const fullSidebarRef = useRef<HTMLDivElement | null>(null);
+  const fullSidebarRef = useRef<HTMLElement | null>(null);
   const compactSidebarFrameRef = useRef<number | null>(null);
   const mobileResultsPanelRef = useRef<HTMLDivElement | null>(null);
   const mobileResultsReturnFocusRef = useRef<HTMLButtonElement | null>(null);
@@ -4115,26 +4115,6 @@ export function PublicDealsExplorer({
     );
   }, [coerceFiltersForMode, mobileResultsPanel]);
 
-  const resetDesktopFilters = useCallback(() => {
-    setDraftFilters((current) =>
-      coerceFiltersForMode({
-        ...current,
-        whenFilter: DEFAULT_DEAL_SEARCH_FILTERS.whenFilter,
-        dateFrom: DEFAULT_DEAL_SEARCH_FILTERS.dateFrom,
-        dateTo: DEFAULT_DEAL_SEARCH_FILTERS.dateTo,
-        departureWeekdayFilter: DEFAULT_DEAL_SEARCH_FILTERS.departureWeekdayFilter,
-        durationFilter: DEFAULT_DEAL_SEARCH_FILTERS.durationFilter,
-        tripFilter: DEFAULT_DEAL_SEARCH_FILTERS.tripFilter,
-        budgetFilter: DEFAULT_DEAL_SEARCH_FILTERS.budgetFilter,
-        priceMin: DEFAULT_DEAL_SEARCH_FILTERS.priceMin,
-        priceMax: DEFAULT_DEAL_SEARCH_FILTERS.priceMax,
-        excludedAirlines: DEFAULT_DEAL_SEARCH_FILTERS.excludedAirlines,
-        directOnly: DEFAULT_DEAL_SEARCH_FILTERS.directOnly,
-        themeFilter: DEFAULT_DEAL_SEARCH_FILTERS.themeFilter,
-      }),
-    );
-  }, [coerceFiltersForMode]);
-
   const searchHref = buildDealsHrefForMode(draftFilters);
 
   const maxDiscount = useMemo(() => {
@@ -4638,7 +4618,6 @@ export function PublicDealsExplorer({
           <label className="deals-desktop-filter-card__direct">
             <span>
               <strong>{t("common.directOnly")}</strong>
-              <small>{t("deals.filters.directHelp")}</small>
             </span>
             <input
               checked={draftFilters.directOnly}
@@ -4750,13 +4729,6 @@ export function PublicDealsExplorer({
           </div>
         ) : null}
 
-        <button
-          className="deals-desktop-filter-card__reset"
-          onClick={resetDesktopFilters}
-          type="button"
-        >
-          {t("deals.mobile.reset")}
-        </button>
       </section>
     );
   };
@@ -5140,20 +5112,18 @@ export function PublicDealsExplorer({
             {renderMobileResultsControls()}
 
             <section className="deals-search-layout" id="destination-fares" ref={resultsBoundaryRef}>
-              <aside className="deals-search-layout__filters">
-                <div className="deals-search-sidebar" ref={fullSidebarRef}>
-                  <div className="deals-desktop-monthly-card">
-                    <MonthlyPriceCard
-                      destinationCity={lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
-                      destinationSlug={toDestinationSlug(
-                        lockedDestinationCity ?? selectedSearchGroup?.city ?? "",
-                      )}
-                      directOnly={effectiveFilters.directOnly}
-                      tripType={effectiveFilters.tripFilter}
-                    />
-                  </div>
-                  {renderDesktopFilters()}
+              <aside className="deals-search-layout__filters" ref={fullSidebarRef}>
+                <div className="deals-desktop-monthly-card">
+                  <MonthlyPriceCard
+                    destinationCity={lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
+                    destinationSlug={toDestinationSlug(
+                      lockedDestinationCity ?? selectedSearchGroup?.city ?? "",
+                    )}
+                    directOnly={effectiveFilters.directOnly}
+                    tripType={effectiveFilters.tripFilter}
+                  />
                 </div>
+                {renderDesktopFilters()}
                 {renderCompactSidebar(false)}
               </aside>
 
@@ -5223,15 +5193,13 @@ export function PublicDealsExplorer({
           </div>
           {renderMobileResultsControls()}
           <section className="deals-search-layout" ref={resultsBoundaryRef}>
-            <aside className="deals-search-layout__filters">
-              <div className="deals-search-sidebar" ref={fullSidebarRef}>
-                {showResultsMap ? (
-                  <div className="deals-search-sidebar__section deals-search-sidebar__section--map-card">
-                    <PublicDealsMap cities={mapCities} locale={locale} />
-                  </div>
-                ) : null}
-                {renderDesktopFilters()}
-              </div>
+            <aside className="deals-search-layout__filters" ref={fullSidebarRef}>
+              {showResultsMap ? (
+                <div className="deals-search-sidebar__section deals-search-sidebar__section--map-card">
+                  <PublicDealsMap cities={mapCities} locale={locale} />
+                </div>
+              ) : null}
+              {renderDesktopFilters()}
               {renderCompactSidebar(true)}
             </aside>
 
