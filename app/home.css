@@ -2573,17 +2573,22 @@ body:has(.v2) .scroll-top-button {
       color 0.2s var(--v2-ease);
   }
 
-  .v2-search__quick-budget-options button:hover,
-  .v2-search__quick-budget-options button:focus-visible,
   .v2-search__quick-budget-options button.is-selected {
     border-color: var(--v2-search-mobile-selected-border);
     background: #edf4ff;
     color: var(--v2-blue-strong);
-    outline: none;
   }
 
   .v2-search__quick-budget-options button:focus-visible {
+    outline: none;
     box-shadow: 0 0 0 3px rgba(35, 100, 223, 0.18);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .v2-search__quick-budget-options button:not(.is-selected):hover {
+      border-color: var(--v2-search-mobile-selected-border);
+      background: #f7faff;
+    }
   }
 
   .v2-search__toggle {
