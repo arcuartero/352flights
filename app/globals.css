@@ -944,6 +944,8 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   transition:
     opacity var(--ease-standard),
     transform var(--ease-standard),
+    background-color var(--ease-standard),
+    color var(--ease-standard),
     border-color var(--ease-standard),
     box-shadow var(--ease-standard);
 }
@@ -972,6 +974,44 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   font-size: 0.95rem;
   font-weight: 800;
   line-height: 1;
+  transition:
+    transform var(--ease-standard),
+    background-color var(--ease-standard),
+    color var(--ease-standard),
+    box-shadow var(--ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .scroll-top-button.is-visible:hover {
+    border-color: #1f5fd6;
+    background: #edf4ff;
+    color: #1f5fd6;
+    box-shadow: 0 14px 30px rgba(31, 95, 214, 0.24);
+    transform: translateY(-4px) scale(1.015);
+  }
+
+  .scroll-top-button.is-visible:hover .scroll-top-button__arrow {
+    background: #1f5fd6;
+    color: #ffffff;
+    box-shadow: 0 5px 12px rgba(31, 95, 214, 0.28);
+    transform: translateY(-2px) scale(1.08);
+  }
+
+  .scroll-top-button.is-visible:hover:not(.is-flying) .scroll-top-button__plane {
+    animation: scroll-top-plane-flight 520ms cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  }
+
+  .scroll-top-button.is-visible:hover:not(.is-flying) .scroll-top-button__speed-lines i {
+    animation: scroll-top-speed-line 620ms ease-out infinite;
+  }
+
+  .scroll-top-button.is-visible:hover:not(.is-flying) .scroll-top-button__speed-lines i:nth-child(2) {
+    animation-delay: 110ms;
+  }
+
+  .scroll-top-button.is-visible:hover:not(.is-flying) .scroll-top-button__speed-lines i:nth-child(3) {
+    animation-delay: 220ms;
+  }
 }
 
 .scroll-top-button__plane {
@@ -1040,6 +1080,8 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .scroll-top-button.is-visible:hover:not(.is-flying) .scroll-top-button__plane,
+  .scroll-top-button.is-visible:hover:not(.is-flying) .scroll-top-button__speed-lines i,
   .scroll-top-button.is-flying .scroll-top-button__plane,
   .scroll-top-button.is-flying .scroll-top-button__speed-lines i {
     animation: none;
