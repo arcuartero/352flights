@@ -4480,7 +4480,8 @@ export function PublicDealsExplorer({
                                 onClick={() => setDraftFilters((current) => ({ ...current, departureWeekdayFilter: option.value as DepartureWeekdayFilter }))}
                                 type="button"
                               >
-                                {option.value === "any" ? t("deals.weekday.any") : new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 4 + index))).replace(/\.$/, "")}
+                                <span>{option.value === "any" ? t("deals.weekday.any") : new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 4 + index))).replace(/\.$/, "")}</span>
+                                {selected ? <Check aria-hidden="true" /> : null}
                               </button>
                             );
                           })}

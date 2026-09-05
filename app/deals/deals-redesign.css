@@ -768,12 +768,16 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .deals-filter-sheet__days button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
   min-width: 0;
   min-height: 2.6rem;
   padding: 0.35rem 0.15rem;
-  border: 1px solid #dce0e7;
+  border: 1px solid #dde4ed;
   border-radius: 0.7rem;
-  background: #f6f7f9;
+  background: #fff;
   color: #102035;
   font: inherit;
   font-size: 0.8rem;
@@ -782,18 +786,29 @@ body:has(.page-shell--deals-city)::before {
   cursor: pointer;
 }
 
-.deals-filter-sheet__days button::first-letter { text-transform: uppercase; }
+.deals-filter-sheet__days button > span::first-letter { text-transform: uppercase; }
+.deals-filter-sheet__days button > svg { width: 0.85rem; height: 0.85rem; flex: 0 0 auto; color: #2364df; }
+
+.deals-filter-sheet__days button:hover:not(:disabled):not([aria-pressed="true"]),
+.deals-filter-sheet__airlines label:hover:not(:has(input:disabled)):not(:has(input:checked)) {
+  border-color: #9abaf3;
+  background: #f4f8ff;
+  color: #184fbd;
+}
 
 .deals-filter-sheet__days button[aria-pressed="true"] {
-  background: #0967ef;
-  border-color: #0967ef;
-  color: #fff;
+  background: #eef4ff;
+  border-color: #2364df;
+  color: #184fbd;
 }
 
 .deals-filter-sheet__days button:disabled {
-  color: #a1a8b3;
-  background: #f0f1f4;
+  border-color: #d2d8df;
+  background: #edf0f3;
+  box-shadow: none;
+  color: #929ca7;
   cursor: not-allowed;
+  opacity: 1;
 }
 
 .deals-filter-sheet .deals-price-range { --v2-accent: #0967ef; gap: 0.3rem; }
@@ -829,11 +844,12 @@ body:has(.page-shell--deals-city)::before {
   gap: 0.4rem;
   min-height: 3rem;
   padding: 0.4rem;
-  border: 1px solid #e0e4e9;
+  border: 1px solid #dde4ed;
+  background: #fff;
   border-radius: 0.55rem;
   cursor: pointer;
 }
-.deals-filter-sheet__airlines label:has(input:checked) { border-color: #2874dc; background: #eef5ff; }
+.deals-filter-sheet__airlines label:has(input:checked) { border-color: #2364df; background: #eef4ff; color: #184fbd; }
 .deals-filter-sheet__airlines .deals-airline-logo { width: 1.8rem; height: 1.8rem; min-width: 0; background: transparent; border: 0; }
 .deals-filter-sheet__airlines .deals-airline-logo img { width: 100%; height: 100%; object-fit: contain; }
 .deals-filter-sheet__airline-name { font-size: 0.75rem; font-weight: 450; line-height: 1.2; overflow-wrap: anywhere; }
@@ -847,8 +863,10 @@ body:has(.page-shell--deals-city)::before {
   border-radius: 0.25rem;
   background: #fff;
 }
-.deals-filter-sheet__airlines input:checked { border-color: #0967ef; background: #0967ef; }
-.deals-filter-sheet__check { position: absolute; right: 0.5rem; width: 0.9rem; height: 0.9rem; color: white; pointer-events: none; visibility: hidden; }
+.deals-filter-sheet__airlines input:checked { border-color: transparent; background: transparent; }
+.deals-filter-sheet__check { position: absolute; right: 0.5rem; width: 0.9rem; height: 0.9rem; color: #2364df; pointer-events: none; visibility: hidden; }
+.deals-filter-sheet__airlines label:has(input:disabled) { border-color: #d2d8df; background: #edf0f3; color: #929ca7; box-shadow: none; cursor: not-allowed; opacity: 1; }
+.deals-filter-sheet__airlines input:disabled + .deals-filter-sheet__check { color: #a5adb6; }
 .deals-filter-sheet__airlines input:checked + .deals-filter-sheet__check { visibility: visible; }
 .deals-filter-sheet input:focus-visible, .deals-filter-sheet button:focus-visible { outline: 2px solid #0967ef; outline-offset: 3px; }
 .deals-filter-sheet .deals-mobile-results-sheet__footer button { display: flex; align-items: center; justify-content: center; gap: 0.65rem; min-height: 3.3rem; font-weight: 650; background: #0967ef; }
