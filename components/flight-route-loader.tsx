@@ -19,6 +19,7 @@ const loadingLabels = {
 };
 
 const ARRIVAL_DURATION = 480;
+const MAX_VISIBLE_DURATION = 8000;
 
 export function FlightRouteLoaderVisual({
   exiting = false,
@@ -146,15 +147,9 @@ export function GlobalFlightRouteLoader() {
   useEffect(() => {
     if (previousRouteKey.current !== routeKey) {
       previousRouteKey.current = routeKey;
-      // Give the newly committed page a paint before completing the flight.
-      let secondFrame = 0;
-      const firstFrame = window.requestAnimationFrame(() => {
-        secondFrame = window.requestAnimationFrame(hideWithFade);
-      });
-      return () => {
-        window.cancelAnimationFrame(firstFrame);
-        window.cancelAnimationFrame(secondFrame);
-      };
+      // Effects run after the committed route has painted. Starting the arrival
+      // here avoids losing the completion signal to a cancelled animation frame.
+      hideWithFade();
     }
   }, [hideWithFade, routeKey]);
 
@@ -205,13 +200,21 @@ export function GlobalFlightRouteLoader() {
       return;
     }
 
-    // Cancellation dismisses the overlay without pretending the page arrived.
+    // A cancelled navigation must never leave the page covered indefinitely.
+    const safetyTimer = window.setTimeout(hideWithFade, MAX_VISIBLE_DURATION);
     const cancel = (event: KeyboardEvent) => {
       if (event.key === "Escape") setPhase("hidden");
     };
+    const finishRestoredPage = () => hideWithFade();
+
     window.addEventListener("keydown", cancel);
-    return () => window.removeEventListener("keydown", cancel);
-  }, [phase]);
+    window.addEventListener("pageshow", finishRestoredPage);
+    return () => {
+      window.clearTimeout(safetyTimer);
+      window.removeEventListener("keydown", cancel);
+      window.removeEventListener("pageshow", finishRestoredPage);
+    };
+  }, [hideWithFade, phase]);
 
   useEffect(
     () => () => {
