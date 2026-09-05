@@ -566,7 +566,6 @@ export function PublicDealsMap({ cities, locale, presentation = "preview" }: Pub
         <section className="deals-results-map" aria-label={copy.sectionTitle}>
           <div className="deals-results-map__heading">
             <span>{copy.sectionTitle}</span>
-            <strong>{mappedCities.length}</strong>
           </div>
           <div className="deals-results-map__preview">
             {mappedCities.length > 0 ? (

@@ -1197,7 +1197,6 @@ function DealsAirlineFilter({
                 }}
                 type="checkbox"
               />
-              <Check aria-hidden="true" className="deals-airline-filter__check" />
             </label>
           );
         })}
@@ -4570,11 +4569,10 @@ export function PublicDealsExplorer({
     );
 
     return (
-      <section
-        aria-labelledby={desktopFiltersTitleId}
-        className="deals-desktop-filter-card"
-      >
-        <h2 id={desktopFiltersTitleId}>{t("deals.filters.refineResults")}</h2>
+      <>
+        <h2 className="deals-desktop-filter-title" id={desktopFiltersTitleId}>
+          {t("deals.filters.refineResults")}
+        </h2>
 
         <div className="deals-desktop-filter-route">
           <div className="deals-desktop-filter-route__origin">
@@ -4729,7 +4727,7 @@ export function PublicDealsExplorer({
           </div>
         ) : null}
 
-      </section>
+      </>
     );
   };
 
@@ -5112,7 +5110,11 @@ export function PublicDealsExplorer({
             {renderMobileResultsControls()}
 
             <section className="deals-search-layout" id="destination-fares" ref={resultsBoundaryRef}>
-              <aside className="deals-search-layout__filters" ref={fullSidebarRef}>
+              <aside
+                aria-labelledby={desktopFiltersTitleId}
+                className="deals-search-layout__filters"
+                ref={fullSidebarRef}
+              >
                 <div className="deals-desktop-monthly-card">
                   <MonthlyPriceCard
                     destinationCity={lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
@@ -5193,11 +5195,13 @@ export function PublicDealsExplorer({
           </div>
           {renderMobileResultsControls()}
           <section className="deals-search-layout" ref={resultsBoundaryRef}>
-            <aside className="deals-search-layout__filters" ref={fullSidebarRef}>
+            <aside
+              aria-labelledby={desktopFiltersTitleId}
+              className="deals-search-layout__filters"
+              ref={fullSidebarRef}
+            >
               {showResultsMap ? (
-                <div className="deals-search-sidebar__section deals-search-sidebar__section--map-card">
-                  <PublicDealsMap cities={mapCities} locale={locale} />
-                </div>
+                <PublicDealsMap cities={mapCities} locale={locale} />
               ) : null}
               {renderDesktopFilters()}
               {renderCompactSidebar(true)}
