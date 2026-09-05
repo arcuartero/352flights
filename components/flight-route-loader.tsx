@@ -38,9 +38,12 @@ export function FlightRouteLoaderVisual({
       const seconds = (now - startedAt) / 1000;
       // The camera follows the plane: it keeps climbing, but never exits the
       // stage on a timer. Only a committed route triggers the final departure.
-      const climb = 48 * (2 / Math.PI) * Math.atan(seconds * seconds / 20);
+      // Start with visible movement on the first frames, then accelerate while
+      // asymptotically keeping the plane inside the stage until the route lands.
+      const climbProgress = 1 - Math.exp(-(0.32 * seconds + 0.06 * seconds * seconds));
+      const climb = 48 * climbProgress;
       flightRef.current?.style.setProperty("--flight-climb", `${28 - climb}px`);
-      const speed = 0.45 + 1.35 * (1 - Math.exp(-seconds / 2.5));
+      const speed = 0.8 + 1.2 * (1 - Math.exp(-seconds / 1.6));
       stageRef.current?.getAnimations({ subtree: true }).forEach((animation) => {
         if ((animation as CSSAnimation).animationName === "flight-route-speed") {
           animation.updatePlaybackRate(speed);
