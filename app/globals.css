@@ -3035,29 +3035,19 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
 .deals-destination-sheet__option.is-confirming {
   border-color: #2364df;
   color: #184fbd;
-  animation: deals-option-confirmation 1s ease-in-out both;
+  animation: deals-option-confirmation 520ms ease-in-out both;
 }
 
 @keyframes deals-option-confirmation {
-  0%, 100% {
+  0%, 46%, 100% {
     background: #eef4ff;
     transform: scale(1);
     box-shadow: 0 0 0 0 rgba(35, 100, 223, 0);
   }
-  24% {
+  18%, 68% {
     background: #dfeaff;
     transform: scale(0.985);
     box-shadow: 0 0 0 4px rgba(35, 100, 223, 0.14);
-  }
-  48% {
-    background: #eef4ff;
-    transform: scale(1);
-    box-shadow: 0 0 0 1px rgba(35, 100, 223, 0.04);
-  }
-  72% {
-    background: #dfeaff;
-    transform: scale(0.99);
-    box-shadow: 0 0 0 4px rgba(35, 100, 223, 0.12);
   }
 }
 

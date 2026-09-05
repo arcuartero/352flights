@@ -164,29 +164,19 @@
 
 .deals-date-picker__presets button.is-confirming {
   color: #1857c9;
-  animation: deals-date-preset-confirmation 1s ease-in-out both;
+  animation: deals-date-preset-confirmation 520ms ease-in-out both;
 }
 
 @keyframes deals-date-preset-confirmation {
-  0%, 100% {
+  0%, 46%, 100% {
     background: #e8f1ff;
     transform: scale(1);
     box-shadow: 0 0 0 0 rgba(35, 100, 223, 0);
   }
-  24% {
+  18%, 68% {
     background: #d9e8ff;
     transform: scale(0.985);
     box-shadow: 0 0 0 4px rgba(35, 100, 223, 0.14);
-  }
-  48% {
-    background: #e8f1ff;
-    transform: scale(1);
-    box-shadow: 0 0 0 1px rgba(35, 100, 223, 0.04);
-  }
-  72% {
-    background: #d9e8ff;
-    transform: scale(0.99);
-    box-shadow: 0 0 0 4px rgba(35, 100, 223, 0.12);
   }
 }
 

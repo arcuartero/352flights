@@ -267,7 +267,7 @@ export function PublicDealsSelect({
       setIsOpen(false);
       setSearchQuery("");
       requestAnimationFrame(() => triggerRef.current?.focus());
-    }, 1000);
+    }, 520);
   };
 
   const moveFocus = (direction: 1 | -1) => {

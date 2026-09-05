@@ -382,7 +382,7 @@ export function PublicDealsDatePicker({
                   setPendingPresetValue(null);
                   setIsOpen(false);
                   requestAnimationFrame(() => triggerRef.current?.focus());
-                }, 1000);
+                }, 520);
               }}
               type="button"
             >
