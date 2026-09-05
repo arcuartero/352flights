@@ -887,7 +887,7 @@ export function V2Landing({
               </label>
               {hasMatchingDeals ? (
                 <Link className="v2-search__cta" href={searchHref}>
-                  {t("common.viewDeals")}
+                  {t("home.searchDiscoverAllDeals")}
                 </Link>
               ) : (
                 <button className="v2-search__cta" disabled type="button">
