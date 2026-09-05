@@ -184,29 +184,43 @@ export function PublicDealsDatePicker({
     [locale],
   );
 
-  const openPicker = () => {
+  const updatePopoverPlacement = (calendarVisible: boolean) => {
     const controlRect = rootRef.current?.getBoundingClientRect();
-    if (controlRect) {
-      const spaceAbove = Math.max(240, controlRect.top - 12);
-      const spaceBelow = Math.max(240, window.innerHeight - controlRect.bottom - 12);
-      const popoverWidth = Math.min(624, window.innerWidth - 32);
-      const wouldOverflowHorizontally =
-        controlRect.left < 16 || controlRect.left + popoverWidth > window.innerWidth - 16;
-      const shouldUseViewportLayer =
-        window.innerHeight <= 900 || window.innerWidth <= 560 || wouldOverflowHorizontally;
-      const shouldOpenAbove = spaceBelow < 480 && spaceAbove > spaceBelow;
-      setUsesViewportLayer(shouldUseViewportLayer);
-      setOpensAbove(!shouldUseViewportLayer && shouldOpenAbove);
-      setPopoverMaxHeight(
-        Math.floor(
-          shouldUseViewportLayer
-            ? Math.max(240, window.innerHeight - 32)
-            : shouldOpenAbove
-              ? spaceAbove
-              : spaceBelow,
-        ),
-      );
+    if (!controlRect) {
+      return;
     }
+
+    const spaceAbove = Math.max(240, controlRect.top - 12);
+    const spaceBelow = Math.max(240, window.innerHeight - controlRect.bottom - 12);
+
+    if (!calendarVisible) {
+      setUsesViewportLayer(window.innerWidth <= 820);
+      setOpensAbove(false);
+      setPopoverMaxHeight(Math.floor(Math.max(240, window.innerHeight - 32)));
+      return;
+    }
+
+    const popoverWidth = Math.min(624, window.innerWidth - 32);
+    const wouldOverflowHorizontally =
+      controlRect.left < 16 || controlRect.left + popoverWidth > window.innerWidth - 16;
+    const shouldUseViewportLayer =
+      window.innerHeight <= 900 || window.innerWidth <= 560 || wouldOverflowHorizontally;
+    const shouldOpenAbove = spaceBelow < 480 && spaceAbove > spaceBelow;
+    setUsesViewportLayer(shouldUseViewportLayer);
+    setOpensAbove(!shouldUseViewportLayer && shouldOpenAbove);
+    setPopoverMaxHeight(
+      Math.floor(
+        shouldUseViewportLayer
+          ? Math.max(240, window.innerHeight - 32)
+          : shouldOpenAbove
+            ? spaceAbove
+            : spaceBelow,
+      ),
+    );
+  };
+
+  const openPicker = () => {
+    updatePopoverPlacement(value === "custom");
     const presetRange = getWhenFilterDateRange(value, today);
     setDraftWhenFilter(value);
     setDraftFrom(value === "custom" ? dateFrom : presetRange?.dateFrom ?? null);
@@ -235,32 +249,7 @@ export function PublicDealsDatePicker({
       }
     };
 
-    const handleResize = () => {
-      const controlRect = rootRef.current?.getBoundingClientRect();
-      if (!controlRect) {
-        return;
-      }
-
-      const spaceAbove = Math.max(240, controlRect.top - 12);
-      const spaceBelow = Math.max(240, window.innerHeight - controlRect.bottom - 12);
-      const popoverWidth = Math.min(624, window.innerWidth - 32);
-      const wouldOverflowHorizontally =
-        controlRect.left < 16 || controlRect.left + popoverWidth > window.innerWidth - 16;
-      const shouldUseViewportLayer =
-        window.innerHeight <= 900 || window.innerWidth <= 560 || wouldOverflowHorizontally;
-      const shouldOpenAbove = spaceBelow < 480 && spaceAbove > spaceBelow;
-      setUsesViewportLayer(shouldUseViewportLayer);
-      setOpensAbove(!shouldUseViewportLayer && shouldOpenAbove);
-      setPopoverMaxHeight(
-        Math.floor(
-          shouldUseViewportLayer
-            ? Math.max(240, window.innerHeight - 32)
-            : shouldOpenAbove
-              ? spaceAbove
-              : spaceBelow,
-        ),
-      );
-    };
+    const handleResize = () => updatePopoverPlacement(showsCalendar);
 
     window.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("keydown", handleKeyDown);
@@ -270,7 +259,7 @@ export function PublicDealsDatePicker({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", handleResize);
     };
-  }, [isOpen]);
+  }, [isOpen, showsCalendar]);
 
   useEffect(() => {
     if (!isOpen || !usesViewportLayer) return;
@@ -374,6 +363,7 @@ export function PublicDealsDatePicker({
               onClick={() => {
                 const whenFilter = option.value as WhenFilter;
                 const presetRange = getWhenFilterDateRange(whenFilter, today);
+                updatePopoverPlacement(false);
                 setDraftWhenFilter(whenFilter);
                 setDraftFrom(presetRange?.dateFrom ?? null);
                 setDraftTo(presetRange?.dateTo ?? null);
@@ -395,6 +385,7 @@ export function PublicDealsDatePicker({
           aria-pressed={draftWhenFilter === "custom"}
           className={draftWhenFilter === "custom" ? "is-selected" : ""}
           onClick={() => {
+            updatePopoverPlacement(true);
             setDraftWhenFilter("custom");
             if (!draftFrom || draftTo) {
               setDraftFrom(null);
@@ -551,7 +542,21 @@ export function PublicDealsDatePicker({
         {!usesViewportLayer ? popover : null}
       </div>
 
-      {usesViewportLayer && popover ? createPortal(popover, document.body) : null}
+      {usesViewportLayer && popover
+        ? createPortal(
+            <div
+              className="deals-date-picker__layer"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setIsOpen(false);
+                }
+              }}
+            >
+              {popover}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
