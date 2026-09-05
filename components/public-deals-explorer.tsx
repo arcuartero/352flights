@@ -17,7 +17,6 @@ import {
   ArrowRight,
   Check,
   Info,
-  MapPin,
   Plane,
   Share,
   X,
@@ -1143,7 +1142,8 @@ function AirlineLogo({
           alt={t("deals.a11y.airlineLogo", { airline: airlineName })}
           loading="lazy"
           onError={() => setFailedLogoCode(logoCode)}
-          src={`https://images.kiwi.com/airlines/64/${logoCode}.png`}
+          referrerPolicy="no-referrer"
+          src={`https://images.kiwi.com/airlines/64x64/${logoCode}.png`}
         />
       ) : (
         <span aria-label={t("deals.a11y.airlineLogo", { airline: airlineName })} className="deals-airline-logo__fallback" role="img">
@@ -1181,8 +1181,13 @@ function DealsAirlineFilter({
         {options.map((option) => {
           const checked = !excludedAirlines.includes(option.key);
           return (
-            <label key={option.key}>
+            <label className={checked ? "is-selected" : undefined} key={option.key}>
+              <span aria-hidden="true" className="deals-airline-filter__logo">
+                <AirlineLogo airlineName={option.label} primaryAirlineCode={null} />
+              </span>
+              <span className="deals-airline-filter__name">{option.label}</span>
               <input
+                aria-label={option.label}
                 checked={checked}
                 onChange={(event) => {
                   const next = event.target.checked
@@ -1192,7 +1197,7 @@ function DealsAirlineFilter({
                 }}
                 type="checkbox"
               />
-              <span>{option.label}</span>
+              <Check aria-hidden="true" className="deals-airline-filter__check" />
             </label>
           );
         })}
@@ -3337,6 +3342,7 @@ export function PublicDealsExplorer({
   const compactSidebarRef = useRef<HTMLDivElement | null>(null);
   const resultsBoundaryRef = useRef<HTMLElement | null>(null);
   const mobileResultsPanelTitleId = useId();
+  const desktopFiltersTitleId = useId();
   const hasOpenedSharedFareRef = useRef(false);
   const [showCompactSidebar, setShowCompactSidebar] = useState(false);
   const [compactSidebarPosition, setCompactSidebarPosition] = useState<{
@@ -4109,6 +4115,26 @@ export function PublicDealsExplorer({
     );
   }, [coerceFiltersForMode, mobileResultsPanel]);
 
+  const resetDesktopFilters = useCallback(() => {
+    setDraftFilters((current) =>
+      coerceFiltersForMode({
+        ...current,
+        whenFilter: DEFAULT_DEAL_SEARCH_FILTERS.whenFilter,
+        dateFrom: DEFAULT_DEAL_SEARCH_FILTERS.dateFrom,
+        dateTo: DEFAULT_DEAL_SEARCH_FILTERS.dateTo,
+        departureWeekdayFilter: DEFAULT_DEAL_SEARCH_FILTERS.departureWeekdayFilter,
+        durationFilter: DEFAULT_DEAL_SEARCH_FILTERS.durationFilter,
+        tripFilter: DEFAULT_DEAL_SEARCH_FILTERS.tripFilter,
+        budgetFilter: DEFAULT_DEAL_SEARCH_FILTERS.budgetFilter,
+        priceMin: DEFAULT_DEAL_SEARCH_FILTERS.priceMin,
+        priceMax: DEFAULT_DEAL_SEARCH_FILTERS.priceMax,
+        excludedAirlines: DEFAULT_DEAL_SEARCH_FILTERS.excludedAirlines,
+        directOnly: DEFAULT_DEAL_SEARCH_FILTERS.directOnly,
+        themeFilter: DEFAULT_DEAL_SEARCH_FILTERS.themeFilter,
+      }),
+    );
+  }, [coerceFiltersForMode]);
+
   const searchHref = buildDealsHrefForMode(draftFilters);
 
   const maxDiscount = useMemo(() => {
@@ -4557,6 +4583,184 @@ export function PublicDealsExplorer({
     </>
   );
 
+  const renderDesktopFilters = () => {
+    const destinationValue = lockedDestinationFilter ?? draftFilters.destinationFilter;
+    const weekdayAvailability = new Map(
+      departureWeekdayOptions.map((option) => [option.value, !option.disabled]),
+    );
+
+    return (
+      <section
+        aria-labelledby={desktopFiltersTitleId}
+        className="deals-desktop-filter-card"
+      >
+        <h2 id={desktopFiltersTitleId}>{t("deals.filters.refineResults")}</h2>
+
+        <div className="deals-desktop-filter-route">
+          <div className="deals-desktop-filter-route__origin">
+            <span>{t("common.from")}</span>
+            <strong>LUX</strong>
+          </div>
+          <span aria-hidden="true" className="deals-desktop-filter-route__plane">
+            <Plane fill="currentColor" size={22} strokeWidth={1.25} />
+          </span>
+          <DealsSelect
+            className={`deals-desktop-filter-route__destination${
+              destinationValue === "any" ? " is-everywhere" : ""
+            }`}
+            label={t("common.to")}
+            mobileDestinationSheet
+            mobileValueLabel={
+              destinationValue === "any" ? t("deals.mobile.everywhere") : undefined
+            }
+            onChange={selectMobileDestination}
+            options={destinationOptions}
+            popularOptionValues={popularDestinationValues}
+            value={destinationValue}
+          />
+        </div>
+
+        <div className="deals-desktop-filter-card__group deals-desktop-filter-card__date">
+          <h3>{t("deals.filters.whenToTravel")}</h3>
+          <DealsDatePicker
+            dateFrom={draftFilters.dateFrom}
+            dateTo={draftFilters.dateTo}
+            label={t("common.when")}
+            onChange={(selection) =>
+              setDraftFilters((current) => ({ ...current, ...selection }))
+            }
+            presetOptions={resultsWhenOptions}
+            value={draftFilters.whenFilter}
+          />
+        </div>
+
+        {shouldShowDirectOnlyOption ? (
+          <label className="deals-desktop-filter-card__direct">
+            <span>
+              <strong>{t("common.directOnly")}</strong>
+              <small>{t("deals.filters.directHelp")}</small>
+            </span>
+            <input
+              checked={draftFilters.directOnly}
+              disabled={!directOnlyOptionAvailable && !draftFilters.directOnly}
+              onChange={(event) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  directOnly: event.target.checked,
+                }))
+              }
+              role="switch"
+              type="checkbox"
+            />
+          </label>
+        ) : null}
+
+        <fieldset className="deals-desktop-filter-card__group deals-desktop-filter-card__days">
+          <legend>{t("deals.departureDay")}</legend>
+          <div>
+            {DEPARTURE_WEEKDAY_OPTIONS.slice(1).map((option, index) => {
+              const selected = draftFilters.departureWeekdayFilter === option.value;
+              const available = weekdayAvailability.get(option.value) ?? false;
+              const shortLabel = new Intl.DateTimeFormat(locale, {
+                weekday: "short",
+                timeZone: "UTC",
+              })
+                .format(new Date(Date.UTC(2026, 0, 5 + index)))
+                .replace(/\.$/, "");
+
+              return (
+                <button
+                  aria-label={t(`deals.weekday.${option.value}`)}
+                  aria-pressed={selected}
+                  className={selected ? "is-selected" : undefined}
+                  disabled={!available && !selected}
+                  key={option.value}
+                  onClick={() =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      departureWeekdayFilter: selected
+                        ? "any"
+                        : (option.value as DepartureWeekdayFilter),
+                    }))
+                  }
+                  type="button"
+                >
+                  {shortLabel}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="deals-desktop-filter-card__group deals-desktop-filter-card__durations">
+          <legend>{t("deals.tripDuration")}</legend>
+          <div>
+            {resultsDurationOptions.map((option) => {
+              const selected = draftFilters.durationFilter === option.value;
+              return (
+                <button
+                  aria-pressed={selected}
+                  className={selected ? "is-selected" : undefined}
+                  disabled={option.disabled && !selected}
+                  key={option.value}
+                  onClick={() =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      durationFilter: selected ? "any" : (option.value as DurationFilter),
+                      tripFilter: "any",
+                    }))
+                  }
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        {shouldShowPriceRangeFilter ? (
+          <div className="deals-desktop-filter-card__group deals-desktop-filter-card__price">
+            <h3>{t("deals.filters.maximumPrice")}</h3>
+            <PublicDealsPriceRange
+              bounds={priceBounds}
+              deferChanges
+              label={t("deals.filters.maximumPrice")}
+              legacyMaximum={legacyPriceMaximum}
+              onChange={updatePriceRange}
+              priceMax={draftFilters.priceMax}
+              priceMin={draftFilters.priceMin}
+              prices={priceHistogramValues}
+              showHistogram
+              showLabel={false}
+            />
+          </div>
+        ) : null}
+
+        {shouldShowAirlineFilter ? (
+          <div className="deals-desktop-filter-card__group deals-desktop-filter-card__airlines">
+            <DealsAirlineFilter
+              excludedAirlines={draftFilters.excludedAirlines}
+              onChange={(excludedAirlines) =>
+                setDraftFilters((current) => ({ ...current, excludedAirlines }))
+              }
+              options={airlineOptions}
+              t={t}
+            />
+          </div>
+        ) : null}
+
+        <button
+          className="deals-desktop-filter-card__reset"
+          onClick={resetDesktopFilters}
+          type="button"
+        >
+          {t("deals.mobile.reset")}
+        </button>
+      </section>
+    );
+  };
+
   const renderCompactSidebar = (includeDestination: boolean) => {
     if (!showCompactSidebar || !compactSidebarPosition) {
       return null;
@@ -4938,118 +5142,17 @@ export function PublicDealsExplorer({
             <section className="deals-search-layout" id="destination-fares" ref={resultsBoundaryRef}>
               <aside className="deals-search-layout__filters">
                 <div className="deals-search-sidebar" ref={fullSidebarRef}>
-                  <MonthlyPriceCard
-                    destinationCity={lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
-                    destinationSlug={toDestinationSlug(
-                      lockedDestinationCity ?? selectedSearchGroup?.city ?? "",
-                    )}
-                    directOnly={effectiveFilters.directOnly}
-                    tripType={effectiveFilters.tripFilter}
-                  />
-                  <div className="deals-search-sidebar__section deals-search-sidebar__section--home-route">
-                    <div className="deals-search-fixed-route">
-                      <div className="deals-control deals-control--static deals-control--origin-fixed">
-                        <span className="deals-control__label-with-icon">
-                          <MapPin aria-hidden="true" />
-                          {t("deals.searchFrom")}
-                        </span>
-                        <strong>{t("common.luxembourg")}</strong>
-                      </div>
-                      <div className="deals-search-fixed-route__destination">
-                        <span>{t("common.destination")}</span>
-                        <strong>{cityHeroTitle}</strong>
-                      </div>
-                    </div>
+                  <div className="deals-desktop-monthly-card">
+                    <MonthlyPriceCard
+                      destinationCity={lockedDestinationCity ?? selectedSearchGroup?.city ?? t("common.destination")}
+                      destinationSlug={toDestinationSlug(
+                        lockedDestinationCity ?? selectedSearchGroup?.city ?? "",
+                      )}
+                      directOnly={effectiveFilters.directOnly}
+                      tripType={effectiveFilters.tripFilter}
+                    />
                   </div>
-
-                  <div className="deals-search-sidebar__section deals-search-sidebar__section--home-controls">
-                    <DealsSelect
-                      label={t("deals.departureDay")}
-                      onChange={(nextValue) =>
-                        setDraftFilters((current) => ({
-                          ...current,
-                          departureWeekdayFilter: nextValue as DepartureWeekdayFilter,
-                        }))
-                      }
-                      options={departureWeekdayOptions}
-                      value={draftFilters.departureWeekdayFilter}
-                    />
-
-                    <DealsDatePicker
-                      dateFrom={draftFilters.dateFrom}
-                      dateTo={draftFilters.dateTo}
-                      label={t("common.when")}
-                      onChange={(selection) =>
-                        setDraftFilters((current) => ({
-                          ...current,
-                          ...selection,
-                        }))
-                      }
-                      presetOptions={resultsWhenOptions}
-                      value={draftFilters.whenFilter}
-                    />
-
-                    <DealsSelect
-                      label={t("deals.duration.any")}
-                      clearValue="any"
-                      columns={3}
-                      onChange={(nextValue) =>
-                        setDraftFilters((current) => ({
-                          ...current,
-                          durationFilter: nextValue as DurationFilter,
-                          tripFilter: "any",
-                        }))
-                      }
-                      options={resultsDurationOptions}
-                      value={draftFilters.durationFilter}
-                    />
-
-                    {shouldShowPriceRangeFilter ? (
-                      <div className="deals-search-sidebar__filter-group">
-                        <PublicDealsPriceRange
-                          bounds={priceBounds}
-                          label={t("common.priceRange")}
-                          legacyMaximum={legacyPriceMaximum}
-                          onChange={updatePriceRange}
-                          priceMax={draftFilters.priceMax}
-                          priceMin={draftFilters.priceMin}
-                          prices={priceHistogramValues}
-                          showHistogram
-                        />
-                      </div>
-                    ) : null}
-
-                    {shouldShowAirlineFilter ? (
-                      <div className="deals-search-sidebar__filter-group">
-                        <DealsAirlineFilter
-                          excludedAirlines={draftFilters.excludedAirlines}
-                          onChange={(excludedAirlines) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              excludedAirlines,
-                            }))
-                          }
-                          options={airlineOptions}
-                          t={t}
-                        />
-                      </div>
-                    ) : null}
-
-                    {shouldShowDirectOnlyOption ? <label className="deals-toggle">
-                      <input
-                        checked={draftFilters.directOnly}
-                        onChange={(event) =>
-                          setDraftFilters((current) => ({
-                            ...current,
-                            directOnly: event.target.checked,
-                          }))
-                        }
-                        type="checkbox"
-                      />
-                      <span>{t("common.directOnly")}</span>
-                    </label> : null}
-                  </div>
-
+                  {renderDesktopFilters()}
                 </div>
                 {renderCompactSidebar(false)}
               </aside>
@@ -5123,148 +5226,11 @@ export function PublicDealsExplorer({
             <aside className="deals-search-layout__filters">
               <div className="deals-search-sidebar" ref={fullSidebarRef}>
                 {showResultsMap ? (
-                  <div className="deals-search-sidebar__section">
+                  <div className="deals-search-sidebar__section deals-search-sidebar__section--map-card">
                     <PublicDealsMap cities={mapCities} locale={locale} />
                   </div>
                 ) : null}
-
-              <div className="deals-search-sidebar__section deals-search-sidebar__section--home-route">
-                <div className="deals-control deals-control--static deals-control--origin-fixed">
-                  <span className="deals-control__label-with-icon">
-                    <MapPin aria-hidden="true" />
-                    {t("deals.searchFrom")}
-                  </span>
-                  <strong>{t("common.luxembourg")}</strong>
-                </div>
-              </div>
-
-              <div className="deals-search-sidebar__section deals-search-sidebar__section--home-controls">
-                <DealsSelect
-                  className="is-destination-selected"
-                  label={t("common.destination")}
-                  mobileDestinationSheet
-                  onChange={(nextValue) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      destinationFilter: nextValue,
-                    }))
-                  }
-                  options={destinationOptions}
-                  popularOptionValues={popularDestinationValues}
-                  value={draftFilters.destinationFilter}
-                />
-
-                <DealsSelect
-                  label={t("deals.departureDay")}
-                  onChange={(nextValue) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      departureWeekdayFilter: nextValue as DepartureWeekdayFilter,
-                    }))
-                  }
-                  options={departureWeekdayOptions}
-                  value={draftFilters.departureWeekdayFilter}
-                />
-
-                <DealsDatePicker
-                  dateFrom={draftFilters.dateFrom}
-                  dateTo={draftFilters.dateTo}
-                  label={t("common.when")}
-                  onChange={(selection) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      ...selection,
-                    }))
-                  }
-                  presetOptions={resultsWhenOptions}
-                  value={draftFilters.whenFilter}
-                />
-
-                <DealsSelect
-                  label={t("deals.duration.any")}
-                  clearValue="any"
-                  columns={3}
-                  onChange={(nextValue) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      durationFilter: nextValue as DurationFilter,
-                      tripFilter: "any",
-                    }))
-                  }
-                  options={resultsDurationOptions}
-                  value={draftFilters.durationFilter}
-                />
-
-                <div className="deals-search-sidebar__filter-group">
-                  <PublicDealsPriceRange
-                    bounds={priceBounds}
-                    label={t("common.priceRange")}
-                    legacyMaximum={legacyPriceMaximum}
-                    onChange={updatePriceRange}
-                    priceMax={draftFilters.priceMax}
-                    priceMin={draftFilters.priceMin}
-                    prices={priceHistogramValues}
-                    showHistogram
-                  />
-                </div>
-
-                <div className="deals-search-sidebar__filter-group">
-                  <DealsAirlineFilter
-                    excludedAirlines={draftFilters.excludedAirlines}
-                    onChange={(excludedAirlines) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        excludedAirlines,
-                      }))
-                    }
-                    options={airlineOptions}
-                    t={t}
-                  />
-                </div>
-
-                {shouldShowDirectOnlyOption ? (
-                  <label className="deals-toggle deals-toggle--untitled-field">
-                    <input
-                      checked={draftFilters.directOnly}
-                      onChange={(event) =>
-                        setDraftFilters((current) => ({
-                          ...current,
-                          directOnly: event.target.checked,
-                        }))
-                      }
-                      type="checkbox"
-                    />
-                    <span>{t("common.directOnly")}</span>
-                  </label>
-                ) : null}
-              </div>
-
-              <div className="deals-search-sidebar__section">
-                <p className="deals-explorer__kicker">{t("deals.quickFilters")}</p>
-                <div className="deals-search-sidebar__chips">
-                  {visibleSearchQuickChips.map((chip) => (
-                    <button
-                      aria-pressed={draftQuickChips.has(chip)}
-                      className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
-                      disabled={!quickChipAvailability.get(chip)}
-                      key={chip}
-                      onClick={() => {
-                        if (!quickChipAvailability.get(chip)) {
-                          return;
-                        }
-                        setDraftFilters((current) =>
-                          draftQuickChips.has(chip)
-                            ? resetQuickChip(chip, current)
-                            : applyQuickChip(chip, current),
-                        );
-                      }}
-                      type="button"
-                    >
-                      {getChipTitle(chip, t)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                {renderDesktopFilters()}
               </div>
               {renderCompactSidebar(true)}
             </aside>
