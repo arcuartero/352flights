@@ -66,6 +66,13 @@ const RHYTHMS = [
     city: "Palma de Mallorca",
     landmark: "Palma Cathedral",
   },
+  {
+    key: "city",
+    label: "City trip",
+    note: "Culture, food, city lights",
+    city: "Prague",
+    landmark: "Old Town Square",
+  },
 ];
 
 const MINIMUM_TICKER_ITEMS = 16;
@@ -198,6 +205,11 @@ function buildRhythmSearchHref(key: string, locale: Locale) {
       return buildDealsSearchHref({
         ...DEFAULT_DEAL_SEARCH_FILTERS,
         themeFilter: "beach",
+      }, pathname);
+    case "city":
+      return buildDealsSearchHref({
+        ...DEFAULT_DEAL_SEARCH_FILTERS,
+        themeFilter: "city",
       }, pathname);
     default:
       return pathname;
@@ -1056,7 +1068,7 @@ export function V2Landing({
                 destinationCity={rhythm.city}
                 fallbackPhotoSrc={landmarkSrc(rhythm.city, rhythm.landmark)}
                 photoSrc={destinationPhotoUrls[toDestinationSlug(rhythm.city)]}
-                sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 33vw"
+                sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 20vw"
               />
               <span className="v2-rhythms__shade" aria-hidden="true" />
               <span className="v2-rhythms__copy">
