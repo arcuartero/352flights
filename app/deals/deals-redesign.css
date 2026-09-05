@@ -1770,11 +1770,8 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .page-shell--deals-city .deals-city-page__media::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(17, 32, 46, 0.08));
-  pointer-events: none;
+  content: none;
+  display: none;
 }
 
 .page-shell--deals-city .deals-city-page__hero-summary {
