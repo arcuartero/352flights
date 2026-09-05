@@ -4575,8 +4575,10 @@ export function PublicDealsExplorer({
         </h2>
 
         <div className="deals-desktop-filter-route">
-          <div className="deals-desktop-filter-route__origin">
-            <span>{t("common.from")}</span>
+          <div
+            aria-label={`${t("common.from")} LUX`}
+            className="deals-desktop-filter-route__origin"
+          >
             <strong>LUX</strong>
           </div>
           <span aria-hidden="true" className="deals-desktop-filter-route__plane">

@@ -4838,15 +4838,16 @@ body:has(.page-shell--deals-city)::before {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.55rem;
     padding: 0.75rem 1rem;
   }
 
-  .deals-desktop-filter-route__origin span,
   .deals-desktop-filter-route__destination > span:first-child {
-    color: #74819a;
-    font-size: 0.82rem;
-    font-weight: 650;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
   }
 
@@ -4884,9 +4885,8 @@ body:has(.page-shell--deals-city)::before {
     position: relative;
     display: grid;
     min-width: 0;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
-    gap: 0.45rem;
     padding: 0.45rem 0.65rem 0.45rem 1.85rem;
   }
 
@@ -4948,6 +4948,12 @@ body:has(.page-shell--deals-city)::before {
     letter-spacing: 0.15em;
     line-height: 1.2;
     text-transform: uppercase;
+  }
+
+  .deals-desktop-filter-card__days > legend,
+  .deals-desktop-filter-card__durations > legend,
+  .deals-desktop-filter-card__airlines .deals-airline-filter > legend {
+    margin-bottom: 1.15rem;
   }
 
   .deals-desktop-filter-card__date .deals-date-picker {
