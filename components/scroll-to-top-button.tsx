@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { ArrowUp } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const SHOW_THRESHOLD = 320;
+import { useI18n } from "@/lib/i18n";
+
+const SHOW_THRESHOLD = 280;
 
 export function ScrollToTopButton() {
+  const pathname = usePathname();
+  const { t } = useI18n();
   const [isVisible, setIsVisible] = useState(false);
-  const lastScrollY = useRef(0);
 
   useEffect(() => {
     function updateVisibility() {
-      const currentScrollY = window.scrollY;
-      const scrollingDown = currentScrollY > lastScrollY.current;
-      lastScrollY.current = currentScrollY;
-
-      setIsVisible(currentScrollY > SHOW_THRESHOLD && (scrollingDown || currentScrollY > 720));
+      setIsVisible(window.scrollY > SHOW_THRESHOLD);
     }
 
     updateVisibility();
@@ -33,19 +34,26 @@ export function ScrollToTopButton() {
     });
   }
 
+  if (pathname.startsWith("/ops")) {
+    return null;
+  }
+
+  const label = t("common.backToTop");
+
   return (
     <button
       aria-hidden={!isVisible}
-      aria-label="Scroll to top"
+      aria-label={label}
       className={`scroll-top-button ${isVisible ? "is-visible" : ""}`}
       onClick={handleClick}
       tabIndex={isVisible ? 0 : -1}
+      title={label}
       type="button"
     >
       <span className="scroll-top-button__arrow" aria-hidden="true">
-        ↑
+        <ArrowUp size={16} strokeWidth={2.5} />
       </span>
-      <span>Scroll to top</span>
+      <span>{label}</span>
     </button>
   );
 }
