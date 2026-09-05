@@ -1783,7 +1783,7 @@ body:has(.v2) .scroll-top-button__arrow {
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .v2-footer__brand span {
@@ -1826,7 +1826,7 @@ body:has(.v2) .scroll-top-button__arrow {
   padding: 0.55rem 0.75rem;
   border-radius: 0.7rem;
   color: inherit;
-  font-weight: 650;
+  font-weight: 400;
   text-decoration: none;
   transition:
     color 0.25s var(--v2-ease),
