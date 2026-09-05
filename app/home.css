@@ -2187,11 +2187,14 @@ body:has(.v2) .scroll-top-button__arrow {
   }
 }
 
-@media (max-width: 540px) {
+@media (max-width: 640px) {
   .v2-contact__main {
-    width: calc(100% - 2rem);
+    width: 100%;
+    margin: 0 0 1.5rem;
     padding: 1.6rem 1rem;
-    border-radius: 1.35rem;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
   }
 
   .v2-contact__intro h1 {
