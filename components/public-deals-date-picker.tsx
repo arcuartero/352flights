@@ -295,14 +295,8 @@ export function PublicDealsDatePicker({
     setDraftTo(dateKey);
   };
 
-  const selectedDraftPreset = presetOptions.find(
-    (option) => option.value === draftWhenFilter,
-  );
   const visiblePresetOptions = presetOptions.filter((option) => option.value !== "any");
-  const canApply =
-    draftWhenFilter === "custom"
-      ? Boolean(draftFrom && draftTo)
-      : Boolean(selectedDraftPreset && !selectedDraftPreset.disabled);
+  const canApply = Boolean(draftFrom && draftTo);
 
   const popover = isOpen ? (
     <div
@@ -350,11 +344,16 @@ export function PublicDealsDatePicker({
               key={option.value}
               onClick={() => {
                 const whenFilter = option.value as WhenFilter;
-                const presetRange = getWhenFilterDateRange(whenFilter, today);
-                updatePopoverPlacement(false);
                 setDraftWhenFilter(whenFilter);
-                setDraftFrom(presetRange?.dateFrom ?? null);
-                setDraftTo(presetRange?.dateTo ?? null);
+                setDraftFrom(null);
+                setDraftTo(null);
+                onChange({
+                  whenFilter,
+                  dateFrom: null,
+                  dateTo: null,
+                });
+                setIsOpen(false);
+                requestAnimationFrame(() => triggerRef.current?.focus());
               }}
               type="button"
             >
@@ -393,8 +392,8 @@ export function PublicDealsDatePicker({
         </button>
       </div>
 
-      <div className="deals-date-picker__calendar">
-        {showsCalendar ? (
+      {showsCalendar ? (
+        <div className="deals-date-picker__calendar">
           <div
             aria-label={t("deals.datePicker.selectRange")}
             className="deals-date-picker__months"
@@ -457,7 +456,6 @@ export function PublicDealsDatePicker({
                 );
             })}
           </div>
-        ) : null}
 
         <div className="deals-date-picker__actions">
           <button
@@ -487,7 +485,8 @@ export function PublicDealsDatePicker({
             {t("deals.datePicker.apply")}
           </button>
         </div>
-      </div>
+        </div>
+      ) : null}
     </div>
   ) : null;
 
