@@ -986,7 +986,7 @@ body:has(.page-shell--deals-city)::before {
     background: #fff;
   }
 
-  .deals-mobile-search-control--destination.is-default-selected {
+  .deals-mobile-search-control--destination.is-destination-selected {
     background: #edf4ff;
   }
 
@@ -1064,7 +1064,7 @@ body:has(.page-shell--deals-city)::before {
   }
 
   @media (max-width: 380px) {
-    .deals-mobile-search-control--destination.is-default-selected
+    .deals-mobile-search-control--destination.is-destination-selected
       .deals-select__trigger strong {
       font-size: 0.75rem;
     }
@@ -2018,7 +2018,11 @@ body:has(.page-shell--deals-city)::before {
 
 .page-shell--deals-search
   .deals-search-sidebar__section--home-controls
-  .deals-select.is-default-selected
+  .deals-select.is-destination-selected
+  .deals-select__trigger,
+.page-shell--deals-city
+  .deals-search-sidebar__section--home-controls
+  .deals-select.is-destination-selected
   .deals-select__trigger {
   border-color: var(--deals-home-selected-border);
   background: #edf4ff;
@@ -2026,7 +2030,33 @@ body:has(.page-shell--deals-city)::before {
 
 .page-shell--deals-search
   .deals-search-sidebar__section--home-controls
-  .deals-select.is-default-selected
+  .deals-select.is-destination-selected
+  .deals-select__trigger
+  strong,
+.page-shell--deals-city
+  .deals-search-sidebar__section--home-controls
+  .deals-select.is-destination-selected
+  .deals-select__trigger
+  strong {
+  color: var(--v2-blue-strong);
+}
+
+.deals-search-compact-filters
+  .deals-select.is-destination-selected
+  .deals-select__trigger,
+.deals-explorer__toolbar
+  .deals-select.is-destination-selected
+  .deals-select__trigger {
+  border-color: var(--deals-home-selected-border);
+  background: #edf4ff;
+}
+
+.deals-search-compact-filters
+  .deals-select.is-destination-selected
+  .deals-select__trigger
+  strong,
+.deals-explorer__toolbar
+  .deals-select.is-destination-selected
   .deals-select__trigger
   strong {
   color: var(--v2-blue-strong);

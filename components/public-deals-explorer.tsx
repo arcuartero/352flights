@@ -4314,7 +4314,7 @@ export function PublicDealsExplorer({
               <Plane fill="currentColor" size={22} strokeWidth={1.25} />
             </span>
             <DealsSelect
-              className={`deals-mobile-search-control deals-mobile-search-control--destination${draftFilters.destinationFilter === "any" ? " is-default-selected" : ""}`}
+              className="deals-mobile-search-control deals-mobile-search-control--destination is-destination-selected"
               label={t("common.to")}
               mobileDestinationSheet
               mobileValueLabel={
@@ -4570,6 +4570,7 @@ export function PublicDealsExplorer({
       >
         {includeDestination ? (
           <DealsSelect
+            className="is-destination-selected"
             label={t("common.destination")}
             mobileDestinationSheet
             onChange={(nextValue) =>
@@ -4703,6 +4704,7 @@ export function PublicDealsExplorer({
             </div>
 
             <DealsSelect
+              className="is-destination-selected"
               label={t("common.to")}
               mobileDestinationSheet
               onChange={(nextValue) =>
@@ -5131,7 +5133,7 @@ export function PublicDealsExplorer({
 
               <div className="deals-search-sidebar__section deals-search-sidebar__section--home-controls">
                 <DealsSelect
-                  className={draftFilters.destinationFilter === "any" ? "is-default-selected" : undefined}
+                  className="is-destination-selected"
                   label={t("common.destination")}
                   mobileDestinationSheet
                   onChange={(nextValue) =>
