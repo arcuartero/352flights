@@ -371,8 +371,7 @@ export function PublicDealsDatePicker({
                 setDraftWhenFilter(whenFilter);
                 setDraftFrom(null);
                 setDraftTo(null);
-                setPendingPresetValue(whenFilter);
-                selectionTimerRef.current = setTimeout(() => {
+                const commitSelection = () => {
                   selectionTimerRef.current = null;
                   onChange({
                     whenFilter,
@@ -382,7 +381,13 @@ export function PublicDealsDatePicker({
                   setPendingPresetValue(null);
                   setIsOpen(false);
                   requestAnimationFrame(() => triggerRef.current?.focus());
-                }, 520);
+                };
+                if (window.matchMedia("(max-width: 820px)").matches) {
+                  setPendingPresetValue(whenFilter);
+                  selectionTimerRef.current = setTimeout(commitSelection, 520);
+                } else {
+                  commitSelection();
+                }
               }}
               type="button"
             >

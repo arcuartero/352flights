@@ -698,6 +698,7 @@ body:has(.v2) .scroll-top-button__arrow {
   font-weight: 700;
 }
 
+@media (max-width: 820px) {
 .v2-search__field--destination.is-destination-selected .deals-select__trigger {
   border-color: rgba(31, 95, 214, 0.35);
   background: #edf4ff;
@@ -705,6 +706,7 @@ body:has(.v2) .scroll-top-button__arrow {
 
 .v2-search__field--destination.is-destination-selected .deals-select__trigger strong {
   color: var(--v2-blue-strong);
+}
 }
 
 .v2-search__custom-select .deals-select__trigger .deals-select__chevron {

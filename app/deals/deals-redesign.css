@@ -2235,6 +2235,7 @@ body:has(.page-shell--deals-city)::before {
   box-shadow: none;
 }
 
+@media (max-width: 820px) {
 .page-shell--deals-search
   .deals-search-sidebar__section--home-controls
   .deals-select.is-destination-selected
@@ -2279,6 +2280,7 @@ body:has(.page-shell--deals-city)::before {
   .deals-select__trigger
   strong {
   color: var(--v2-blue-strong);
+}
 }
 
 .page-shell--deals-search

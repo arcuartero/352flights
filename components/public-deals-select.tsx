@@ -243,8 +243,7 @@ export function PublicDealsSelect({
     const nextValue = option.value === value && clearValue !== undefined
       ? clearValue
       : option.value;
-    setPendingValue(option.value);
-    selectionTimerRef.current = setTimeout(() => {
+    const commitSelection = () => {
       selectionTimerRef.current = null;
 
       if (mobileDestinationSheet && option.value !== "any") {
@@ -267,7 +266,13 @@ export function PublicDealsSelect({
       setIsOpen(false);
       setSearchQuery("");
       requestAnimationFrame(() => triggerRef.current?.focus());
-    }, 520);
+    };
+    if (window.matchMedia("(max-width: 820px)").matches) {
+      setPendingValue(option.value);
+      selectionTimerRef.current = setTimeout(commitSelection, 520);
+    } else {
+      commitSelection();
+    }
   };
 
   const moveFocus = (direction: 1 | -1) => {
