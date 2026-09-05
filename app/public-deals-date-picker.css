@@ -683,6 +683,31 @@
 
   .deals-date-picker__layer
     .deals-date-picker__popover.is-presets-only
+    .deals-date-picker__presets
+    > button:disabled,
+  .deals-redesign
+    .deals-date-picker__layer
+    .deals-date-picker__popover.is-presets-only
+    .deals-date-picker__presets
+    > button:disabled {
+    border-color: #d2d8df;
+    background: #edf0f3;
+    box-shadow: none;
+    color: #929ca7;
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
+  .deals-date-picker__layer
+    .deals-date-picker__popover.is-presets-only
+    .deals-date-picker__presets
+    > button:disabled
+    .deals-date-picker__preset-check {
+    color: #a5adb6;
+  }
+
+  .deals-date-picker__layer
+    .deals-date-picker__popover.is-presets-only
     .deals-date-picker__preset-check {
     color: #2364df;
   }
