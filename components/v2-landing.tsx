@@ -647,9 +647,14 @@ export function V2Landing({
   }, [destinationOptions, filters.destinationFilter]);
 
   useEffect(() => {
+    const usesQuickBudget = quickBudgetOptions.some(
+      (option) =>
+        filters.priceMin === option.priceMin && filters.priceMax === option.priceMax,
+    );
+
     if (
       hasVariablePriceRange ||
-      (filters.priceMin === null && filters.priceMax === null)
+      usesQuickBudget
     ) {
       return;
     }
@@ -664,7 +669,7 @@ export function V2Landing({
             priceMax: null,
           },
     );
-  }, [filters.priceMax, filters.priceMin, hasVariablePriceRange]);
+  }, [filters.priceMax, filters.priceMin, hasVariablePriceRange, quickBudgetOptions]);
 
   useEffect(() => {
     if (filters.durationFilter === "any") {
