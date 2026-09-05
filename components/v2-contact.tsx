@@ -62,7 +62,7 @@ export function V2Contact({ locale }: { locale: Locale }) {
         <EmailOption locale={locale} placement="mobile" />
       </main>
 
-      <V2Footer backHomeHref={homePath} backHomeLabel={copy.backHome} />
+      <V2Footer />
     </div>
   );
 }
