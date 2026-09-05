@@ -198,8 +198,13 @@ export function PublicDealsDatePicker({
       return;
     }
 
-    const spaceAbove = Math.max(240, controlRect.top - 12);
-    const spaceBelow = Math.max(240, window.innerHeight - controlRect.bottom - 12);
+    const viewportGap = 12;
+    const topbarBottom = document
+      .querySelector<HTMLElement>(".deals-redesign__topbar")
+      ?.getBoundingClientRect().bottom;
+    const safeTop = Math.max(viewportGap, (topbarBottom ?? 0) + viewportGap);
+    const spaceAbove = Math.max(0, controlRect.top - safeTop - viewportGap);
+    const spaceBelow = Math.max(0, window.innerHeight - controlRect.bottom - viewportGap);
 
     if (!calendarVisible) {
       setUsesViewportLayer(window.innerWidth <= 820);
@@ -212,7 +217,10 @@ export function PublicDealsDatePicker({
     const wouldOverflowHorizontally =
       controlRect.left < 16 || controlRect.left + popoverWidth > window.innerWidth - 16;
     const shouldUseViewportLayer =
-      window.innerHeight <= 900 || window.innerWidth <= 560 || wouldOverflowHorizontally;
+      window.innerHeight <= 900 ||
+      window.innerWidth <= 560 ||
+      wouldOverflowHorizontally ||
+      Math.max(spaceAbove, spaceBelow) < 320;
     const shouldOpenAbove = spaceBelow < 480 && spaceAbove > spaceBelow;
     setUsesViewportLayer(shouldUseViewportLayer);
     setOpensAbove(!shouldUseViewportLayer && shouldOpenAbove);
