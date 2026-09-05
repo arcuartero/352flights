@@ -77,19 +77,6 @@ function localeTag(locale: Locale) {
   return locale === "pt" ? "pt-PT" : locale;
 }
 
-function formatDateField(value: string | null, locale: Locale) {
-  if (!value) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat(localeTag(locale), {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(dateFromKey(value));
-}
-
 export function formatPublicDealDateRange(
   dateFrom: string | null,
   dateTo: string | null,
@@ -407,25 +394,12 @@ export function PublicDealsDatePicker({
 
       <div className="deals-date-picker__calendar">
         {showsCalendar ? (
-          <>
-            <div className="deals-date-picker__fields" aria-live="polite">
-              <div>
-                <span>{t("deals.datePicker.startDate")}</span>
-                <strong>{formatDateField(visualFrom, locale) ?? "—"}</strong>
-              </div>
-              <i aria-hidden="true">–</i>
-              <div>
-                <span>{t("deals.datePicker.endDate")}</span>
-                <strong>{formatDateField(visualTo, locale) ?? "—"}</strong>
-              </div>
-            </div>
-
-            <div
-              aria-label={t("deals.datePicker.selectRange")}
-              className="deals-date-picker__months"
-              ref={monthsScrollRef}
-            >
-              {calendarMonths.map((month, monthIndex) => {
+          <div
+            aria-label={t("deals.datePicker.selectRange")}
+            className="deals-date-picker__months"
+            ref={monthsScrollRef}
+          >
+            {calendarMonths.map((month, monthIndex) => {
                 const monthKey = dateToKey(month).slice(0, 7);
                 return (
                   <section
@@ -480,9 +454,8 @@ export function PublicDealsDatePicker({
                     </div>
                   </section>
                 );
-              })}
-            </div>
-          </>
+            })}
+          </div>
         ) : null}
 
         <div className="deals-date-picker__actions">
