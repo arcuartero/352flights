@@ -2641,7 +2641,10 @@ function DealFlightCard({
               </Link>
             ) : null}
             {showAirlineLogo ? (
-              <div aria-hidden="true" className="deals-search-card__mobile-airline-logo">
+              <div
+                aria-hidden={showMobileAirlineName || undefined}
+                className="deals-search-card__mobile-airline-logo"
+              >
                 <AirlineLogo
                   airlineName={airlineName}
                   primaryAirlineCode={deal.primaryAirlineCode}

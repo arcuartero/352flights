@@ -3659,6 +3659,44 @@ body:has(.page-shell--deals-city)::before {
   background: linear-gradient(180deg, rgba(17, 32, 46, 0.04), rgba(17, 32, 46, 0.3));
 }
 
+@media (min-width: 981px) {
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar:not(.deals-search-card__meta-bar--mobile-only) {
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar:not(.deals-search-card__meta-bar--mobile-only) .deals-search-card__mobile-airline-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    order: -1;
+    flex: 0 0 2.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar:not(.deals-search-card__meta-bar--mobile-only) .deals-airline-logo,
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar:not(.deals-search-card__meta-bar--mobile-only) .deals-airline-logo img {
+    width: 2.75rem;
+    max-width: 2.75rem;
+    height: 2.75rem;
+    max-height: 2.75rem;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__meta-bar:not(.deals-search-card__meta-bar--mobile-only) .deals-search-card__city-link {
+    font-size: 1.55rem;
+    line-height: 1;
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__segment {
+    grid-template-columns: 1.7rem minmax(0, 1fr);
+  }
+
+  .page-shell--deals-search .deals-search-card--route-layout .deals-search-card__airline {
+    display: none;
+  }
+}
+
 @media (max-width: 980px) {
   .page-shell--deals-search,
   .page-shell--deals-city {
