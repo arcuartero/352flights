@@ -6779,78 +6779,76 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
 
 .flight-route-loader--exiting {
   pointer-events: none;
-  animation: flight-route-overlay-out 180ms ease-in forwards;
+  animation: flight-route-overlay-out 480ms ease-in forwards;
 }
 
 .flight-route-loader__stage {
   position: relative;
-  width: 12rem;
-  height: 10rem;
+  width: 10rem;
+  height: 14rem;
+  overflow: hidden;
+  contain: layout paint;
 }
 
-.flight-route-loader__orbit {
+.flight-route-loader__halo {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--flight-orbit-width);
-  height: var(--flight-orbit-height);
-  animation: flight-route-orbit var(--flight-orbit-duration) linear infinite;
+  inset: calc(50% - 3.5rem) auto auto calc(50% - 3.5rem);
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  background: #edf4ff;
+}
+
+.flight-route-loader__ascent {
+  position: absolute;
+  top: calc(50% - 2.5rem);
+  left: calc(50% - 2.5rem);
+  transform: translateY(var(--flight-climb, 28px));
 }
 
 .flight-route-loader__flight {
-  position: absolute;
-  top: calc(50% - 1.5rem);
-  right: -1.5rem;
-  width: 3rem;
-  height: 3rem;
+  position: relative;
+  width: 5rem;
+  height: 5rem;
   color: #2463d4;
-  filter: drop-shadow(0 8px 14px rgba(36, 99, 212, 0.26));
-  transform: rotate(90deg);
+}
+
+.flight-route-loader--exiting .flight-route-loader__flight {
+  animation: flight-route-arrive 440ms cubic-bezier(0.5, 0, 0.8, 0.5) forwards;
 }
 
 .flight-route-loader__plane {
   position: relative;
   z-index: 2;
-  width: 3rem;
-  height: 3rem;
-  transform: rotate(45deg);
+  width: 100%;
+  height: 100%;
 }
 
 .flight-route-loader__trail {
   position: absolute;
-  top: 50%;
-  right: calc(100% - 0.52rem);
-  border-radius: 999px 0 0 999px;
-  transform: translateY(-50%);
-  transform-origin: right center;
-  clip-path: polygon(0 50%, 100% 0, 100% 100%);
-  animation: flight-route-trail 760ms ease-in-out infinite alternate;
+  top: 4.5rem;
+  width: 0.18rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: #7ca7f4;
+  opacity: 0;
+  animation: flight-route-speed 900ms linear infinite;
 }
 
 .flight-route-loader__trail--1 {
-  width: 6.8rem;
-  height: 0.38rem;
-  background: linear-gradient(90deg, transparent 0%, rgba(237, 51, 45, 0.08) 18%, rgba(237, 51, 45, 0.48) 62%, #ed332d 100%);
-  filter: drop-shadow(0 0 0.22rem rgba(237, 51, 45, 0.38));
-  opacity: 0.94;
+  left: calc(50% - 0.85rem);
+  animation-delay: -300ms;
 }
 
 .flight-route-loader__trail--2 {
-  top: calc(50% - 0.28rem);
-  width: 5.2rem;
-  height: 0.12rem;
-  background: linear-gradient(90deg, transparent 0%, rgba(237, 51, 45, 0.16) 42%, rgba(237, 51, 45, 0.62) 100%);
-  opacity: 0.62;
-  animation-delay: -260ms;
+  left: calc(50% - 0.09rem);
+  height: 1.65rem;
+  background: #2463d4;
 }
 
 .flight-route-loader__trail--3 {
-  top: calc(50% + 0.28rem);
-  width: 4.35rem;
-  height: 0.1rem;
-  background: linear-gradient(90deg, transparent 0%, rgba(237, 51, 45, 0.12) 38%, rgba(237, 51, 45, 0.52) 100%);
-  opacity: 0.48;
-  animation-delay: -520ms;
+  left: calc(50% + 0.67rem);
+  animation-delay: -600ms;
 }
 
 @keyframes flight-route-overlay-in {
@@ -6874,24 +6872,15 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
   }
 }
 
-@keyframes flight-route-orbit {
-  from {
-    transform: translate(-50%, -50%) rotate(var(--flight-orbit-start));
-  }
-  to {
-    transform: translate(-50%, -50%) rotate(calc(var(--flight-orbit-start) + 360deg));
-  }
+@keyframes flight-route-arrive {
+  to { transform: translateY(-10rem); }
 }
 
-@keyframes flight-route-trail {
-  from {
-    scale: 0.84 0.82;
-    opacity: 0.62;
-  }
-  to {
-    scale: 1.04 1;
-    opacity: 1;
-  }
+@keyframes flight-route-speed {
+  0% { transform: translateY(-0.4rem) scaleY(0.4); opacity: 0; }
+  20% { opacity: 0.85; }
+  70% { opacity: 0.6; }
+  100% { transform: translateY(2.4rem) scaleY(1.3); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -6909,7 +6898,6 @@ html[data-theme="light"] .deals-opportunity-modal__media-caption h3 {
     backdrop-filter: blur(7px);
   }
 
-  .flight-route-loader__orbit {
-    transform: translate(-50%, -50%);
-  }
+  .flight-route-loader__ascent { transform: none; }
+  .flight-route-loader__trail { opacity: 0.7; }
 }
