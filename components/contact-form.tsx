@@ -90,7 +90,6 @@ export function ContactForm({ locale }: { locale: Locale }) {
       <div className="v2-contact-form__footer">
         <button disabled={isPending} type="submit">
           {isPending ? copy.submitting : copy.submit}
-          <span aria-hidden="true">→</span>
         </button>
         <p className={`v2-contact-form__status v2-contact-form__status--${status.tone}`} aria-live="polite">
           {status.message}

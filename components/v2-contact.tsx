@@ -3,9 +3,9 @@ import Link from "next/link";
 
 import { ContactForm } from "@/components/contact-form";
 import { LanguageSelector } from "@/components/language-selector";
+import { V2AlertsButton } from "@/components/v2-alerts";
 import { V2Footer } from "@/components/v2-footer";
 import { contactCopy } from "@/lib/contact-localization";
-import { getLocalizedLegalPath } from "@/lib/legal-localization";
 import { getLocalizedHomePath, type Locale } from "@/lib/locales";
 
 function EmailOption({
@@ -19,16 +19,15 @@ function EmailOption({
 
   return (
     <div className={`v2-contact__email-option v2-contact__email-option--${placement}`}>
-      <a className="v2-contact__email" href="mailto:info@352flights.com">
-        <span className="v2-contact__email-icon" aria-hidden="true">
-          <Mail strokeWidth={1.8} />
-        </span>
-        <span>
-          <small>{copy.emailPrompt}</small>
-          <strong>info@352flights.com</strong>
-        </span>
-      </a>
-      <p className="v2-contact__response-time">{copy.responseTime}</p>
+      <span className="v2-contact__email-icon" aria-hidden="true">
+        <Mail strokeWidth={1.8} />
+      </span>
+      <span className="v2-contact__email-copy">
+        <a className="v2-contact__email" href="mailto:info@352flights.com">
+          info@352flights.com
+        </a>
+        <small>{copy.responseTime}</small>
+      </span>
     </div>
   );
 }
@@ -45,30 +44,25 @@ export function V2Contact({ locale }: { locale: Locale }) {
         </Link>
         <div className="v2-topbar__actions">
           <LanguageSelector />
-          <Link className="v2-topbar__cta" href={homePath}>{copy.backHome}</Link>
+          <V2AlertsButton />
         </div>
       </header>
 
       <main className="v2-contact__main">
-        <section className="v2-contact__intro">
+        <section className="v2-contact__intro" aria-labelledby="contact-title">
           <p className="v2-eyebrow">{copy.eyebrow}</p>
-          <h1>{copy.title}</h1>
+          <h1 id="contact-title">{copy.title}</h1>
           <p className="v2-contact__lede">{copy.intro}</p>
           <EmailOption locale={locale} placement="desktop" />
         </section>
 
-        <section className="v2-contact__panel" aria-labelledby="contact-form-title">
-          <h2 id="contact-form-title">{copy.formTitle}</h2>
+        <section className="v2-contact__panel" aria-label={copy.formTitle}>
           <ContactForm locale={locale} />
-          <p className="v2-contact__privacy">
-            {copy.privacyPrefix}{" "}
-            <Link href={getLocalizedLegalPath(locale, "privacy")}>{copy.privacyLink}</Link>.
-          </p>
         </section>
         <EmailOption locale={locale} placement="mobile" />
       </main>
 
-      <V2Footer />
+      <V2Footer backHomeHref={homePath} backHomeLabel={copy.backHome} />
     </div>
   );
 }
