@@ -504,6 +504,35 @@ export function V2Landing({
       })),
     [deals, filters, now, t],
   );
+  const quickBudgetOptions = useMemo(
+    () =>
+      [
+        { key: "under-100", label: "<100€", priceMin: null, priceMax: 100 },
+        { key: "under-250", label: "<250€", priceMin: null, priceMax: 250 },
+        { key: "over-500", label: ">500€", priceMin: 500, priceMax: null },
+        {
+          key: "all",
+          label: t("common.allPrices"),
+          priceMin: null,
+          priceMax: null,
+        },
+      ].map((option) => ({
+        ...option,
+        disabled: !deals.some((deal) =>
+          matchesHomeSearchFilters(
+            deal,
+            {
+              ...filters,
+              budgetFilter: "any",
+              priceMin: option.priceMin,
+              priceMax: option.priceMax,
+            },
+            now,
+          ),
+        ),
+      })),
+    [deals, filters, now, t],
+  );
   const priceBounds = useMemo(() => {
     const filtersWithoutPrice = {
       ...filters,
@@ -839,17 +868,7 @@ export function V2Landing({
               <div className="v2-search__quick-budget" aria-label={t("common.budget")}>
                 <span className="v2-search__quick-budget-label">{t("common.budget")}</span>
                 <div className="v2-search__quick-budget-options">
-                  {[
-                    { key: "under-100", label: "<100€", priceMin: null, priceMax: 100 },
-                    { key: "under-250", label: "<250€", priceMin: null, priceMax: 250 },
-                    { key: "over-500", label: ">500€", priceMin: 500, priceMax: null },
-                    {
-                      key: "all",
-                      label: t("common.allPrices"),
-                      priceMin: null,
-                      priceMax: null,
-                    },
-                  ].map((option) => {
+                  {quickBudgetOptions.map((option) => {
                     const isSelected =
                       filters.priceMin === option.priceMin &&
                       filters.priceMax === option.priceMax;
@@ -858,6 +877,7 @@ export function V2Landing({
                       <button
                         aria-pressed={isSelected}
                         className={isSelected ? "is-selected" : undefined}
+                        disabled={option.disabled}
                         key={option.key}
                         onClick={() =>
                           setFilters((current) => ({

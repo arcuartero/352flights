@@ -2591,6 +2591,15 @@ body:has(.v2) .scroll-top-button {
     }
   }
 
+  .v2-search__quick-budget-options button:disabled,
+  .v2-search__quick-budget-options button.is-selected:disabled {
+    border-color: #d2d8df;
+    background: #edf0f3;
+    box-shadow: none;
+    color: #929ca7;
+    cursor: not-allowed;
+  }
+
   .v2-search__toggle {
     order: 6;
     display: none;
