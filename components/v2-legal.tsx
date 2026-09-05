@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { LanguageSelector } from "@/components/language-selector";
+import { contactCopy, getLocalizedContactPath } from "@/lib/contact-localization";
 import {
   getLocalizedLegalPath,
   legalCopy,
@@ -51,6 +52,7 @@ export function V2Legal({ locale, page }: V2LegalProps) {
           +352 Flights <span aria-hidden="true">|</span> © 2026
         </span>
         <nav aria-label="Legal">
+          <Link href={getLocalizedContactPath(locale)}>{contactCopy[locale].navLabel}</Link>
           <Link href={getLocalizedLegalPath(locale, "privacy")}>
             {legalCopy[locale].pages.privacy.title}
           </Link>

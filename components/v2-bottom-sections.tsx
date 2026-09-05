@@ -5,7 +5,9 @@ import { Heart, Mailbox, Send, Tag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { NewsletterForm } from "@/components/newsletter-form";
+import { contactCopy, getLocalizedContactPath } from "@/lib/contact-localization";
 import { useI18n } from "@/lib/i18n";
+import { getLocalizedLegalPath } from "@/lib/legal-localization";
 
 function CountUp({ value, suffix = "", prefix = "" }: { value: number; suffix?: string; prefix?: string }) {
   const ref = useRef<HTMLSpanElement | null>(null);
@@ -66,7 +68,7 @@ function CountUp({ value, suffix = "", prefix = "" }: { value: number; suffix?: 
 }
 
 export function V2BottomSections() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   return (
     <>
@@ -126,9 +128,10 @@ export function V2BottomSections() {
             +352 Flights <span aria-hidden="true">|</span> © 2026
           </span>
           <nav aria-label={t("common.legalNavigation")}>
-            <Link href="/privacy">{t("common.privacy")}</Link>
-            <Link href="/cookies">{t("common.cookies")}</Link>
-            <Link href="/terms">{t("common.terms")}</Link>
+            <Link href={getLocalizedContactPath(locale)}>{contactCopy[locale].navLabel}</Link>
+            <Link href={getLocalizedLegalPath(locale, "privacy")}>{t("common.privacy")}</Link>
+            <Link href={getLocalizedLegalPath(locale, "cookies")}>{t("common.cookies")}</Link>
+            <Link href={getLocalizedLegalPath(locale, "terms")}>{t("common.terms")}</Link>
           </nav>
           <span className="v2-footer__made">
             {t("bottom.madeWith")}

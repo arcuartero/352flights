@@ -94,6 +94,19 @@ export function getLocalizedPublicPath(pathname: string, locale: Locale) {
   const currentLocale = isLocalizedHomeLocale(segments[0]) ? segments[0] : "en";
   const routeSegments = currentLocale === "en" ? segments : segments.slice(1);
   if (routeSegments.length === 1) {
+    const contactSegments: Record<Locale, string> = {
+      en: "contact",
+      fr: "contact",
+      de: "kontakt",
+      pt: "contacto",
+      it: "contatti",
+      es: "contacto",
+    };
+    if (routeSegments[0] === contactSegments[currentLocale]) {
+      const segment = contactSegments[locale];
+      return locale === "en" ? `/${segment}` : `/${locale}/${segment}`;
+    }
+
     // Kept as a lazy import-free lookup to avoid coupling the core locale helpers
     // to the metadata module.
     const legalSegments: Record<Locale, Record<string, string>> = {
@@ -117,7 +130,12 @@ export function getLocalizedPublicPath(pathname: string, locale: Locale) {
 }
 
 export function getLocaleFromPathname(pathname: string): Locale | null {
-  if (pathname === "/" || pathname === "/deals" || pathname.startsWith("/deals/")) {
+  if (
+    pathname === "/" ||
+    pathname === "/contact" ||
+    pathname === "/deals" ||
+    pathname.startsWith("/deals/")
+  ) {
     return "en";
   }
 

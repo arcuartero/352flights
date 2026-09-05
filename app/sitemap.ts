@@ -4,6 +4,7 @@ import { getDestinationLanguageAlternates } from "@/lib/deals-seo";
 import { getDestinationSlugs } from "@/lib/destination-routes";
 import { matchesDestinationSlug } from "@/lib/destination-slugs";
 import { isDestinationIndexable } from "@/lib/destination-seo-policy";
+import { getLocalizedContactPath } from "@/lib/contact-localization";
 import { getSiteUrl } from "@/lib/env";
 import { getHomeLanguageAlternates } from "@/lib/home-localization";
 import {
@@ -23,6 +24,7 @@ export const revalidate = 1800;
 const legalPages: LegalPageKey[] = ["privacy", "cookies", "terms"];
 const HOME_LAST_MODIFIED = new Date("2026-09-02T21:21:09.000Z");
 const LEGAL_LAST_MODIFIED = new Date("2026-09-02T21:21:09.000Z");
+const CONTACT_LAST_MODIFIED = new Date("2026-09-05T00:00:00.000Z");
 
 function getDestinationLastModified(
   slug: string,
@@ -88,6 +90,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     })),
   );
+  const contactPages: MetadataRoute.Sitemap = locales.map((locale) => ({
+    url: new URL(getLocalizedContactPath(locale), siteUrl).toString(),
+    lastModified: CONTACT_LAST_MODIFIED,
+    changeFrequency: "yearly",
+    priority: 0.4,
+    alternates: {
+      languages: Object.fromEntries(
+        locales.map((language) => [
+          language,
+          new URL(getLocalizedContactPath(language), siteUrl).toString(),
+        ]),
+      ),
+    },
+  }));
 
-  return [...homePages, ...cityPages, ...localizedLegalPages];
+  return [...homePages, ...cityPages, ...localizedLegalPages, ...contactPages];
 }

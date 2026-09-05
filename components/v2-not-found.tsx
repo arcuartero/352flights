@@ -6,7 +6,9 @@ import Link from "next/link";
 
 import { LanguageSelector } from "@/components/language-selector";
 import { V2AlertsButton } from "@/components/v2-alerts";
+import { contactCopy, getLocalizedContactPath } from "@/lib/contact-localization";
 import { useI18n, type Locale } from "@/lib/i18n";
+import { getLocalizedLegalPath } from "@/lib/legal-localization";
 import {
   getLocalizedDealsSearchPath,
   getLocalizedDestinationPath,
@@ -197,9 +199,10 @@ export function V2NotFound() {
           +352 Flights <span aria-hidden="true">|</span> © 2026
         </span>
         <nav aria-label={t("common.legalNavigation")}>
-          <Link href="/privacy">{t("common.privacy")}</Link>
-          <Link href="/cookies">{t("common.cookies")}</Link>
-          <Link href="/terms">{t("common.terms")}</Link>
+          <Link href={getLocalizedContactPath(locale)}>{contactCopy[locale].navLabel}</Link>
+          <Link href={getLocalizedLegalPath(locale, "privacy")}>{t("common.privacy")}</Link>
+          <Link href={getLocalizedLegalPath(locale, "cookies")}>{t("common.cookies")}</Link>
+          <Link href={getLocalizedLegalPath(locale, "terms")}>{t("common.terms")}</Link>
         </nav>
         <span className="v2-footer__made">
           {t("bottom.madeWith")}

@@ -71,9 +71,10 @@ type SendResendEmailInput = {
   subject: string;
   html: string;
   text: string;
-  emailType: "campaign" | "campaign_test" | "welcome" | "ops_alert";
+  emailType: "campaign" | "campaign_test" | "welcome" | "ops_alert" | "contact";
   sendType?: CampaignSendType;
   idempotencyKey: string;
+  replyTo?: string;
 };
 
 const RESEND_NOREPLY_FROM = "352 Flights <noreply@352flights.com>";
@@ -1719,7 +1720,9 @@ export async function sendResendEmail(input: SendResendEmailInput) {
       subject: input.subject,
       html: input.html,
       text: input.text,
-      ...(env.RESEND_REPLY_TO_EMAIL ? { replyTo: env.RESEND_REPLY_TO_EMAIL } : {}),
+      ...(input.replyTo || env.RESEND_REPLY_TO_EMAIL
+        ? { replyTo: input.replyTo ?? env.RESEND_REPLY_TO_EMAIL }
+        : {}),
       tags: [
         {
           name: "product",

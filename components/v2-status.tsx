@@ -85,6 +85,7 @@ export function V2Status({
           +352 Flights <span aria-hidden="true">|</span> © 2026
         </span>
         <nav aria-label="Legal">
+          <Link href="/contact">Contact</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/cookies">Cookies</Link>
           <Link href="/terms">Terms</Link>

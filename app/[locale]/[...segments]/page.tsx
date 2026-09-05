@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 
 import { DealsCityPageContent } from "@/components/deals-city-page-content";
 import { DealsSearchPageContent } from "@/components/deals-search-page-content";
+import { V2Contact } from "@/components/v2-contact";
 import { V2Legal } from "@/components/v2-legal";
+import { getContactMetadata, isContactSegment } from "@/lib/contact-localization";
 import { getDealsCityMetadata, getDealsSearchMetadata } from "@/lib/deals-seo";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
 import { getLocalizedDestinationName } from "@/lib/destination-localization";
@@ -30,7 +32,8 @@ type LocalizedDealsPageProps = {
 type ResolvedLocalizedDealsRoute =
   | { locale: LocalizedHomeLocale; kind: "search" }
   | { locale: LocalizedHomeLocale; kind: "destination"; citySlug: string; cityName: string }
-  | { locale: LocalizedHomeLocale; kind: "legal"; page: LegalPageKey };
+  | { locale: LocalizedHomeLocale; kind: "legal"; page: LegalPageKey }
+  | { locale: LocalizedHomeLocale; kind: "contact" };
 
 function hasSearchParams(searchParams: Record<string, string | string[] | undefined>) {
   return Object.values(searchParams).some((value) =>
@@ -47,6 +50,10 @@ async function resolveLocalizedDealsRoute(
   }
 
   if (segments.length === 1) {
+    if (isContactSegment(locale, segments[0])) {
+      return { locale, kind: "contact" };
+    }
+
     const legalPage = getLegalPageFromSegment(locale, segments[0]);
     if (legalPage) {
       return { locale, kind: "legal", page: legalPage };
@@ -93,6 +100,10 @@ export async function generateMetadata({
     return getLegalMetadata(route.locale, route.page);
   }
 
+  if (route.kind === "contact") {
+    return getContactMetadata(route.locale);
+  }
+
   const isFilteredPage = hasSearchParams(resolvedSearchParams);
   const cityData = isFilteredPage ? null : await getPublicCityDealsPageData(route.citySlug);
   const noindex =
@@ -118,6 +129,10 @@ export default async function LocalizedDealsPage({
 
   if (route.kind === "legal") {
     return <V2Legal locale={route.locale} page={route.page} />;
+  }
+
+  if (route.kind === "contact") {
+    return <V2Contact locale={route.locale} />;
   }
 
   return (

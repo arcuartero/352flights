@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { LanguageSelector } from "@/components/language-selector";
 import { V2AlertsButton } from "@/components/v2-alerts";
 import { V2Outro } from "@/components/v2-outro";
+import { isContactSegment } from "@/lib/contact-localization";
 import { getLegalPageFromSegment } from "@/lib/legal-localization";
 import { getLocalizedHomePath, isLocalizedHomeLocale } from "@/lib/locales";
 
@@ -24,7 +25,10 @@ export default async function LocalizedDealsLayout({
     notFound();
   }
 
-  if (segments.length === 1 && getLegalPageFromSegment(locale, segments[0])) {
+  if (
+    segments.length === 1 &&
+    (getLegalPageFromSegment(locale, segments[0]) || isContactSegment(locale, segments[0]))
+  ) {
     return children;
   }
 
