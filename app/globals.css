@@ -2958,6 +2958,44 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
   color: var(--text-strong);
 }
 
+.deals-select__option.is-confirming,
+.deals-destination-sheet__option.is-confirming {
+  border-color: #2364df;
+  color: #184fbd;
+  animation: deals-option-confirmation 1s ease-in-out both;
+}
+
+@keyframes deals-option-confirmation {
+  0%, 100% {
+    background: #eef4ff;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(35, 100, 223, 0);
+  }
+  24% {
+    background: #dfeaff;
+    transform: scale(0.985);
+    box-shadow: 0 0 0 4px rgba(35, 100, 223, 0.14);
+  }
+  48% {
+    background: #eef4ff;
+    transform: scale(1);
+    box-shadow: 0 0 0 1px rgba(35, 100, 223, 0.04);
+  }
+  72% {
+    background: #dfeaff;
+    transform: scale(0.99);
+    box-shadow: 0 0 0 4px rgba(35, 100, 223, 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deals-select__option.is-confirming,
+  .deals-destination-sheet__option.is-confirming {
+    animation: none;
+    background: #eef4ff;
+  }
+}
+
 .deals-select__option span {
   line-height: 1.35;
 }

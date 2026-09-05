@@ -7,6 +7,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -112,6 +113,7 @@ export function PublicDealsDatePicker({
   const [draftWhenFilter, setDraftWhenFilter] = useState<WhenFilter>(value);
   const [draftFrom, setDraftFrom] = useState<string | null>(dateFrom);
   const [draftTo, setDraftTo] = useState<string | null>(dateTo);
+  const [pendingPresetValue, setPendingPresetValue] = useState<WhenFilter | null>(null);
   const showsCalendar = draftWhenFilter === "custom";
   const today = useMemo(() => {
     const current = new Date();
@@ -128,6 +130,25 @@ export function PublicDealsDatePicker({
   const monthsScrollRef = useRef<HTMLDivElement | null>(null);
   const monthRefs = useRef<Array<HTMLElement | null>>([]);
   const pickerId = useId();
+  const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelPendingSelection = useCallback(() => {
+    if (selectionTimerRef.current) {
+      clearTimeout(selectionTimerRef.current);
+      selectionTimerRef.current = null;
+    }
+    setPendingPresetValue(null);
+  }, []);
+
+  const closePicker = useCallback((restoreFocus = true) => {
+    cancelPendingSelection();
+    setIsOpen(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }
+  }, [cancelPendingSelection]);
+
+  useEffect(() => cancelPendingSelection, [cancelPendingSelection]);
 
   const selectedPreset = presetOptions.find((option) => option.value === value);
   const triggerLabel =
@@ -226,13 +247,12 @@ export function PublicDealsDatePicker({
         !rootRef.current?.contains(target) &&
         !popoverRef.current?.contains(target)
       ) {
-        setIsOpen(false);
+        closePicker(false);
       }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsOpen(false);
-        triggerRef.current?.focus();
+        closePicker();
       }
     };
 
@@ -246,7 +266,7 @@ export function PublicDealsDatePicker({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", handleResize);
     };
-  }, [isOpen, showsCalendar]);
+  }, [closePicker, isOpen, showsCalendar]);
 
   useEffect(() => {
     if (!isOpen || !usesViewportLayer) return;
@@ -322,8 +342,7 @@ export function PublicDealsDatePicker({
             aria-label={t("deals.mobile.close")}
             className="deals-date-picker__mobile-close"
             onClick={() => {
-              setIsOpen(false);
-              requestAnimationFrame(() => triggerRef.current?.focus());
+              closePicker();
             }}
             type="button"
           >
@@ -335,25 +354,35 @@ export function PublicDealsDatePicker({
           <p>{t("deals.datePicker.travelDescription")}</p>
         </div>
         {visiblePresetOptions.map((option) => {
-          const isSelected = option.value === draftWhenFilter;
+          const isConfirming = option.value === pendingPresetValue;
+          const isSelected = isConfirming || (
+            pendingPresetValue === null && option.value === draftWhenFilter
+          );
           return (
             <button
               aria-pressed={isSelected}
-              className={isSelected ? "is-selected" : ""}
+              aria-disabled={pendingPresetValue !== null || option.disabled}
+              className={`${isSelected ? "is-selected" : ""}${isConfirming ? " is-confirming" : ""}`}
               disabled={option.disabled}
               key={option.value}
               onClick={() => {
+                if (pendingPresetValue !== null) return;
                 const whenFilter = option.value as WhenFilter;
                 setDraftWhenFilter(whenFilter);
                 setDraftFrom(null);
                 setDraftTo(null);
-                onChange({
-                  whenFilter,
-                  dateFrom: null,
-                  dateTo: null,
-                });
-                setIsOpen(false);
-                requestAnimationFrame(() => triggerRef.current?.focus());
+                setPendingPresetValue(whenFilter);
+                selectionTimerRef.current = setTimeout(() => {
+                  selectionTimerRef.current = null;
+                  onChange({
+                    whenFilter,
+                    dateFrom: null,
+                    dateTo: null,
+                  });
+                  setPendingPresetValue(null);
+                  setIsOpen(false);
+                  requestAnimationFrame(() => triggerRef.current?.focus());
+                }, 1000);
               }}
               type="button"
             >
@@ -369,9 +398,11 @@ export function PublicDealsDatePicker({
           );
         })}
         <button
+          aria-disabled={pendingPresetValue !== null}
           aria-pressed={draftWhenFilter === "custom"}
           className={draftWhenFilter === "custom" ? "is-selected" : ""}
           onClick={() => {
+            if (pendingPresetValue !== null) return;
             updatePopoverPlacement(true);
             setDraftWhenFilter("custom");
             if (!draftFrom || draftTo) {
@@ -460,7 +491,7 @@ export function PublicDealsDatePicker({
         <div className="deals-date-picker__actions">
           <button
             className="deals-date-picker__cancel"
-            onClick={() => setIsOpen(false)}
+            onClick={() => closePicker()}
             type="button"
           >
             {t("deals.datePicker.cancel")}
@@ -503,7 +534,7 @@ export function PublicDealsDatePicker({
           aria-haspopup="dialog"
           aria-labelledby={`${pickerId}-label`}
           className={`deals-date-picker__trigger${isOpen ? " is-open" : ""}`}
-          onClick={() => (isOpen ? setIsOpen(false) : openPicker())}
+          onClick={() => (isOpen ? closePicker(false) : openPicker())}
           ref={triggerRef}
           type="button"
         >
@@ -521,7 +552,7 @@ export function PublicDealsDatePicker({
               className="deals-date-picker__layer"
               onMouseDown={(event) => {
                 if (event.target === event.currentTarget) {
-                  setIsOpen(false);
+                  closePicker(false);
                 }
               }}
             >

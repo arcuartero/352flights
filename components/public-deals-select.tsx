@@ -75,11 +75,13 @@ export function PublicDealsSelect({
   const [isMobileSheetViewport, setIsMobileSheetViewport] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [recentValues, setRecentValues] = useState<string[]>([]);
+  const [pendingValue, setPendingValue] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listboxId = useId();
   const sheetTitleId = useId();
   const searchLabelId = useId();
@@ -115,13 +117,24 @@ export function PublicDealsSelect({
     }
   }, [mobileDestinationSheet]);
 
+  const cancelPendingSelection = useCallback(() => {
+    if (selectionTimerRef.current) {
+      clearTimeout(selectionTimerRef.current);
+      selectionTimerRef.current = null;
+    }
+    setPendingValue(null);
+  }, []);
+
   const closeSelect = useCallback((restoreFocus = true) => {
+    cancelPendingSelection();
     setIsOpen(false);
     setSearchQuery("");
     if (restoreFocus) {
       requestAnimationFrame(() => triggerRef.current?.focus());
     }
-  }, []);
+  }, [cancelPendingSelection]);
+
+  useEffect(() => cancelPendingSelection, [cancelPendingSelection]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -225,25 +238,36 @@ export function PublicDealsSelect({
   }, [enabledDestinationOptions, searchQuery]);
 
   const selectOption = (option: PublicDealsSelectOption) => {
-    if (option.disabled) return;
+    if (option.disabled || pendingValue !== null) return;
 
-    if (mobileDestinationSheet && option.value !== "any") {
-      setRecentValues((current) => {
-        const next = [option.value, ...current.filter((item) => item !== option.value)].slice(
-          0,
-          MAX_RECENT_DESTINATIONS,
-        );
-        try {
-          window.localStorage.setItem(RECENT_DESTINATIONS_KEY, JSON.stringify(next));
-        } catch {
-          // The selector still works when storage is unavailable.
-        }
-        return next;
-      });
-    }
+    const nextValue = option.value === value && clearValue !== undefined
+      ? clearValue
+      : option.value;
+    setPendingValue(option.value);
+    selectionTimerRef.current = setTimeout(() => {
+      selectionTimerRef.current = null;
 
-    onChange(option.value === value && clearValue !== undefined ? clearValue : option.value);
-    closeSelect();
+      if (mobileDestinationSheet && option.value !== "any") {
+        setRecentValues((current) => {
+          const next = [option.value, ...current.filter((item) => item !== option.value)].slice(
+            0,
+            MAX_RECENT_DESTINATIONS,
+          );
+          try {
+            window.localStorage.setItem(RECENT_DESTINATIONS_KEY, JSON.stringify(next));
+          } catch {
+            // The selector still works when storage is unavailable.
+          }
+          return next;
+        });
+      }
+
+      onChange(nextValue);
+      setPendingValue(null);
+      setIsOpen(false);
+      setSearchQuery("");
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }, 1000);
   };
 
   const moveFocus = (direction: 1 | -1) => {
@@ -263,12 +287,14 @@ export function PublicDealsSelect({
     option: PublicDealsSelectOption,
     icon?: ReactNode,
   ) => {
-    const isSelected = option.value === value;
+    const isConfirming = option.value === pendingValue;
+    const isSelected = isConfirming || (pendingValue === null && option.value === value);
     const flagSrc = icon ? undefined : getCountryFlagSrc(option.countryCode);
     return (
       <button
         aria-pressed={isSelected}
-        className={`deals-destination-sheet__option${isSelected ? " is-selected" : ""}`}
+        aria-disabled={pendingValue !== null}
+        className={`deals-destination-sheet__option${isSelected ? " is-selected" : ""}${isConfirming ? " is-confirming" : ""}`}
         key={option.value}
         onClick={() => selectOption(option)}
         type="button"
@@ -298,12 +324,14 @@ export function PublicDealsSelect({
   };
 
   const renderSimpleSheetOption = (option: PublicDealsSelectOption) => {
-    const isSelected = option.value === value;
+    const isConfirming = option.value === pendingValue;
+    const isSelected = isConfirming || (pendingValue === null && option.value === value);
     return (
       <button
         aria-label={option.displayLabel ? option.label : undefined}
         aria-pressed={isSelected}
-        className={`deals-destination-sheet__option deals-destination-sheet__option--simple${isSelected ? " is-selected" : ""}`}
+        aria-disabled={pendingValue !== null || option.disabled}
+        className={`deals-destination-sheet__option deals-destination-sheet__option--simple${isSelected ? " is-selected" : ""}${isConfirming ? " is-confirming" : ""}`}
         disabled={option.disabled}
         key={option.value}
         onClick={() => selectOption(option)}
@@ -518,12 +546,14 @@ export function PublicDealsSelect({
       {isOpen && (!usesMobileSheet || !isMobileSheetViewport) ? (
         <div aria-labelledby={`${listboxId}-label`} className={`deals-select__menu${columns === 3 ? " deals-select__menu--three-columns" : ""}`} id={listboxId} role="listbox">
           {options.map((option, index) => {
-            const isSelected = option.value === value;
+            const isConfirming = option.value === pendingValue;
+            const isSelected = isConfirming || (pendingValue === null && option.value === value);
             return (
               <button
                 aria-label={option.displayLabel ? option.label : undefined}
                 aria-selected={isSelected}
-                className={`deals-select__option${isSelected ? " is-selected" : ""}${option.disabled ? " is-disabled" : ""}`}
+                aria-disabled={pendingValue !== null || option.disabled}
+                className={`deals-select__option${isSelected ? " is-selected" : ""}${isConfirming ? " is-confirming" : ""}${option.disabled ? " is-disabled" : ""}`}
                 disabled={option.disabled}
                 key={option.value}
                 onClick={() => selectOption(option)}
