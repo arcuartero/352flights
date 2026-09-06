@@ -12,6 +12,7 @@ import "../home.css";
 import "../public-deals-date-picker.css";
 import "../public-deals-price-range.css";
 import "./deals-redesign.css";
+import "./deals-ticket.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),

@@ -14,11 +14,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  ArrowDown,
   ArrowRight,
   Check,
   Info,
   Plane,
   Share,
+  Sparkle,
   X,
 } from "lucide-react";
 
@@ -2643,7 +2645,12 @@ function DealFlightCard({
   const resolvedPendingLabel = pendingLabel === "Skyscanner link pending" ? t("deals.skyscannerPending") : pendingLabel;
   const strongPrice = isStrongPriceDeal(deal);
   const routeLayout = layout === "route";
-  const cardClassName = `${className ?? "deals-search-card"}${strongPrice ? " deals-search-card--strong-price" : ""}${routeLayout ? " deals-search-card--route-layout" : ""}`;
+  const hasTicketSavings = routeLayout && deal.pricePosition !== "new_price" &&
+    deal.baselinePrice !== null && Number.isFinite(deal.baselinePrice) &&
+    deal.baselinePrice > deal.dealPrice && deal.dealPrice > 0;
+  const savedAmount = hasTicketSavings ? deal.baselinePrice! - deal.dealPrice : 0;
+  const savedPercent = hasTicketSavings ? Math.round(savedAmount / deal.baselinePrice! * 100) : 0;
+  const cardClassName = `${className ?? "deals-search-card"}${strongPrice ? " deals-search-card--strong-price" : ""}${routeLayout ? " deals-search-card--route-layout deals-search-card--ticket" : ""}${hasTicketSavings ? " deals-search-card--ticket-savings" : ""}`;
   const destinationHref = buildDestinationDealsHref(deal.destinationCity, locale);
 
   return (
@@ -2652,7 +2659,17 @@ function DealFlightCard({
         <DealShareButton className="deals-share-button--card-corner" deal={deal} />
       ) : null}
       <div className="deals-search-card__content">
-        {showCityLabel || showMobileCityLabel || showAirlineLogo ? (
+        {routeLayout ? (
+          <div className="deals-ticket__airline">
+            <AirlineLogo airlineName={airlineName} primaryAirlineCode={deal.primaryAirlineCode} />
+            <div>
+              <strong>{airlineName}</strong>
+              {showCityLabel || showMobileCityLabel ? (
+                <Link href={destinationHref}>{destinationName}</Link>
+              ) : null}
+            </div>
+          </div>
+        ) : showCityLabel || showMobileCityLabel || showAirlineLogo ? (
           <div
             className={`deals-search-card__meta-bar${showCityLabel ? "" : " deals-search-card__meta-bar--mobile-only"}`}
           >
@@ -2893,10 +2910,24 @@ function DealFlightCard({
 
       {showBooking ? (
         <aside className="deals-search-card__booking">
+          {hasTicketSavings ? (
+            <>
+              <div className="deals-ticket__badge">
+                <Sparkle aria-hidden="true" size={20} fill="currentColor" />
+                <span>{t(strongPrice ? "deals.ticket.greatDeal" : "deals.ticket.goodDeal")}</span>
+              </div>
+              <div className="deals-ticket__usual-price" title={usualPriceExplanation ?? undefined}>
+                <s aria-label={usualPriceExplanation ?? undefined}>{formatCurrency(deal.baselinePrice!)}</s>
+                <ArrowDown aria-hidden="true" size={24} strokeWidth={3} />
+              </div>
+            </>
+          ) : null}
           <strong className="deals-search-card__price">{formatCurrency(deal.dealPrice)}</strong>
           <div className="deals-search-card__saving-row">
             <p className={`deals-search-card__saving${strongPrice ? " is-positive" : " is-neutral"}`}>
-              {savingsLabel}
+              {hasTicketSavings ? (
+                <><strong>{t("deals.ticket.save", { amount: formatCurrency(savedAmount) })}</strong>{" · "}{t("deals.ticket.less", { pct: savedPercent })}</>
+              ) : savingsLabel}
             </p>
             <div className="deals-search-card__secondary-actions">
               {usualPriceExplanation ? (

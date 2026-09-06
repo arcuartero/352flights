@@ -10,6 +10,7 @@ import { getLocalizedHomePath, isLocalizedHomeLocale } from "@/lib/locales";
 
 import "../../home.css";
 import "../../deals/deals-redesign.css";
+import "../../deals/deals-ticket.css";
 
 type LocalizedDealsLayoutProps = {
   children: React.ReactNode;
