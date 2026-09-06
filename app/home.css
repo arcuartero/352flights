@@ -2305,6 +2305,17 @@ body:has(.v2) .scroll-top-button__arrow {
     color: #184fbd;
   }
 
+  .v2-search__field--trip .deals-select__option:disabled,
+  .v2-search__field--trip .deals-select__option.is-disabled,
+  .v2-search__field--budget .deals-select__option:disabled,
+  .v2-search__field--budget .deals-select__option.is-disabled {
+    border-color: #e1e5ea;
+    background: #f1f3f6;
+    color: #a4acb6;
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
   .v2-search__field--trip .deals-select__option:not(:disabled):hover,
   .v2-search__field--budget .deals-select__option:not(:disabled):hover {
     border-color: rgba(35, 100, 223, 0.55);
@@ -2408,6 +2419,17 @@ body:has(.v2) .scroll-top-button__arrow {
     border-color: #2364df;
     background: #eef4ff;
     color: #184fbd;
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__presets
+    button:disabled {
+    border-color: #e1e5ea;
+    background: #f1f3f6;
+    color: #a4acb6;
+    opacity: 1;
+    cursor: not-allowed;
   }
 
   .v2-search__field--when
