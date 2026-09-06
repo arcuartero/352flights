@@ -8,7 +8,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LanguageSelector } from "@/components/language-selector";
 import { DestinationVisual } from "@/components/public-destination-visual";
 import { PublicDealsDatePicker } from "@/components/public-deals-date-picker";
-import { PublicDealsPriceRange } from "@/components/public-deals-price-range";
 import { PublicDealsSelect } from "@/components/public-deals-select";
 import { V2AlertsModal } from "@/components/v2-alerts";
 import { V2BottomSections } from "@/components/v2-bottom-sections";
@@ -545,40 +544,20 @@ export function V2Landing({
       })),
     [deals, filters, now, t],
   );
-  const priceBounds = useMemo(() => {
-    const filtersWithoutPrice = {
-      ...filters,
-      budgetFilter: "any" as const,
-      priceMin: null,
-      priceMax: null,
-    };
-    const matchingPrices = deals
-      .filter((deal) => matchesHomeSearchFilters(deal, filtersWithoutPrice, now))
-      .map((deal) => deal.dealPrice)
-      .filter((price) => Number.isFinite(price) && price > 0);
-    const fallbackPrices = deals
-      .filter((deal) => {
-        if (
-          filters.destinationFilter !== "any" &&
-          normalizeDestinationKey(deal.destinationCity) !== filters.destinationFilter
-        ) {
-          return false;
-        }
-
-        return !filters.directOnly || deal.maxStops === "NON_STOP";
-      })
-      .map((deal) => deal.dealPrice)
-      .filter((price) => Number.isFinite(price) && price > 0);
-    const source = matchingPrices.length > 0 ? matchingPrices : fallbackPrices;
-
-    return {
-      distinctPriceCount: new Set(source.map((price) => price.toFixed(2))).size,
-      min: source.length > 0 ? Math.floor(Math.min(...source)) : 0,
-      max: source.length > 0 ? Math.ceil(Math.max(...source)) : 1,
-    };
-  }, [deals, filters, now]);
-  const hasVariablePriceRange =
-    priceBounds.distinctPriceCount > 1 && priceBounds.min < priceBounds.max;
+  const selectedBudgetKey = quickBudgetOptions.find(
+    (option) => filters.priceMin === option.priceMin && filters.priceMax === option.priceMax,
+  )?.key ?? "all";
+  const desktopBudgetOptions = ["all", "under-100", "under-250", "over-500"].map(
+    (key) => {
+      const option = quickBudgetOptions.find((budget) => budget.key === key)!;
+      return {
+        value: option.key,
+        label: key === "all" ? t("home.searchAllPrices") : option.label,
+        displayLabel: option.label,
+        disabled: option.disabled,
+      };
+    },
+  );
   const destinationOptions = useMemo(() => {
     const filtersWithoutDestination = {
       ...filters,
@@ -657,31 +636,6 @@ export function V2Landing({
 
     setFilters((current) => ({ ...current, destinationFilter: "any" }));
   }, [destinationOptions, filters.destinationFilter]);
-
-  useEffect(() => {
-    const usesQuickBudget = quickBudgetOptions.some(
-      (option) =>
-        filters.priceMin === option.priceMin && filters.priceMax === option.priceMax,
-    );
-
-    if (
-      hasVariablePriceRange ||
-      usesQuickBudget
-    ) {
-      return;
-    }
-
-    setFilters((current) =>
-      current.priceMin === null && current.priceMax === null
-        ? current
-        : {
-            ...current,
-            budgetFilter: "any",
-            priceMin: null,
-            priceMax: null,
-          },
-    );
-  }, [filters.priceMax, filters.priceMin, hasVariablePriceRange, quickBudgetOptions]);
 
   useEffect(() => {
     if (filters.durationFilter === "any") {
@@ -862,24 +816,23 @@ export function V2Landing({
                 options={searchDurationOptions}
                 value={filters.durationFilter}
               />
-              {hasVariablePriceRange ? (
-                <PublicDealsPriceRange
-                  bounds={priceBounds}
-                  className="v2-search__field v2-search__field--budget"
-                  label={t("common.priceRange")}
-                  onChange={(priceMin, priceMax) =>
+              <PublicDealsSelect
+                className="v2-search__field v2-search__field--budget v2-search__custom-select"
+                label={t("common.priceRange")}
+                onChange={(value) => {
+                  const option = quickBudgetOptions.find((budget) => budget.key === value);
+                  if (option) {
                     setFilters((current) => ({
                       ...current,
                       budgetFilter: "any",
-                      priceMin,
-                      priceMax,
-                    }))
+                      priceMin: option.priceMin,
+                      priceMax: option.priceMax,
+                    }));
                   }
-                  priceMax={filters.priceMax}
-                  priceMin={filters.priceMin}
-                  showHistogram
-                />
-              ) : null}
+                }}
+                options={desktopBudgetOptions}
+                value={selectedBudgetKey}
+              />
               <div className="v2-search__quick-budget" aria-label={t("common.budget")}>
                 <span className="v2-search__quick-budget-label">{t("common.budget")}</span>
                 <div className="v2-search__quick-budget-options">
