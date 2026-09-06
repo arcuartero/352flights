@@ -1088,7 +1088,7 @@ export function V2Landing({
         <div className="v2-testimonials__head">
           <p className="v2-eyebrow">{t("home.testimonialsKicker")}</p>
           <h2>
-            {t("home.testimonialsTitle")}
+            <span>{t("home.testimonialsTitle")}</span>
             <br />
             <em>{t("home.testimonialsEm")}</em>
           </h2>

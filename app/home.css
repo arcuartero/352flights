@@ -1505,6 +1505,16 @@ body:has(.v2) .scroll-top-button__arrow {
   line-height: 1.06;
 }
 
+@media (min-width: 821px) {
+  .v2-testimonials__head {
+    max-width: 52rem;
+  }
+
+  .v2-testimonials__head h2 > span {
+    white-space: nowrap;
+  }
+}
+
 .v2-testimonials__head em {
   font-style: italic;
   color: var(--v2-accent);
