@@ -13,6 +13,7 @@ export type TripFilter = "any" | "weekend" | "weeklong" | "long_stay";
 export type BudgetFilter = "any" | "50" | "80" | "120" | "200";
 export type ThemeFilter = "any" | "beach" | "city" | "nature";
 export type DurationFilter = "any" | "1" | "2" | "3" | "4" | "5" | "6_plus";
+export type DurationFilterValue = Exclude<DurationFilter, "any">;
 export type DepartureWeekdayFilter =
   | "any"
   | "monday"
@@ -22,6 +23,7 @@ export type DepartureWeekdayFilter =
   | "friday"
   | "saturday"
   | "sunday";
+export type DepartureWeekdayFilterValue = Exclude<DepartureWeekdayFilter, "any">;
 export type DealSearchSort =
   | "best"
   | "price_asc"
@@ -42,7 +44,9 @@ export type DealSearchFilters = {
   themeFilter: ThemeFilter;
   destinationFilter: string;
   departureWeekdayFilter: DepartureWeekdayFilter;
+  departureWeekdayFilters: DepartureWeekdayFilterValue[];
   durationFilter: DurationFilter;
+  durationFilters: DurationFilterValue[];
   dateFrom: string | null;
   dateTo: string | null;
 };
@@ -58,7 +62,9 @@ export const DEFAULT_DEAL_SEARCH_FILTERS: DealSearchFilters = {
   themeFilter: "any",
   destinationFilter: "any",
   departureWeekdayFilter: "any",
+  departureWeekdayFilters: [],
   durationFilter: "any",
+  durationFilters: [],
   dateFrom: null,
   dateTo: null,
 };
@@ -108,6 +114,40 @@ const DEAL_SEARCH_SORTS = new Set<DealSearchSort>([
   "trip_longest",
 ]);
 export const DEFAULT_DEAL_SEARCH_SORT: DealSearchSort = "best";
+
+export function getSelectedDepartureWeekdayFilters(filters: DealSearchFilters) {
+  if (filters.departureWeekdayFilters.length > 0) {
+    return filters.departureWeekdayFilters;
+  }
+
+  return filters.departureWeekdayFilter === "any" ? [] : [filters.departureWeekdayFilter];
+}
+
+export function getSelectedDurationFilters(filters: DealSearchFilters) {
+  if (filters.durationFilters.length > 0) {
+    return filters.durationFilters;
+  }
+
+  return filters.durationFilter === "any" ? [] : [filters.durationFilter];
+}
+
+function parseDepartureWeekdayFilters(value: string | undefined) {
+  if (!value) return [];
+
+  return [...new Set(value.split(","))].filter(
+    (entry): entry is DepartureWeekdayFilterValue =>
+      entry !== "any" && DEPARTURE_WEEKDAY_FILTERS.has(entry as DepartureWeekdayFilter),
+  );
+}
+
+function parseDurationFilters(value: string | undefined) {
+  if (!value) return [];
+
+  return [...new Set(value.split(","))].filter(
+    (entry): entry is DurationFilterValue =>
+      entry !== "any" && DURATION_FILTERS.has(entry as DurationFilter),
+  );
+}
 
 function extractDateKey(value: string | null | undefined) {
   return value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
@@ -299,6 +339,8 @@ export function parseDealSearchFilters(
   const destinationValue = getParamValue(source, "destination");
   const departureWeekdayValue = getParamValue(source, "departure_weekday");
   const durationValue = getParamValue(source, "duration");
+  const departureWeekdayFilters = parseDepartureWeekdayFilters(departureWeekdayValue);
+  const durationFilters = parseDurationFilters(durationValue);
   const dateFrom = parseDateParam(getParamValue(source, "date_from"));
   const dateTo = parseDateParam(getParamValue(source, "date_to"));
   const parsedWhenFilter = WHEN_FILTERS.has((whenValue as WhenFilter) ?? "any")
@@ -331,14 +373,11 @@ export function parseDealSearchFilters(
       destinationValue && destinationValue.trim().length > 0
         ? normalizeDestinationFilterValue(destinationValue)
         : "any",
-    departureWeekdayFilter: DEPARTURE_WEEKDAY_FILTERS.has(
-      (departureWeekdayValue as DepartureWeekdayFilter) ?? "any",
-    )
-      ? ((departureWeekdayValue as DepartureWeekdayFilter) ?? "any")
-      : "any",
-    durationFilter: DURATION_FILTERS.has((durationValue as DurationFilter) ?? "any")
-      ? ((durationValue as DurationFilter) ?? "any")
-      : "any",
+    departureWeekdayFilter:
+      departureWeekdayFilters.length === 1 ? departureWeekdayFilters[0] : "any",
+    departureWeekdayFilters,
+    durationFilter: durationFilters.length === 1 ? durationFilters[0] : "any",
+    durationFilters,
     dateFrom: hasSelectedCustomRange ? dateFrom : null,
     dateTo: hasSelectedCustomRange ? dateTo : null,
   };
@@ -404,12 +443,14 @@ export function buildDealsSearchHref(
     params.set("destination", normalizeDestinationFilterValue(filters.destinationFilter));
   }
 
-  if (filters.departureWeekdayFilter !== "any") {
-    params.set("departure_weekday", filters.departureWeekdayFilter);
+  const departureWeekdayFilters = getSelectedDepartureWeekdayFilters(filters);
+  if (departureWeekdayFilters.length > 0) {
+    params.set("departure_weekday", departureWeekdayFilters.join(","));
   }
 
-  if (filters.durationFilter !== "any") {
-    params.set("duration", filters.durationFilter);
+  const durationFilters = getSelectedDurationFilters(filters);
+  if (durationFilters.length > 0) {
+    params.set("duration", durationFilters.join(","));
   }
 
   if (sort !== DEFAULT_DEAL_SEARCH_SORT) {
@@ -431,8 +472,8 @@ export function hasActiveDealSearchFilters(filters: DealSearchFilters) {
     filters.directOnly ||
     filters.themeFilter !== "any" ||
     filters.destinationFilter !== "any" ||
-    filters.departureWeekdayFilter !== "any" ||
-    filters.durationFilter !== "any" ||
+    getSelectedDepartureWeekdayFilters(filters).length > 0 ||
+    getSelectedDurationFilters(filters).length > 0 ||
     Boolean(filters.dateFrom && filters.dateTo)
   );
 }

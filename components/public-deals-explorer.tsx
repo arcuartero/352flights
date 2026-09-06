@@ -64,6 +64,8 @@ import { getLocalizedDestinationName } from "@/lib/destination-localization";
 import {
   buildDealsSearchHref,
   DEFAULT_DEAL_SEARCH_FILTERS,
+  getSelectedDepartureWeekdayFilters,
+  getSelectedDurationFilters,
   getWhenFilterDateRange,
   DEFAULT_DEAL_SEARCH_SORT,
   doesTripIncludeWeekend,
@@ -71,7 +73,9 @@ import {
   type BudgetFilter,
   type DealSearchSort,
   type DepartureWeekdayFilter,
+  type DepartureWeekdayFilterValue,
   type DurationFilter,
+  type DurationFilterValue,
   type DealSearchFilters,
   type ThemeFilter,
   type TripFilter,
@@ -1807,12 +1811,13 @@ function matchesPriceRange(deal: CampaignPreviewDeal, filters: DealSearchFilters
   return filters.priceMax === null || deal.dealPrice <= filters.priceMax;
 }
 
-function matchesDurationFilter(deal: CampaignPreviewDeal, durationFilter: DurationFilter) {
-  if (durationFilter === "any") {
+function matchesDurationFilter(deal: CampaignPreviewDeal, filters: DealSearchFilters) {
+  const durationFilters = getSelectedDurationFilters(filters);
+  if (durationFilters.length === 0) {
     return true;
   }
 
-  return getDurationFilterValue(deal) === durationFilter;
+  return durationFilters.includes(getDurationFilterValue(deal));
 }
 
 function matchesDealSearchFilters(
@@ -1845,7 +1850,7 @@ function matchesDealSearchFilters(
     return false;
   }
 
-  if (!matchesDurationFilter(deal, filters.durationFilter)) {
+  if (!matchesDurationFilter(deal, filters)) {
     return false;
   }
 
@@ -1860,9 +1865,11 @@ function matchesDealSearchFilters(
     return false;
   }
 
+  const departureWeekdayFilters = getSelectedDepartureWeekdayFilters(filters);
+  const departureWeekday = getDepartureWeekdayFilterValue(deal.departureDate);
   if (
-    filters.departureWeekdayFilter !== "any" &&
-    getDepartureWeekdayFilterValue(deal.departureDate) !== filters.departureWeekdayFilter
+    departureWeekdayFilters.length > 0 &&
+    (departureWeekday === "any" || !departureWeekdayFilters.includes(departureWeekday))
   ) {
     return false;
   }
@@ -1894,8 +1901,15 @@ function areDealSearchFiltersEqual(left: DealSearchFilters, right: DealSearchFil
     left.directOnly === right.directOnly &&
     left.themeFilter === right.themeFilter &&
     left.destinationFilter === right.destinationFilter &&
-    left.departureWeekdayFilter === right.departureWeekdayFilter &&
-    left.durationFilter === right.durationFilter &&
+    getSelectedDepartureWeekdayFilters(left).length ===
+      getSelectedDepartureWeekdayFilters(right).length &&
+    getSelectedDepartureWeekdayFilters(left).every((value) =>
+      getSelectedDepartureWeekdayFilters(right).includes(value),
+    ) &&
+    getSelectedDurationFilters(left).length === getSelectedDurationFilters(right).length &&
+    getSelectedDurationFilters(left).every((value) =>
+      getSelectedDurationFilters(right).includes(value),
+    ) &&
     left.dateFrom === right.dateFrom &&
     left.dateTo === right.dateTo
   );
@@ -2041,7 +2055,12 @@ function buildDurationOptions(
   now: Date,
   t: Translate,
 ) {
-  const filtersWithoutDuration = { ...filters, durationFilter: "any" as DurationFilter };
+  const filtersWithoutDuration = {
+    ...filters,
+    durationFilter: "any" as DurationFilter,
+    durationFilters: [],
+  };
+  const selectedDurationFilters = getSelectedDurationFilters(filters);
   const availableValues = new Set(
     deals
       .filter((deal) => matchesDealSearchFilters(deal, filtersWithoutDuration, now))
@@ -2052,7 +2071,7 @@ function buildDurationOptions(
     value,
     label: t(`deals.duration.${value}`),
     displayLabel: value === "6_plus" ? "6+" : value,
-    disabled: value !== filters.durationFilter && !availableValues.has(value),
+    disabled: !selectedDurationFilters.includes(value) && !availableValues.has(value),
   }));
 }
 
@@ -3915,6 +3934,8 @@ export function PublicDealsExplorer({
         (value) => ({
           ...draftFilters,
           departureWeekdayFilter: value as DepartureWeekdayFilter,
+          departureWeekdayFilters:
+            value === "any" ? [] : [value as DepartureWeekdayFilterValue],
         }),
       )
         .map((option) => ({ ...option, label: t(`deals.weekday.${option.value}`) }))
@@ -3962,12 +3983,12 @@ export function PublicDealsExplorer({
       }
 
       const availableDurations = new Set(serverSearchResult.facets.durationValues);
+      const selectedDurationFilters = getSelectedDurationFilters(draftFilters);
       return DURATION_FILTER_VALUES.map((value) => ({
         value,
         label: t(`deals.duration.${value}`),
         displayLabel: value === "6_plus" ? "6+" : value,
-        disabled:
-          value !== draftFilters.durationFilter && !availableDurations.has(value),
+        disabled: !selectedDurationFilters.includes(value) && !availableDurations.has(value),
       }));
     },
     [draftFilters, mode, now, serverSearchResult, sourceDeals, t],
@@ -4019,15 +4040,21 @@ export function PublicDealsExplorer({
     : SEARCH_QUICK_CHIPS.filter((chip) => chip !== "direct");
 
   useEffect(() => {
-    if (
-      draftFilters.durationFilter === "any" ||
-      resultsDurationOptions.some((option) => option.value === draftFilters.durationFilter)
-    ) {
-      return;
-    }
+    const availableDurationValues = new Set(
+      resultsDurationOptions.filter((option) => !option.disabled).map((option) => option.value),
+    );
+    const selectedDurationFilters = getSelectedDurationFilters(draftFilters);
+    const nextDurationFilters = selectedDurationFilters.filter((value) =>
+      availableDurationValues.has(value),
+    );
+    if (nextDurationFilters.length === selectedDurationFilters.length) return;
 
-    setDraftFilters((current) => ({ ...current, durationFilter: "any" }));
-  }, [draftFilters.durationFilter, resultsDurationOptions]);
+    setDraftFilters((current) => ({
+      ...current,
+      durationFilter: nextDurationFilters.length === 1 ? nextDurationFilters[0] : "any",
+      durationFilters: nextDurationFilters,
+    }));
+  }, [draftFilters, resultsDurationOptions]);
 
   const selectMobileDestination = useCallback(
     (nextValue: string) => {
@@ -4108,8 +4135,10 @@ export function PublicDealsExplorer({
         directOnly: DEFAULT_DEAL_SEARCH_FILTERS.directOnly,
         themeFilter: DEFAULT_DEAL_SEARCH_FILTERS.themeFilter,
         departureWeekdayFilter: DEFAULT_DEAL_SEARCH_FILTERS.departureWeekdayFilter,
+        departureWeekdayFilters: DEFAULT_DEAL_SEARCH_FILTERS.departureWeekdayFilters,
         tripFilter: DEFAULT_DEAL_SEARCH_FILTERS.tripFilter,
         durationFilter: current.durationFilter,
+        durationFilters: current.durationFilters,
       }),
     );
   }, [coerceFiltersForMode, mobileResultsPanel]);
@@ -4360,6 +4389,8 @@ export function PublicDealsExplorer({
                   setDraftFilters((current) => ({
                     ...current,
                     durationFilter: nextValue as DurationFilter,
+                    durationFilters:
+                      nextValue === "any" ? [] : [nextValue as DurationFilterValue],
                     tripFilter: "any",
                   }))
                 }
@@ -4477,7 +4508,11 @@ export function PublicDealsExplorer({
                         </div>
                         <div className="deals-filter-sheet__days" role="group" aria-labelledby={`${mobileResultsPanelTitleId}-day`}>
                           {DEPARTURE_WEEKDAY_OPTIONS.map((option, index) => {
-                            const selected = draftFilters.departureWeekdayFilter === option.value;
+                            const selectedWeekdays = getSelectedDepartureWeekdayFilters(draftFilters);
+                            const selected =
+                              option.value === "any"
+                                ? selectedWeekdays.length === 0
+                                : selectedWeekdays.includes(option.value as DepartureWeekdayFilterValue);
                             const available = option.value === "any" || departureWeekdayOptions.some((item) => item.value === option.value && !item.disabled);
                             return (
                               <button
@@ -4485,7 +4520,29 @@ export function PublicDealsExplorer({
                                 aria-pressed={selected}
                                 disabled={!available && !selected}
                                 key={option.value}
-                                onClick={() => setDraftFilters((current) => ({ ...current, departureWeekdayFilter: option.value as DepartureWeekdayFilter }))}
+                                onClick={() =>
+                                  setDraftFilters((current) => {
+                                    if (option.value === "any") {
+                                      return {
+                                        ...current,
+                                        departureWeekdayFilter: "any",
+                                        departureWeekdayFilters: [],
+                                      };
+                                    }
+
+                                    const value = option.value as DepartureWeekdayFilterValue;
+                                    const selectedValues = getSelectedDepartureWeekdayFilters(current);
+                                    const nextValues = selectedValues.includes(value)
+                                      ? selectedValues.filter((item) => item !== value)
+                                      : [...selectedValues, value];
+                                    return {
+                                      ...current,
+                                      departureWeekdayFilter:
+                                        nextValues.length === 1 ? nextValues[0] : "any",
+                                      departureWeekdayFilters: nextValues,
+                                    };
+                                  })
+                                }
                                 type="button"
                               >
                                 <span>{option.value === "any" ? t("deals.weekday.any") : new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 4 + index))).replace(/\.$/, "")}</span>
@@ -4564,6 +4621,8 @@ export function PublicDealsExplorer({
 
   const renderDesktopFilters = () => {
     const destinationValue = lockedDestinationFilter ?? draftFilters.destinationFilter;
+    const selectedWeekdayFilters = getSelectedDepartureWeekdayFilters(draftFilters);
+    const selectedDurationFilters = getSelectedDurationFilters(draftFilters);
     const weekdayAvailability = new Map(
       departureWeekdayOptions.map((option) => [option.value, !option.disabled]),
     );
@@ -4635,7 +4694,9 @@ export function PublicDealsExplorer({
           <legend>{t("deals.departureDay")}</legend>
           <div>
             {DEPARTURE_WEEKDAY_OPTIONS.slice(1).map((option, index) => {
-              const selected = draftFilters.departureWeekdayFilter === option.value;
+              const selected = selectedWeekdayFilters.includes(
+                option.value as DepartureWeekdayFilterValue,
+              );
               const available = weekdayAvailability.get(option.value) ?? false;
               const shortLabel = new Intl.DateTimeFormat(locale, {
                 weekday: "short",
@@ -4654,9 +4715,15 @@ export function PublicDealsExplorer({
                   onClick={() =>
                     setDraftFilters((current) => ({
                       ...current,
-                      departureWeekdayFilter: selected
-                        ? "any"
-                        : (option.value as DepartureWeekdayFilter),
+                      departureWeekdayFilter: "any",
+                      departureWeekdayFilters: selected
+                        ? getSelectedDepartureWeekdayFilters(current).filter(
+                            (value) => value !== option.value,
+                          )
+                        : [
+                            ...getSelectedDepartureWeekdayFilters(current),
+                            option.value as DepartureWeekdayFilterValue,
+                          ],
                     }))
                   }
                   type="button"
@@ -4672,7 +4739,9 @@ export function PublicDealsExplorer({
           <legend>{t("deals.tripDuration")}</legend>
           <div>
             {resultsDurationOptions.map((option) => {
-              const selected = draftFilters.durationFilter === option.value;
+              const selected = selectedDurationFilters.includes(
+                option.value as DurationFilterValue,
+              );
               return (
                 <button
                   aria-pressed={selected}
@@ -4682,7 +4751,15 @@ export function PublicDealsExplorer({
                   onClick={() =>
                     setDraftFilters((current) => ({
                       ...current,
-                      durationFilter: selected ? "any" : (option.value as DurationFilter),
+                      durationFilter: "any",
+                      durationFilters: selected
+                        ? getSelectedDurationFilters(current).filter(
+                            (value) => value !== option.value,
+                          )
+                        : [
+                            ...getSelectedDurationFilters(current),
+                            option.value as DurationFilterValue,
+                          ],
                       tripFilter: "any",
                     }))
                   }
@@ -4771,6 +4848,10 @@ export function PublicDealsExplorer({
             setDraftFilters((current) => ({
               ...current,
               departureWeekdayFilter: nextValue as DepartureWeekdayFilter,
+              departureWeekdayFilters:
+                nextValue === "any"
+                  ? []
+                  : [nextValue as DepartureWeekdayFilterValue],
             }))
           }
           options={departureWeekdayOptions}
@@ -4800,6 +4881,8 @@ export function PublicDealsExplorer({
                 setDraftFilters((current) => ({
                   ...current,
                   durationFilter: nextValue as DurationFilter,
+                  durationFilters:
+                    nextValue === "any" ? [] : [nextValue as DurationFilterValue],
                   tripFilter: "any",
                 }))
               }

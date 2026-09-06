@@ -8,6 +8,8 @@ import {
 } from "@/lib/public-airlines";
 import {
   doesTripIncludeWeekend,
+  getSelectedDepartureWeekdayFilters,
+  getSelectedDurationFilters,
   getWhenFilterDateRange,
   isTripInCurrentWeekend,
   type DealSearchFilters,
@@ -220,7 +222,8 @@ export function matchesPublicDealSearchFilters(
 
   const airlineKeys = getPublicAirlineNames(deal.airlineSummary).map(normalizePublicAirlineName);
   if (filters.excludedAirlines.some((airline) => airlineKeys.includes(airline))) return false;
-  if (filters.durationFilter !== "any" && getDurationValue(deal) !== filters.durationFilter) {
+  const durationFilters = getSelectedDurationFilters(filters);
+  if (durationFilters.length > 0 && !durationFilters.includes(getDurationValue(deal))) {
     return false;
   }
   if (filters.directOnly && deal.maxStops !== "NON_STOP") return false;
@@ -230,9 +233,11 @@ export function matchesPublicDealSearchFilters(
   ) {
     return false;
   }
+  const departureWeekdayFilters = getSelectedDepartureWeekdayFilters(filters);
+  const departureWeekday = getDepartureWeekday(deal.departureDate);
   if (
-    filters.departureWeekdayFilter !== "any" &&
-    getDepartureWeekday(deal.departureDate) !== filters.departureWeekdayFilter
+    departureWeekdayFilters.length > 0 &&
+    (departureWeekday === "any" || !departureWeekdayFilters.includes(departureWeekday))
   ) {
     return false;
   }
@@ -467,7 +472,13 @@ export function buildPublicDealsSearchResult(
       destinations,
       popularDestinationValues,
       departureWeekdays: DEPARTURE_WEEKDAYS.filter(
-        (value) => value === "any" || hasMatches({ ...filters, departureWeekdayFilter: value }),
+        (value) =>
+          value === "any" ||
+          hasMatches({
+            ...filters,
+            departureWeekdayFilter: value,
+            departureWeekdayFilters: [value],
+          }),
       ),
       whenValues: WHEN_VALUES.filter(
         (value) =>
@@ -478,7 +489,11 @@ export function buildPublicDealsSearchResult(
         (value) => value === "any" || hasMatches({ ...filters, tripFilter: value }),
       ),
       durationValues: DURATION_VALUES.filter((value) =>
-        hasMatches({ ...filters, durationFilter: value }),
+        hasMatches({
+          ...filters,
+          durationFilter: value,
+          durationFilters: [value],
+        }),
       ),
       airlines: [...labelsByAirline]
         .map(([key, label]) => ({ key, label }))
