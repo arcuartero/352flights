@@ -4897,11 +4897,7 @@ body:has(.page-shell--deals-city)::before {
 
   .deals-desktop-filter-route__destination.is-everywhere {
     border-radius: 0 1rem 1rem 0;
-    background: linear-gradient(
-      to right,
-      transparent 0 1.7rem,
-      #edf4ff 1.7rem 100%
-    );
+    background: #edf4ff;
   }
 
   .deals-desktop-filter-route__destination .deals-select__trigger {
@@ -4949,8 +4945,10 @@ body:has(.page-shell--deals-city)::before {
     top: calc(100% + 0.75rem);
     right: auto;
     left: 0;
-    width: min(32rem, calc(100vw - 2rem));
+    width: 100%;
+    max-width: 100%;
     max-height: min(39rem, var(--deals-destination-popover-max-height, calc(100vh - 5rem)));
+    box-sizing: border-box;
   }
 
   .deals-desktop-filter-route__destination .deals-destination-popover.is-above {
