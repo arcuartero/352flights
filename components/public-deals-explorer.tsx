@@ -2663,10 +2663,13 @@ function DealFlightCard({
           <div className="deals-ticket__airline">
             <AirlineLogo airlineName={airlineName} primaryAirlineCode={deal.primaryAirlineCode} />
             <div>
-              <strong>{airlineName}</strong>
               {showCityLabel || showMobileCityLabel ? (
-                <Link href={destinationHref}>{destinationName}</Link>
-              ) : null}
+                <Link className="deals-ticket__destination" href={destinationHref}>
+                  {destinationName}
+                </Link>
+              ) : (
+                <strong>{airlineName}</strong>
+              )}
             </div>
           </div>
         ) : showCityLabel || showMobileCityLabel || showAirlineLogo ? (

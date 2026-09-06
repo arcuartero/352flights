@@ -22,14 +22,17 @@
 .deals-ticket__airline strong {
   color: #082236;
   font-size: 1.45rem;
-  font-weight: 750;
+  font-weight: 600;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .deals-ticket__airline a {
-  color: #53677c;
-  font-size: 0.9rem;
+  color: #082236;
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .deals-ticket__airline a:hover { color: #155bd7; }
@@ -80,7 +83,7 @@
 .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__price {
   color: #082236;
   font-size: clamp(2.5rem, 30cqi, 5.5rem);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 1;
 }
@@ -208,7 +211,8 @@
 
 @media (max-width: 980px) {
   .deals-ticket__airline { padding-right: 3rem; }
-  .deals-ticket__airline strong { font-size: 1.2rem; }
+  .deals-ticket__airline strong,
+  .deals-ticket__airline a { font-size: 1.2rem; }
 
   .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__booking {
     padding: 1rem;
