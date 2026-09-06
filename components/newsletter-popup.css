@@ -24,16 +24,15 @@
 .newsletter-popup__close:focus-visible, .newsletter-popup__submit:focus-visible { outline: 3px solid var(--popup-blue); outline-offset: 4px; }
 .newsletter-popup__icon { position: relative; display: grid; place-items: center; width: 4.5rem; height: 4.5rem; margin: 0 auto 1.35rem; border-radius: 50%; background: #e5eeff; color: var(--popup-blue); }
 .newsletter-popup__icon i { position: absolute; top: .4rem; right: .3rem; width: .8rem; height: .8rem; border: 2px solid white; border-radius: 50%; background: var(--popup-red); }
-.newsletter-popup__eyebrow { margin: 0 0 1rem; color: var(--popup-blue); font-size: .875rem; font-weight: 800; line-height: 1.5; letter-spacing: .13em; text-transform: uppercase; }
-.newsletter-popup h2 { margin: 0; color: var(--popup-ink); font-family: inherit; font-size: clamp(1.85rem, 5vw, 2.45rem); font-weight: 800; line-height: 1.08; letter-spacing: -.045em; text-wrap: balance; }
-.newsletter-popup__description { margin: 1.05rem 0 1.9rem; color: #526181; font-size: 1.125rem; line-height: 1.55; text-wrap: balance; }
+.newsletter-popup__eyebrow { margin: 0 0 1rem; color: var(--popup-blue); font-size: .875rem; font-weight: 600; line-height: 1.5; letter-spacing: .13em; text-transform: uppercase; }
+.newsletter-popup h2 { margin: 0 0 1.9rem; color: var(--popup-ink); font-family: inherit; font-size: clamp(1.85rem, 5vw, 2.45rem); font-weight: 600; line-height: 1.08; letter-spacing: -.035em; text-wrap: balance; }
 .newsletter-popup__form { display: grid; gap: .9rem; }
 .newsletter-popup__field { display: flex; align-items: center; gap: .9rem; min-height: 3.7rem; padding: .7rem 1.1rem; border: 1.5px solid #6894ff; border-radius: 1.05rem; background: #fff; }
 .newsletter-popup__field:focus-within { border-color: var(--popup-blue); box-shadow: 0 0 0 3px #0755e91a; }
 .newsletter-popup__field svg { flex-shrink: 0; }
 .newsletter-popup__field input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; background: transparent; color: var(--popup-ink); font: inherit; font-size: 1.05rem; }
 .newsletter-popup__field input::placeholder { color: #596989; opacity: 1; }
-.newsletter-popup__submit { display: flex; align-items: center; justify-content: center; gap: 1rem; min-height: 3.7rem; padding: .8rem 1rem; border: 0; border-radius: 1.05rem; background: var(--popup-red); color: white; font: inherit; font-size: 1.15rem; font-weight: 800; line-height: 1.35; cursor: pointer; transition: background 160ms ease; }
+.newsletter-popup__submit { display: flex; align-items: center; justify-content: center; gap: 1rem; min-height: 3.7rem; padding: .8rem 1rem; border: 0; border-radius: 1.05rem; background: var(--popup-red); color: white; font: inherit; font-size: 1.15rem; font-weight: 600; line-height: 1.35; cursor: pointer; transition: background 160ms ease; }
 .newsletter-popup__submit:hover { background: #cf0e1d; }
 .newsletter-popup__submit:disabled { opacity: .65; cursor: wait; }
 .newsletter-popup__error { margin: 0; color: #b31426; font-size: .95rem; line-height: 1.5; }
@@ -41,6 +40,6 @@
 .newsletter-popup__success p { margin: 0; font-size: 1rem; line-height: 1.5; }
 .newsletter-popup__footnote { margin: 1.8rem 0 0; color: #76819a; font-size: .875rem; line-height: 1.5; }
 @keyframes newsletter-popup-enter { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@media (max-width: 480px) { .newsletter-popup { padding: 2.6rem 1.4rem 1.8rem; border-radius: 1.5rem; } .newsletter-popup__description { font-size: 1rem; } }
-@media (max-height: 650px) { .newsletter-popup { padding-block: 1.8rem 1.4rem; } .newsletter-popup__icon { width: 3.5rem; height: 3.5rem; margin-bottom: .8rem; } .newsletter-popup__description { margin-block: .8rem 1.2rem; } .newsletter-popup__footnote { margin-top: 1.2rem; } }
+@media (max-width: 480px) { .newsletter-popup { padding: 2.6rem 1.4rem 1.8rem; border-radius: 1.5rem; } }
+@media (max-height: 650px) { .newsletter-popup { padding-block: 1.8rem 1.4rem; } .newsletter-popup__icon { width: 3.5rem; height: 3.5rem; margin-bottom: .8rem; } .newsletter-popup__footnote { margin-top: 1.2rem; } }
 @media (prefers-reduced-motion: reduce) { .newsletter-popup[open] { animation: none; } .newsletter-popup__submit { transition: none; } }

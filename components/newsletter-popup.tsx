@@ -14,13 +14,13 @@ import "./newsletter-popup.css";
 const DELAY_MS = 45_000;
 const seenKey = "352flights-newsletter-popup-seen";
 const startedKey = "352flights-newsletter-popup-started";
-const copy: Record<Locale, { eyebrow: string; title: string; description: string; email: string; submit: string; footnote: string }> = {
-  es: { eyebrow: "Alertas por email", title: "No te pierdas las mejores ofertas", description: "Recibe por email oportunidades reales desde Luxemburgo.", email: "Tu email", submit: "Suscribirme gratis", footnote: "Gratis · Baja en 1 clic" },
-  en: { eyebrow: "Email alerts", title: "Don’t miss the best flight deals", description: "Get real flight deals from Luxembourg straight to your inbox.", email: "Your email", submit: "Subscribe for free", footnote: "Free · Unsubscribe in 1 click" },
-  fr: { eyebrow: "Alertes par email", title: "Ne manquez pas les meilleures offres", description: "Recevez par email de vraies bonnes affaires au départ du Luxembourg.", email: "Votre email", submit: "M’inscrire gratuitement", footnote: "Gratuit · Désinscription en 1 clic" },
-  de: { eyebrow: "Angebote per E-Mail", title: "Verpasse keine Flugangebote", description: "Erhalte echte Flugangebote ab Luxemburg direkt in dein Postfach.", email: "Deine E-Mail", submit: "Kostenlos abonnieren", footnote: "Kostenlos · Mit 1 Klick abmelden" },
-  pt: { eyebrow: "Alertas por email", title: "Não percas as melhores ofertas", description: "Recebe por email oportunidades reais a partir do Luxemburgo.", email: "O teu email", submit: "Subscrever grátis", footnote: "Grátis · Cancelar em 1 clique" },
-  it: { eyebrow: "Avvisi via email", title: "Non perderti le migliori offerte", description: "Ricevi via email vere occasioni per volare dal Lussemburgo.", email: "La tua email", submit: "Iscrivimi gratis", footnote: "Gratis · Cancellazione in 1 clic" },
+const copy: Record<Locale, { eyebrow: string; title: string; email: string; submit: string; footnote: string }> = {
+  es: { eyebrow: "Alertas por email", title: "No te pierdas las mejores ofertas", email: "Tu email", submit: "Suscribirme gratis", footnote: "Gratis · Baja en 1 clic" },
+  en: { eyebrow: "Email alerts", title: "Don’t miss the best flight deals", email: "Your email", submit: "Subscribe for free", footnote: "Free · Unsubscribe in 1 click" },
+  fr: { eyebrow: "Alertes par email", title: "Ne manquez pas les meilleures offres", email: "Votre email", submit: "M’inscrire gratuitement", footnote: "Gratuit · Désinscription en 1 clic" },
+  de: { eyebrow: "Angebote per E-Mail", title: "Verpasse keine Flugangebote", email: "Deine E-Mail", submit: "Kostenlos abonnieren", footnote: "Kostenlos · Mit 1 Klick abmelden" },
+  pt: { eyebrow: "Alertas por email", title: "Não percas as melhores ofertas", email: "O teu email", submit: "Subscrever grátis", footnote: "Grátis · Cancelar em 1 clique" },
+  it: { eyebrow: "Avvisi via email", title: "Non perderti le migliori offerte", email: "La tua email", submit: "Iscrivimi gratis", footnote: "Gratis · Cancellazione in 1 clic" },
 };
 
 export function NewsletterPopup() {
@@ -99,7 +99,6 @@ export function NewsletterPopup() {
       ref={dialogRef}
       className="newsletter-popup"
       aria-labelledby="newsletter-popup-title"
-      aria-describedby="newsletter-popup-description"
       onCancel={() => setOpen(false)}
       onKeyDown={(event) => {
         if (event.key !== "Tab") return;
@@ -124,7 +123,6 @@ export function NewsletterPopup() {
       <span className="newsletter-popup__icon" aria-hidden="true"><Send size={32} fill="currentColor" strokeWidth={1.5} /><i /></span>
       <p className="newsletter-popup__eyebrow">{content.eyebrow}</p>
       <h2 id="newsletter-popup-title">{content.title}</h2>
-      <p id="newsletter-popup-description" className="newsletter-popup__description">{content.description}</p>
       {status?.tone === "success" ? (
         <div className="newsletter-popup__success" role="status"><Check aria-hidden="true" size={28} /><p>{status.message}</p></div>
       ) : (
