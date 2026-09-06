@@ -266,15 +266,75 @@
   .deals-ticket__airline a { font-size: 1.2rem; }
 
   .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__booking {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
     padding: 1rem;
     border-top: 1px dashed #b9c1ce;
-    gap: 0.55rem;
+    gap: 0.8rem 0.6rem;
   }
 
-  .deals-ticket__usual-price { margin-top: 0; }
-  .deals-ticket__usual-price s { font-size: 1.45rem; }
+  .deals-search-card--ticket .deals-ticket__badge {
+    grid-area: 1 / 1;
+    min-height: 2.1rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.85rem;
+    background: #edf8f1;
+    gap: 0.4rem;
+    font-size: clamp(0.65rem, 3.2cqi, 0.82rem);
+  }
 
-  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__price { font-size: 3.4rem; }
+  .deals-search-card--ticket .deals-ticket__usual-price {
+    grid-area: 2 / 1;
+    margin: 0;
+    gap: 0.5rem;
+  }
+
+  .deals-search-card--ticket .deals-ticket__usual-price s {
+    font-size: clamp(1rem, 6cqi, 1.45rem);
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__price {
+    grid-area: 2 / 1 / 3 / 3;
+    min-width: 0;
+    font-size: clamp(2rem, 15cqi, 3.4rem);
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket-savings .deals-search-card__price {
+    grid-column: 2;
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__saving-row {
+    display: contents;
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__saving {
+    grid-area: 1 / 1 / 2 / -1;
+    font-size: clamp(0.7rem, 3.5cqi, 0.95rem);
+    line-height: 1.35;
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket-savings .deals-search-card__saving {
+    grid-column: 2 / -1;
+    padding-left: 0.65rem;
+    border-left: 1px solid #dfe4eb;
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__secondary-actions {
+    grid-area: 2 / 3;
+    justify-self: end;
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__booking-actions {
+    grid-area: 3 / 1 / 4 / -1;
+    margin: 0;
+  }
+
+  .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__cta {
+    min-height: 2.9rem;
+    border-radius: 0.8rem;
+    font-size: 1rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
