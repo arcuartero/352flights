@@ -51,6 +51,7 @@ body:has(.v2) .site-chrome {
 
 body:has(.v2) .scroll-top-button {
   border-color: rgba(31, 95, 214, 0.22);
+  border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.94);
   color: #1d2733;
   box-shadow: 0 8px 22px rgba(17, 32, 46, 0.16);
@@ -272,7 +273,7 @@ body:has(.v2) .scroll-top-button__arrow {
   min-height: var(--v2-topbar-action-height, 3rem);
   padding: 0 1.35rem;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: var(--v2-blue-strong);
   color: var(--v2-cream);
   font-size: 0.9rem;
@@ -1635,7 +1636,7 @@ body:has(.v2) .scroll-top-button__arrow {
   gap: 0.5rem;
   padding: 0.4rem;
   border: 1px solid var(--v2-hairline);
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: var(--v2-cream);
   box-shadow: 0 18px 44px rgba(16, 22, 31, 0.1);
 }
@@ -1662,7 +1663,7 @@ body:has(.v2) .scroll-top-button__arrow {
   min-height: 3.25rem;
   padding: 0.7rem 1.5rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: var(--v2-accent);
   color: var(--v2-cream);
   font-weight: 650;
