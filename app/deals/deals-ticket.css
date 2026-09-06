@@ -13,6 +13,10 @@
   font-weight: 600;
 }
 
+.deals-redesign .deals-search-card--ticket .deals-share-button--card-corner {
+  box-shadow: none;
+}
+
 .deals-ticket__airline {
   display: flex;
   align-items: center;
