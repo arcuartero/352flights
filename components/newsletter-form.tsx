@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
+import { rememberNewsletterSubscription } from "@/lib/newsletter-popup-client";
 import {
   subscriptionErrorMessage,
   subscriptionSuccessMessage,
@@ -67,6 +68,7 @@ export function NewsletterForm() {
               return;
             }
 
+            rememberNewsletterSubscription();
             form.reset();
             setStatus({
               tone: "success",

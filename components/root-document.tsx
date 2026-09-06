@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { GlobalFlightRouteLoader } from "@/components/flight-route-loader";
+import { NewsletterPopup } from "@/components/newsletter-popup";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { SiteChrome } from "@/components/site-chrome";
 import { WebActivityLog } from "@/components/web-activity-log";
@@ -45,6 +46,7 @@ export function RootDocument({
           </Suspense>
           <SiteChrome />
           {children}
+          <NewsletterPopup />
           <WebActivityLog />
           <ScrollToTopButton />
         </LanguageProvider>

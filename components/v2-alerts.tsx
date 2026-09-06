@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
+import { rememberNewsletterSubscription } from "@/lib/newsletter-popup-client";
 import {
   subscriptionErrorMessage,
   subscriptionSuccessMessage,
@@ -63,6 +64,7 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
           });
           return;
         }
+        rememberNewsletterSubscription();
         setStatus({
           tone: "success",
           message: subscriptionSuccessMessage(payload, {
