@@ -727,7 +727,7 @@ export function V2Landing({
               priority
               quality={82}
               sizes="100vw"
-              src="/deals-hero-airplane-cabin-3.jpeg"
+              src="/home-hero-airplane-cabin.jpg"
             />
             <span className="v2-hero__overlay" aria-hidden="true" />
           </div>
