@@ -51,6 +51,7 @@ import {
   normalizePublicAirlineName,
 } from "@/lib/public-airlines";
 import {
+  disableDirectOnlyWhenOnlyConnectingFares,
   getPublicDealsSearchQueryKey,
   PUBLIC_DEALS_SEARCH_MAX_LIMIT,
   PUBLIC_DEALS_SEARCH_PAGE_SIZE,
@@ -3391,6 +3392,21 @@ export function PublicDealsExplorer({
   );
   const sourceDeals =
     mode === "results" && serverSearchResult ? serverSearchResult.deals : data.deals;
+
+  useEffect(() => {
+    if (mode !== "city" || !draftFilters.directOnly) return;
+
+    const filtersWithFallback = disableDirectOnlyWhenOnlyConnectingFares(
+      sourceDeals,
+      coerceFiltersForMode(draftFilters),
+      now,
+    );
+    if (filtersWithFallback.directOnly) return;
+
+    setDraftFilters((current) =>
+      current.directOnly ? { ...current, directOnly: false } : current,
+    );
+  }, [coerceFiltersForMode, draftFilters, mode, now, sourceDeals]);
 
   useEffect(() => {
     if (mode !== "results" || !initialSearchResult) return;

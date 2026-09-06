@@ -20,6 +20,7 @@ import {
 import { getLocalizedDestinationPath, type Locale } from "@/lib/locales";
 import { getPublicCityDealsPageData, type PublicDealsPageData } from "@/lib/ops";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
+import { disableDirectOnlyWhenOnlyConnectingFares } from "@/lib/public-deals-query";
 import {
   parseDealSearchFilters,
   parseDealSearchSort,
@@ -352,6 +353,11 @@ export async function DealsCityPageContent({
   const initialSharedFareId = Array.isArray(sharedFareParam)
     ? sharedFareParam[0] ?? null
     : sharedFareParam ?? null;
+  const initialFilters = disableDirectOnlyWhenOnlyConnectingFares(
+    cityData.deals,
+    parseDealSearchFilters(resolvedSearchParams),
+    new Date(),
+  );
 
   return (
     <main className="page-shell page-shell--deals-city">
@@ -363,7 +369,7 @@ export async function DealsCityPageContent({
         data={cityData}
         destinationCatalog={DESTINATION_CATALOG}
         destinationPhotoUrls={destinationPhotoUrls}
-        initialFilters={parseDealSearchFilters(resolvedSearchParams)}
+        initialFilters={initialFilters}
         initialSharedFareId={initialSharedFareId}
         initialSort={parseDealSearchSort(resolvedSearchParams)}
         lockedDestinationCity={cityName}

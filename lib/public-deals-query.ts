@@ -244,6 +244,26 @@ export function matchesPublicDealSearchFilters(
   return filters.themeFilter === "any" || getDestinationTheme(deal.destinationCity) === filters.themeFilter;
 }
 
+export function disableDirectOnlyWhenOnlyConnectingFares(
+  deals: CampaignPreviewDeal[],
+  filters: DealSearchFilters,
+  now: Date,
+): DealSearchFilters {
+  if (!filters.directOnly) return filters;
+
+  const filtersWithConnections = { ...filters, directOnly: false };
+  const hasDirectFares = deals.some((deal) =>
+    matchesPublicDealSearchFilters(deal, filters, now),
+  );
+  const hasConnectingFares = deals.some(
+    (deal) =>
+      deal.maxStops !== "NON_STOP" &&
+      matchesPublicDealSearchFilters(deal, filtersWithConnections, now),
+  );
+
+  return !hasDirectFares && hasConnectingFares ? filtersWithConnections : filters;
+}
+
 function compareByPrice(left: CampaignPreviewDeal, right: CampaignPreviewDeal) {
   return left.dealPrice !== right.dealPrice
     ? left.dealPrice - right.dealPrice
