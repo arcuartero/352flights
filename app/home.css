@@ -175,7 +175,7 @@ body:has(.v2) .scroll-top-button__arrow {
   min-width: calc(var(--v2-topbar-action-height) * 1.48);
   height: var(--v2-topbar-action-height);
   border: 1px solid rgba(12, 25, 43, 0.12);
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.86);
   box-shadow: 0 0.9rem 2.2rem rgba(12, 25, 43, 0.08);
   color: inherit;
@@ -1065,13 +1065,13 @@ body:has(.v2) .scroll-top-button__arrow {
 
 .v2-smart-flights > h2 {
   margin: 0 0 clamp(1.35rem, 2.6vw, 2.25rem);
-  color: var(--v2-accent);
-  font-size: clamp(1rem, 1.45vw, 1.35rem);
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  color: var(--v2-ink);
+  font-size: clamp(1.8rem, 4vw, 2.9rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
   line-height: 1.15;
   text-align: center;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .v2-smart-flights__grid {
@@ -2746,8 +2746,8 @@ body:has(.v2) .scroll-top-button__arrow {
 
   .v2-smart-flights > h2 {
     margin-bottom: 1.15rem;
-    font-size: 0.98rem;
-    letter-spacing: 0.07em;
+    font-size: 1.8rem;
+    letter-spacing: -0.035em;
   }
 
   .v2-smart-flights__icon {
