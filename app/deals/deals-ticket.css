@@ -3,9 +3,13 @@
   --ticket-green: #008345;
   border: 1px solid #cfd7e1;
   background: #fff;
-  box-shadow:
-    0 2px 8px rgba(17, 32, 46, 0.08),
-    0 14px 32px rgba(17, 32, 46, 0.14);
+  box-shadow: none;
+}
+
+.page-shell--deals-search .deals-search-page-card,
+.page-shell--deals-search .deals-search-layout,
+.page-shell--deals-city .deals-city-page .deals-search-layout {
+  background: var(--v2-blue-wash);
 }
 
 .deals-redesign .deals-date-picker__trigger strong,
