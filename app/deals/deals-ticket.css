@@ -1,9 +1,16 @@
 /* Flight tickets: a white itinerary and a perforated fare stub. */
 .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket {
   --ticket-green: #008345;
-  border: 1px solid #dfe4e9;
+  border: 1px solid #cfd7e1;
   background: #fff;
-  box-shadow: 0 12px 32px rgba(17, 32, 46, 0.11);
+  box-shadow:
+    0 2px 8px rgba(17, 32, 46, 0.08),
+    0 14px 32px rgba(17, 32, 46, 0.14);
+}
+
+.deals-redesign .deals-date-picker__trigger strong,
+.deals-redesign .deals-desktop-filter-card__direct strong {
+  font-weight: 600;
 }
 
 .deals-ticket__airline {
@@ -149,10 +156,6 @@
   .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket {
     grid-template-columns: minmax(0, 69fr) minmax(0, 31fr);
     border-radius: 1.4rem;
-    mask-image:
-      radial-gradient(circle at 69% 0, transparent 0.85rem, #000 calc(0.85rem + 1px)),
-      radial-gradient(circle at 69% 100%, transparent 0.85rem, #000 calc(0.85rem + 1px));
-    mask-composite: intersect;
   }
 
   .deals-search-card--ticket::before,
@@ -163,14 +166,22 @@
     z-index: 2;
     width: calc(1.7rem + 2px);
     height: calc(1.7rem + 2px);
-    border: 1px solid #dfe4e9;
+    border: 1px solid #cfd7e1;
     border-radius: 50%;
+    background: #fff;
     pointer-events: none;
     transform: translateX(-50%);
   }
 
-  .deals-search-card--ticket::before { top: calc(-0.85rem - 1px); }
-  .deals-search-card--ticket::after { bottom: calc(-0.85rem - 1px); }
+  .deals-search-card--ticket::before {
+    top: calc(-0.85rem - 1px);
+    clip-path: inset(50% 0 0);
+  }
+
+  .deals-search-card--ticket::after {
+    bottom: calc(-0.85rem - 1px);
+    clip-path: inset(0 0 50%);
+  }
 
   .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__content {
     gap: 1rem;
