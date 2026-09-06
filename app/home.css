@@ -2164,7 +2164,7 @@ body:has(.v2) .scroll-top-button__arrow {
     min-height: 2.2rem;
     padding: 0.3rem 1.3rem 0.3rem 0;
     border: 0;
-    border-radius: 0.45rem;
+    border-radius: 0;
     background: transparent;
     box-shadow: none;
   }
@@ -2207,21 +2207,21 @@ body:has(.v2) .scroll-top-button__arrow {
   .v2-search__custom-select .deals-select__trigger:is(:hover, .is-open),
   .v2-search__field.deals-date-picker .deals-date-picker__trigger:is(:hover, .is-open) {
     background: #f0f5ff;
-    box-shadow: inset 0 -2px 0 var(--v2-blue-strong);
+    box-shadow: inset 0 -2px 0 #a8c9f2;
   }
 
   .v2-search__custom-select .deals-select__trigger:focus-visible,
   .v2-search__field.deals-date-picker .deals-date-picker__trigger:focus-visible {
     outline: 2px solid var(--v2-blue-strong);
     outline-offset: 4px;
-    box-shadow: inset 0 -2px 0 var(--v2-blue-strong);
+    box-shadow: inset 0 -2px 0 #a8c9f2;
   }
 
   .v2-search__field--destination .deals-select__trigger,
   .v2-search__field.v2-search__field--when .deals-date-picker__trigger,
   .v2-search__field--trip .deals-select__trigger,
   .v2-search__field--budget .deals-select__trigger {
-    box-shadow: inset 0 -2px 0 var(--v2-blue-strong);
+    box-shadow: inset 0 -2px 0 #a8c9f2;
   }
 
   .v2-search__bar .v2-search__toggle {
