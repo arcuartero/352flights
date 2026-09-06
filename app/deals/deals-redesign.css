@@ -4494,8 +4494,8 @@ body:has(.page-shell--deals-city)::before {
 }
 
 @media (max-height: 800px) and (min-width: 561px) {
-  .deals-redesign .deals-date-picker__popover,
-  .deals-redesign .deals-date-picker__popover.is-above {
+  .deals-redesign .deals-date-picker__popover:not(.is-presets-only),
+  .deals-redesign .deals-date-picker__popover.is-above:not(.is-presets-only) {
     position: fixed;
     top: 50%;
     bottom: auto;

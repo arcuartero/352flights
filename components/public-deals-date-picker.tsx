@@ -207,9 +207,25 @@ export function PublicDealsDatePicker({
     const spaceBelow = Math.max(0, window.innerHeight - controlRect.bottom - viewportGap);
 
     if (!calendarVisible) {
-      setUsesViewportLayer(window.innerWidth <= 820);
-      setOpensAbove(false);
-      setPopoverMaxHeight(Math.floor(Math.max(240, window.innerHeight - 32)));
+      const shouldUseViewportLayer = window.innerWidth <= 820;
+      const preferredPopoverHeight = Math.min(
+        560,
+        Math.max(240, popoverRef.current?.scrollHeight ?? 420),
+      );
+      const shouldOpenAbove =
+        !shouldUseViewportLayer &&
+        spaceBelow < preferredPopoverHeight &&
+        spaceAbove > spaceBelow;
+
+      setUsesViewportLayer(shouldUseViewportLayer);
+      setOpensAbove(shouldOpenAbove);
+      setPopoverMaxHeight(
+        Math.floor(
+          shouldUseViewportLayer
+            ? Math.max(240, window.innerHeight - 32)
+            : Math.max(240, shouldOpenAbove ? spaceAbove : spaceBelow),
+        ),
+      );
       return;
     }
 
@@ -265,14 +281,18 @@ export function PublicDealsDatePicker({
     };
 
     const handleResize = () => updatePopoverPlacement(showsCalendar);
+    const placementFrame = requestAnimationFrame(handleResize);
 
     window.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleResize, true);
     return () => {
+      cancelAnimationFrame(placementFrame);
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize, true);
     };
   }, [closePicker, isOpen, showsCalendar]);
 
