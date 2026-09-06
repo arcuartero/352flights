@@ -97,7 +97,7 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
         className="v2-modal__dialog"
         role="dialog"
       >
-        <button aria-label={t("alerts.close")} className="v2-modal__close" onClick={onClose} type="button">
+        <button autoFocus aria-label={t("alerts.close")} className="v2-modal__close" onClick={onClose} type="button">
           <X strokeWidth={2} />
         </button>
 
@@ -128,7 +128,6 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
                 <Mail strokeWidth={1.8} />
                 <input
                   autoComplete="email"
-                  autoFocus
                   id="v2-alerts-email"
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder={t("common.emailPlaceholder")}
