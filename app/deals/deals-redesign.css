@@ -2031,6 +2031,8 @@ body:has(.page-shell--deals-city)::before {
 }
 
 .deals-search-compact-filters {
+  --desktop-filter-border: rgba(35, 100, 223, 0.19);
+  --desktop-filter-border-strong: rgba(35, 100, 223, 0.62);
   position: var(--compact-filter-placement, fixed);
   top: var(--compact-filter-top, 5.75rem);
   left: var(--compact-filter-left);
@@ -2038,7 +2040,7 @@ body:has(.page-shell--deals-city)::before {
   display: grid;
   width: var(--compact-filter-width);
   max-height: calc(100vh - 7rem);
-  gap: 0.7rem;
+  gap: 1.15rem;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -2046,6 +2048,14 @@ body:has(.page-shell--deals-city)::before {
   box-shadow: none;
   backdrop-filter: none;
   animation: deals-compact-filters-in 160ms ease-out both;
+}
+
+.deals-search-compact-filters .deals-desktop-filter-card__group {
+  gap: 0.7rem;
+}
+
+.deals-search-compact-filters .deals-desktop-filter-card__group > legend {
+  margin-bottom: 0.7rem;
 }
 
 @keyframes deals-compact-filters-in {

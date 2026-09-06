@@ -4669,7 +4669,7 @@ export function PublicDealsExplorer({
     </>
   );
 
-  const renderDesktopFilters = () => {
+  const renderDesktopFilters = (compact = false) => {
     const destinationValue = lockedDestinationFilter ?? draftFilters.destinationFilter;
     const selectedWeekdayFilters = getSelectedDepartureWeekdayFilters(draftFilters);
     const selectedDurationFilters = getSelectedDurationFilters(draftFilters);
@@ -4679,7 +4679,7 @@ export function PublicDealsExplorer({
 
     return (
       <>
-        <h2 className="deals-desktop-filter-title" id={desktopFiltersTitleId}>
+        <h2 className="deals-desktop-filter-title" id={compact ? undefined : desktopFiltersTitleId}>
           {t("deals.filters.refineResults")}
         </h2>
 
@@ -4822,7 +4822,7 @@ export function PublicDealsExplorer({
           </div>
         </fieldset>
 
-        {shouldShowPriceRangeFilter ? (
+        {!compact && shouldShowPriceRangeFilter ? (
           <div className="deals-desktop-filter-card__group deals-desktop-filter-card__price">
             <h3>{t("deals.filters.maximumPrice")}</h3>
             <PublicDealsPriceRange
@@ -4840,7 +4840,7 @@ export function PublicDealsExplorer({
           </div>
         ) : null}
 
-        {shouldShowAirlineFilter ? (
+        {!compact && shouldShowAirlineFilter ? (
           <div className="deals-desktop-filter-card__group deals-desktop-filter-card__airlines">
             <DealsAirlineFilter
               excludedAirlines={draftFilters.excludedAirlines}
@@ -4857,14 +4857,14 @@ export function PublicDealsExplorer({
     );
   };
 
-  const renderCompactSidebar = (includeDestination: boolean) => {
+  const renderCompactSidebar = () => {
     if (!showCompactSidebar || !compactSidebarPosition) {
       return null;
     }
 
     return createPortal(
       <div
-        className="deals-search-compact-filters"
+        className="deals-redesign deals-search-compact-filters"
         ref={compactSidebarRef}
         style={
           {
@@ -4875,71 +4875,7 @@ export function PublicDealsExplorer({
           } as CSSProperties
         }
       >
-        {includeDestination ? (
-          <DealsSelect
-            className="is-destination-selected"
-            label={t("common.destination")}
-            mobileDestinationSheet
-            onChange={(nextValue) =>
-              setDraftFilters((current) => ({
-                ...current,
-                destinationFilter: nextValue,
-              }))
-            }
-            options={destinationOptions}
-            popularOptionValues={popularDestinationValues}
-            value={draftFilters.destinationFilter}
-          />
-        ) : null}
-
-        <DealsSelect
-          label={t("deals.departureDay")}
-          onChange={(nextValue) =>
-            setDraftFilters((current) => ({
-              ...current,
-              departureWeekdayFilter: nextValue as DepartureWeekdayFilter,
-              departureWeekdayFilters:
-                nextValue === "any"
-                  ? []
-                  : [nextValue as DepartureWeekdayFilterValue],
-            }))
-          }
-          options={departureWeekdayOptions}
-          value={draftFilters.departureWeekdayFilter}
-        />
-
-        <DealsDatePicker
-          dateFrom={draftFilters.dateFrom}
-          dateTo={draftFilters.dateTo}
-          label={t("common.when")}
-          onChange={(selection) =>
-            setDraftFilters((current) => ({
-              ...current,
-              ...selection,
-            }))
-          }
-          presetOptions={resultsWhenOptions}
-          value={draftFilters.whenFilter}
-        />
-
-          <>
-            <DealsSelect
-              label={t("deals.duration.any")}
-              clearValue="any"
-              columns={3}
-              onChange={(nextValue) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  durationFilter: nextValue as DurationFilter,
-                  durationFilters:
-                    nextValue === "any" ? [] : [nextValue as DurationFilterValue],
-                  tripFilter: "any",
-                }))
-              }
-              options={resultsDurationOptions}
-              value={draftFilters.durationFilter}
-            />
-          </>
+        {renderDesktopFilters(true)}
       </div>,
       document.body,
     );
@@ -5258,7 +5194,7 @@ export function PublicDealsExplorer({
                   />
                 </div>
                 {renderDesktopFilters()}
-                {renderCompactSidebar(false)}
+                {renderCompactSidebar()}
               </aside>
 
               <div className="deals-search-layout__results">
@@ -5339,7 +5275,7 @@ export function PublicDealsExplorer({
                 <PublicDealsMap cities={mapCities} locale={locale} />
               ) : null}
               {renderDesktopFilters()}
-              {renderCompactSidebar(true)}
+              {renderCompactSidebar()}
             </aside>
 
           <div className="deals-search-layout__results">
