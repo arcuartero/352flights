@@ -2251,6 +2251,8 @@ body:has(.v2) .scroll-top-button__arrow {
   .v2-search__field--budget .deals-select__menu {
     left: 0;
     top: calc(100% + 0.65rem);
+    max-height: var(--deals-select-max-height, 624px);
+    overflow-y: auto;
     max-width: calc(100vw - 2rem);
     display: grid;
     gap: 0.55rem;
@@ -2260,6 +2262,12 @@ body:has(.v2) .scroll-top-button__arrow {
     background: #f8fafc;
     box-shadow: 0 28px 70px rgba(7, 25, 50, 0.22);
     animation: destination-popover-in 180ms ease-out both;
+  }
+
+  .v2-search__field--trip .deals-select__menu.is-above,
+  .v2-search__field--budget .deals-select__menu.is-above {
+    top: auto;
+    bottom: calc(100% + 0.65rem);
   }
 
   .v2-search__field--trip .deals-select__menu {
@@ -2325,6 +2333,7 @@ body:has(.v2) .scroll-top-button__arrow {
 
   .v2-search__field--when .deals-date-picker__popover--home {
     --v2-accent: #2364df;
+    left: var(--deals-date-picker-left-offset, 0px);
     top: calc(100% + 0.65rem);
     border: 1px solid rgba(30, 66, 112, 0.14);
     border-radius: 1.35rem;
@@ -2333,7 +2342,18 @@ body:has(.v2) .scroll-top-button__arrow {
     animation: destination-popover-in 180ms ease-out both;
   }
 
-  .v2-search__field--when .deals-date-picker__popover--home.is-above {
+  .v2-search__field--when .deals-date-picker__popover--home:not(.is-presets-only) {
+    position: absolute;
+    top: calc(100% + 0.65rem);
+    bottom: auto;
+    left: var(--deals-date-picker-left-offset, 0px);
+    height: min(37rem, var(--deals-date-picker-max-height, 40rem));
+    max-height: var(--deals-date-picker-max-height, 40rem);
+    transform: none;
+  }
+
+  .v2-search__field--when .deals-date-picker__popover--home.is-above,
+  .v2-search__field--when .deals-date-picker__popover--home.is-above:not(.is-presets-only) {
     top: auto;
     bottom: calc(100% + 0.65rem);
   }

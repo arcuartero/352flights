@@ -18,6 +18,7 @@ import {
 import { createPortal } from "react-dom";
 
 import type { PublicDealsSelectOption } from "@/components/public-deals-select";
+import { getGroupedDropdownPlacement } from "@/lib/grouped-dropdown-placement";
 import { useI18n, type Locale } from "@/lib/i18n";
 import { getWhenFilterDateRange, type WhenFilter } from "@/lib/public-deals-search";
 
@@ -123,6 +124,7 @@ export function PublicDealsDatePicker({
   const maxDate = dateToKey(addDays(addMonths(startOfMonth(today), 19), -1));
   const [opensAbove, setOpensAbove] = useState(false);
   const [popoverMaxHeight, setPopoverMaxHeight] = useState(560);
+  const [popoverLeftOffset, setPopoverLeftOffset] = useState(0);
   const [usesViewportLayer, setUsesViewportLayer] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -197,6 +199,17 @@ export function PublicDealsDatePicker({
     if (!controlRect) {
       return;
     }
+
+    const groupedPlacement = getGroupedDropdownPlacement(rootRef.current);
+    if (groupedPlacement) {
+      const width = calendarVisible ? Math.min(624, window.innerWidth - 32) : 448;
+      setUsesViewportLayer(false);
+      setOpensAbove(groupedPlacement.opensAbove);
+      setPopoverMaxHeight(groupedPlacement.maxHeight);
+      setPopoverLeftOffset(Math.min(0, window.innerWidth - 16 - controlRect.left - width));
+      return;
+    }
+    setPopoverLeftOffset(0);
 
     const viewportGap = 12;
     const topbarBottom = document
@@ -357,6 +370,7 @@ export function PublicDealsDatePicker({
       style={
         {
           "--deals-date-picker-max-height": `${popoverMaxHeight}px`,
+          "--deals-date-picker-left-offset": `${popoverLeftOffset}px`,
         } as CSSProperties
       }
     >

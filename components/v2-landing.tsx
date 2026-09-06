@@ -748,6 +748,7 @@ export function V2Landing({
             {/* Search — the shared fare engine, docked inside the hero card */}
             <div
               className="v2-search__bar"
+              data-dropdown-placement-group
               data-reveal
               id="v2-search"
               style={{ "--d": "440ms" } as React.CSSProperties}

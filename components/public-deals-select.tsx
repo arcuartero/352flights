@@ -14,6 +14,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { getCountryFlagSrc } from "@/lib/airport-countries";
+import { getGroupedDropdownPlacement } from "@/lib/grouped-dropdown-placement";
 import { useI18n } from "@/lib/i18n";
 
 export type PublicDealsSelectOption = {
@@ -140,7 +141,15 @@ export function PublicDealsSelect({
   }, [cancelPendingSelection]);
 
   const updateDesktopPopoverPlacement = useCallback(() => {
-    if (!mobileDestinationSheet || window.innerWidth <= 820) return;
+    if (window.innerWidth <= 820) return;
+
+    const groupedPlacement = getGroupedDropdownPlacement(rootRef.current);
+    if (groupedPlacement) {
+      setDesktopPopoverOpensAbove(groupedPlacement.opensAbove);
+      setDesktopPopoverMaxHeight(Math.min(624, groupedPlacement.maxHeight));
+      return;
+    }
+    if (!mobileDestinationSheet) return;
 
     const root = rootRef.current;
     const anchor = root?.closest<HTMLElement>(".deals-desktop-filter-route") ?? root;
@@ -170,7 +179,8 @@ export function PublicDealsSelect({
   useEffect(() => cancelPendingSelection, [cancelPendingSelection]);
 
   useEffect(() => {
-    if (!isOpen || !mobileDestinationSheet || isMobileSheetViewport) return;
+    if (!isOpen || isMobileSheetViewport) return;
+    if (!mobileDestinationSheet && !rootRef.current?.closest("[data-dropdown-placement-group]")) return;
 
     const handleViewportChange = () => updateDesktopPopoverPlacement();
     const handleScroll = (event: Event) => {
@@ -629,7 +639,14 @@ export function PublicDealsSelect({
       ) : null}
 
       {isOpen && (!usesMobileSheet || (!isMobileSheetViewport && !mobileDestinationSheet)) ? (
-        <div aria-labelledby={`${listboxId}-label`} className={`deals-select__menu${columns === 3 ? " deals-select__menu--three-columns" : ""}`} id={listboxId} role="listbox">
+        <div
+          aria-labelledby={`${listboxId}-label`}
+          className={`deals-select__menu${columns === 3 ? " deals-select__menu--three-columns" : ""}${desktopPopoverOpensAbove ? " is-above" : ""}`}
+          id={listboxId}
+          ref={desktopPopoverRef}
+          role="listbox"
+          style={{ "--deals-select-max-height": `${desktopPopoverMaxHeight}px` } as CSSProperties}
+        >
           {options.map((option, index) => {
             const isConfirming = option.value === pendingValue;
             const isSelected = isConfirming || (pendingValue === null && option.value === value);
