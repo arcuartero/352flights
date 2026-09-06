@@ -85,6 +85,7 @@ export function PublicDealsSelect({
   const listboxId = useId();
   const sheetTitleId = useId();
   const searchLabelId = useId();
+  const desktopPickerId = useId();
   const selectedValueId = `${listboxId}-value`;
   const valueIndex = options.findIndex((option) => option.value === value);
   const selectedIndex = valueIndex >= 0
@@ -186,8 +187,12 @@ export function PublicDealsSelect({
       };
     }
 
-    setActiveIndex(selectedIndex);
-    requestAnimationFrame(() => optionRefs.current[selectedIndex]?.focus());
+    if (mobileDestinationSheet) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
+    } else {
+      setActiveIndex(selectedIndex);
+      requestAnimationFrame(() => optionRefs.current[selectedIndex]?.focus());
+    }
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) closeSelect(false);
@@ -348,6 +353,116 @@ export function PublicDealsSelect({
     );
   };
 
+  const renderDestinationPickerContent = () => (
+    <>
+      <label className="deals-destination-sheet__search" htmlFor={searchLabelId}>
+        <Search aria-hidden="true" />
+        <span className="sr-only">{t("destinationPicker.searchLabel")}</span>
+        <input
+          autoComplete="off"
+          id={searchLabelId}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder={t("destinationPicker.searchPlaceholder")}
+          ref={searchInputRef}
+          type="search"
+          value={searchQuery}
+        />
+        {searchQuery ? (
+          <button
+            aria-label={t("destinationPicker.clearSearch")}
+            onClick={() => {
+              setSearchQuery("");
+              searchInputRef.current?.focus();
+            }}
+            type="button"
+          >
+            <X aria-hidden="true" />
+          </button>
+        ) : null}
+      </label>
+
+      <div className="deals-destination-sheet__body">
+        {searchQuery ? (
+          <section className="deals-destination-sheet__section">
+            <h3>{t("destinationPicker.searchResults")}</h3>
+            {filteredOptions.length > 0 ? (
+              <div className="deals-destination-sheet__list">
+                {filteredOptions.map((option) => renderSheetOption(option))}
+              </div>
+            ) : (
+              <p className="deals-destination-sheet__empty">
+                {t("destinationPicker.noResults")}
+              </p>
+            )}
+          </section>
+        ) : (
+          <>
+            {options.find((option) => option.value === "any" && !option.disabled)
+              ? renderSheetOption(
+                  options.find((option) => option.value === "any")!,
+                  <Sparkles />,
+                )
+              : null}
+
+            {typeof mobileDirectOnly === "boolean" &&
+            mobileDirectOnlyLabel &&
+            onMobileDirectOnlyChange ? (
+              <button
+                aria-pressed={mobileDirectOnly}
+                className={`deals-destination-sheet__filter${mobileDirectOnly ? " is-active" : ""}`}
+                onClick={() => onMobileDirectOnlyChange(!mobileDirectOnly)}
+                type="button"
+              >
+                <span
+                  aria-hidden="true"
+                  className="deals-destination-sheet__filter-icon"
+                >
+                  <Plane />
+                </span>
+                <span>{mobileDirectOnlyLabel}</span>
+                <span
+                  aria-hidden="true"
+                  className="deals-destination-sheet__filter-switch"
+                >
+                  <i />
+                </span>
+              </button>
+            ) : null}
+
+            {recentOptions.length > 0 ? (
+              <section className="deals-destination-sheet__section">
+                <h3>
+                  <Clock3 aria-hidden="true" />
+                  {t("destinationPicker.recent")}
+                </h3>
+                <div className="deals-destination-sheet__chips">
+                  {recentOptions.map((option) => renderSheetOption(option))}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="deals-destination-sheet__section">
+              <h3>
+                <Sparkles aria-hidden="true" />
+                {t("destinationPicker.popular")}
+              </h3>
+              <div className="deals-destination-sheet__chips">
+                {popularOptions.map((option) => renderSheetOption(option))}
+              </div>
+            </section>
+
+            <section className="deals-destination-sheet__section">
+              <h3>{t("destinationPicker.all")}</h3>
+              <div className="deals-destination-sheet__list">
+                {enabledDestinationOptions.map((option) => renderSheetOption(option))}
+              </div>
+            </section>
+          </>
+        )}
+      </div>
+    </>
+  );
+
   const mobileSheet =
     isOpen && usesMobileSheet && isMobileSheetViewport
       ? createPortal(
@@ -388,113 +503,7 @@ export function PublicDealsSelect({
               </header>
 
               {mobileDestinationSheet ? (
-                <>
-                  <label className="deals-destination-sheet__search" htmlFor={searchLabelId}>
-                    <Search aria-hidden="true" />
-                    <span className="sr-only">{t("destinationPicker.searchLabel")}</span>
-                    <input
-                      autoComplete="off"
-                      id={searchLabelId}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder={t("destinationPicker.searchPlaceholder")}
-                      ref={searchInputRef}
-                      type="search"
-                      value={searchQuery}
-                    />
-                    {searchQuery ? (
-                      <button
-                        aria-label={t("destinationPicker.clearSearch")}
-                        onClick={() => {
-                          setSearchQuery("");
-                          searchInputRef.current?.focus();
-                        }}
-                        type="button"
-                      >
-                        <X aria-hidden="true" />
-                      </button>
-                    ) : null}
-                  </label>
-
-                  <div className="deals-destination-sheet__body">
-                    {searchQuery ? (
-                      <section className="deals-destination-sheet__section">
-                        <h3>{t("destinationPicker.searchResults")}</h3>
-                        {filteredOptions.length > 0 ? (
-                          <div className="deals-destination-sheet__list">
-                            {filteredOptions.map((option) => renderSheetOption(option))}
-                          </div>
-                        ) : (
-                          <p className="deals-destination-sheet__empty">
-                            {t("destinationPicker.noResults")}
-                          </p>
-                        )}
-                      </section>
-                    ) : (
-                      <>
-                        {options.find((option) => option.value === "any" && !option.disabled)
-                          ? renderSheetOption(
-                              options.find((option) => option.value === "any")!,
-                              <Sparkles />,
-                            )
-                          : null}
-
-                        {typeof mobileDirectOnly === "boolean" &&
-                        mobileDirectOnlyLabel &&
-                        onMobileDirectOnlyChange ? (
-                          <button
-                            aria-pressed={mobileDirectOnly}
-                            className={`deals-destination-sheet__filter${mobileDirectOnly ? " is-active" : ""}`}
-                            onClick={() => onMobileDirectOnlyChange(!mobileDirectOnly)}
-                            type="button"
-                          >
-                            <span
-                              aria-hidden="true"
-                              className="deals-destination-sheet__filter-icon"
-                            >
-                              <Plane />
-                            </span>
-                            <span>{mobileDirectOnlyLabel}</span>
-                            <span
-                              aria-hidden="true"
-                              className="deals-destination-sheet__filter-switch"
-                            >
-                              <i />
-                            </span>
-                          </button>
-                        ) : null}
-
-                        {recentOptions.length > 0 ? (
-                          <section className="deals-destination-sheet__section">
-                            <h3>
-                              <Clock3 aria-hidden="true" />
-                              {t("destinationPicker.recent")}
-                            </h3>
-                            <div className="deals-destination-sheet__chips">
-                              {recentOptions.map((option) => renderSheetOption(option))}
-                            </div>
-                          </section>
-                        ) : null}
-
-                        <section className="deals-destination-sheet__section">
-                          <h3>
-                            <Sparkles aria-hidden="true" />
-                            {t("destinationPicker.popular")}
-                          </h3>
-                          <div className="deals-destination-sheet__chips">
-                            {popularOptions.map((option) => renderSheetOption(option))}
-                          </div>
-                        </section>
-
-                        <section className="deals-destination-sheet__section">
-                          <h3>{t("destinationPicker.all")}</h3>
-                          <div className="deals-destination-sheet__list">
-                            {enabledDestinationOptions.map((option) => renderSheetOption(option))}
-                          </div>
-                        </section>
-                      </>
-                    )}
-                  </div>
-                </>
+                renderDestinationPickerContent()
               ) : (
                 <div className="deals-destination-sheet__body deals-destination-sheet__body--simple">
                   <div className={`deals-destination-sheet__simple-list${columns === 3 ? " deals-destination-sheet__simple-list--three-columns" : ""}`}>
@@ -515,9 +524,15 @@ export function PublicDealsSelect({
     >
       <span id={`${listboxId}-label`}>{label}</span>
       <button
-        aria-controls={isMobileSheetViewport && usesMobileSheet ? undefined : listboxId}
+        aria-controls={
+          mobileDestinationSheet && !isMobileSheetViewport
+            ? desktopPickerId
+            : isMobileSheetViewport && usesMobileSheet
+              ? undefined
+              : listboxId
+        }
         aria-expanded={isOpen}
-        aria-haspopup={isMobileSheetViewport && usesMobileSheet ? "dialog" : "listbox"}
+        aria-haspopup={mobileDestinationSheet || (isMobileSheetViewport && usesMobileSheet) ? "dialog" : "listbox"}
         aria-labelledby={selectedOption ? `${listboxId}-label ${selectedValueId}` : `${listboxId}-label`}
         className={`deals-select__trigger${leadingIcon ? " has-leading-icon" : ""}${isOpen ? " is-open" : ""}`}
         onClick={() => setIsOpen((current) => !current)}
@@ -548,7 +563,18 @@ export function PublicDealsSelect({
         />
       </button>
 
-      {isOpen && (!usesMobileSheet || !isMobileSheetViewport) ? (
+      {isOpen && mobileDestinationSheet && !isMobileSheetViewport ? (
+        <div
+          aria-label={t("destinationPicker.title")}
+          className="deals-destination-popover"
+          id={desktopPickerId}
+          role="dialog"
+        >
+          {renderDestinationPickerContent()}
+        </div>
+      ) : null}
+
+      {isOpen && (!usesMobileSheet || (!isMobileSheetViewport && !mobileDestinationSheet)) ? (
         <div aria-labelledby={`${listboxId}-label`} className={`deals-select__menu${columns === 3 ? " deals-select__menu--three-columns" : ""}`} id={listboxId} role="listbox">
           {options.map((option, index) => {
             const isConfirming = option.value === pendingValue;

@@ -310,15 +310,24 @@ body:has(.v2) .scroll-top-button__arrow {
 }
 
 .v2-hero__canvas:has(.deals-date-picker__popover),
-.v2-hero__canvas:has(.v2-search__custom-select .deals-select__menu) {
+.v2-hero__canvas:has(.v2-search__custom-select .deals-select__menu),
+.v2-hero__canvas:has(.deals-destination-popover) {
   z-index: 20;
   overflow: visible;
   will-change: auto;
 }
 
 .v2-search__bar:has(.deals-date-picker__popover),
-.v2-search__bar:has(.v2-search__custom-select .deals-select__menu) {
+.v2-search__bar:has(.v2-search__custom-select .deals-select__menu),
+.v2-search__bar:has(.deals-destination-popover) {
   will-change: auto;
+}
+
+@media (min-width: 821px) {
+  .v2-search__destination-select .deals-destination-popover {
+    right: auto;
+    left: 0;
+  }
 }
 
 .v2-hero__media {

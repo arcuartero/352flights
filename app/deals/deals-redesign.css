@@ -4933,6 +4933,18 @@ body:has(.page-shell--deals-city)::before {
     width: min(22rem, calc(100vw - 2rem));
   }
 
+  .deals-desktop-filter-route__destination:has(.deals-destination-popover) {
+    z-index: 900;
+  }
+
+  .deals-desktop-filter-route__destination .deals-destination-popover {
+    top: -0.35rem;
+    right: auto;
+    left: calc(100% + 1rem);
+    width: min(32rem, calc(100vw - 2rem));
+    max-height: min(39rem, calc(100vh - 5rem));
+  }
+
   .deals-desktop-filter-card__group {
     display: grid;
     min-width: 0;
