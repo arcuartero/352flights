@@ -4893,9 +4893,6 @@ body:has(.page-shell--deals-city)::before {
     grid-template-columns: minmax(0, 1fr);
     align-items: center;
     padding: 0.45rem 0.65rem 0.45rem 1.85rem;
-  }
-
-  .deals-desktop-filter-route__destination.is-everywhere {
     border-radius: 0 1rem 1rem 0;
     background: #edf4ff;
   }
