@@ -2004,7 +2004,7 @@ body:has(.v2) .scroll-top-button__arrow {
   min-height: 3.45rem;
   padding: 0.85rem 1.25rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0.8rem;
   background: var(--v2-blue-strong);
   color: white;
   cursor: pointer;
