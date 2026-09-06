@@ -5137,16 +5137,16 @@ body:has(.page-shell--deals-city)::before {
   .deals-desktop-filter-card__days button.is-selected,
   .deals-desktop-filter-card__durations button.is-selected {
     border-color: var(--v2-blue-strong);
-    background: var(--v2-blue-strong);
-    color: #ffffff;
+    background: #f3f7ff;
+    color: var(--v2-blue-strong);
   }
 
   .deals-desktop-filter-card__days button.is-selected:hover:not(:disabled),
   .deals-desktop-filter-card__durations button.is-selected:hover:not(:disabled) {
-    border-color: #123f9f;
-    background: #184eb8;
-    box-shadow: 0 5px 12px rgba(24, 78, 184, 0.24);
-    color: #ffffff;
+    border-color: #1b56c4;
+    background: #e8f0ff;
+    box-shadow: 0 4px 10px rgba(35, 100, 223, 0.14);
+    color: #1b56c4;
   }
 
   .deals-desktop-filter-card__days button:disabled,
