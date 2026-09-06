@@ -168,33 +168,44 @@
 
 @media (min-width: 981px) {
   .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket {
-    grid-template-columns: minmax(0, 69fr) minmax(0, 31fr);
+    --ticket-split: 0.69;
+    --ticket-notch-radius: 0.85rem;
+    /* Align the border-box cutouts with the divider inside the 1px border. */
+    --ticket-notch-center: calc((100% - 2px) * var(--ticket-split) + 1px);
+    --ticket-notch-mask:
+      radial-gradient(circle at var(--ticket-notch-center) 0,
+        transparent calc(var(--ticket-notch-radius) - 0.5px), #000 var(--ticket-notch-radius)) top / 100% 51% no-repeat,
+      radial-gradient(circle at var(--ticket-notch-center) 100%,
+        transparent calc(var(--ticket-notch-radius) - 0.5px), #000 var(--ticket-notch-radius)) bottom / 100% 51% no-repeat;
+    grid-template-columns: minmax(0, calc(100% * var(--ticket-split))) minmax(0, 1fr);
     border-radius: 1.4rem;
+    /* Cut through the background, outer border and perforation together. */
+    -webkit-mask: var(--ticket-notch-mask);
+    mask: var(--ticket-notch-mask);
   }
 
   .deals-search-card--ticket::before,
   .deals-search-card--ticket::after {
     content: "";
     position: absolute;
-    left: 69%;
+    left: calc(100% * var(--ticket-split));
     z-index: 2;
-    width: calc(1.7rem + 2px);
-    height: calc(1.7rem + 2px);
+    box-sizing: border-box;
+    width: calc(2 * var(--ticket-notch-radius) + 2px);
+    height: calc(2 * var(--ticket-notch-radius) + 2px);
     border: 1px solid #cfd7e1;
     border-radius: 50%;
-    background: #fff;
+    background: transparent;
     pointer-events: none;
     transform: translateX(-50%);
   }
 
   .deals-search-card--ticket::before {
-    top: calc(-0.85rem - 1px);
-    clip-path: inset(50% 0 0);
+    top: calc(-1 * var(--ticket-notch-radius) - 2px);
   }
 
   .deals-search-card--ticket::after {
-    bottom: calc(-0.85rem - 1px);
-    clip-path: inset(0 0 50%);
+    bottom: calc(-1 * var(--ticket-notch-radius) - 2px);
   }
 
   .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__content {
@@ -203,8 +214,18 @@
   }
 
   .deals-redesign .deals-search-card--route-layout.deals-search-card--ticket .deals-search-card__booking {
-    border-left: 1px dashed #b9c1ce;
+    border-left: 1px solid transparent;
     padding: 1.4rem 1.25rem;
+  }
+
+  .deals-search-card--ticket .deals-search-card__booking::before {
+    content: "";
+    position: absolute;
+    top: var(--ticket-notch-radius);
+    bottom: var(--ticket-notch-radius);
+    left: -1px;
+    border-left: 1px dashed #b9c1ce;
+    pointer-events: none;
   }
 
   .deals-search-card--ticket .deals-ticket__badge { padding-right: 2rem; }
