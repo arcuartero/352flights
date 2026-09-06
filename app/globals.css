@@ -3153,10 +3153,10 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     z-index: 700;
     display: grid;
     width: min(34rem, calc(100vw - 2rem));
-    max-height: min(42rem, calc(100vh - 7rem));
+    max-height: min(42rem, var(--deals-destination-popover-max-height, calc(100vh - 7rem)));
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
-    padding-top: 1rem;
+    padding-top: 1.2rem;
     border: 1px solid rgba(30, 66, 112, 0.14);
     border-radius: 1.35rem;
     background: #f8fafc;
@@ -3165,12 +3165,17 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     animation: destination-popover-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .deals-destination-popover.is-above {
+    top: auto;
+    bottom: calc(100% + 0.65rem);
+  }
+
   .deals-destination-popover .deals-destination-sheet__search {
     position: relative;
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    margin: 0 1rem 0.75rem;
+    margin: 0 1.2rem 0.9rem;
     padding: 0 0.9rem;
     border: 1px solid #d8e1ec;
     border-radius: 0.95rem;
@@ -3235,7 +3240,7 @@ html[data-theme="light"] .site-chrome__preferences-visual::before {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0.1rem 1rem 1rem;
+    padding: 0.1rem 1.2rem 1.2rem;
   }
 
   .deals-destination-popover .deals-destination-sheet__section {

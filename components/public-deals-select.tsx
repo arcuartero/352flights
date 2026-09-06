@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -76,10 +77,13 @@ export function PublicDealsSelect({
   const [searchQuery, setSearchQuery] = useState("");
   const [recentValues, setRecentValues] = useState<string[]>([]);
   const [pendingValue, setPendingValue] = useState<string | null>(null);
+  const [desktopPopoverOpensAbove, setDesktopPopoverOpensAbove] = useState(false);
+  const [desktopPopoverMaxHeight, setDesktopPopoverMaxHeight] = useState(624);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const desktopPopoverRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listboxId = useId();
@@ -135,7 +139,51 @@ export function PublicDealsSelect({
     }
   }, [cancelPendingSelection]);
 
+  const updateDesktopPopoverPlacement = useCallback(() => {
+    if (!mobileDestinationSheet || window.innerWidth <= 820) return;
+
+    const root = rootRef.current;
+    const anchor = root?.closest<HTMLElement>(".deals-desktop-filter-route") ?? root;
+    const anchorRect = anchor?.getBoundingClientRect();
+    if (!anchorRect) return;
+
+    const viewportGap = 12;
+    const topbarBottom = document
+      .querySelector<HTMLElement>(".deals-redesign__topbar")
+      ?.getBoundingClientRect().bottom;
+    const safeTop = Math.max(viewportGap, (topbarBottom ?? 0) + viewportGap);
+    const spaceAbove = Math.max(0, anchorRect.top - safeTop - viewportGap);
+    const spaceBelow = Math.max(0, window.innerHeight - anchorRect.bottom - viewportGap);
+    const targetHeight = Math.min(624, Math.max(320, window.innerHeight - 80));
+    const shouldOpenAbove = spaceBelow < targetHeight && spaceAbove > spaceBelow;
+    const availableSpace = shouldOpenAbove ? spaceAbove : spaceBelow;
+
+    setDesktopPopoverOpensAbove(shouldOpenAbove);
+    setDesktopPopoverMaxHeight(Math.floor(Math.max(220, Math.min(624, availableSpace))));
+  }, [mobileDestinationSheet]);
+
+  const openSelect = useCallback(() => {
+    updateDesktopPopoverPlacement();
+    setIsOpen(true);
+  }, [updateDesktopPopoverPlacement]);
+
   useEffect(() => cancelPendingSelection, [cancelPendingSelection]);
+
+  useEffect(() => {
+    if (!isOpen || !mobileDestinationSheet || isMobileSheetViewport) return;
+
+    const handleViewportChange = () => updateDesktopPopoverPlacement();
+    const handleScroll = (event: Event) => {
+      if (desktopPopoverRef.current?.contains(event.target as Node)) return;
+      updateDesktopPopoverPlacement();
+    };
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [isMobileSheetViewport, isOpen, mobileDestinationSheet, updateDesktopPopoverPlacement]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -535,11 +583,11 @@ export function PublicDealsSelect({
         aria-haspopup={mobileDestinationSheet || (isMobileSheetViewport && usesMobileSheet) ? "dialog" : "listbox"}
         aria-labelledby={selectedOption ? `${listboxId}-label ${selectedValueId}` : `${listboxId}-label`}
         className={`deals-select__trigger${leadingIcon ? " has-leading-icon" : ""}${isOpen ? " is-open" : ""}`}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => (isOpen ? closeSelect(false) : openSelect())}
         onKeyDown={(event) => {
           if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key) && !isOpen) {
             event.preventDefault();
-            setIsOpen(true);
+            openSelect();
           }
         }}
         ref={triggerRef}
@@ -566,9 +614,15 @@ export function PublicDealsSelect({
       {isOpen && mobileDestinationSheet && !isMobileSheetViewport ? (
         <div
           aria-label={t("destinationPicker.title")}
-          className="deals-destination-popover"
+          className={`deals-destination-popover${desktopPopoverOpensAbove ? " is-above" : ""}`}
           id={desktopPickerId}
+          ref={desktopPopoverRef}
           role="dialog"
+          style={
+            {
+              "--deals-destination-popover-max-height": `${desktopPopoverMaxHeight}px`,
+            } as CSSProperties
+          }
         >
           {renderDestinationPickerContent()}
         </div>
