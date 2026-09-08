@@ -3,7 +3,6 @@ import type { MetadataRoute } from "next";
 import { getDestinationLanguageAlternates } from "@/lib/deals-seo";
 import { getDestinationSlugs } from "@/lib/destination-routes";
 import { matchesDestinationSlug } from "@/lib/destination-slugs";
-import { isDestinationIndexable } from "@/lib/destination-seo-policy";
 import { getLocalizedContactPath } from "@/lib/contact-localization";
 import { getSiteUrl } from "@/lib/env";
 import { getHomeLanguageAlternates } from "@/lib/home-localization";
@@ -14,7 +13,9 @@ import {
 } from "@/lib/legal-localization";
 import {
   getLocalizedDestinationPath,
+  getLocalizedDealsSearchPath,
   getLocalizedHomePath,
+  htmlLangTags,
   locales,
 } from "@/lib/locales";
 import { getPublicSearchDealsPageData } from "@/lib/ops";
@@ -56,10 +57,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ),
     },
   }));
-  const indexableDestinationSlugs = getDestinationSlugs().filter((slug) =>
-    isDestinationIndexable(slug, publicDeals),
-  );
-  const cityPages: MetadataRoute.Sitemap = indexableDestinationSlugs.flatMap((slug) =>
+  const searchPages: MetadataRoute.Sitemap = locales.map((locale) => ({
+    url: new URL(getLocalizedDealsSearchPath(locale), siteUrl).toString(),
+    lastModified: HOME_LAST_MODIFIED,
+    changeFrequency: "hourly",
+    priority: 0.9,
+    alternates: {
+      languages: Object.fromEntries([
+        ...locales.map((language) => [
+          htmlLangTags[language],
+          new URL(getLocalizedDealsSearchPath(language), siteUrl).toString(),
+        ]),
+        ["x-default", new URL(getLocalizedDealsSearchPath("en"), siteUrl).toString()],
+      ]),
+    },
+  }));
+  const cityPages: MetadataRoute.Sitemap = getDestinationSlugs().flatMap((slug) =>
     locales.map((locale) => ({
       url: new URL(getLocalizedDestinationPath(locale, slug), siteUrl).toString(),
       lastModified: getDestinationLastModified(slug, publicDeals.deals),
@@ -105,5 +118,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   }));
 
-  return [...homePages, ...cityPages, ...localizedLegalPages, ...contactPages];
+  return [...homePages, ...searchPages, ...cityPages, ...localizedLegalPages, ...contactPages];
 }

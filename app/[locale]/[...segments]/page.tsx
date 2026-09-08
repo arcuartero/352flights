@@ -9,7 +9,6 @@ import { getContactMetadata, isContactSegment } from "@/lib/contact-localization
 import { getDealsCityMetadata, getDealsSearchMetadata } from "@/lib/deals-seo";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
 import { getLocalizedDestinationName } from "@/lib/destination-localization";
-import { isDestinationIndexable } from "@/lib/destination-seo-policy";
 import {
   getLegalMetadata,
   getLegalPageFromSegment,
@@ -20,7 +19,6 @@ import {
   isLocalizedHomeLocale,
   type LocalizedHomeLocale,
 } from "@/lib/locales";
-import { getPublicCityDealsPageData } from "@/lib/ops";
 
 export const revalidate = 1800;
 
@@ -34,12 +32,6 @@ type ResolvedLocalizedDealsRoute =
   | { locale: LocalizedHomeLocale; kind: "destination"; citySlug: string; cityName: string }
   | { locale: LocalizedHomeLocale; kind: "legal"; page: LegalPageKey }
   | { locale: LocalizedHomeLocale; kind: "contact" };
-
-function hasSearchParams(searchParams: Record<string, string | string[] | undefined>) {
-  return Object.values(searchParams).some((value) =>
-    Array.isArray(value) ? value.length > 0 : value !== undefined,
-  );
-}
 
 async function resolveLocalizedDealsRoute(
   params: LocalizedDealsPageProps["params"],
@@ -85,12 +77,8 @@ async function resolveLocalizedDealsRoute(
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: LocalizedDealsPageProps): Promise<Metadata> {
-  const [route, resolvedSearchParams] = await Promise.all([
-    resolveLocalizedDealsRoute(params),
-    searchParams,
-  ]);
+  const route = await resolveLocalizedDealsRoute(params);
 
   if (route.kind === "search") {
     return getDealsSearchMetadata(route.locale);
@@ -104,16 +92,10 @@ export async function generateMetadata({
     return getContactMetadata(route.locale);
   }
 
-  const isFilteredPage = hasSearchParams(resolvedSearchParams);
-  const cityData = isFilteredPage ? null : await getPublicCityDealsPageData(route.citySlug);
-  const noindex =
-    isFilteredPage || (cityData !== null && !isDestinationIndexable(route.citySlug, cityData));
-
   return getDealsCityMetadata(
     route.locale,
     getLocalizedDestinationName(route.cityName, route.locale),
     route.citySlug,
-    noindex,
   );
 }
 

@@ -173,7 +173,7 @@ export function getDealsSearchMetadata(locale: Locale): Metadata {
     title: copy.searchTitle,
     description: copy.searchDescription,
     alternates: { canonical: pathname },
-    robots: { index: false, follow: true },
+    robots: { index: true, follow: true },
     openGraph: {
       title: copy.searchTitle,
       description: copy.searchDescription,
@@ -195,7 +195,6 @@ export function getDealsCityMetadata(
   locale: Locale,
   cityName: string,
   citySlug: string,
-  noindex: boolean,
 ): Metadata {
   const copy = dealsSeoCopy[locale];
   const pathname = getLocalizedDestinationPath(locale, citySlug);
@@ -211,7 +210,7 @@ export function getDealsCityMetadata(
     description,
     alternates: {
       canonical: pathname,
-      ...(noindex ? {} : { languages: getDestinationLanguageAlternates(citySlug) }),
+      languages: getDestinationLanguageAlternates(citySlug),
     },
     openGraph: {
       title,
@@ -230,7 +229,7 @@ export function getDealsCityMetadata(
       description,
       images: [socialImage],
     },
-    robots: noindex ? { index: false, follow: true } : { index: true, follow: true },
+    robots: { index: true, follow: true },
   };
 }
 
