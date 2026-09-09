@@ -1844,12 +1844,22 @@ class LuxFlightScanner:
         )
         outbound_stop_count = max(len(outbound.legs) - 1, 0)
         return_stop_count = max(len(inbound.legs) - 1, 0)
+        outbound_duration = getattr(outbound, "duration", None)
+        return_duration = getattr(inbound, "duration", None)
+        if not isinstance(outbound_duration, (int, float)) or not isinstance(return_duration, (int, float)):
+            return None
+        outbound_duration_minutes = int(outbound_duration)
+        return_duration_minutes = int(return_duration)
+        if outbound_duration_minutes <= 0 or return_duration_minutes <= 0:
+            return None
 
         return {
             "outbound_departure_at": cls._serialize_datetime(outbound_departure),
             "outbound_arrival_at": cls._serialize_datetime(outbound_arrival),
             "return_departure_at": cls._serialize_datetime(return_departure),
             "return_arrival_at": cls._serialize_datetime(return_arrival),
+            "outbound_duration_minutes": outbound_duration_minutes,
+            "return_duration_minutes": return_duration_minutes,
             "destination_stay_hours": destination_stay_hours,
             "outbound_stop_count": outbound_stop_count,
             "return_stop_count": return_stop_count,

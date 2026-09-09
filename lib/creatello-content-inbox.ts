@@ -6,6 +6,8 @@ import { getCreatelloInboxEnv } from "@/lib/env";
 import {
   buildCreatelloInboxPackage,
   CREATELLO_INBOX_MAX_BYTES,
+  createlloInboxPackageSchema,
+  type CreatelloInboxPackage,
 } from "@/lib/creatello-content-inbox-contract";
 import { loadTikTokOffersByIds } from "@/lib/tiktok-carousel-data";
 import type { CreatelloLanguage } from "@/lib/tiktok-carousel";
@@ -53,14 +55,9 @@ function safeErrorMessage(value: unknown, status: number) {
   return `Creatello rechazó el paquete (HTTP ${status}).`;
 }
 
-export async function sendOffersToCreatello(input: {
-  selectedOfferIds: number[];
-  language: CreatelloLanguage;
-  revision?: number;
-}) {
+export async function sendCreatelloInboxPackage(payloadValue: CreatelloInboxPackage) {
   const env = getCreatelloInboxEnv();
-  const offers = await loadTikTokOffersByIds(input.selectedOfferIds);
-  const payload = buildCreatelloInboxPackage(offers, input.language, input.revision ?? 1);
+  const payload = createlloInboxPackageSchema.parse(payloadValue);
   const rawBody = JSON.stringify(payload);
   if (Buffer.byteLength(rawBody, "utf8") > CREATELLO_INBOX_MAX_BYTES) {
     throw new Error("El paquete supera el límite de 256 KiB de Creatello.");
@@ -108,4 +105,14 @@ export async function sendOffersToCreatello(input: {
     idempotent: responseBody.idempotent,
   });
   return responseBody;
+}
+
+export async function sendOffersToCreatello(input: {
+  selectedOfferIds: number[];
+  language: CreatelloLanguage;
+  revision?: number;
+}) {
+  const offers = await loadTikTokOffersByIds(input.selectedOfferIds);
+  const payload = buildCreatelloInboxPackage(offers, input.language, input.revision ?? 1);
+  return sendCreatelloInboxPackage(payload);
 }

@@ -10,6 +10,12 @@ export const CREATELLO_INBOX_SOURCE = "352flights" as const;
 export const CREATELLO_INBOX_MAX_OFFERS = 20;
 export const CREATELLO_INBOX_MAX_BYTES = 256 * 1024;
 export const CREATELLO_INBOX_FRESHNESS_HOURS = 24;
+export const CREATELLO_INBOX_TARGET_TEMPLATES = [
+  "travel-offer",
+  "cheap-flights-tiktok",
+  "flight-deals-352",
+] as const;
+export type CreatelloInboxTargetTemplate = typeof CREATELLO_INBOX_TARGET_TEMPLATES[number];
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
@@ -70,6 +76,7 @@ export const createlloInboxPackageSchema = z.object({
   revision: z.number().int().positive().max(2_147_483_647),
   source: z.literal(CREATELLO_INBOX_SOURCE),
   language: z.enum(["es", "en", "fr", "de", "pt"]),
+  targetTemplate: z.enum(CREATELLO_INBOX_TARGET_TEMPLATES).optional(),
   createdAt: timestampSchema,
   offers: z.array(createlloInboxOfferSchema).min(1).max(CREATELLO_INBOX_MAX_OFFERS),
 }).strict();
@@ -148,7 +155,7 @@ function countryName(countryCode: string, language: CreatelloLanguage) {
   return new Intl.DisplayNames([language], { type: "region" }).of(countryCode);
 }
 
-function toInboxOffer(offer: TikTokSourceOffer, language: CreatelloLanguage) {
+export function toCreatelloInboxOffer(offer: TikTokSourceOffer, language: CreatelloLanguage) {
   const outboundStops = metadataInteger(offer, "outbound_stop_count");
   const returnStops = metadataInteger(offer, "return_stop_count");
   if (outboundStops === undefined || returnStops === undefined) {
@@ -175,6 +182,8 @@ function toInboxOffer(offer: TikTokSourceOffer, language: CreatelloLanguage) {
   const outboundArrivalTime = localTime(metadataString(offer, "outbound_arrival_at"));
   const returnDepartureTime = localTime(metadataString(offer, "return_departure_at"));
   const returnArrivalTime = localTime(metadataString(offer, "return_arrival_at"));
+  const outboundDurationMinutes = metadataInteger(offer, "outbound_duration_minutes");
+  const returnDurationMinutes = metadataInteger(offer, "return_duration_minutes");
 
   return createlloInboxOfferSchema.parse({
     sourceSnapshotId: `price-snapshot:${offer.id}`,
@@ -205,6 +214,8 @@ function toInboxOffer(offer: TikTokSourceOffer, language: CreatelloLanguage) {
     ...(outboundArrivalTime ? { outboundArrivalTime } : {}),
     ...(returnDepartureTime ? { returnDepartureTime } : {}),
     ...(returnArrivalTime ? { returnArrivalTime } : {}),
+    ...(outboundDurationMinutes ? { outboundDurationMinutes } : {}),
+    ...(returnDurationMinutes ? { returnDurationMinutes } : {}),
     checkedAt,
     expiresAt,
     sourcePageUrl,
@@ -215,6 +226,12 @@ export function buildCreatelloInboxPackage(
   offers: TikTokSourceOffer[],
   language: CreatelloLanguage,
   revision = 1,
+  options: {
+    targetTemplate?: CreatelloInboxTargetTemplate;
+    externalId?: string;
+    eventId?: string;
+    createdAt?: string;
+  } = {},
 ) {
   if (offers.length < 1 || offers.length > CREATELLO_INBOX_MAX_OFFERS) {
     throw new Error(`Selecciona entre 1 y ${CREATELLO_INBOX_MAX_OFFERS} ofertas.`);
@@ -224,19 +241,20 @@ export function buildCreatelloInboxPackage(
   }
 
   const identity = `${language}:${offers.map((offer) => offer.id).join(":")}`;
-  const externalId = `editorial:${stableKey([identity])}`;
-  const createdAt = new Date(
+  const externalId = options.externalId ?? `editorial:${stableKey([identity])}`;
+  const createdAt = options.createdAt ?? new Date(
     Math.max(...offers.map((offer) => new Date(offer.scannedAt).getTime())),
   ).toISOString();
 
   return createlloInboxPackageSchema.parse({
     schemaVersion: CREATELLO_INBOX_SCHEMA_VERSION,
-    eventId: stableUuid(`${externalId}:${revision}`),
+    eventId: options.eventId ?? stableUuid(`${externalId}:${revision}`),
     externalId,
     revision,
     source: CREATELLO_INBOX_SOURCE,
     language,
+    ...(options.targetTemplate ? { targetTemplate: options.targetTemplate } : {}),
     createdAt,
-    offers: offers.map((offer) => toInboxOffer(offer, language)),
+    offers: offers.map((offer) => toCreatelloInboxOffer(offer, language)),
   });
 }

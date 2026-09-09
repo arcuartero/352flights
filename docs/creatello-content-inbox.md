@@ -1,12 +1,28 @@
 # Envío de paquetes a Creatello
 
-352 Flights puede enviar una selección manual de ofertas a la bandeja **Datos recibidos** de Creatello. El paquete es neutral: no incluye plantilla, imágenes, renderizado ni instrucciones de publicación.
+352 Flights puede enviar selecciones manuales y tres paquetes automáticos diarios a la bandeja **Datos recibidos** de Creatello. Los paquetes no incluyen imágenes, renderizado ni instrucciones de publicación. Los automáticos incluyen una plantilla sugerida, pero Creatello no crea el borrador hasta que el usuario lo confirma.
+
+## Envío automático diario
+
+Vercel llama a `GET /api/cron/creatello-daily` todos los días a las `07:15 UTC`. La ruta exige `Authorization: Bearer <CRON_SECRET>`; Vercel añade esta cabecera automáticamente cuando `CRON_SECRET` existe en producción. También admite `POST` con la misma autenticación para una ejecución operativa manual.
+
+En cada fecha de Luxemburgo se prepara como máximo un paquete para cada plantilla:
+
+- `flight-deals-352`
+- `travel-offer`
+- `cheap-flights-tiktok`
+
+El tamaño se elige de forma pseudoaleatoria entre 3, 4 y 5, pero es determinista para `fecha + plantilla`; por ello un reintento conserva el mismo tamaño. Solo se consideran tarifas publicables de LUX, comprobadas dentro de las 24 horas anteriores al corte diario y con salida futura.
+
+La selección reserva en Supabase tanto el snapshot como el `itineraryKey`. No se repite una oferta ya enviada en otro paquete ni otro día, y tampoco se repite destino entre los tres paquetes del mismo día. Se priorizan las ofertas de menor precio y, en empate, las más recientes. Si no hay al menos tres ofertas completas y compatibles para una plantilla, esa plantilla se omite y el cron devuelve un estado no exitoso para que el fallo sea visible; nunca rellena campos inventados.
+
+Las reservas y el payload exacto se conservan en `creatello_daily_deliveries` y `creatello_daily_delivery_offers`. Un reintento reutiliza el payload guardado y la idempotencia de Creatello devuelve el mismo registro.
 
 ## Uso desde el panel
 
 1. Abre `/ops/tiktok-json` e inicia sesión con las credenciales de Ops.
 2. Pide propuestas y selecciona entre 1 y 20 ofertas.
-3. Elige el idioma del contenido. La plantilla solo afecta a la vista previa local y no se envía.
+3. Elige el idioma del contenido. En el flujo manual, la plantilla solo afecta a la vista previa local y no se envía.
 4. Pulsa **Enviar datos a Creatello**.
 5. Un mensaje muestra el UUID creado por Creatello o indica que el mismo paquete ya existía.
 
@@ -17,6 +33,7 @@ El navegador solo llama a `POST /api/ops/creatello-inbox`, protegido por la aute
 ```env
 CREATELLO_CONTENT_INBOX_URL=https://<dominio-creatello>/api/content-inbox
 CREATELLO_CONTENT_INBOX_HMAC_SECRET=<mismo-secreto-aleatorio-de-al-menos-32-caracteres>
+CRON_SECRET=<secreto-aleatorio-para-las-rutas-cron>
 ```
 
 El secreto debe coincidir con `CONTENT_INBOX_HMAC_SECRET` en Creatello. El ID de workspace solo se configura en Creatello mediante `CONTENT_INBOX_WORKSPACE_ID`; 352 Flights no lo conoce ni lo envía.
@@ -39,7 +56,7 @@ El servidor vuelve a leer esas ofertas desde Supabase, comprueba que sigan siend
 - `X-Creatello-Timestamp: <Unix seconds>`
 - `X-Creatello-Signature: sha256=<HMAC-SHA256(timestamp.rawBody)>`
 
-La petición caduca a los 15 segundos. No se registran el secreto, la firma ni el cuerpo completo.
+La petición caduca a los 15 segundos. No se registran el secreto, la firma ni el cuerpo completo. Los envíos automáticos añaden `targetTemplate` (`travel-offer`, `cheap-flights-tiktok` o `flight-deals-352`) como recomendación para la bandeja.
 
 ## Identidad e idempotencia
 
@@ -62,7 +79,7 @@ Para cambiar el contenido de una identidad existente debe incrementarse `revisio
 - `expiresAt`: 24 horas después de `checkedAt`, que es la política de frescura pública actual de 352 Flights.
 - `sourcePageUrl`: URL pública original de Skyscanner.
 
-Las duraciones no se calculan a partir de horarios locales de aeropuertos distintos porque eso produciría datos incorrectos sin zonas horarias. Mientras el scanner no guarde duraciones fiables, Creatello indicará que falta ese campo al intentar usar `flight-deals-352`. `travel-offer` y `cheap-flights-tiktok` no lo requieren.
+Las duraciones no se calculan a partir de horarios locales de aeropuertos distintos. El scanner guarda `outbound_duration_minutes` y `return_duration_minutes` usando las duraciones proporcionadas por el proveedor; solo esos valores fiables habilitan el paquete automático `flight-deals-352`. `travel-offer` y `cheap-flights-tiktok` no los requieren.
 
 ## Respuestas del endpoint interno
 
@@ -85,3 +102,11 @@ Errores locales de petición devuelven `400`, falta de configuración `503` y fa
 ## Contrato completo de Creatello
 
 La fuente canónica está en `shared/content-inbox-contract.js` del proyecto Creatello y la documentación de recepción en `docs/content-inbox.md`. Creatello limita cada paquete a 20 ofertas y 256 KiB.
+
+## Puesta en marcha
+
+1. Aplicar `supabase/migrations/20260909090000_creatello_daily_deliveries.sql` en el Supabase de 352 Flights.
+2. Confirmar en producción `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CREATELLO_CONTENT_INBOX_URL`, `CREATELLO_CONTENT_INBOX_HMAC_SECRET` y `CRON_SECRET`.
+3. Desplegar primero Creatello (para que acepte `targetTemplate`) y después 352 Flights.
+4. Actualizar el código del scanner que corre en el VPS y ejecutar al menos un escaneo; los snapshots anteriores no contienen las duraciones fiables nuevas.
+5. Ejecutar una vez `POST /api/cron/creatello-daily` con la cabecera Bearer para validar el flujo. Repetirlo el mismo día no crea paquetes nuevos.
