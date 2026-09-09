@@ -9,11 +9,11 @@ export default function OpsTikTokJsonLoading() {
           <div className="ops-panel__header">
             <div>
               <span className="ops-panel__eyebrow">Contenido social</span>
-              <h2>Content generator</h2>
+              <h2>Social content</h2>
               <p>Cargando formatos y ofertas reales de 352 Flights.</p>
             </div>
           </div>
-          <div aria-label="Cargando generador de TikTok JSON" className="tiktok-json-skeleton" role="status">
+          <div aria-label="Cargando contenido social" className="tiktok-json-skeleton" role="status">
             <span />
             <span />
             <span />

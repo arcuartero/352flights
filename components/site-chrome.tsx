@@ -40,6 +40,10 @@ function getPageLabel(pathname: string) {
     return "Price intelligence";
   }
 
+  if (pathname.startsWith("/ops/tiktok-json")) {
+    return "Social content";
+  }
+
   if (pathname.startsWith("/ops")) {
     return "Operations board";
   }

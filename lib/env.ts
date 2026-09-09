@@ -14,6 +14,14 @@ const cronSchema = z.object({
   CRON_SECRET: z.string().min(1),
 });
 
+const createlloInboxSchema = z.object({
+  CREATELLO_CONTENT_INBOX_URL: z.string().url().refine((value) => {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) && url.pathname.endsWith("/api/content-inbox");
+  }, "Debe ser la URL completa terminada en /api/content-inbox"),
+  CREATELLO_CONTENT_INBOX_HMAC_SECRET: z.string().min(32),
+});
+
 function emptyToUndefined(value: string | undefined) {
   if (!value) {
     return undefined;
@@ -52,6 +60,20 @@ export function hasCronSecret() {
 export function getCronSecret() {
   return cronSchema.parse({
     CRON_SECRET: process.env.CRON_SECRET,
+  });
+}
+
+export function hasCreatelloInboxEnv() {
+  return Boolean(
+    process.env.CREATELLO_CONTENT_INBOX_URL
+    && process.env.CREATELLO_CONTENT_INBOX_HMAC_SECRET,
+  );
+}
+
+export function getCreatelloInboxEnv() {
+  return createlloInboxSchema.parse({
+    CREATELLO_CONTENT_INBOX_URL: process.env.CREATELLO_CONTENT_INBOX_URL,
+    CREATELLO_CONTENT_INBOX_HMAC_SECRET: process.env.CREATELLO_CONTENT_INBOX_HMAC_SECRET,
   });
 }
 

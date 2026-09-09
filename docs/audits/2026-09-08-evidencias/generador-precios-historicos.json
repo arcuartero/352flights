@@ -1,0 +1,17 @@
+{
+  "case": "Synthetic same trip: older EUR50, latest EUR120",
+  "generatedPrice": 50,
+  "proposalWithoutBudget": [
+    {
+      "id": 2,
+      "price": 120
+    }
+  ],
+  "proposalUnder100": [
+    {
+      "id": 1,
+      "price": 50,
+      "scannedAt": "2026-08-01T12:00:00Z"
+    }
+  ]
+}

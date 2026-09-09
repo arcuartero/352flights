@@ -1,0 +1,30 @@
+[
+  {
+    "path": "/api/subscribe",
+    "input": "malformed JSON only",
+    "status": 500,
+    "content_type": null,
+    "body_preview": ""
+  },
+  {
+    "path": "/api/preferences",
+    "input": "malformed JSON only",
+    "status": 500,
+    "content_type": null,
+    "body_preview": ""
+  },
+  {
+    "path": "/api/contact",
+    "input": "malformed JSON only",
+    "status": 400,
+    "content_type": "application/json",
+    "body_preview": "{\"error\":\"Invalid contact form.\"}"
+  },
+  {
+    "path": "/api/ops/tiktok-json",
+    "input": "malformed JSON only",
+    "status": 401,
+    "content_type": "text/plain;charset=UTF-8",
+    "body_preview": "Authentication required."
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "path": "/deals/abu-dhabi",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Abu Dhabi"
+  },
+  {
+    "path": "/deals/tokyo",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Tokyo"
+  },
+  {
+    "path": "/deals/almeria",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Almeria"
+  },
+  {
+    "path": "/deals/lisbon",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Lisbon"
+  },
+  {
+    "path": "/deals/madrid",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Madrid"
+  },
+  {
+    "path": "/deals/tenerife",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Tenerife"
+  },
+  {
+    "path": "/deals/gran-canaria",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Gran Canaria"
+  },
+  {
+    "path": "/deals/london",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to London"
+  },
+  {
+    "path": "/deals/stockholm",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Cheap flights from Luxembourg to Stockholm"
+  },
+  {
+    "path": "/es/ofertas/nice",
+    "status": 200,
+    "robots": "index, follow",
+    "h1": "Vuelos baratos de Luxemburgo a Niza"
+  },
+  {
+    "path": "/deals/nice?price_max=1",
+    "status": 200,
+    "robots": "noindex, follow",
+    "h1": "Cheap flights from Luxembourg to Nice"
+  },
+  {
+    "path": "/deals/nice?utm_source=audit",
+    "status": 200,
+    "robots": "noindex, follow",
+    "h1": "Cheap flights from Luxembourg to Nice"
+  }
+]

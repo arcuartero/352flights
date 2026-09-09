@@ -1,0 +1,764 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "url": "https://www.352flights.com/",
+    "duration_ms": 296,
+    "bytes": 510312,
+    "headers": {
+      "Age": "1471",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "HIT"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "We watch every fare out of LUX and write to you only when it's genuinely cheap. No noise — just the right deals, at the right time."
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com"
+      }
+    ],
+    "title": [
+      "You know when to fly. We&#x27;ll find where. | +352 Flights"
+    ]
+  },
+  {
+    "path": "/es",
+    "status": 200,
+    "url": "https://www.352flights.com/es",
+    "duration_ms": 462,
+    "bytes": 511460,
+    "headers": {
+      "Age": "27612",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "STALE"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Vigilamos cada tarifa desde LUX y te escribimos solo cuando merece la pena. Sin ruido: solo las ofertas correctas, en el momento correcto."
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com"
+      }
+    ],
+    "title": [
+      "Tú sabes cuándo quieres volar. Nosotros encontramos el destino. | +352 Flights"
+    ]
+  },
+  {
+    "path": "/fr",
+    "status": 200,
+    "url": "https://www.352flights.com/fr",
+    "duration_ms": 498,
+    "bytes": 511793,
+    "headers": {
+      "Age": "27605",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "STALE"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Nous surveillons chaque tarif au départ de LUX et vous écrivons seulement quand il est vraiment intéressant. Pas de bruit — seulement les bonnes offres, au bon moment."
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com"
+      }
+    ],
+    "title": [
+      "Vous savez quand partir. Nous trouvons où aller. | +352 Flights"
+    ]
+  },
+  {
+    "path": "/deals/search",
+    "status": 200,
+    "url": "https://www.352flights.com/deals/search",
+    "duration_ms": 1819,
+    "bytes": 235819,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "A live shortlist balancing price, timing, directness, and travel shape."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, follow"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/deals/search"
+      }
+    ],
+    "title": [
+      "Search results"
+    ]
+  },
+  {
+    "path": "/es/ofertas/nice",
+    "status": 200,
+    "url": "https://www.352flights.com/es/ofertas/nice",
+    "duration_ms": 1399,
+    "bytes": 208906,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Encuentra vuelos baratos de Luxemburgo a Niza. Compara precios actuales, fechas, aerolíneas y duración del viaje."
+      },
+      {
+        "name": "robots",
+        "content": "index, follow"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/es/ofertas/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com/deals/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr/offres/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de/angebote/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt/ofertas/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it/offerte/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es/ofertas/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com/deals/nice"
+      }
+    ],
+    "title": [
+      "Vuelos baratos de Luxemburgo a Niza"
+    ]
+  },
+  {
+    "path": "/es/ofertas/nice?utm_source=audit",
+    "status": 200,
+    "url": "https://www.352flights.com/es/ofertas/nice?utm_source=audit",
+    "duration_ms": 1391,
+    "bytes": 207412,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Encuentra vuelos baratos de Luxemburgo a Niza. Compara precios actuales, fechas, aerolíneas y duración del viaje."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, follow"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/es/ofertas/nice"
+      }
+    ],
+    "title": [
+      "Vuelos baratos de Luxemburgo a Niza"
+    ]
+  },
+  {
+    "path": "/es/ofertas/nice?price_max=1",
+    "status": 200,
+    "url": "https://www.352flights.com/es/ofertas/nice?price_max=1",
+    "duration_ms": 1164,
+    "bytes": 134226,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Encuentra vuelos baratos de Luxemburgo a Niza. Compara precios actuales, fechas, aerolíneas y duración del viaje."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, follow"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/es/ofertas/nice"
+      }
+    ],
+    "title": [
+      "Vuelos baratos de Luxemburgo a Niza"
+    ]
+  },
+  {
+    "path": "/deals/no-such-destination-audit",
+    "status": 404,
+    "url": "https://www.352flights.com/deals/no-such-destination-audit",
+    "duration_ms": 270,
+    "bytes": 14826,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "robots",
+        "content": "noindex"
+      }
+    ],
+    "links": [],
+    "title": []
+  },
+  {
+    "path": "/contact",
+    "status": 200,
+    "url": "https://www.352flights.com/contact",
+    "duration_ms": 214,
+    "bytes": 25072,
+    "headers": {
+      "Age": "59971",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Vercel-Cache": "HIT"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Questions about a fare, your alerts, a partnership, or anything else? Send us a message and we’ll get back to you as soon as we can."
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/contact"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en",
+        "href": "https://www.352flights.com/contact"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr",
+        "href": "https://www.352flights.com/fr/contact"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de",
+        "href": "https://www.352flights.com/de/kontakt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt",
+        "href": "https://www.352flights.com/pt/contacto"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it",
+        "href": "https://www.352flights.com/it/contatti"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es",
+        "href": "https://www.352flights.com/es/contacto"
+      }
+    ],
+    "title": [
+      "Contact | +352 Flights"
+    ]
+  },
+  {
+    "path": "/es/contacto",
+    "status": 200,
+    "url": "https://www.352flights.com/es/contacto",
+    "duration_ms": 238,
+    "bytes": 32735,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "¿Tienes alguna pregunta sobre una tarifa, tus alertas, una colaboración o cualquier otro tema? Envíanos un mensaje y te responderemos lo antes posible."
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/es/contacto"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en",
+        "href": "https://www.352flights.com/contact"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr",
+        "href": "https://www.352flights.com/fr/contact"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de",
+        "href": "https://www.352flights.com/de/kontakt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt",
+        "href": "https://www.352flights.com/pt/contacto"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it",
+        "href": "https://www.352flights.com/it/contatti"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es",
+        "href": "https://www.352flights.com/es/contacto"
+      }
+    ],
+    "title": [
+      "Contacto | +352 Flights"
+    ]
+  },
+  {
+    "path": "/privacy",
+    "status": 200,
+    "url": "https://www.352flights.com/privacy",
+    "duration_ms": 226,
+    "bytes": 23092,
+    "headers": {
+      "Age": "27627",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Vercel-Cache": "HIT"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "How +352 Flights uses subscriber preferences and technical data."
+      },
+      {
+        "name": "robots",
+        "content": "index, follow"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/privacy"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com/privacy"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr/confidentialite"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de/datenschutz"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt/privacidade"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it/privacy"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es/privacidad"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com/privacy"
+      }
+    ],
+    "title": [
+      "Privacy policy"
+    ]
+  },
+  {
+    "path": "/preferences",
+    "status": 200,
+    "url": "https://www.352flights.com/preferences",
+    "duration_ms": 255,
+    "bytes": 18895,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Open your private +352 Flights link to manage your alert preferences."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, nofollow"
+      }
+    ],
+    "links": [],
+    "title": [
+      "Manage your flight alerts | +352 Flights"
+    ]
+  },
+  {
+    "path": "/confirm",
+    "status": 200,
+    "url": "https://www.352flights.com/confirm",
+    "duration_ms": 250,
+    "bytes": 18253,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Confirm your private +352 Flights alert subscription."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, nofollow"
+      }
+    ],
+    "links": [],
+    "title": [
+      "Confirm your flight alerts | +352 Flights"
+    ]
+  },
+  {
+    "path": "/unsubscribe",
+    "status": 200,
+    "url": "https://www.352flights.com/unsubscribe",
+    "duration_ms": 239,
+    "bytes": 18349,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Powered-By": "Next.js",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [
+      {
+        "name": "description",
+        "content": "Stop receiving emails from your private +352 Flights alert profile."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, nofollow"
+      }
+    ],
+    "links": [],
+    "title": [
+      "Unsubscribe from flight alerts | +352 Flights"
+    ]
+  },
+  {
+    "path": "/robots.txt",
+    "status": 200,
+    "url": "https://www.352flights.com/robots.txt",
+    "duration_ms": 89,
+    "bytes": 137,
+    "headers": {
+      "Age": "138050",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/plain",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Vercel-Cache": "HIT"
+    },
+    "meta": [],
+    "links": [],
+    "title": [],
+    "body": "User-Agent: *\nAllow: /\nDisallow: /api/\nDisallow: /ops/\n\nHost: https://www.352flights.com\nSitemap: https://www.352flights.com/sitemap.xml\n"
+  },
+  {
+    "path": "/sitemap.xml",
+    "status": 200,
+    "url": "https://www.352flights.com/sitemap.xml",
+    "duration_ms": 374,
+    "bytes": 579645,
+    "headers": {
+      "Age": "1473",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "application/xml",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Vercel-Cache": "HIT"
+    },
+    "meta": [],
+    "links": [],
+    "title": [],
+    "url_count": 666,
+    "unique_count": 666,
+    "sample_urls": [
+      "https://www.352flights.com/",
+      "https://www.352flights.com/fr",
+      "https://www.352flights.com/de",
+      "https://www.352flights.com/pt",
+      "https://www.352flights.com/it",
+      "https://www.352flights.com/es",
+      "https://www.352flights.com/deals/abu-dhabi",
+      "https://www.352flights.com/fr/offres/abu-dhabi",
+      "https://www.352flights.com/de/angebote/abu-dhabi",
+      "https://www.352flights.com/pt/ofertas/abu-dhabi",
+      "https://www.352flights.com/it/offerte/abu-dhabi",
+      "https://www.352flights.com/es/ofertas/abu-dhabi"
+    ]
+  },
+  {
+    "path": "/ops",
+    "status": 401,
+    "url": "https://www.352flights.com/ops",
+    "duration_ms": 118,
+    "bytes": 24,
+    "headers": {
+      "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/plain;charset=UTF-8",
+      "Strict-Transport-Security": "max-age=63072000"
+    },
+    "meta": [],
+    "links": [],
+    "title": []
+  },
+  {
+    "path": "/api/ops/scanner-status",
+    "status": 401,
+    "url": "https://www.352flights.com/api/ops/scanner-status",
+    "duration_ms": 756,
+    "bytes": 24,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/plain;charset=UTF-8",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [],
+    "links": [],
+    "title": []
+  },
+  {
+    "path": "/api/ops/tiktok-json",
+    "status": 405,
+    "url": "https://www.352flights.com/api/ops/tiktok-json",
+    "duration_ms": 726,
+    "bytes": 0,
+    "headers": {
+      "Age": "0",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Strict-Transport-Security": "max-age=63072000",
+      "X-Vercel-Cache": "MISS"
+    },
+    "meta": [],
+    "links": [],
+    "title": []
+  }
+]

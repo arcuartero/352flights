@@ -1,0 +1,27 @@
+........................[2026-09-08 10:31:12Z] Search rate limited (HTTP 429): pausing 0s before attempt 2/3 · 1/1 · LUX -> LHR Fri -> Mon
+[2026-09-08 10:31:12Z] Search rate limited (HTTP 429): pausing 0s before attempt 3/3 · 1/1 · LUX -> LHR Fri -> Mon
+.[2026-09-08 10:31:12Z] Search rate limited (HTTP 429): pausing 0s before attempt 2/3 · 1/1 · LUX -> LHR Fri -> Mon
+[2026-09-08 10:31:12Z] Search rate limited (HTTP 429): pausing 0s before attempt 3/3 · 1/1 · LUX -> LHR Fri -> Mon
+....E..................
+======================================================================
+ERROR: test_service_calendar_search_is_not_limited_to_an_airline (test_route_discovery_scope.RouteDiscoveryScopeTests.test_service_calendar_search_is_not_limited_to_an_airline)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/albertorodriguez/Documents/Luxcheapflights copia 2/scanner/tests/test_route_discovery_scope.py", line 41, in test_service_calendar_search_is_not_limited_to_an_airline
+    filters = scanner._build_service_calendar_flight_filters(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/albertorodriguez/Documents/Luxcheapflights copia 2/scanner/luxflight_scanner/scanner.py", line 1636, in _build_service_calendar_flight_filters
+    FlightSegment(
+  File "/Users/albertorodriguez/Documents/Luxcheapflights copia 2/scanner/.venv/lib/python3.11/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for FlightSegment
+travel_date
+  Value error, Travel date cannot be in the past [type=value_error, input_value='2026-09-01', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.12/v/value_error
+
+----------------------------------------------------------------------
+Ran 48 tests in 0.040s
+
+FAILED (errors=1)
+[2026-09-08T10:31:12.547309+00:00] Completed price_scanner start command command-1: started

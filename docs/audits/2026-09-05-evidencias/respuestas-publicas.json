@@ -1,0 +1,748 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "url": "https://www.352flights.com/",
+    "bytes": 518410,
+    "seconds": 0.29,
+    "headers": {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "HIT"
+    },
+    "title": "You know when to fly. We'll find where. | +352 Flights",
+    "meta": [
+      {
+        "name": "description",
+        "content": "We watch every fare out of LUX and write to you only when it's genuinely cheap. No noise \u2014 just the right deals, at the right time."
+      },
+      {
+        "property": "og:title",
+        "content": "You know when to fly. We'll find where. | +352 Flights"
+      },
+      {
+        "property": "og:url",
+        "content": "https://www.352flights.com"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com"
+      }
+    ],
+    "headings": [
+      [
+        "h1",
+        "You know when to fly."
+      ],
+      [
+        "h1",
+        " "
+      ],
+      [
+        "h1",
+        "We'll find where."
+      ],
+      [
+        "h2",
+        "Smarter flights from Luxembourg"
+      ],
+      [
+        "h2",
+        "Where to fly from Luxembourg this season."
+      ],
+      [
+        "h2",
+        "Find flights that fit your plans."
+      ],
+      [
+        "h2",
+        "Words from people"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "already flying."
+      ],
+      [
+        "h2",
+        "Be on the plane"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "next time."
+      ]
+    ]
+  },
+  {
+    "path": "/es",
+    "status": 200,
+    "url": "https://www.352flights.com/es",
+    "bytes": 519558,
+    "seconds": 0.55,
+    "headers": {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "PRERENDER"
+    },
+    "title": "T\u00fa sabes cu\u00e1ndo quieres volar. Nosotros encontramos el destino. | +352 Flights",
+    "meta": [
+      {
+        "name": "description",
+        "content": "Vigilamos cada tarifa desde LUX y te escribimos solo cuando merece la pena. Sin ruido: solo las ofertas correctas, en el momento correcto."
+      },
+      {
+        "property": "og:title",
+        "content": "T\u00fa sabes cu\u00e1ndo quieres volar. Nosotros encontramos el destino. | +352 Flights"
+      },
+      {
+        "property": "og:url",
+        "content": "https://www.352flights.com/es"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com"
+      }
+    ],
+    "headings": [
+      [
+        "h1",
+        "T\u00fa sabes cu\u00e1ndo quieres volar."
+      ],
+      [
+        "h1",
+        " "
+      ],
+      [
+        "h1",
+        "Nosotros encontramos el destino."
+      ],
+      [
+        "h2",
+        "Vuelos m\u00e1s inteligentes desde Luxemburgo"
+      ],
+      [
+        "h2",
+        "D\u00f3nde volar desde Luxemburgo esta temporada."
+      ],
+      [
+        "h2",
+        "Encuentra vuelos que encajen con tus planes."
+      ],
+      [
+        "h2",
+        "Palabras de gente que"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "ya est\u00e1 volando."
+      ],
+      [
+        "h2",
+        "S\u00fabete al avi\u00f3n"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "la pr\u00f3xima vez."
+      ]
+    ]
+  },
+  {
+    "path": "/fr",
+    "status": 200,
+    "url": "https://www.352flights.com/fr",
+    "bytes": 519905,
+    "seconds": 0.62,
+    "headers": {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "PRERENDER"
+    },
+    "title": "Vous savez quand partir. Nous trouvons o\u00f9 aller. | +352 Flights",
+    "meta": [
+      {
+        "name": "description",
+        "content": "Nous surveillons chaque tarif au d\u00e9part de LUX et vous \u00e9crivons seulement quand il est vraiment int\u00e9ressant. Pas de bruit \u2014 seulement les bonnes offres, au bon moment."
+      },
+      {
+        "property": "og:title",
+        "content": "Vous savez quand partir. Nous trouvons o\u00f9 aller. | +352 Flights"
+      },
+      {
+        "property": "og:url",
+        "content": "https://www.352flights.com/fr"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com"
+      }
+    ],
+    "headings": [
+      [
+        "h1",
+        "Vous savez quand partir."
+      ],
+      [
+        "h1",
+        " "
+      ],
+      [
+        "h1",
+        "Nous trouvons o\u00f9 aller."
+      ],
+      [
+        "h2",
+        "Des vols plus malins au d\u00e9part de Luxembourg"
+      ],
+      [
+        "h2",
+        "O\u00f9 partir depuis Luxembourg cette saison."
+      ],
+      [
+        "h2",
+        "Trouvez des vols adapt\u00e9s \u00e0 vos projets."
+      ],
+      [
+        "h2",
+        "Des mots de personnes"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "d\u00e9j\u00e0 parties."
+      ],
+      [
+        "h2",
+        "Soyez dans l'avion"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "la prochaine fois."
+      ]
+    ]
+  },
+  {
+    "path": "/deals/search",
+    "status": 200,
+    "url": "https://www.352flights.com/deals/search",
+    "bytes": 224987,
+    "seconds": 0.27,
+    "headers": {
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "HIT"
+    },
+    "title": "Search results",
+    "meta": [
+      {
+        "name": "description",
+        "content": "A live shortlist balancing price, timing, directness, and travel shape."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, follow"
+      },
+      {
+        "property": "og:title",
+        "content": "Search results"
+      },
+      {
+        "property": "og:url",
+        "content": "https://www.352flights.com/deals/search"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/deals/search"
+      }
+    ],
+    "headings": [
+      [
+        "h1",
+        "The strongest opportunities on the board right now."
+      ],
+      [
+        "h1",
+        "The strongest opportunities on the board right now."
+      ],
+      [
+        "h2",
+        "Get daily flight drops. Book before they disappear"
+      ],
+      [
+        "h2",
+        "Be on the plane"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "next time."
+      ]
+    ]
+  },
+  {
+    "path": "/deals/nice",
+    "status": 200,
+    "url": "https://www.352flights.com/deals/nice",
+    "bytes": 189972,
+    "seconds": 0.37,
+    "headers": {
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "MISS"
+    },
+    "title": "Cheap flights from Luxembourg to Nice",
+    "meta": [
+      {
+        "name": "description",
+        "content": "Find cheap flights from Luxembourg to Nice. Compare live fares, dates, airlines, and trip lengths to find the option that fits your plans."
+      },
+      {
+        "name": "robots",
+        "content": "index, follow"
+      },
+      {
+        "property": "og:title",
+        "content": "Cheap flights from Luxembourg to Nice"
+      },
+      {
+        "property": "og:url",
+        "content": "https://www.352flights.com/deals/nice"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/deals/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com/deals/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr/offres/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de/angebote/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt/ofertas/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it/offerte/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es/ofertas/nice"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com/deals/nice"
+      }
+    ],
+    "headings": [
+      [
+        "h1",
+        "Cheap flights from Luxembourg to Nice"
+      ],
+      [
+        "h2",
+        "All live fares for Nice."
+      ],
+      [
+        "h2",
+        "Get daily flight drops. Book before they disappear"
+      ],
+      [
+        "h2",
+        "Useful links to plan your trip"
+      ],
+      [
+        "h2",
+        "Be on the plane"
+      ],
+      [
+        "h2",
+        " "
+      ],
+      [
+        "h2",
+        "next time."
+      ]
+    ]
+  },
+  {
+    "path": "/es/ofertas/niza",
+    "status": 404
+  },
+  {
+    "path": "/deals/not-a-real-city-audit",
+    "status": 404
+  },
+  {
+    "path": "/contact",
+    "status": 404
+  },
+  {
+    "path": "/privacy",
+    "status": 200,
+    "url": "https://www.352flights.com/privacy",
+    "bytes": 21926,
+    "seconds": 0.34,
+    "headers": {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "PRERENDER"
+    },
+    "title": "Privacy policy",
+    "meta": [
+      {
+        "name": "description",
+        "content": "How +352 Flights uses subscriber preferences and technical data."
+      },
+      {
+        "name": "robots",
+        "content": "index, follow"
+      },
+      {
+        "property": "og:title",
+        "content": "Privacy policy"
+      },
+      {
+        "property": "og:url",
+        "content": "https://www.352flights.com/privacy"
+      }
+    ],
+    "links": [
+      {
+        "rel": "canonical",
+        "href": "https://www.352flights.com/privacy"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "en-LU",
+        "href": "https://www.352flights.com/privacy"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "fr-LU",
+        "href": "https://www.352flights.com/fr/confidentialite"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "de-LU",
+        "href": "https://www.352flights.com/de/datenschutz"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "pt-LU",
+        "href": "https://www.352flights.com/pt/privacidade"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "it-LU",
+        "href": "https://www.352flights.com/it/privacy"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "es-LU",
+        "href": "https://www.352flights.com/es/privacidad"
+      },
+      {
+        "rel": "alternate",
+        "hreflang": "x-default",
+        "href": "https://www.352flights.com/privacy"
+      }
+    ],
+    "headings": [
+      [
+        "h1",
+        "Privacy policy"
+      ],
+      [
+        "h2",
+        "What we store"
+      ],
+      [
+        "h2",
+        "Why we store it"
+      ],
+      [
+        "h2",
+        "Your control"
+      ]
+    ]
+  },
+  {
+    "path": "/robots.txt",
+    "status": 200,
+    "url": "https://www.352flights.com/robots.txt",
+    "bytes": 137,
+    "seconds": 0.33,
+    "headers": {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/plain",
+      "X-Vercel-Cache": "PRERENDER"
+    },
+    "title": "",
+    "meta": [],
+    "links": [],
+    "headings": []
+  },
+  {
+    "path": "/sitemap.xml",
+    "status": 200,
+    "url": "https://www.352flights.com/sitemap.xml",
+    "bytes": 591156,
+    "seconds": 0.52,
+    "headers": {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "application/xml",
+      "X-Vercel-Cache": "PRERENDER"
+    },
+    "title": "",
+    "meta": [],
+    "links": [],
+    "headings": []
+  },
+  {
+    "path": "/ops",
+    "status": 401
+  },
+  {
+    "path": "/api/ops/scanner-status",
+    "status": 401
+  },
+  {
+    "path": "/confirm",
+    "status": 200,
+    "url": "https://www.352flights.com/confirm",
+    "bytes": 17075,
+    "seconds": 0.25,
+    "headers": {
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "MISS"
+    },
+    "title": "Confirm your flight alerts | +352 Flights",
+    "meta": [
+      {
+        "name": "description",
+        "content": "Confirm your private +352 Flights alert subscription."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, nofollow"
+      }
+    ],
+    "links": [],
+    "headings": [
+      [
+        "h1",
+        "That confirmation link is missing a token."
+      ]
+    ]
+  },
+  {
+    "path": "/preferences",
+    "status": 200,
+    "url": "https://www.352flights.com/preferences",
+    "bytes": 17211,
+    "seconds": 0.27,
+    "headers": {
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "MISS"
+    },
+    "title": "Manage your flight alerts | +352 Flights",
+    "meta": [
+      {
+        "name": "description",
+        "content": "Open your private +352 Flights link to manage your alert preferences."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, nofollow"
+      }
+    ],
+    "links": [],
+    "headings": []
+  },
+  {
+    "path": "/unsubscribe",
+    "status": 200,
+    "url": "https://www.352flights.com/unsubscribe",
+    "bytes": 17168,
+    "seconds": 0.25,
+    "headers": {
+      "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Vercel-Cache": "MISS"
+    },
+    "title": "Unsubscribe from flight alerts | +352 Flights",
+    "meta": [
+      {
+        "name": "description",
+        "content": "Stop receiving emails from your private +352 Flights alert profile."
+      },
+      {
+        "name": "robots",
+        "content": "noindex, nofollow"
+      }
+    ],
+    "links": [],
+    "headings": [
+      [
+        "h1",
+        "That unsubscribe link is incomplete."
+      ]
+    ]
+  }
+]

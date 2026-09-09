@@ -1,0 +1,21 @@
+{
+  "date": "2026-09-05",
+  "typecheck": {
+    "command": "npm run typecheck",
+    "result": "passed"
+  },
+  "scanner": {
+    "command": "scanner/.venv/bin/python -m unittest discover -s scanner/tests -v",
+    "total": 48,
+    "passed": 47,
+    "errors": 1,
+    "failed_test": "test_service_calendar_search_is_not_limited_to_an_airline",
+    "reason": "Fixture travel_date 2026-09-01 is in the past; FlightSegment rejects it"
+  },
+  "invalid_json_local": {
+    "subscribe": 500,
+    "preferences": 500,
+    "contact": 400
+  },
+  "note": "No live emails sent, scans started, settings changed or site deployment performed."
+}

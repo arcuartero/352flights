@@ -16,6 +16,17 @@ export type TikTokSourceOffer = {
 export type TikTokGenerationOptions = {
   template: CreatelloTemplate; language: CreatelloLanguage; originAirport: string;
   startMonth: string; slideCount: number; offersPerSlide: number; maxPrice?: number; now?: Date;
+  monthCount?: number; selectedOfferIds?: number[];
+};
+export type TikTokProposalSort = "cheapest" | "freshest" | "direct";
+export type TikTokProposalOptions = {
+  originAirport: string;
+  startMonth: string;
+  monthCount: number;
+  candidateLimit: number;
+  sort: TikTokProposalSort;
+  maxPrice?: number;
+  now?: Date;
 };
 export type TikTokGenerationResult = {
   document: Record<string, unknown>; warnings: string[];
@@ -81,15 +92,102 @@ function metaString(o:TikTokSourceOffer,key:string){const v=o.metadata?.[key]; r
 function time(v:string|undefined,label:string){if(!v)throw new Error(`Falta ${label}.`); const m=/T(\d{2}:\d{2})/.exec(v); if(!m)throw new Error(`${label} no tiene un horario válido.`); return m[1];}
 function duration(a:string|undefined,b:string|undefined,label:string){if(!a||!b)throw new Error(`Falta ${label}.`); const ms=new Date(b).getTime()-new Date(a).getTime(); if(!Number.isFinite(ms)||ms<=0)throw new Error(`${label} no es válida.`); const mins=Math.round(ms/60000); return `${Math.floor(mins/60)}h ${mins%60}m`;}
 function tripDuration(o:TikTokSourceOffer,lang:CreatelloLanguage){const a=parseDate(o.departureDate),b=parseDate(o.returnDate); if(!a||!b)throw new Error("Las fechas del viaje no son válidas."); const days=Math.round((b.getTime()-a.getTime())/86400000)+1; const words={es:days===1?"día":"días",en:days===1?"day":"days",fr:days===1?"jour":"jours",de:days===1?"Tag":"Tage",pt:days===1?"dia":"dias"}; return `${days} ${words[lang]}`;}
-function normalized(offers:TikTokSourceOffer[],options:TikTokGenerationOptions){const origin=options.originAirport.toUpperCase(); const range=getTikTokCarouselDateRange(options.startMonth,options.slideCount,options.now); const best=new Map<string,TikTokSourceOffer>(); for(const o of offers){if(o.originAirport.toUpperCase()!==origin||o.departureDate<range.fromDate||o.departureDate>=range.toDateExclusive||!parseDate(o.departureDate)||!parseDate(o.returnDate)||o.returnDate<o.departureDate||!Number.isFinite(o.price)||o.price<=0)continue; const k=`${origin}:${o.destinationAirport.toUpperCase()}:${o.departureDate}:${o.returnDate}`; if(!best.has(k)||o.price<best.get(k)!.price)best.set(k,o);} return [...best.values()].sort((a,b)=>a.price-b.price||a.departureDate.localeCompare(b.departureDate)).slice(0,200);}
+function isValidOfferInRange(
+  offer:TikTokSourceOffer,
+  origin:string,
+  range:{fromDate:string;toDateExclusive:string},
+){
+  return offer.originAirport.toUpperCase()===origin
+    && offer.departureDate>=range.fromDate
+    && offer.departureDate<range.toDateExclusive
+    && Boolean(parseDate(offer.departureDate))
+    && Boolean(parseDate(offer.returnDate))
+    && offer.returnDate>=offer.departureDate
+    && Number.isFinite(offer.price)
+    && offer.price>0;
+}
+
+function normalized(offers:TikTokSourceOffer[],options:TikTokGenerationOptions){
+  const origin=options.originAirport.toUpperCase();
+  const range=getTikTokCarouselDateRange(
+    options.startMonth,
+    options.monthCount??options.slideCount,
+    options.now,
+  );
+  const valid=offers.filter((offer)=>isValidOfferInRange(offer,origin,range));
+  if(options.selectedOfferIds?.length){
+    const byId=new Map(valid.map((offer)=>[offer.id,offer]));
+    return options.selectedOfferIds.flatMap((id)=>{
+      const offer=byId.get(id);
+      return offer?[offer]:[];
+    });
+  }
+  const best=new Map<string,TikTokSourceOffer>();
+  for(const offer of valid){
+    const key=`${origin}:${offer.destinationAirport.toUpperCase()}:${offer.departureDate}:${offer.returnDate}`;
+    const current=best.get(key);
+    if(!current||offer.price<current.price)best.set(key,offer);
+  }
+  return [...best.values()]
+    .sort((left,right)=>left.price-right.price||left.departureDate.localeCompare(right.departureDate))
+    .slice(0,200);
+}
 function uniqueDestinationOffers(offers:TikTokSourceOffer[]){const seen=new Set<string>(); return offers.filter(offer=>{const key=keyText(offer.destinationCity); if(seen.has(key))return false; seen.add(key); return true;});}
 
+export function proposeTikTokOffers(
+  source:TikTokSourceOffer[],
+  options:TikTokProposalOptions,
+){
+  const origin=options.originAirport.toUpperCase();
+  const range=getTikTokCarouselDateRange(options.startMonth,options.monthCount,options.now);
+  const exactTrips=new Map<string,TikTokSourceOffer>();
+
+  for(const offer of source){
+    if(!isValidOfferInRange(offer,origin,range))continue;
+    if(options.maxPrice!==undefined&&offer.price>options.maxPrice)continue;
+    if(options.sort==="direct"&&offer.maxStops.toUpperCase()!=="NON_STOP")continue;
+
+    const key=[origin,offer.destinationAirport.toUpperCase(),offer.departureDate,offer.returnDate].join(":");
+    const current=exactTrips.get(key);
+    if(
+      !current
+      || offer.scannedAt>current.scannedAt
+      || (offer.scannedAt===current.scannedAt&&offer.price<current.price)
+    ){
+      exactTrips.set(key,offer);
+    }
+  }
+
+  const candidates=[...exactTrips.values()];
+  candidates.sort((left,right)=>{
+    if(options.sort==="freshest"){
+      return right.scannedAt.localeCompare(left.scannedAt)||left.price-right.price;
+    }
+    return left.price-right.price||right.scannedAt.localeCompare(left.scannedAt);
+  });
+  return candidates.slice(0,Math.min(100,Math.max(1,options.candidateLimit)));
+}
+
 export function generateCreatelloDocument(source:TikTokSourceOffer[],options:TikTokGenerationOptions):TikTokGenerationResult {
-  const offers=uniqueDestinationOffers(normalized(source,options)); if(!offers.length)throw new Error("No hay ofertas reales válidas para la selección.");
+  const normalizedOffers=normalized(source,options);
+  const offers=options.selectedOfferIds?.length
+    ? normalizedOffers
+    : uniqueDestinationOffers(normalizedOffers);
+  if(!offers.length)throw new Error("No hay ofertas reales válidas para la selección.");
   const lang=options.language, originCode=options.originAirport.toUpperCase(), originCity=ORIGINS[originCode]?.[lang]??resolveTikTokOrigin(originCode).city;
   let document:Record<string,unknown>; const preview:TikTokGenerationResult["preview"]=[];
   if(options.template==="cheap-flights-tiktok"){
-    const groups=new Map<string,TikTokSourceOffer[]>(); for(const o of offers){const k=o.departureDate.slice(0,7); const list=groups.get(k)??[]; if(list.length<Math.min(10,Math.max(3,options.offersPerSlide)))list.push(o); groups.set(k,list);}
+    const perSlide=Math.min(10,Math.max(3,options.offersPerSlide));
+    const groups=new Map<string,TikTokSourceOffer[]>();
+    for(const offer of offers){
+      const key=offer.departureDate.slice(0,7);
+      const list=groups.get(key)??[];
+      if(options.selectedOfferIds?.length&&list.length>=perSlide){
+        throw new Error(`Has seleccionado más de ${perSlide} ofertas para ${key}.`);
+      }
+      if(list.length<perSlide)list.push(offer);
+      groups.set(key,list);
+    }
     const slides=[...groups.values()].slice(0,20).filter(v=>v.length>0).map(group=>({origin:{city:originCity,airport:originCode},offers:group.map(o=>({destination:cityName(o.destinationCity,lang),airport:o.destinationAirport.toUpperCase(),departure:shortDate(o.departureDate,lang),returnDate:shortDate(o.returnDate,lang),price:Number(o.price.toFixed(2)),currency:currency(o.currency)}))}));
     const c=CLOSING[lang]; document={template:"cheap-flights-tiktok",language:lang,cover:{title:COVER[lang][0],subtitle:`${COVER[lang][1]} ${originCity}`},slides,closing:{headline:c[0],body:c[1],cta:c[2]}};
     slides.forEach(s=>preview.push({title:s.offers.map(o=>o.destination).join(" · "),detail:`${s.offers.length} ofertas`}));

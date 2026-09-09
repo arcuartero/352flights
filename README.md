@@ -103,6 +103,11 @@ The ops board now also includes:
 - subscriber preference summaries
 - a matched send queue for digest and flash campaigns
 - a recent campaign history panel backed by Supabase logs
+- a manual social-content selection flow that sends neutral, signed offer packages to Creatello
+
+The Creatello sender lives at `/ops/tiktok-json`. Its private server endpoint is
+`POST /api/ops/creatello-inbox`; setup and payload details are documented in
+[`docs/creatello-content-inbox.md`](docs/creatello-content-inbox.md).
 
 ### Preference Flow
 

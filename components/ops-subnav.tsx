@@ -44,7 +44,7 @@ const links = [
   },
   {
     href: "/ops/tiktok-json",
-    label: "TikTok JSON",
+    label: "Social content",
     icon: FileJson2,
   },
   {
@@ -87,8 +87,8 @@ const pageCopy: Record<string, { eyebrow: string; title: string; description: st
   },
   "/ops/tiktok-json": {
     eyebrow: "Social publishing",
-    title: "TikTok JSON",
-    description: "Turn verified deals into ready-to-publish social content.",
+    title: "Social content",
+    description: "Choose verified offers and build ready-to-publish social content.",
   },
   "/ops/active-routes": {
     eyebrow: "Network coverage",
