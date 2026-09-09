@@ -141,6 +141,21 @@ If you already ran an earlier version of the schema, run the updated `supabase/s
 
 The API route uses the service role key on the server, so RLS can stay enabled.
 
+## Creatello social revalidation
+
+Creatello revalidates a received package immediately before any scheduled social publication:
+
+```text
+POST /api/integrations/creatello/revalidate
+X-352-Timestamp: <epoch milliseconds>
+X-352-Signature: sha256=<HMAC-SHA256(timestamp + "." + exact raw body)>
+```
+
+Configure the same private `CREATELLO_352_REVALIDATION_HMAC_SECRET` (at least 32 characters) in
+352 Flights and Creatello. The endpoint compares route, dates, currency and price against the latest
+eligible snapshot from the previous 24 hours. It never returns provider secrets and never substitutes
+an offer: any difference makes Creatello cancel that publication.
+
 ## Email Sending
 
 `/ops` can now send:
