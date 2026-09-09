@@ -9,6 +9,7 @@ import {
   Database,
   FileText,
   RefreshCw,
+  RotateCcw,
 } from "lucide-react";
 
 import type {
@@ -29,6 +30,10 @@ type RunDetailResponse =
 
 type RunHistoryResponse =
   | { ok: true; runs: PriceScanRun[] }
+  | { ok: false; reason: string; detail?: string };
+
+type ResumeResponse =
+  | { ok: true; reason: string; commandId: string }
   | { ok: false; reason: string; detail?: string };
 
 type SortDirection = "asc" | "desc";
@@ -599,9 +604,21 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     message: string;
     runId: string;
   } | null>(null);
+  const [resumingRunId, setResumingRunId] = useState<string | null>(null);
+  const [resumeNotice, setResumeNotice] = useState<{
+    runId: string;
+    tone: "success" | "error";
+    message: string;
+  } | null>(null);
   const loadedPatternRunIds = useRef(new Set<string>());
   const runningPatternRunIds = useRef(new Set<string>());
   const visibleRuns = liveRuns.slice(0, runLimit);
+  const resumableRunId = liveRuns.find(
+    (run) =>
+      run.scannerSource === "mac" &&
+      ["partial", "failed", "stopped"].includes(run.status) &&
+      run.routesCompleted < run.routesPlanned,
+  )?.id;
 
   useEffect(() => {
     let disposed = false;
@@ -820,6 +837,39 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     }
   }
 
+  async function resumeRun(run: PriceScanRun) {
+    if (resumingRunId) return;
+    setResumingRunId(run.id);
+    setResumeNotice(null);
+    try {
+      const response = await fetch(`/api/ops/price-scan-runs/${run.id}/resume`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as ResumeResponse;
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.ok ? "No se pudo reanudar el análisis." : payload.detail ?? payload.reason,
+        );
+      }
+      setResumeNotice({
+        runId: run.id,
+        tone: "success",
+        message: "Reanudación enviada al Mac. El análisis continuará desde el checkpoint guardado.",
+      });
+    } catch (requestError) {
+      setResumeNotice({
+        runId: run.id,
+        tone: "error",
+        message:
+          requestError instanceof Error
+            ? requestError.message
+            : "No se pudo reanudar el análisis.",
+      });
+    } finally {
+      setResumingRunId(null);
+    }
+  }
+
   return (
     <section className="ops-panel ops-panel--wide price-scan-history">
       <div className="price-scan-history__header">
@@ -945,6 +995,42 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                   </summary>
 
                   <div className="price-scan-history__run-body">
+                    {run.id === resumableRunId ? (
+                      <section className="price-scan-history__resume" aria-label="Reanudar análisis">
+                        <div>
+                          <strong>Este análisis tiene trabajo pendiente</strong>
+                          <p>
+                            Continuará con las rutas y reglas que faltan usando el progreso
+                            guardado en el Mac.
+                          </p>
+                        </div>
+                        <button
+                          className="ops-button ops-button--primary"
+                          disabled={resumingRunId !== null}
+                          onClick={() => void resumeRun(run)}
+                          type="button"
+                        >
+                          <RotateCcw
+                            aria-hidden="true"
+                            className={resumingRunId === run.id ? "is-spinning" : undefined}
+                            size={16}
+                          />
+                          {resumingRunId === run.id ? "Reanudando" : "Retomar desde donde se quedó"}
+                        </button>
+                      </section>
+                    ) : null}
+                    {resumeNotice?.runId === run.id ? (
+                      <p
+                        className={`ops-status ${
+                          resumeNotice.tone === "success"
+                            ? "ops-status--success"
+                            : "ops-status--error"
+                        }`}
+                        role="status"
+                      >
+                        {resumeNotice.message}
+                      </p>
+                    ) : null}
                     {explanation ? (
                       <section
                         aria-label="Explicación sencilla del escaneo"

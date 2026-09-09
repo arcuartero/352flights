@@ -47,6 +47,46 @@ class MacScannerControlAgentTests(unittest.TestCase):
             ],
         )
 
+    def test_resume_rejects_a_missing_or_different_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_path = Path(directory) / "state.json"
+            state_path.write_text(
+                json.dumps({"price_scan_checkpoint": {"run_key": "run-other"}}),
+                encoding="utf-8",
+            )
+            agent = MacScannerControlAgent.__new__(MacScannerControlAgent)
+            agent.gui_domain = "gui/501"
+            agent.state_path = state_path
+            with patch(
+                "luxflight_scanner.control_agent.read_lock_state",
+                return_value=(None, None, False),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "checkpoint is not available"):
+                    agent.start_price_scanner(resume_run_key="run-requested")
+
+    def test_resume_starts_when_checkpoint_matches(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state_path = Path(directory) / "state.json"
+            state_path.write_text(
+                json.dumps({"price_scan_checkpoint": {"run_key": "run-1"}}),
+                encoding="utf-8",
+            )
+            agent = MacScannerControlAgent.__new__(MacScannerControlAgent)
+            agent.gui_domain = "gui/501"
+            agent.state_path = state_path
+            completed = Mock(returncode=0, stderr="", stdout="")
+            with (
+                patch(
+                    "luxflight_scanner.control_agent.read_lock_state",
+                    return_value=(None, None, False),
+                ),
+                patch("luxflight_scanner.control_agent.subprocess.run", return_value=completed),
+            ):
+                result = agent.start_price_scanner(resume_run_key="run-1")
+
+        self.assertEqual(result["reason"], "resumed")
+        self.assertEqual(result["run_key"], "run-1")
+
     def test_heartbeat_only_does_not_claim_a_command(self) -> None:
         agent = MacScannerControlAgent.__new__(MacScannerControlAgent)
         agent.heartbeat = Mock()

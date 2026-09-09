@@ -373,12 +373,29 @@ class MacScannerControlAgent:
         )
         response.raise_for_status()
 
-    def start_price_scanner(self) -> dict[str, Any]:
+    def _price_scan_checkpoint(self) -> dict[str, Any] | None:
+        try:
+            payload = json.loads(self.state_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        checkpoint = payload.get("price_scan_checkpoint") if isinstance(payload, dict) else None
+        return dict(checkpoint) if isinstance(checkpoint, dict) else None
+
+    def start_price_scanner(self, *, resume_run_key: str | None = None) -> dict[str, Any]:
         owner, pid, active = read_lock_state()
         if active and owner == "price_scanner":
             return {"reason": "already_running", "pid": pid}
         if active:
             raise RuntimeError(f"The {owner or 'other'} Mac scanner is already running.")
+
+        if resume_run_key:
+            checkpoint = self._price_scan_checkpoint()
+            checkpoint_run_key = str((checkpoint or {}).get("run_key") or "")
+            if checkpoint_run_key != resume_run_key:
+                raise RuntimeError(
+                    "The requested scan can no longer be resumed because its local "
+                    "checkpoint is not available."
+                )
 
         completed = subprocess.run(
             ["launchctl", "kickstart", f"{self.gui_domain}/{PRICE_SCANNER_LABEL}"],
@@ -390,7 +407,11 @@ class MacScannerControlAgent:
         if completed.returncode != 0:
             detail = completed.stderr.strip() or completed.stdout.strip() or "unknown launchctl error"
             raise RuntimeError(f"Could not start the Mac Price Scanner: {detail}")
-        return {"reason": "started", "launchd_label": PRICE_SCANNER_LABEL}
+        return {
+            "reason": "resumed" if resume_run_key else "started",
+            "launchd_label": PRICE_SCANNER_LABEL,
+            "run_key": resume_run_key,
+        }
 
     @staticmethod
     def stop_price_scanner() -> dict[str, Any]:
@@ -426,7 +447,10 @@ class MacScannerControlAgent:
         if command.scanner_type != "price_scanner":
             raise RuntimeError(f"Unsupported Mac scanner type: {command.scanner_type}")
         if command.action == "start":
-            return self.start_price_scanner()
+            resume_run_key = command.payload.get("resume_run_key")
+            if resume_run_key is not None and not isinstance(resume_run_key, str):
+                raise RuntimeError("Invalid resume_run_key in scanner command payload.")
+            return self.start_price_scanner(resume_run_key=resume_run_key)
         if command.action == "stop":
             return self.stop_price_scanner()
         raise RuntimeError(f"Unsupported Mac scanner action: {command.action}")
