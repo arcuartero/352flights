@@ -11,6 +11,7 @@ import {
 import { sendCreatelloInboxPackage } from "@/lib/creatello-content-inbox";
 import {
   DAILY_CREATELLO_TEMPLATES,
+  type CreatelloDeliverySlot,
   dailyCreatelloCutoff,
   dailyCreatelloDateKey,
   dailyCreatelloDestinationKey,
@@ -47,6 +48,7 @@ type SnapshotRow = {
 type DailyDeliveryRow = {
   id: string;
   delivery_date: string;
+  delivery_slot: CreatelloDeliverySlot;
   target_template: CreatelloInboxTargetTemplate;
   language: CreatelloLanguage;
   offer_count: number;
@@ -70,9 +72,9 @@ function packageHash(payload: CreatelloInboxPackage) {
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
-async function loadCandidateOffers(dateKey: string) {
+async function loadCandidateOffers(dateKey: string, deliverySlot: CreatelloDeliverySlot) {
   const supabase = getSupabaseAdminClient();
-  const cutoff = dailyCreatelloCutoff(dateKey);
+  const cutoff = dailyCreatelloCutoff(dateKey, deliverySlot);
   const windowStart = new Date(cutoff.getTime() - CANDIDATE_WINDOW_HOURS * 60 * 60 * 1000);
   const { data: routesData, error: routesError } = await supabase
     .from("scanned_routes")
@@ -126,12 +128,13 @@ async function loadCandidateOffers(dateKey: string) {
   });
 }
 
-async function loadExistingDailyDeliveries(dateKey: string) {
+async function loadExistingDailyDeliveries(dateKey: string, deliverySlot: CreatelloDeliverySlot) {
   const supabase = getSupabaseAdminClient();
   const { data, error } = await supabase
     .from("creatello_daily_deliveries")
     .select("*")
-    .eq("delivery_date", dateKey);
+    .eq("delivery_date", dateKey)
+    .eq("delivery_slot", deliverySlot);
   if (error) throw error;
   return (data ?? []).map((row) => ({
     ...row,
@@ -162,6 +165,7 @@ async function loadUsedOffers() {
 
 async function reserveDelivery(input: {
   dateKey: string;
+  deliverySlot: CreatelloDeliverySlot;
   targetTemplate: CreatelloInboxTargetTemplate;
   payload: CreatelloInboxPackage;
   sourceSnapshotIds: number[];
@@ -169,6 +173,7 @@ async function reserveDelivery(input: {
   const supabase = getSupabaseAdminClient();
   const { data, error } = await supabase.rpc("reserve_creatello_daily_delivery", {
     p_delivery_date: input.dateKey,
+    p_delivery_slot: input.deliverySlot,
     p_target_template: input.targetTemplate,
     p_language: input.payload.language,
     p_payload: input.payload,
@@ -245,11 +250,14 @@ async function deliver(row: DailyDeliveryRow) {
   }
 }
 
-export async function runDailyCreatelloDelivery(now = new Date()) {
+export async function runDailyCreatelloDelivery(
+  now = new Date(),
+  deliverySlot: CreatelloDeliverySlot = "morning",
+) {
   const dateKey = dailyCreatelloDateKey(now);
   const [offers, existing, used] = await Promise.all([
-    loadCandidateOffers(dateKey),
-    loadExistingDailyDeliveries(dateKey),
+    loadCandidateOffers(dateKey, deliverySlot),
+    loadExistingDailyDeliveries(dateKey, deliverySlot),
     loadUsedOffers(),
   ]);
   const existingTemplates = new Set(existing.map((row) => row.target_template));
@@ -260,22 +268,24 @@ export async function runDailyCreatelloDelivery(now = new Date()) {
     offers,
     language: DAILY_LANGUAGE,
     dateKey,
+    deliverySlot,
     usedItineraryKeys: used.itineraryKeys,
     usedSourceSnapshotIds: used.sourceSnapshotIds,
     reservedTodayDestinationKeys,
     templates: missingTemplates,
   });
 
-  const cutoff = dailyCreatelloCutoff(dateKey).toISOString();
+  const cutoff = dailyCreatelloCutoff(dateKey, deliverySlot).toISOString();
   const reserved: DailyDeliveryRow[] = [];
   for (const item of plan.plans) {
     const payload = buildCreatelloInboxPackage(item.offers, DAILY_LANGUAGE, 1, {
       targetTemplate: item.targetTemplate,
-      externalId: `daily:${dateKey}:${item.targetTemplate}`,
+      externalId: `daily:${dateKey}:${deliverySlot}:${item.targetTemplate}`,
       createdAt: cutoff,
     });
     reserved.push(await reserveDelivery({
       dateKey,
+      deliverySlot,
       targetTemplate: item.targetTemplate,
       payload,
       sourceSnapshotIds: item.offers.map((offer) => offer.id),
@@ -292,6 +302,7 @@ export async function runDailyCreatelloDelivery(now = new Date()) {
 
   console.info("[creatello-daily] run_completed", {
     dateKey,
+    deliverySlot,
     candidateCount: offers.length,
     validCandidateCount: plan.validCandidateCount,
     delivered: delivered.map((item) => ({ template: item.targetTemplate, count: item.offerCount, state: item.state })),
@@ -302,6 +313,7 @@ export async function runDailyCreatelloDelivery(now = new Date()) {
   return {
     ok: failed.length === 0 && plan.skipped.length === 0 && delivered.length === DAILY_CREATELLO_TEMPLATES.length,
     date: dateKey,
+    slot: deliverySlot,
     cutoff,
     candidateCount: offers.length,
     validCandidateCount: plan.validCandidateCount,

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { runDailyCreatelloDelivery } from "@/lib/creatello-daily-delivery";
+import {
+  CREATELLO_DELIVERY_SLOTS,
+  type CreatelloDeliverySlot,
+} from "@/lib/creatello-daily-selection";
 import { hasCreatelloInboxEnv, hasSupabaseAdminEnv } from "@/lib/env";
 import { validateCronSecret } from "@/lib/ops";
 
@@ -26,8 +30,19 @@ async function handle(request: Request) {
     );
   }
 
+  const requestedSlot = new URL(request.url).searchParams.get("slot") ?? "morning";
+  if (!CREATELLO_DELIVERY_SLOTS.includes(requestedSlot as CreatelloDeliverySlot)) {
+    return NextResponse.json(
+      { ok: false, reason: "invalid_delivery_slot" },
+      { status: 400, headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
+  }
+
   try {
-    const result = await runDailyCreatelloDelivery();
+    const result = await runDailyCreatelloDelivery(
+      new Date(),
+      requestedSlot as CreatelloDeliverySlot,
+    );
     return NextResponse.json(result, {
       status: result.ok ? 200 : 503,
       headers: { "Cache-Control": "no-store, max-age=0" },

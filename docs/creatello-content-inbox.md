@@ -1,20 +1,20 @@
 # Envío de paquetes a Creatello
 
-352 Flights puede enviar selecciones manuales y tres paquetes automáticos diarios a la bandeja **Datos recibidos** de Creatello. Los paquetes no incluyen imágenes, renderizado ni instrucciones de publicación. Los automáticos incluyen una plantilla sugerida, pero Creatello no crea el borrador hasta que el usuario lo confirma.
+352 Flights puede enviar selecciones manuales y dos tandas de tres paquetes automáticos al día a la bandeja **Datos recibidos** de Creatello. Los paquetes no incluyen imágenes, renderizado ni instrucciones de publicación. Los automáticos incluyen una plantilla sugerida, pero Creatello no crea el borrador hasta que el usuario lo confirma.
 
-## Envío automático diario
+## Dos envíos automáticos diarios
 
-Vercel llama a `GET /api/cron/creatello-daily` todos los días a las `07:15 UTC`. La ruta exige `Authorization: Bearer <CRON_SECRET>`; Vercel añade esta cabecera automáticamente cuando `CRON_SECRET` existe en producción. También admite `POST` con la misma autenticación para una ejecución operativa manual.
+Vercel llama a `GET /api/cron/creatello-daily?slot=morning` todos los días a las `07:15 UTC` y a `GET /api/cron/creatello-daily?slot=evening` a las `19:15 UTC`. En Luxemburgo corresponden a las 09:15 y 21:15 durante el horario de verano, y a las 08:15 y 20:15 durante el horario de invierno. La ruta exige `Authorization: Bearer <CRON_SECRET>`; Vercel añade esta cabecera automáticamente cuando `CRON_SECRET` existe en producción. También admite `POST` con la misma autenticación para una ejecución operativa manual.
 
-En cada fecha de Luxemburgo se prepara como máximo un paquete para cada plantilla:
+En cada franja de cada fecha de Luxemburgo se prepara como máximo un paquete para cada plantilla:
 
 - `flight-deals-352`
 - `travel-offer`
 - `cheap-flights-tiktok`
 
-El tamaño se elige de forma pseudoaleatoria entre 3, 4 y 5, pero es determinista para `fecha + plantilla`; por ello un reintento conserva el mismo tamaño. Solo se consideran tarifas publicables de LUX, comprobadas dentro de las 24 horas anteriores al corte diario y con salida futura.
+El tamaño se elige de forma pseudoaleatoria entre 3, 4 y 5, pero es determinista para `fecha + franja + plantilla`; por ello un reintento conserva el mismo tamaño. Solo se consideran tarifas publicables de LUX, comprobadas dentro de las 24 horas anteriores al corte de la franja y con salida futura.
 
-La selección reserva en Supabase tanto el snapshot como el `itineraryKey`. No se repite una oferta ya enviada en otro paquete ni otro día, y tampoco se repite destino entre los tres paquetes del mismo día. Se priorizan las ofertas de menor precio y, en empate, las más recientes. Si no hay al menos tres ofertas completas y compatibles para una plantilla, esa plantilla se omite y el cron devuelve un estado no exitoso para que el fallo sea visible; nunca rellena campos inventados.
+La selección reserva en Supabase tanto el snapshot como el `itineraryKey`. No se repite una oferta ya enviada en otro paquete, franja o día, y tampoco se repite destino entre todos los paquetes de una misma fecha. Se priorizan las ofertas de menor precio y, en empate, las más recientes. Si no hay al menos tres ofertas completas y compatibles para una plantilla, esa plantilla se omite y el cron devuelve un estado no exitoso para que el fallo sea visible; nunca rellena campos inventados.
 
 Las reservas y el payload exacto se conservan en `creatello_daily_deliveries` y `creatello_daily_delivery_offers`. Un reintento reutiliza el payload guardado y la idempotencia de Creatello devuelve el mismo registro.
 
@@ -109,4 +109,4 @@ La fuente canónica está en `shared/content-inbox-contract.js` del proyecto Cre
 2. Confirmar en producción `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CREATELLO_CONTENT_INBOX_URL`, `CREATELLO_CONTENT_INBOX_HMAC_SECRET` y `CRON_SECRET`.
 3. Desplegar primero Creatello (para que acepte `targetTemplate`) y después 352 Flights.
 4. Actualizar el código del scanner que corre en el VPS y ejecutar al menos un escaneo; los snapshots anteriores no contienen las duraciones fiables nuevas.
-5. Ejecutar una vez `POST /api/cron/creatello-daily` con la cabecera Bearer para validar el flujo. Repetirlo el mismo día no crea paquetes nuevos.
+5. Ejecutar `POST /api/cron/creatello-daily?slot=morning` o `?slot=evening` con la cabecera Bearer para validar el flujo. Repetir una misma franja el mismo día no crea paquetes nuevos.

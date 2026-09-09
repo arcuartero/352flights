@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   DAILY_CREATELLO_TEMPLATES,
+  dailyCreatelloCutoff,
   dailyCreatelloPackageSize,
   planDailyCreatelloPackages,
   prepareDailyCreatelloCandidates,
@@ -47,11 +48,18 @@ function offer(id: number): TikTokSourceOffer {
 
 test("daily package sizes are deterministic and always between three and five", () => {
   for (const template of DAILY_CREATELLO_TEMPLATES) {
-    const first = dailyCreatelloPackageSize("2026-09-09", template);
-    const repeated = dailyCreatelloPackageSize("2026-09-09", template);
-    assert.equal(first, repeated);
-    assert.ok(first >= 3 && first <= 5);
+    for (const slot of ["morning", "evening"] as const) {
+      const first = dailyCreatelloPackageSize("2026-09-09", template, slot);
+      const repeated = dailyCreatelloPackageSize("2026-09-09", template, slot);
+      assert.equal(first, repeated);
+      assert.ok(first >= 3 && first <= 5);
+    }
   }
+});
+
+test("uses separate UTC cutoffs for the two daily delivery slots", () => {
+  assert.equal(dailyCreatelloCutoff("2026-09-09", "morning").toISOString(), "2026-09-09T07:15:00.000Z");
+  assert.equal(dailyCreatelloCutoff("2026-09-09", "evening").toISOString(), "2026-09-09T19:15:00.000Z");
 });
 
 test("plans one compatible package per template without repeated offers or destinations", () => {
@@ -59,6 +67,7 @@ test("plans one compatible package per template without repeated offers or desti
     offers: Array.from({ length: 20 }, (_, index) => offer(index + 1)),
     language: "es",
     dateKey: "2026-09-09",
+    deliverySlot: "evening",
   });
 
   assert.equal(result.plans.length, 3);
@@ -68,7 +77,10 @@ test("plans one compatible package per template without repeated offers or desti
   assert.equal(new Set(selected.map((item) => item.itineraryKey)).size, selected.length);
   assert.equal(new Set(selected.map((item) => item.destinationCity)).size, selected.length);
   for (const plan of result.plans) {
-    assert.equal(plan.offers.length, dailyCreatelloPackageSize("2026-09-09", plan.targetTemplate));
+    assert.equal(
+      plan.offers.length,
+      dailyCreatelloPackageSize("2026-09-09", plan.targetTemplate, "evening"),
+    );
   }
 });
 
