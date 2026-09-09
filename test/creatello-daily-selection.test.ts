@@ -66,7 +66,7 @@ test("plans one compatible package per template without repeated offers or desti
   const selected = result.plans.flatMap((plan) => plan.canonicalOffers);
   assert.equal(new Set(selected.map((item) => item.sourceSnapshotId)).size, selected.length);
   assert.equal(new Set(selected.map((item) => item.itineraryKey)).size, selected.length);
-  assert.equal(new Set(selected.map((item) => item.destinationAirport)).size, selected.length);
+  assert.equal(new Set(selected.map((item) => item.destinationCity)).size, selected.length);
   for (const plan of result.plans) {
     assert.equal(plan.offers.length, dailyCreatelloPackageSize("2026-09-09", plan.targetTemplate));
   }
@@ -86,6 +86,19 @@ test("never selects an itinerary or snapshot already reserved", () => {
   const selected = result.plans.flatMap((plan) => plan.canonicalOffers);
   assert.ok(selected.every((item) => item.itineraryKey !== blocked.itineraryKey));
   assert.ok(selected.every((item) => item.sourceSnapshotId !== blocked.sourceSnapshotId));
+});
+
+test("treats different airports in the same city as one destination", () => {
+  const offers = Array.from({ length: 8 }, (_, index) => offer(index + 1));
+  offers[1] = { ...offers[1], destinationCity: offers[0].destinationCity };
+  const result = planDailyCreatelloPackages({
+    offers,
+    language: "es",
+    dateKey: "2026-09-12",
+    templates: ["travel-offer"],
+  });
+  const cities = result.plans[0].canonicalOffers.map((item) => item.destinationCity);
+  assert.equal(new Set(cities).size, cities.length);
 });
 
 test("skips flight-deals-352 instead of inventing missing durations", () => {

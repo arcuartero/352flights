@@ -55,6 +55,10 @@ export function dailyCreatelloCutoff(dateKey: string) {
   return new Date(`${dateKey}T07:15:00.000Z`);
 }
 
+export function dailyCreatelloDestinationKey(city: string) {
+  return city.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+}
+
 export function prepareDailyCreatelloCandidates(
   offers: TikTokSourceOffer[],
   language: CreatelloLanguage,
@@ -105,14 +109,14 @@ export function planDailyCreatelloPackages(input: {
   dateKey: string;
   usedItineraryKeys?: Iterable<string>;
   usedSourceSnapshotIds?: Iterable<string>;
-  reservedTodayDestinations?: Iterable<string>;
+  reservedTodayDestinationKeys?: Iterable<string>;
   templates?: readonly CreatelloInboxTargetTemplate[];
 }) {
   const templates = input.templates ?? DAILY_CREATELLO_TEMPLATES;
   const candidates = prepareDailyCreatelloCandidates(input.offers, input.language);
   const usedItineraries = new Set(input.usedItineraryKeys ?? []);
   const usedSnapshots = new Set(input.usedSourceSnapshotIds ?? []);
-  const usedDestinations = new Set(input.reservedTodayDestinations ?? []);
+  const usedDestinations = new Set(input.reservedTodayDestinationKeys ?? []);
   const plans: DailyCreatelloPlan[] = [];
   const skipped: DailyCreatelloSkippedPlan[] = [];
 
@@ -122,13 +126,14 @@ export function planDailyCreatelloPackages(input: {
       .filter((candidate) => isCompatible(candidate, targetTemplate))
       .filter((candidate) => !usedItineraries.has(candidate.canonical.itineraryKey))
       .filter((candidate) => !usedSnapshots.has(candidate.canonical.sourceSnapshotId))
-      .filter((candidate) => !usedDestinations.has(candidate.canonical.destinationAirport))
+      .filter((candidate) => !usedDestinations.has(dailyCreatelloDestinationKey(candidate.canonical.destinationCity)))
       .sort(candidateOrder(input.dateKey, targetTemplate));
 
     const uniqueDestinations = new Map<string, DailyCreatelloCandidate>();
     for (const candidate of eligible) {
-      if (!uniqueDestinations.has(candidate.canonical.destinationAirport)) {
-        uniqueDestinations.set(candidate.canonical.destinationAirport, candidate);
+      const destinationKey = dailyCreatelloDestinationKey(candidate.canonical.destinationCity);
+      if (!uniqueDestinations.has(destinationKey)) {
+        uniqueDestinations.set(destinationKey, candidate);
       }
     }
     const selected = [...uniqueDestinations.values()].slice(0, requestedCount);
@@ -145,7 +150,7 @@ export function planDailyCreatelloPackages(input: {
     for (const candidate of selected) {
       usedItineraries.add(candidate.canonical.itineraryKey);
       usedSnapshots.add(candidate.canonical.sourceSnapshotId);
-      usedDestinations.add(candidate.canonical.destinationAirport);
+      usedDestinations.add(dailyCreatelloDestinationKey(candidate.canonical.destinationCity));
     }
     plans.push({
       targetTemplate,

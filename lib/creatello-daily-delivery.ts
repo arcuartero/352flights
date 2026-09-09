@@ -13,6 +13,7 @@ import {
   DAILY_CREATELLO_TEMPLATES,
   dailyCreatelloCutoff,
   dailyCreatelloDateKey,
+  dailyCreatelloDestinationKey,
   planDailyCreatelloPackages,
 } from "@/lib/creatello-daily-selection";
 import { getSupabaseAdminClient } from "@/lib/supabase";
@@ -252,8 +253,8 @@ export async function runDailyCreatelloDelivery(now = new Date()) {
     loadUsedOffers(),
   ]);
   const existingTemplates = new Set(existing.map((row) => row.target_template));
-  const reservedTodayDestinations = existing.flatMap((row) =>
-    row.payload.offers.map((offer) => offer.destinationAirport));
+  const reservedTodayDestinationKeys = existing.flatMap((row) =>
+    row.payload.offers.map((offer) => dailyCreatelloDestinationKey(offer.destinationCity)));
   const missingTemplates = DAILY_CREATELLO_TEMPLATES.filter((template) => !existingTemplates.has(template));
   const plan = planDailyCreatelloPackages({
     offers,
@@ -261,7 +262,7 @@ export async function runDailyCreatelloDelivery(now = new Date()) {
     dateKey,
     usedItineraryKeys: used.itineraryKeys,
     usedSourceSnapshotIds: used.sourceSnapshotIds,
-    reservedTodayDestinations,
+    reservedTodayDestinationKeys,
     templates: missingTemplates,
   });
 
