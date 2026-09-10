@@ -1,6 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { createlloInboxOfferSchema } from "@/lib/creatello-content-inbox-contract";
+import {
+  createlloInboxOfferSchema,
+  createlloInboxPackageSchema,
+  createlloInboxPayloadHash,
+} from "@/lib/creatello-content-inbox-contract";
 import { getCreatelloRevalidationEnv } from "@/lib/env";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -29,11 +33,17 @@ export async function revalidateCreatelloOffers(input: RevalidationRequest): Pro
   const supabase = getSupabaseAdminClient();
   const reasons: RevalidationReason[] = [];
   const { data: delivery } = await supabase.from("creatello_daily_deliveries")
-    .select("payload_hash")
+    .select("payload")
     .eq("payload->>externalId", input.externalId)
     .eq("payload->>revision", String(input.revision))
     .maybeSingle();
-  if (delivery && delivery.payload_hash !== input.payloadHash) {
+  const storedPayload = delivery
+    ? createlloInboxPackageSchema.safeParse(delivery.payload)
+    : null;
+  if (storedPayload && !storedPayload.success) {
+    return { valid: false, reasons: input.offers.map((offer) => ({ itineraryKey: offer.itineraryKey, reason: "not_found" as const })) };
+  }
+  if (storedPayload?.success && createlloInboxPayloadHash(storedPayload.data) !== input.payloadHash) {
     return { valid: false, reasons: input.offers.map((offer) => ({ itineraryKey: offer.itineraryKey, reason: "not_found" as const })) };
   }
 

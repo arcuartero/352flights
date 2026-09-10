@@ -83,6 +83,32 @@ export const createlloInboxPackageSchema = z.object({
 
 export type CreatelloInboxPackage = z.infer<typeof createlloInboxPackageSchema>;
 
+/**
+ * Serializes JSON with object keys in a stable order. Creatello uses this exact
+ * representation to calculate the payload hash stored with an inbox item.
+ */
+export function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(",")}}`;
+  }
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    throw new TypeError("Only JSON-compatible values can be canonicalized");
+  }
+  return serialized;
+}
+
+export function createlloInboxPayloadHash(payload: CreatelloInboxPackage): string {
+  return createHash("sha256").update(canonicalJson(payload)).digest("hex");
+}
+
 function metadataString(offer: TikTokSourceOffer, key: string) {
   const value = offer.metadata?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;

@@ -1,9 +1,8 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
-
 import {
   buildCreatelloInboxPackage,
+  createlloInboxPayloadHash,
   createlloInboxPackageSchema,
   type CreatelloInboxPackage,
   type CreatelloInboxTargetTemplate,
@@ -66,10 +65,6 @@ type DailyDeliveryRow = {
 function safeDeliveryError(error: unknown) {
   const message = error instanceof Error ? error.message : "Error desconocido";
   return message.replace(/[\r\n\t]+/g, " ").slice(0, 500);
-}
-
-function packageHash(payload: CreatelloInboxPackage) {
-  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
 async function loadCandidateOffers(dateKey: string, deliverySlot: CreatelloDeliverySlot) {
@@ -177,7 +172,7 @@ async function reserveDelivery(input: {
     p_target_template: input.targetTemplate,
     p_language: input.payload.language,
     p_payload: input.payload,
-    p_payload_hash: packageHash(input.payload),
+    p_payload_hash: createlloInboxPayloadHash(input.payload),
     p_source_snapshot_ids: input.sourceSnapshotIds,
     p_itinerary_keys: input.payload.offers.map((offer) => offer.itineraryKey),
     p_destination_airports: input.payload.offers.map((offer) => offer.destinationAirport),
