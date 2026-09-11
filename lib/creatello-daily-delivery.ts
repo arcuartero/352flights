@@ -90,7 +90,7 @@ async function loadCandidateOffers(dateKey: string, deliverySlot: CreatelloDeliv
       .select("id,route_id,price,currency,departure_date,return_date,max_stops,scanned_at,metadata")
       .in("route_id", routeIds)
       .eq("metadata->>public_fare_eligible", "true")
-      .gte("departure_date", dateKey)
+      .gt("departure_date", dateKey)
       .not("return_date", "is", null)
       .gte("scanned_at", windowStart.toISOString())
       .lte("scanned_at", cutoff.toISOString())

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { z } from "zod";
+import { departureDeadline } from "./creatello-travel-validity";
 
 import { getAirportCountryCode } from "@/lib/airport-countries";
 import type { CreatelloLanguage, TikTokSourceOffer } from "@/lib/tiktok-carousel";
@@ -9,7 +10,6 @@ export const CREATELLO_INBOX_SCHEMA_VERSION = 1 as const;
 export const CREATELLO_INBOX_SOURCE = "352flights" as const;
 export const CREATELLO_INBOX_MAX_OFFERS = 20;
 export const CREATELLO_INBOX_MAX_BYTES = 256 * 1024;
-export const CREATELLO_INBOX_FRESHNESS_HOURS = 24;
 export const CREATELLO_INBOX_TARGET_TEMPLATES = [
   "travel-offer",
   "cheap-flights-tiktok",
@@ -194,9 +194,8 @@ export function toCreatelloInboxOffer(offer: TikTokSourceOffer, language: Create
     throw new Error(`La oferta ${offer.id} no tiene una fecha de comprobación válida.`);
   }
   const checkedAt = checkedAtDate.toISOString();
-  const expiresAt = new Date(
-    checkedAtDate.getTime() + CREATELLO_INBOX_FRESHNESS_HOURS * 60 * 60 * 1000,
-  ).toISOString();
+  const expiresAt = departureDeadline(offer.departureDate);
+  if (Date.parse(expiresAt) <= Date.now()) throw new Error("La fecha de salida de la oferta ya ha llegado.");
   const destinationCountryCode = getAirportCountryCode(offer.destinationAirport);
   const destinationCountry = destinationCountryCode
     ? countryName(destinationCountryCode, language)
