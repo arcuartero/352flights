@@ -271,6 +271,12 @@ export async function runDailyCreatelloDelivery(
   });
 
   const cutoff = dailyCreatelloCutoff(dateKey, deliverySlot).toISOString();
+  for (const skipped of plan.skipped) {
+    if (skipped.targetTemplate === "cheap-flights-tiktok") console.warn("[creatello-daily] monthly_package_skipped", {
+      dateKey, deliverySlot, requiredMonths: 3, minimumFlightsPerMonth: 3,
+      monthlyCounts: skipped.monthlyCounts || {}, reason: skipped.reason,
+    });
+  }
   const reserved: DailyDeliveryRow[] = [];
   for (const item of plan.plans) {
     const payload = buildCreatelloInboxPackage(item.offers, DAILY_LANGUAGE, 1, {
