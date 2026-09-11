@@ -4927,7 +4927,7 @@ export async function getPublicSearchDealsPageData(): Promise<PublicDealsPageDat
   }
 }
 
-export async function getPublicCityDealsPageData(citySlug: string): Promise<PublicDealsPageData> {
+export async function getPublicCityDealsPageData(citySlug: string, options?: { strict?: boolean }): Promise<PublicDealsPageData> {
   const normalizedSlug = citySlug.trim().toLowerCase();
   const getCachedCityData = unstable_cache(
     () => getPublicCityDealsPageDataUncached(normalizedSlug),
@@ -4940,11 +4940,15 @@ export async function getPublicCityDealsPageData(citySlug: string): Promise<Publ
 
   try {
     const data = await getCachedCityData();
+    if (options?.strict && (!data.configured || !data.schemaReady)) {
+      throw new Error("Public fares are not available for validation");
+    }
     if (data.configured && data.schemaReady) {
       lastSuccessfulPublicCityDealsPageData.set(normalizedSlug, data);
     }
     return data;
   } catch (error) {
+    if (options?.strict) throw error;
     console.error(`[public-city-fares:${normalizedSlug}] Supabase read failed after retries.`, error);
     return (
       lastSuccessfulPublicCityDealsPageData.get(normalizedSlug) ??

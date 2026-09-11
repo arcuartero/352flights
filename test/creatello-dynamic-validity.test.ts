@@ -52,3 +52,20 @@ test("database failures are thrown, never reported as available or unavailable",
     await assert.rejects(revalidateCreatelloOffers(input, fakeDb(rows), now));
   }
 });
+
+test("public policy uses the website resolver and returns prices without mutating the pack", async () => {
+  const request = { ...input, policy: "public_web_v1" as const };
+  const before = JSON.stringify(request);
+  const quote = { itineraryKey: input.offers[0].itineraryKey, priceMinor: 9900, currency: "EUR", fareId: "fare-456", url: "https://www.352flights.com/deals/nice?fare=fare-456", checkedAt: new Date(now).toISOString() };
+  const result = await revalidateCreatelloOffers(request, fakeDb(fixtures().slice(0, 3)), now, async () => ({ quote }));
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.quotes, [quote]);
+  assert.equal(JSON.stringify(request), before);
+});
+test("a stored but publicly absent fare blocks; connection errors remain retryable", async () => {
+  const request = { ...input, policy: "public_web_v1" as const };
+  const result = await revalidateCreatelloOffers(request, fakeDb(fixtures().slice(0, 3)), now, async () => ({ reason: "not_visible_on_web" }));
+  assert.equal(result.valid, false);
+  assert.equal(result.reasons[0].reason, "not_visible_on_web");
+  await assert.rejects(revalidateCreatelloOffers(request, fakeDb(fixtures().slice(0, 3)), now, async () => { throw new Error("cache unavailable"); }));
+});

@@ -15,11 +15,16 @@ export const revalidationRequestSchema = z.object({
   revision: z.number().int().positive(),
   payloadHash: z.string().regex(/^[0-9a-f]{64}$/),
   offers: z.array(createlloInboxOfferSchema).min(1).max(20),
+  policy: z.literal("public_web_v1").optional(),
 }).strict();
 
 export type RevalidationRequest = z.infer<typeof revalidationRequestSchema>;
-export type RevalidationReason = { itineraryKey: string; reason: "unavailable" | "not_found" | "route_changed" | "dates_changed" | "currency_changed" | "departure_passed" };
+export type RevalidationReason = { itineraryKey: string; reason: "unavailable" | "not_found" | "route_changed" | "dates_changed" | "currency_changed" | "departure_passed" | "not_visible_on_web" | "conditions_changed" };
 export type RevalidationObservation = { itineraryKey: string; reason: "stale" | "price_changed" };
+export type PublicQuote = { itineraryKey: string; priceMinor: number; currency: string; fareId: string; url: string; checkedAt: string };
+export type PublicQuoteResult = { quote: PublicQuote } | { reason: RevalidationReason["reason"] };
+export type PublicQuoteResolver = (offer: RevalidationRequest["offers"][number], routeId: number, supabase: ReturnType<typeof getSupabaseAdminClient>, now: number) => Promise<PublicQuoteResult>;
+const resolvePublicQuote: PublicQuoteResolver = async (...args) => (await import("./creatello-public-quote")).resolvePublicQuote(...args);
 
 export function verifyRevalidationSignature(rawBody: string, timestamp: string | null, signature: string | null, secret: string, now = Date.now()) {
   if (!timestamp || !signature || !/^\d{10,13}$/.test(timestamp)) return false;
@@ -31,9 +36,10 @@ export function verifyRevalidationSignature(rawBody: string, timestamp: string |
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-export async function revalidateCreatelloOffers(input: RevalidationRequest, supabase = getSupabaseAdminClient(), now = Date.now()): Promise<{ valid: boolean; reasons: RevalidationReason[]; observations?: RevalidationObservation[] }> {
+export async function revalidateCreatelloOffers(input: RevalidationRequest, supabase = getSupabaseAdminClient(), now = Date.now(), quoteResolver = resolvePublicQuote): Promise<{ valid: boolean; reasons: RevalidationReason[]; observations?: RevalidationObservation[]; quotes?: PublicQuote[]; policy?: string }> {
   const reasons: RevalidationReason[] = [];
   const observations: RevalidationObservation[] = [];
+  const quotes: PublicQuote[] = [];
   const { data: delivery, error: deliveryError } = await supabase.from("creatello_daily_deliveries")
     .select("payload")
     .eq("payload->>externalId", input.externalId)
@@ -75,6 +81,15 @@ export async function revalidateCreatelloOffers(input: RevalidationRequest, supa
     if (original.departure_date !== offer.departureDate || original.return_date !== offer.returnDate) {
       reasons.push({ itineraryKey: offer.itineraryKey, reason: "dates_changed" }); continue;
     }
+    if (input.policy === "public_web_v1") {
+      const result = await quoteResolver(offer, original.route_id, supabase, now);
+      if ("reason" in result) reasons.push({ itineraryKey: offer.itineraryKey, reason: result.reason });
+      else {
+        quotes.push(result.quote);
+        if (result.quote.priceMinor !== offer.priceMinor) observations.push({ itineraryKey: offer.itineraryKey, reason: "price_changed" });
+      }
+      continue;
+    }
     const { data: latest, error: latestError } = await supabase.from("price_snapshots")
       .select("price,currency,scanned_at")
       .eq("route_id", original.route_id)
@@ -88,7 +103,7 @@ export async function revalidateCreatelloOffers(input: RevalidationRequest, supa
     if (latest.currency !== offer.currency) { reasons.push({ itineraryKey: offer.itineraryKey, reason: "currency_changed" }); continue; }
     if (Math.round(Number(latest.price) * 100) !== offer.priceMinor) { observations.push({ itineraryKey: offer.itineraryKey, reason: "price_changed" }); }
   }
-  return { valid: reasons.length === 0, reasons, observations };
+  return { valid: reasons.length === 0, reasons, observations, ...(input.policy ? { policy: input.policy, quotes } : {}) };
 }
 
 export function getRevalidationSecret() {
