@@ -133,7 +133,16 @@ export function CookieBanner() {
           )}
         </section>
       ) : config.showReopen ? (
-        <button className="cookie-ui__reopen" onClick={() => { setChoices(readCookieChoices()); setPreferences(true); setOpen(true); }} type="button">{copy.reopen}</button>
+        <button aria-label={copy.reopen} className="cookie-ui__reopen" onClick={() => { setChoices(readCookieChoices()); setPreferences(true); setOpen(true); }} title={copy.reopen} type="button">
+          <svg aria-hidden="true" className="cookie-ui__reopen-icon" fill="none" viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="12" fill="#fff" stroke="currentColor" strokeWidth="1.8" />
+            <circle cx="11" cy="10.5" r="1.55" fill="currentColor" />
+            <circle cx="20.5" cy="10" r="1.35" fill="currentColor" />
+            <circle cx="15.5" cy="16" r="1.7" fill="currentColor" />
+            <circle cx="9.5" cy="20" r="1.25" fill="currentColor" />
+            <circle cx="22" cy="20.5" r="1.55" fill="currentColor" />
+          </svg>
+        </button>
       ) : null}
     </div>
   );
