@@ -42,7 +42,7 @@ export const defaultCookieConfig: CookieConfig = {
   backdrop: true, compact: false, cornerRadius: 28,
   panelColor: "#ffffff", textColor: "#172338", mutedColor: "#647084",
   borderColor: "#e4e9f0", primaryColor: "#123776", primaryTextColor: "#ffffff",
-  secondaryColor: "#123776", secondaryTextColor: "#ffffff", accentColor: "#123776",
+  secondaryColor: "#123776", secondaryTextColor: "#123776", accentColor: "#123776",
   copy: {
     title: "Privacy center",
     description: "Your privacy matters. Choose which optional cookies we can use to improve your experience.",

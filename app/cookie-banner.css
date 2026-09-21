@@ -38,6 +38,8 @@
 .cookie-ui__panel--preferences { width: min(100%, 610px); padding-bottom: 0; }
 .cookie-ui--compact .cookie-ui__panel { width: min(100%, 450px); padding: 22px; }
 .cookie-ui--compact .cookie-ui__panel--preferences { width: min(100%, 540px); padding-bottom: 0; }
+.cookie-ui__logo { display: block; flex: none; width: 154px; height: auto; margin: 0 auto 20px; }
+.cookie-ui__panel--preferences .cookie-ui__logo { width: 138px; margin-bottom: 16px; }
 .cookie-ui__heading { display: flex; align-items: flex-start; justify-content: center; gap: 18px; }
 .cookie-ui__heading h2 {
   flex: 1;
@@ -106,7 +108,7 @@
 }
 .cookie-ui__button:hover { filter: brightness(1.12); transform: translateY(-1px); }
 .cookie-ui__button--primary { background: var(--cookie-primary); color: var(--cookie-primary-text); }
-.cookie-ui__button--secondary { background: var(--cookie-secondary); color: var(--cookie-secondary-text); }
+.cookie-ui__button--secondary { border: 2px solid var(--cookie-secondary); background: #fff; color: var(--cookie-secondary-text); }
 .cookie-ui__categories { display: grid; }
 .cookie-ui__category {
   display: flex;
