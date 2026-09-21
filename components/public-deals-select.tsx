@@ -14,6 +14,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { getCountryFlagSrc } from "@/lib/airport-countries";
+import { consentEventName, hasCookieConsent } from "@/lib/cookie-consent";
 import { getGroupedDropdownPlacement } from "@/lib/grouped-dropdown-placement";
 import { useI18n } from "@/lib/i18n";
 
@@ -113,7 +114,7 @@ export function PublicDealsSelect({
     if (!mobileDestinationSheet) return;
 
     try {
-      const stored = window.localStorage.getItem(RECENT_DESTINATIONS_KEY);
+      const stored = hasCookieConsent("functional") ? window.localStorage.getItem(RECENT_DESTINATIONS_KEY) : null;
       const parsed = stored ? JSON.parse(stored) : [];
       if (Array.isArray(parsed)) {
         setRecentValues(parsed.filter((item): item is string => typeof item === "string"));
@@ -121,6 +122,15 @@ export function PublicDealsSelect({
     } catch {
       setRecentValues([]);
     }
+  }, [mobileDestinationSheet]);
+
+  useEffect(() => {
+    if (!mobileDestinationSheet) return;
+    const onConsentChange = () => {
+      if (!hasCookieConsent("functional")) setRecentValues([]);
+    };
+    window.addEventListener(consentEventName, onConsentChange);
+    return () => window.removeEventListener(consentEventName, onConsentChange);
   }, [mobileDestinationSheet]);
 
   const cancelPendingSelection = useCallback(() => {
@@ -316,7 +326,7 @@ export function PublicDealsSelect({
             MAX_RECENT_DESTINATIONS,
           );
           try {
-            window.localStorage.setItem(RECENT_DESTINATIONS_KEY, JSON.stringify(next));
+            if (hasCookieConsent("functional")) window.localStorage.setItem(RECENT_DESTINATIONS_KEY, JSON.stringify(next));
           } catch {
             // The selector still works when storage is unavailable.
           }

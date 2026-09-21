@@ -44,12 +44,13 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
       },
       cookies: {
         title: "Cookies",
-        description: "How +352 Flights uses essential cookies and local browser storage.",
-        intro: "+352 Flights uses a small number of essential browser cookies and local storage keys to keep the interface working, remember settings, and preserve session-level product behavior.",
+        description: "How +352 Flights uses cookies and local browser storage.",
+        intro: "+352 Flights uses necessary browser storage to run the site and save your choice. Functional, analytics and marketing categories are optional and start disabled.",
         sections: [
-          { title: "Essential only", body: "These cookies support core features such as subscriber sessions, interface preferences, and product reliability. They are not used to build unrelated advertising profiles." },
-          { title: "Preference storage", body: "Some settings may also be saved locally in your browser, such as theme mode or recent interface state, to keep the experience consistent between visits." },
-          { title: "How to manage them", body: "You can clear browser storage or block cookies in your browser settings, although some parts of the experience may stop working correctly." },
+          { title: "Necessary", body: "Language, theme, security and your consent choice use necessary storage. These settings keep the site working." },
+          { title: "Optional categories", body: "Functional storage can remember recent destinations. Google Analytics measures users, sessions and pages only after you accept analytics. Marketing remains inactive unless relevant services are added and you consent." },
+          { title: "Anonymous counts", body: "We count banner decisions and broad page groups after a rejection or closure in daily totals. These totals contain no visitor ID, IP address, session ID, user agent or full URL. They cannot identify unique visitors. Rejected visits are not sent to Google Analytics." },
+          { title: "How to manage them", body: "Use the Cookie settings button on any page to accept, reject or change optional categories. Rejecting them removes the saved recent-destinations list and Google Analytics cookies." },
         ],
       },
       terms: {
@@ -80,12 +81,13 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
       },
       cookies: {
         title: "Cookies",
-        description: "Comment +352 Flights utilise les cookies essentiels et le stockage local.",
-        intro: "+352 Flights utilise quelques cookies essentiels et clés de stockage local pour faire fonctionner l’interface, mémoriser vos réglages et conserver le comportement de la session.",
+        description: "Comment +352 Flights utilise les cookies et le stockage local.",
+        intro: "+352 Flights utilise un stockage nécessaire au fonctionnement du site et à la sauvegarde de votre choix. Les catégories fonctionnelles, statistiques et marketing sont facultatives et désactivées par défaut.",
         sections: [
-          { title: "Uniquement l’essentiel", body: "Ces cookies prennent en charge les sessions abonnés, les préférences d’interface et la fiabilité du produit. Ils ne servent pas à créer des profils publicitaires sans rapport avec le service." },
-          { title: "Préférences enregistrées", body: "Certains réglages, comme le thème ou l’état récent de l’interface, peuvent être enregistrés localement pour rendre l’expérience cohérente entre les visites." },
-          { title: "Comment les gérer", body: "Vous pouvez effacer le stockage du navigateur ou bloquer les cookies dans ses réglages, mais certaines fonctions risquent alors de ne plus fonctionner correctement." },
+          { title: "Nécessaires", body: "La langue, le thème, la sécurité et votre choix de cookies utilisent un stockage nécessaire au fonctionnement du site." },
+          { title: "Catégories facultatives", body: "Le stockage fonctionnel peut mémoriser les destinations récentes. Google Analytics mesure les visites uniquement avec votre accord. Le marketing reste inactif sans service ajouté et accepté." },
+          { title: "Comptages anonymes", body: "Nous comptons chaque jour les choix du bandeau et les grandes catégories de pages vues après un refus ou une fermeture, sans identifiant, adresse IP, session, agent utilisateur ni URL complète. Ces totaux ne comptent pas les visiteurs uniques et ne sont pas transmis à Google." },
+          { title: "Comment les gérer", body: "Utilisez le bouton Paramètres des cookies sur chaque page pour modifier votre choix. Un refus efface les destinations récentes enregistrées." },
         ],
       },
       terms: {
@@ -116,12 +118,13 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
       },
       cookies: {
         title: "Cookies",
-        description: "Wie +352 Flights notwendige Cookies und lokalen Speicher verwendet.",
-        intro: "+352 Flights verwendet wenige notwendige Browser-Cookies und lokale Speicherwerte, damit die Oberfläche funktioniert, Einstellungen erhalten bleiben und Sitzungsfunktionen verfügbar sind.",
+        description: "Wie +352 Flights Cookies und lokalen Speicher verwendet.",
+        intro: "+352 Flights nutzt notwendigen Speicher für den Betrieb der Website und Ihre Auswahl. Funktionale, Analyse- und Marketing-Kategorien sind optional und zunächst deaktiviert.",
         sections: [
-          { title: "Nur das Notwendige", body: "Diese Cookies unterstützen Abonnentensitzungen, Oberflächeneinstellungen und die Zuverlässigkeit des Produkts. Sie werden nicht für unabhängige Werbeprofile verwendet." },
-          { title: "Gespeicherte Präferenzen", body: "Einstellungen wie Designmodus oder der letzte Oberflächenzustand können lokal gespeichert werden, damit die Nutzung zwischen Besuchen konsistent bleibt." },
-          { title: "Verwaltung", body: "Sie können den Browserspeicher löschen oder Cookies in den Browsereinstellungen blockieren. Einige Funktionen könnten dann nicht mehr korrekt arbeiten." },
+          { title: "Notwendig", body: "Sprache, Design, Sicherheit und Ihre Cookie-Auswahl benötigen Speicher für den Betrieb der Website." },
+          { title: "Optionale Kategorien", body: "Funktionaler Speicher kann letzte Ziele merken. Google Analytics misst Besuche nur mit Ihrer Zustimmung. Marketing bleibt ohne zusätzliche Dienste und Zustimmung inaktiv." },
+          { title: "Anonyme Zählwerte", body: "Wir zählen Banner-Entscheidungen und grobe Seitengruppen nach Ablehnung oder Schließen als Tageswerte, ohne Besucherkennung, IP-Adresse, Sitzung, User-Agent oder vollständige URL. Daraus ergeben sich keine eindeutigen Besucher; an Google wird nichts gesendet." },
+          { title: "Verwaltung", body: "Über Cookie-Einstellungen auf jeder Seite können Sie Ihre Auswahl ändern. Eine Ablehnung löscht gespeicherte letzte Ziele." },
         ],
       },
       terms: {
@@ -152,12 +155,13 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
       },
       cookies: {
         title: "Cookies",
-        description: "Como a +352 Flights utiliza cookies essenciais e armazenamento local.",
-        intro: "A +352 Flights utiliza alguns cookies essenciais e chaves de armazenamento local para manter a interface a funcionar, recordar definições e preservar o comportamento da sessão.",
+        description: "Como a +352 Flights utiliza cookies e armazenamento local.",
+        intro: "A +352 Flights utiliza armazenamento necessário para o site funcionar e guardar a sua escolha. As categorias funcionais, analíticas e de marketing são opcionais e começam desligadas.",
         sections: [
-          { title: "Apenas o essencial", body: "Estes cookies suportam sessões, preferências da interface e fiabilidade do produto. Não são utilizados para criar perfis publicitários sem relação com o serviço." },
-          { title: "Preferências guardadas", body: "Algumas definições, como o tema ou o estado recente da interface, podem ser guardadas localmente para manter uma experiência consistente entre visitas." },
-          { title: "Como geri-los", body: "Pode limpar o armazenamento ou bloquear cookies nas definições do navegador, embora algumas funcionalidades possam deixar de funcionar corretamente." },
+          { title: "Necessários", body: "Idioma, tema, segurança e a sua escolha de cookies usam armazenamento necessário para o funcionamento do site." },
+          { title: "Categorias opcionais", body: "O armazenamento funcional pode recordar destinos recentes. O Google Analytics mede visitas apenas com o seu consentimento. O marketing permanece inativo sem serviços adicionais aceites." },
+          { title: "Contagens anónimas", body: "Contamos escolhas do banner e grupos gerais de páginas após rejeição ou fecho em totais diários, sem identificador, IP, sessão, agente do navegador ou URL completa. Não representam visitantes únicos nem são enviados à Google." },
+          { title: "Como geri-los", body: "Use Definições de cookies em qualquer página para alterar a escolha. Rejeitar apaga os destinos recentes guardados." },
         ],
       },
       terms: {
@@ -188,12 +192,13 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
       },
       cookies: {
         title: "Cookie",
-        description: "Come +352 Flights utilizza cookie essenziali e memoria locale.",
-        intro: "+352 Flights utilizza pochi cookie essenziali e dati di memoria locale per far funzionare l’interfaccia, ricordare le impostazioni e conservare le funzioni della sessione.",
+        description: "Come +352 Flights utilizza cookie e memoria locale.",
+        intro: "+352 Flights usa memoria necessaria per il sito e per salvare la tua scelta. Le categorie funzionali, analitiche e marketing sono facoltative e inizialmente disattivate.",
         sections: [
-          { title: "Solo l’essenziale", body: "Questi cookie supportano sessioni, preferenze dell’interfaccia e affidabilità del prodotto. Non vengono usati per creare profili pubblicitari non collegati al servizio." },
-          { title: "Preferenze memorizzate", body: "Alcune impostazioni, come il tema o lo stato recente dell’interfaccia, possono essere salvate localmente per rendere coerente l’esperienza tra le visite." },
-          { title: "Come gestirli", body: "Puoi cancellare la memoria del browser o bloccare i cookie nelle impostazioni, anche se alcune funzioni potrebbero non funzionare correttamente." },
+          { title: "Necessari", body: "Lingua, tema, sicurezza e scelta dei cookie usano memoria necessaria al funzionamento del sito." },
+          { title: "Categorie facoltative", body: "La memoria funzionale può ricordare le destinazioni recenti. Google Analytics misura le visite solo con il tuo consenso. Il marketing resta inattivo senza altri servizi accettati." },
+          { title: "Conteggi anonimi", body: "Contiamo le scelte del banner e i gruppi generali di pagine dopo un rifiuto o una chiusura in totali giornalieri, senza identificativi, IP, sessioni, user agent o URL completo. Non sono visitatori unici e non inviamo questi dati a Google." },
+          { title: "Come gestirli", body: "Usa Impostazioni cookie in ogni pagina per modificare la scelta. Il rifiuto cancella le destinazioni recenti salvate." },
         ],
       },
       terms: {
@@ -224,12 +229,13 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
       },
       cookies: {
         title: "Cookies",
-        description: "Cómo utiliza +352 Flights las cookies esenciales y el almacenamiento local.",
-        intro: "+352 Flights utiliza unas pocas cookies esenciales y claves de almacenamiento local para que la interfaz funcione, recordar ajustes y conservar el comportamiento de la sesión.",
+        description: "Cómo utiliza +352 Flights las cookies y el almacenamiento local.",
+        intro: "+352 Flights usa almacenamiento necesario para que funcione la web y guardar tu elección. Las categorías funcionales, analíticas y de marketing son opcionales y empiezan desactivadas.",
         sections: [
-          { title: "Solo lo esencial", body: "Estas cookies permiten gestionar sesiones, preferencias de interfaz y fiabilidad del producto. No se utilizan para crear perfiles publicitarios ajenos al servicio." },
-          { title: "Preferencias guardadas", body: "Algunos ajustes, como el tema o el estado reciente de la interfaz, pueden guardarse localmente para mantener una experiencia coherente entre visitas." },
-          { title: "Cómo gestionarlas", body: "Puedes borrar el almacenamiento o bloquear las cookies en los ajustes del navegador, aunque algunas funciones podrían dejar de funcionar correctamente." },
+          { title: "Necesarias", body: "El idioma, el tema, la seguridad y tu elección de cookies usan almacenamiento necesario para la web." },
+          { title: "Categorías opcionales", body: "El almacenamiento funcional puede recordar destinos recientes. Google Analytics mide visitas y sesiones solo si aceptas la categoría Analíticas. Marketing sigue inactivo mientras no se incorporen otros servicios y los aceptes." },
+          { title: "Recuentos anónimos", body: "Contamos cada día las decisiones del banner y grupos generales de páginas vistas después de rechazar o cerrar. No guardamos identificadores, dirección IP, sesión, agente del navegador ni URL completa. No son usuarios únicos ni se envían a Google." },
+          { title: "Cómo gestionarlas", body: "Usa Configuración de cookies en cualquier página para cambiar tu elección. Rechazarlas borra los destinos recientes guardados." },
         ],
       },
       terms: {

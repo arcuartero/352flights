@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
+import { CookieSettingsButton } from "@/components/cookie-settings-button";
 import { LanguageSelector } from "@/components/language-selector";
 import { contactCopy, getLocalizedContactPath } from "@/lib/contact-localization";
 import {
@@ -37,6 +38,7 @@ export function V2Legal({ locale, page }: V2LegalProps) {
         <p className="v2-eyebrow">{localeCopy.eyebrow}</p>
         <h1 className="v2-legal__title">{copy.title}</h1>
         <p className="v2-legal__intro">{copy.intro}</p>
+        {page === "cookies" && <CookieSettingsButton label={locale === "fr" ? "Modifier les préférences" : locale === "de" ? "Cookie-Einstellungen ändern" : locale === "pt" ? "Alterar preferências" : locale === "it" ? "Modifica le preferenze" : locale === "es" ? "Cambiar preferencias" : "Change cookie preferences"} />}
         <div className="v2-legal__content">
           {copy.sections.map((section) => (
             <section key={section.title}>
