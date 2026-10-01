@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import date
+from datetime import date, timedelta
 
 from luxflight_scanner.main import build_parser
 from luxflight_scanner.models import RouteSeed
@@ -40,7 +40,7 @@ class RouteDiscoveryScopeTests(unittest.TestCase):
 
         filters = scanner._build_service_calendar_flight_filters(
             route(),
-            travel_date=date(2026, 9, 1),
+            travel_date=date.today() + timedelta(days=14),
             max_stops="NON_STOP",
         )
 
