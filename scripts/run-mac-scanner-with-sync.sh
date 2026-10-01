@@ -68,6 +68,15 @@ else
   exit 127
 fi
 
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Refreshing scan configuration from Supabase."
+"${SCANNER_CMD[@]}" --pull-supabase-configuration --json > "$LOG_DIR/mac-config-$RUN_ID.json"
+config_status=$?
+
+if [[ "$config_status" -ne 0 ]]; then
+  echo "Configuration refresh failed with status $config_status. Scanner was not started." >&2
+  exit "$config_status"
+fi
+
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Starting Mac scanner."
 "${SCANNER_CMD[@]}" "$@" --json > "$LOG_DIR/mac-scanner-$RUN_ID.json"
 scan_status=$?
