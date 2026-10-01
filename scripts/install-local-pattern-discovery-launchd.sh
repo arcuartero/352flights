@@ -38,14 +38,14 @@ cat > "$PLIST_TARGET" <<PLIST
   <false/>
 
   <key>StartCalendarInterval</key>
-  <dict>
-    <key>Day</key>
-    <integer>1</integer>
-    <key>Hour</key>
-    <integer>3</integer>
-    <key>Minute</key>
-    <integer>30</integer>
-  </dict>
+  <!-- Retry later if the nightly price scan still owns the shared lock.
+       The runner's 20-day guard prevents a second completed monthly run. -->
+  <array>
+    <dict><key>Day</key><integer>1</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Day</key><integer>1</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Day</key><integer>1</integer><key>Hour</key><integer>15</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Day</key><integer>1</integer><key>Hour</key><integer>21</integer><key>Minute</key><integer>30</integer></dict>
+  </array>
 
   <key>StandardOutPath</key>
   <string>$RUNTIME_ROOT/logs/pattern-discovery.launchd.stdout.log</string>
@@ -62,5 +62,5 @@ if [[ "${1:-}" == "--start-now" ]]; then
   launchctl kickstart "gui/$(id -u)/$LABEL"
 fi
 
-echo "Installed $LABEL (monthly on day 1 at 03:30 local time)"
+echo "Installed $LABEL (monthly on day 1 at 03:30, with later retries if busy)"
 echo "plist: $PLIST_TARGET"
