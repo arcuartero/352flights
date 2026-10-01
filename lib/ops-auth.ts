@@ -4,6 +4,7 @@ export function unauthorizedOpsResponse() {
   return new NextResponse("Authentication required.", {
     status: 401,
     headers: {
+      "Cache-Control": "private, no-store, max-age=0, must-revalidate",
       "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
     },
   });
@@ -14,7 +15,7 @@ export function ensureOpsAuthorized(request: Request) {
   const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
 
   if (!expectedUser || !expectedPassword) {
-    return null;
+    return unauthorizedOpsResponse();
   }
 
   const authorization = request.headers.get("authorization");

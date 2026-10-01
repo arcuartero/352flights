@@ -97,7 +97,7 @@ export function middleware(request: NextRequest) {
   const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
 
   if (!expectedUser || !expectedPassword) {
-    return localizedResponse(request);
+    return unauthorizedResponse();
   }
 
   const authorization = request.headers.get("authorization");
