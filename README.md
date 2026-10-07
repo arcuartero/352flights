@@ -209,7 +209,7 @@ For the cheap online setup, keep the web on Vercel and run the 11-hour scanner o
 
 `.github/workflows/scan-lux-deals.yml` can run the scanner manually.
 
-`.github/workflows/send-daily-digest.yml` triggers the daily endpoint hourly at minute 17. `.github/workflows/send-weekly-digest.yml` triggers the weekly endpoint hourly at minute 27. `/ops` controls each automation and their shared Luxembourg local send time.
+`.github/workflows/scheduled-jobs.yml` is the single scheduler: every hour at minute 17 it calls the daily digest, weekly digest and ops-alert endpoints (each decides whether work is due), and at 07 and 19 UTC it also triggers the Creatello morning and evening deliveries. It works the same whether the app runs on Vercel or another host. A manual run can target one job and forces the digests. `/ops` controls each automation and their shared Luxembourg local send time.
 
 The schedule is:
 
@@ -244,7 +244,7 @@ To make the digest cron actually run in GitHub:
    `PUBLIC_CACHE_REVALIDATION_SECRET` or, if unset, `CRON_SECRET`. The Mac/VPS
    scanner `.env` needs one of them too; the Supabase service-role key is no
    longer accepted by that endpoint.
-6. Trigger `Send Daily Lux Digest` once after deployment to verify the cron endpoint.
+6. Trigger `Scheduled Jobs` manually once after deployment to verify the cron endpoints.
 7. After that, the digest schedule will keep running automatically.
 
 ## Next Steps

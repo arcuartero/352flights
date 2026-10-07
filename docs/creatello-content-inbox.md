@@ -4,7 +4,7 @@
 
 ## Dos envíos automáticos diarios
 
-Vercel llama a `GET /api/cron/creatello-daily?slot=morning` todos los días a las `07:15 UTC` y a `GET /api/cron/creatello-daily?slot=evening` a las `19:15 UTC`. En Luxemburgo corresponden a las 09:15 y 21:15 durante el horario de verano, y a las 08:15 y 20:15 durante el horario de invierno. La ruta exige `Authorization: Bearer <CRON_SECRET>`; Vercel añade esta cabecera automáticamente cuando `CRON_SECRET` existe en producción. También admite `POST` con la misma autenticación para una ejecución operativa manual.
+El workflow `Scheduled Jobs` de GitHub Actions llama a `POST /api/cron/creatello-daily?slot=morning` en su ejecución de las `07:17 UTC` y a `POST /api/cron/creatello-daily?slot=evening` en la de las `19:17 UTC` (GitHub puede retrasar unos minutos las ejecuciones programadas; desde ese workflow también se puede lanzar cada franja a mano). En Luxemburgo corresponden a las 09:15 y 21:15 durante el horario de verano, y a las 08:15 y 20:15 durante el horario de invierno. La ruta exige `Authorization: Bearer <CRON_SECRET>`, que el workflow toma del secreto `CRON_SECRET` de GitHub. También admite `POST` con la misma autenticación para una ejecución operativa manual.
 
 En cada franja de cada fecha de Luxemburgo se prepara como máximo un paquete para cada plantilla:
 

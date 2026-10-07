@@ -1,0 +1,80 @@
+name: Scheduled Jobs
+
+# Single hourly trigger for every web cron endpoint. Each endpoint decides on its
+# own whether work is due (send time, idempotency), so calling hourly is safe.
+# Creatello is the exception: it runs only in its two delivery hours.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run now (manual runs force the digests, as before)
+        type: choice
+        default: all
+        options:
+          - all
+          - digest
+          - weekly
+          - ops-alerts
+          - creatello-morning
+          - creatello-evening
+  schedule:
+    - cron: "17 * * * *"
+
+concurrency:
+  group: scheduled-jobs
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call due cron endpoints
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_JOB: ${{ inputs.job || 'all' }}
+        run: |
+          set -u
+          if [ -z "$APP_BASE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Missing APP_BASE_URL or CRON_SECRET secret."
+            exit 1
+          fi
+
+          failures=0
+          call() {
+            name="$1"; path="$2"
+            echo "::group::$name"
+            response=$(curl -sS --max-time 120 -w '\n%{http_code}' -X POST \
+              "${APP_BASE_URL%/}$path" -H "Authorization: Bearer $CRON_SECRET") || response=$'\n000'
+            status=$(printf '%s\n' "$response" | tail -n 1)
+            printf '%s\n' "$response" | sed '$d'
+            echo "::endgroup::"
+            if [ "$status" -ge 400 ] || [ "$status" = "000" ]; then
+              echo "::error::$name returned HTTP $status"
+              failures=$((failures + 1))
+            fi
+          }
+          wants() { [ "$REQUESTED_JOB" = "all" ] || [ "$REQUESTED_JOB" = "$1" ]; }
+
+          force=""
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then force="?force=1"; fi
+
+          wants digest && call "Daily digest" "/api/cron/digest$force"
+          wants weekly && call "Weekly digest" "/api/cron/weekly$force"
+          wants ops-alerts && call "Ops alerts" "/api/cron/ops-alerts"
+
+          # Creatello slots keep their previous 07:15 / 19:15 UTC cadence.
+          hour=$(date -u +%H)
+          if [ "$REQUESTED_JOB" = "creatello-morning" ] || { [ "$EVENT_NAME" = "schedule" ] && [ "$hour" = "07" ]; }; then
+            call "Creatello morning" "/api/cron/creatello-daily?slot=morning"
+          fi
+          if [ "$REQUESTED_JOB" = "creatello-evening" ] || { [ "$EVENT_NAME" = "schedule" ] && [ "$hour" = "19" ]; }; then
+            call "Creatello evening" "/api/cron/creatello-daily?slot=evening"
+          fi
+
+          exit $((failures > 0))
