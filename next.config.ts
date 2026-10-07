@@ -1,7 +1,36 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
+// Full policy in report-only mode: violations go to /api/csp-report without blocking anything.
+// Promote to enforcement once production reports stay empty. Inline scripts stay allowed because
+// nonces would force dynamic rendering of the cached public pages.
+const reportOnlyPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com`,
+  "style-src 'self' 'unsafe-inline'",
+  [
+    "img-src 'self' data: blob:",
+    "https://*.supabase.co",
+    "https://images.unsplash.com",
+    "https://upload.wikimedia.org",
+    "https://images.kiwi.com",
+    "https://cdn.jsdelivr.net",
+    "https://*.tile.openstreetmap.org",
+    "https://www.googletagmanager.com",
+    "https://*.google-analytics.com",
+  ].join(" "),
+  "font-src 'self' data:",
+  `connect-src 'self'${isDev ? " ws:" : ""} https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com`,
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "report-uri /api/csp-report",
+  "report-to csp",
+].join("; ");
+
 // Applied by Next itself so they hold on any host (Vercel or the reverse proxy in front of the app).
-// A full script/style CSP is not enforced yet: GA4, Leaflet tiles and remote photos need a report-only pass first.
 const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -12,6 +41,8 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'",
   },
+  { key: "Content-Security-Policy-Report-Only", value: reportOnlyPolicy },
+  { key: "Reporting-Endpoints", value: 'csp="/api/csp-report"' },
 ];
 
 const nextConfig: NextConfig = {
