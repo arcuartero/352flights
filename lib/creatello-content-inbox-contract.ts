@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { z } from "zod";
+import { departureDeadline } from "./creatello-travel-validity";
 
 import { getAirportCountryCode } from "@/lib/airport-countries";
 import type { CreatelloLanguage, TikTokSourceOffer } from "@/lib/tiktok-carousel";
@@ -9,7 +10,6 @@ export const CREATELLO_INBOX_SCHEMA_VERSION = 1 as const;
 export const CREATELLO_INBOX_SOURCE = "352flights" as const;
 export const CREATELLO_INBOX_MAX_OFFERS = 20;
 export const CREATELLO_INBOX_MAX_BYTES = 256 * 1024;
-export const CREATELLO_INBOX_FRESHNESS_HOURS = 24;
 export const CREATELLO_INBOX_TARGET_TEMPLATES = [
   "travel-offer",
   "cheap-flights-tiktok",
@@ -82,6 +82,32 @@ export const createlloInboxPackageSchema = z.object({
 }).strict();
 
 export type CreatelloInboxPackage = z.infer<typeof createlloInboxPackageSchema>;
+
+/**
+ * Serializes JSON with object keys in a stable order. Creatello uses this exact
+ * representation to calculate the payload hash stored with an inbox item.
+ */
+export function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(",")}}`;
+  }
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    throw new TypeError("Only JSON-compatible values can be canonicalized");
+  }
+  return serialized;
+}
+
+export function createlloInboxPayloadHash(payload: CreatelloInboxPackage): string {
+  return createHash("sha256").update(canonicalJson(payload)).digest("hex");
+}
 
 function metadataString(offer: TikTokSourceOffer, key: string) {
   const value = offer.metadata?.[key];
@@ -168,9 +194,8 @@ export function toCreatelloInboxOffer(offer: TikTokSourceOffer, language: Create
     throw new Error(`La oferta ${offer.id} no tiene una fecha de comprobación válida.`);
   }
   const checkedAt = checkedAtDate.toISOString();
-  const expiresAt = new Date(
-    checkedAtDate.getTime() + CREATELLO_INBOX_FRESHNESS_HOURS * 60 * 60 * 1000,
-  ).toISOString();
+  const expiresAt = departureDeadline(offer.departureDate);
+  if (Date.parse(expiresAt) <= Date.now()) throw new Error("La fecha de salida de la oferta ya ha llegado.");
   const destinationCountryCode = getAirportCountryCode(offer.destinationAirport);
   const destinationCountry = destinationCountryCode
     ? countryName(destinationCountryCode, language)

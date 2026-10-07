@@ -7,6 +7,7 @@ import {
   dailyCreatelloPackageSize,
   planDailyCreatelloPackages,
   prepareDailyCreatelloCandidates,
+  selectMonthlyCreatelloCandidates,
 } from "../lib/creatello-daily-selection";
 import type { TikTokSourceOffer } from "../lib/tiktok-carousel";
 
@@ -64,7 +65,7 @@ test("uses separate UTC cutoffs for the two daily delivery slots", () => {
 
 test("plans one compatible package per template without repeated offers or destinations", () => {
   const result = planDailyCreatelloPackages({
-    offers: Array.from({ length: 20 }, (_, index) => offer(index + 1)),
+    offers: Array.from({ length: 20 }, (_, index) => ({ ...offer(index + 1), departureDate: `2027-${["01","03","05"][index % 3]}-01`, returnDate: `2027-${["01","03","05"][index % 3]}-07` })),
     language: "es",
     dateKey: "2026-09-09",
     deliverySlot: "evening",
@@ -77,11 +78,37 @@ test("plans one compatible package per template without repeated offers or desti
   assert.equal(new Set(selected.map((item) => item.itineraryKey)).size, selected.length);
   assert.equal(new Set(selected.map((item) => item.destinationCity)).size, selected.length);
   for (const plan of result.plans) {
+    if (plan.targetTemplate === "cheap-flights-tiktok") {
+      assert.ok(plan.offers.length >= 9 && plan.offers.length <= 15);
+      continue;
+    }
     assert.equal(
       plan.offers.length,
       dailyCreatelloPackageSize("2026-09-09", plan.targetTemplate, "evening"),
     );
   }
+});
+
+test("monthly selection requires three months and produces stable distinct destinations", () => {
+  const candidates = prepareDailyCreatelloCandidates(Array.from({ length: 18 }, (_, index) => ({ ...offer(index + 1), departureDate: `2027-${["01","03","05"][index % 3]}-01`, returnDate: `2027-${["01","03","05"][index % 3]}-07` })), "en");
+  const result = selectMonthlyCreatelloCandidates(candidates, "2026-09-11:morning");
+  assert.deepEqual(result, selectMonthlyCreatelloCandidates(candidates, "2026-09-11:morning"));
+  const months = new Map<string, number>();
+  for (const item of result.selected) { const month = item.canonical.departureDate.slice(0,7); months.set(month,(months.get(month)||0)+1); }
+  assert.deepEqual([...months.keys()], ["2027-01","2027-03","2027-05"]);
+  assert.ok([...months.values()].every(count=>count>=3 && count<=5));
+  assert.equal(new Set(result.selected.map(item=>item.canonical.destinationCity)).size,result.selected.length);
+  assert.equal(selectMonthlyCreatelloCandidates(candidates.filter(item=>!item.canonical.departureDate.startsWith("2027-05")), "seed").selected.length,0);
+});
+
+test("monthly matching reallocates a city shared across months instead of starving a later month", () => {
+  const candidates = prepareDailyCreatelloCandidates(Array.from({length:12},(_,index)=>offer(index+1)),"en");
+  candidates.forEach((item,index)=>{ item.canonical.departureDate=`2027-${["01","03","05"][Math.floor(index/4)]}-01`; });
+  candidates[0].canonical.destinationCity=candidates[4].canonical.destinationCity;
+  candidates[1].canonical.destinationCity=candidates[8].canonical.destinationCity;
+  const result=selectMonthlyCreatelloCandidates(candidates,"seed");
+  assert.ok(result.selected.length>=9);
+  assert.equal(new Set(result.selected.map(item=>item.canonical.destinationCity)).size,result.selected.length);
 });
 
 test("never selects an itinerary or snapshot already reserved", () => {

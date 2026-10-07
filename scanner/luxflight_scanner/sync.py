@@ -457,9 +457,34 @@ class LocalSupabaseSync:
         report["remote_routes_touched"] = len(self.remote_route_ids)
         report["configured_routes"] = len(self.routes_by_key)
         report["storage_mode"] = self.config.storage_mode
+        # Live writes are already marked as synced and skipped above, but the
+        # website still needs invalidation. Keep this separate from DB sync so
+        # a failed HTTP revalidation is retried without uploading prices again.
+        pending_cache_syncs: list[dict[str, Any]] = []
+        for collection in ("snapshots", "indicative_prices", "deals"):
+            for item in state[collection]:
+                sync = item.get("sync")
+                if not _is_synced(item) or sync.get("cache_revalidated_at"):
+                    continue
+                snapshot = (
+                    local_snapshots_by_id.get(str(item.get("snapshot_id")))
+                    if collection == "deals" else item
+                )
+                try:
+                    route = self._route_for_snapshot(snapshot or {})
+                except RuntimeError:
+                    # Historical records may refer to routes no longer enabled.
+                    continue
+                changed_destinations.add(route.destination_city)
+                pending_cache_syncs.append(sync)
         report["cache_revalidation"] = self._revalidate_public_destinations(
             changed_destinations
         )
+        if report["cache_revalidation"]["status"] == "revalidated":
+            revalidated_at = utcnow_iso()
+            for sync in pending_cache_syncs:
+                sync["cache_revalidated_at"] = revalidated_at
+            _persist_state(self.state_path, state)
         return report
 
     def _revalidate_public_destinations(self, cities: set[str]) -> dict[str, Any]:

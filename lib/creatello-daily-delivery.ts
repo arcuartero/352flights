@@ -1,9 +1,8 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
-
 import {
   buildCreatelloInboxPackage,
+  createlloInboxPayloadHash,
   createlloInboxPackageSchema,
   type CreatelloInboxPackage,
   type CreatelloInboxTargetTemplate,
@@ -68,10 +67,6 @@ function safeDeliveryError(error: unknown) {
   return message.replace(/[\r\n\t]+/g, " ").slice(0, 500);
 }
 
-function packageHash(payload: CreatelloInboxPackage) {
-  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-}
-
 async function loadCandidateOffers(dateKey: string, deliverySlot: CreatelloDeliverySlot) {
   const supabase = getSupabaseAdminClient();
   const cutoff = dailyCreatelloCutoff(dateKey, deliverySlot);
@@ -95,7 +90,7 @@ async function loadCandidateOffers(dateKey: string, deliverySlot: CreatelloDeliv
       .select("id,route_id,price,currency,departure_date,return_date,max_stops,scanned_at,metadata")
       .in("route_id", routeIds)
       .eq("metadata->>public_fare_eligible", "true")
-      .gte("departure_date", dateKey)
+      .gt("departure_date", dateKey)
       .not("return_date", "is", null)
       .gte("scanned_at", windowStart.toISOString())
       .lte("scanned_at", cutoff.toISOString())
@@ -177,7 +172,7 @@ async function reserveDelivery(input: {
     p_target_template: input.targetTemplate,
     p_language: input.payload.language,
     p_payload: input.payload,
-    p_payload_hash: packageHash(input.payload),
+    p_payload_hash: createlloInboxPayloadHash(input.payload),
     p_source_snapshot_ids: input.sourceSnapshotIds,
     p_itinerary_keys: input.payload.offers.map((offer) => offer.itineraryKey),
     p_destination_airports: input.payload.offers.map((offer) => offer.destinationAirport),
@@ -276,6 +271,12 @@ export async function runDailyCreatelloDelivery(
   });
 
   const cutoff = dailyCreatelloCutoff(dateKey, deliverySlot).toISOString();
+  for (const skipped of plan.skipped) {
+    if (skipped.targetTemplate === "cheap-flights-tiktok") console.warn("[creatello-daily] monthly_package_skipped", {
+      dateKey, deliverySlot, requiredMonths: 3, minimumFlightsPerMonth: 3,
+      monthlyCounts: skipped.monthlyCounts || {}, reason: skipped.reason,
+    });
+  }
   const reserved: DailyDeliveryRow[] = [];
   for (const item of plan.plans) {
     const payload = buildCreatelloInboxPackage(item.offers, DAILY_LANGUAGE, 1, {

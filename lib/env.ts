@@ -22,6 +22,10 @@ const createlloInboxSchema = z.object({
   CREATELLO_CONTENT_INBOX_HMAC_SECRET: z.string().min(32),
 });
 
+const createlloRevalidationSchema = z.object({
+  CREATELLO_352_REVALIDATION_HMAC_SECRET: z.string().min(32),
+});
+
 function emptyToUndefined(value: string | undefined) {
   if (!value) {
     return undefined;
@@ -74,6 +78,12 @@ export function getCreatelloInboxEnv() {
   return createlloInboxSchema.parse({
     CREATELLO_CONTENT_INBOX_URL: process.env.CREATELLO_CONTENT_INBOX_URL,
     CREATELLO_CONTENT_INBOX_HMAC_SECRET: process.env.CREATELLO_CONTENT_INBOX_HMAC_SECRET,
+  });
+}
+
+export function getCreatelloRevalidationEnv() {
+  return createlloRevalidationSchema.parse({
+    CREATELLO_352_REVALIDATION_HMAC_SECRET: process.env.CREATELLO_352_REVALIDATION_HMAC_SECRET,
   });
 }
 

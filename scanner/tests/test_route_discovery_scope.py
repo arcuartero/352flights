@@ -40,7 +40,7 @@ class RouteDiscoveryScopeTests(unittest.TestCase):
 
         filters = scanner._build_service_calendar_flight_filters(
             route(),
-            travel_date=date.today() + timedelta(days=30),
+            travel_date=date.today() + timedelta(days=14),
             max_stops="NON_STOP",
         )
 

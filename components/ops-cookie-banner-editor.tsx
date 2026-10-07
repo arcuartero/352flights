@@ -7,7 +7,7 @@ type TextKey = Exclude<keyof CookieConfig["copy"], (typeof cookieCategories)[num
 const textFields: { key: TextKey; label: string }[] = [
   { key: "title", label: "Banner title" }, { key: "description", label: "Banner description" },
   { key: "preferencesTitle", label: "Preferences title" }, { key: "preferencesDescription", label: "Preferences description" },
-  { key: "acceptSelected", label: "Accept selected button" }, { key: "acceptAll", label: "Accept all button" },
+  { key: "acceptAll", label: "Accept all button" },
   { key: "rejectAll", label: "Reject all button" }, { key: "preferences", label: "View preferences button" },
   { key: "savePreferences", label: "Save preferences button" }, { key: "reopen", label: "Reopen button" },
   { key: "close", label: "Close button label" }, { key: "alwaysActive", label: "Necessary status label" },
@@ -25,7 +25,7 @@ const toggles: { key: keyof CookieConfig; label: string; help: string }[] = [
   { key: "showReopen", label: "Show floating settings button", help: "Lets visitors change consent later." },
   { key: "showPolicyLink", label: "Show cookie policy link", help: "Links to the matching language policy page." },
   { key: "showCategorySummary", label: "Show category names", help: "Lists all categories on the first view." },
-  { key: "backdrop", label: "Dim the page", help: "Adds a backdrop behind the banner." },
+  { key: "backdrop", label: "Darken the blurred page", help: "The background is always blurred while the banner is open; this adds a darker tint." },
   { key: "compact", label: "Compact layout", help: "Reduces panel width and padding." },
 ];
 
