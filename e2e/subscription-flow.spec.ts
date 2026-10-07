@@ -21,8 +21,14 @@ function linkFrom(email: SentEmail, path: string) {
 }
 
 async function dismissCookieBanner(page: Page) {
+  // Without a stored choice the banner always opens, but only after its config loads;
+  // wait for it instead of racing it, or its backdrop swallows the next click.
+  const cookies = await page.context().cookies();
+  if (cookies.some((cookie) => cookie.name === "352flights-cookie-consent")) return;
   const reject = page.getByRole("button", { name: /reject all/i });
-  if (await reject.isVisible().catch(() => false)) await reject.click();
+  await reject.waitFor({ state: "visible" });
+  await reject.click();
+  await expect(reject).toBeHidden();
 }
 
 async function subscribeFromHome(page: Page, email: string) {

@@ -25,6 +25,15 @@ jobs:
           node-version: 22
           cache: npm
 
+      # The fare renewal DB test drives the real Python scanner through uv.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen
+        working-directory: scanner
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
