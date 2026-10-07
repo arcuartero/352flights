@@ -205,6 +205,16 @@ Behavior:
 
 For the cheap online setup, keep the web on Vercel and run the 11-hour scanner on a small VPS with local storage plus sync. See `docs/cheap-online-setup.md`.
 
+## Tests
+
+- `npm run typecheck`, `npm run lint` (fails on any warning) and `npm test` (unit and PGlite database tests).
+- `npm run test:e2e` runs the Playwright subscription flow against `next dev` on port 3100 with
+  Supabase and Resend replaced by `e2e/mock-backend.mjs`. It uses the installed Google Chrome,
+  builds into `.next-e2e`, and can run while `npm run dev` is up.
+- Scanner: `cd scanner && uv run python -m unittest discover -s tests`.
+
+`.github/workflows/ci.yml` runs all of the above on every push to `main` and every pull request.
+
 ## GitHub Actions
 
 `.github/workflows/scan-lux-deals.yml` can run the scanner manually.
