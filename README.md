@@ -240,6 +240,10 @@ To make the digest cron actually run in GitHub:
    - `CRON_SECRET`
 4. Open the `Actions` tab and enable workflows if GitHub asks.
 5. Trigger `Scan Lux Flight Deals` manually only if you want to test GitHub Actions.
+   The scanner authenticates to `/api/public-deals/revalidate` with
+   `PUBLIC_CACHE_REVALIDATION_SECRET` or, if unset, `CRON_SECRET`. The Mac/VPS
+   scanner `.env` needs one of them too; the Supabase service-role key is no
+   longer accepted by that endpoint.
 6. Trigger `Send Daily Lux Digest` once after deployment to verify the cron endpoint.
 7. After that, the digest schedule will keep running automatically.
 

@@ -22,7 +22,15 @@ type SubscriberLookupRow = {
   email_confirmed: boolean;
   onboarding_completed: boolean;
   preferred_locale: string | null;
+  welcome_email_sent_at: string | null;
 };
+
+/** Repeat submissions inside this window reuse the email already sent instead of mailing again. */
+const WELCOME_EMAIL_COOLDOWN_MS = 10 * 60 * 1000;
+
+function sentRecently(sentAt: string | null, now: number) {
+  return sentAt !== null && now - Date.parse(sentAt) < WELCOME_EMAIL_COOLDOWN_MS;
+}
 
 function formatError(error: unknown) {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
@@ -46,11 +54,12 @@ function buildSubscriptionUrls(subscriber: Pick<
 }
 
 const subscriberSelect =
-  "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed,preferred_locale";
+  "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed,preferred_locale,welcome_email_sent_at";
 
 export async function subscribeEmailAddress(email: string, locale?: EmailLocale, travelEmailConsent = false) {
   const supabase = getSupabaseAdminClient();
-  const nowIso = new Date().toISOString();
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
   const preferredLocale = normalizeEmailLocale(locale);
 
   const existingQuery = await supabase
@@ -64,9 +73,17 @@ export async function subscribeEmailAddress(email: string, locale?: EmailLocale,
   }
 
   let subscriber = existingQuery.data as SubscriberLookupRow | null;
+  // Throttles repeat sends to one address; an unsubscribed address always gets a fresh confirmation.
+  const emailedRecently =
+    subscriber !== null &&
+    subscriber.status !== "unsubscribed" &&
+    sentRecently(subscriber.welcome_email_sent_at, now);
 
   if (subscriber) {
-    const shouldReconfirm = subscriber.status === "unsubscribed" || !subscriber.email_confirmed;
+    // Keep the pending token while the previous email is still fresh so its link keeps working.
+    const shouldReconfirm =
+      subscriber.status === "unsubscribed" ||
+      (!subscriber.email_confirmed && !emailedRecently);
 
     const updatePayload: Record<string, unknown> = {
       origin_city: "Luxembourg",
@@ -125,7 +142,7 @@ export async function subscribeEmailAddress(email: string, locale?: EmailLocale,
     subscriber = insertQuery.data as SubscriberLookupRow;
   }
 
-  const sendWelcomeEmail = hasResendEnv()
+  const sendWelcomeEmail = hasResendEnv() && !emailedRecently
     ? async () => {
         const links = buildSubscriptionUrls(subscriber);
         const welcome = renderWelcomeEmail({
@@ -144,7 +161,8 @@ export async function subscribeEmailAddress(email: string, locale?: EmailLocale,
           html: welcome.html,
           text: welcome.text,
           emailType: "welcome",
-          idempotencyKey: `lux-welcome-${subscriber.id}-${Date.now()}`,
+          // Collapses concurrent duplicate submissions; a rotated token always yields a new key.
+          idempotencyKey: `lux-welcome-${subscriber.id}-${subscriber.confirmation_token}-${Math.floor(now / WELCOME_EMAIL_COOLDOWN_MS)}`,
         });
 
         const welcomeUpdate = await supabase

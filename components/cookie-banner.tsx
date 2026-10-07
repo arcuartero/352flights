@@ -30,7 +30,7 @@ export function CookieBanner() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/cookie-banner", { cache: "no-store" })
+    fetch("/api/cookie-banner")
       .then((response) => response.ok ? response.json() : defaultCookieConfig)
       .catch(() => defaultCookieConfig)
       .then((value: CookieConfig) => {

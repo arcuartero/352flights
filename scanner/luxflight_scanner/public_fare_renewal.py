@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 
+from .cache_revalidation import public_cache_revalidation_secret
 from .models import RouteSeed, SearchPattern
 from .storage import SupabaseStore
 
@@ -55,7 +56,7 @@ class RenewalStore:
     def __init__(self, config: Any):
         self.client = SupabaseStore(config).client
         self.cache_url = os.getenv("PUBLIC_CACHE_REVALIDATION_URL", "").strip()
-        self.secret = config.supabase_service_role_key
+        self.secret = public_cache_revalidation_secret()
 
     def rpc(self, name: str, body: dict[str, Any]) -> Any:
         response = self.client.post(f"/rest/v1/rpc/{name}", json=body)
@@ -73,7 +74,7 @@ class RenewalStore:
         })
 
     def flush_caches(self) -> str:
-        if not self.cache_url:
+        if not self.cache_url or not self.secret:
             return "not_configured"
         response = self.client.get("/rest/v1/public_fare_lifecycle", params={
             "cache_dirty": "eq.true", "select": "itinerary_key,updated_at,scanned_routes(destination_city)",

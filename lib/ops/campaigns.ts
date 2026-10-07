@@ -1,4 +1,5 @@
 import "server-only";
+import { matchesAnySecret } from "@/lib/secret-compare";
 import {
   deliveryModeMatches,
   weeklyPeriodStart,
@@ -804,6 +805,7 @@ export async function sendApprovedDealCampaign(input: {
               text: rendered.text,
               emailType: "campaign",
               sendType: input.sendType,
+              listUnsubscribeUrl: `${siteUrl}/api/unsubscribe/one-click?token=${subscriber.unsubscribeToken}`,
               idempotencyKey: input.digestDate
                 ? `lux-${input.sendType}-${input.digestDate}-${subscriber.id}`
                 : buildIdempotencyKey(
@@ -1096,7 +1098,7 @@ export function validateCronSecret(secret: string | null) {
     return false;
   }
 
-  return secret === getCronSecret().CRON_SECRET;
+  return matchesAnySecret(secret, [getCronSecret().CRON_SECRET]);
 }
 
 /** Runs from the hourly trigger; Monday's date stays stable for retries all week. */

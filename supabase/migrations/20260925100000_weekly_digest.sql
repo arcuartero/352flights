@@ -4,7 +4,8 @@ ALTER TABLE public.email_campaigns DROP CONSTRAINT IF EXISTS email_campaigns_sen
 ALTER TABLE public.email_campaigns ADD CONSTRAINT email_campaigns_send_type_check
   CHECK (send_type IN ('digest', 'flash', 'weekly'));
 ALTER TABLE public.ops_automation_settings
-  ADD COLUMN IF NOT EXISTS weekly_digest_enabled boolean NOT NULL DEFAULT true,
+  -- Off until an operator reviews the weekly preview in /ops/email-campaigns.
+  ADD COLUMN IF NOT EXISTS weekly_digest_enabled boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS last_weekly_sent_on date;
 CREATE TABLE IF NOT EXISTS public.scheduled_weekly_jobs (
   delivery_date date PRIMARY KEY,

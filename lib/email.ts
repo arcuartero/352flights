@@ -79,6 +79,8 @@ type SendResendEmailInput = {
   sendType?: CampaignSendType;
   idempotencyKey: string;
   replyTo?: string;
+  /** RFC 8058 one-click endpoint; required by Gmail/Yahoo for bulk mail. */
+  listUnsubscribeUrl?: string;
 };
 
 const RESEND_NOREPLY_FROM = "352 Flights <noreply@352flights.com>";
@@ -1951,12 +1953,22 @@ export async function sendResendEmail(input: SendResendEmailInput) {
       "Content-Type": "application/json",
       "Idempotency-Key": input.idempotencyKey,
     },
+    // Safe to retry after a timeout: the idempotency key deduplicates at Resend.
+    signal: AbortSignal.timeout(15_000),
     body: JSON.stringify({
       from: getResendFromEmail(input.emailType),
       to: [input.to],
       subject: input.subject,
       html: input.html,
       text: input.text,
+      ...(input.listUnsubscribeUrl
+        ? {
+            headers: {
+              "List-Unsubscribe": `<${input.listUnsubscribeUrl}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+          }
+        : {}),
       ...((
         input.replyTo !== undefined ? input.replyTo : env.RESEND_REPLY_TO_EMAIL
       )

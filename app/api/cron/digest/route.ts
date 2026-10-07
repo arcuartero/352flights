@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { runScheduledDigest, validateCronSecret } from "@/lib/ops/campaigns";
+import { bearerToken } from "@/lib/secret-compare";
 
 export async function POST(request: Request) {
-  const authorization = request.headers.get("authorization");
-  const token = authorization?.startsWith("Bearer ")
-    ? authorization.slice("Bearer ".length)
-    : null;
+  const token = bearerToken(request);
 
   if (!validateCronSecret(token)) {
     return NextResponse.json(

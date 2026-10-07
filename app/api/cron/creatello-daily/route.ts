@@ -7,16 +7,14 @@ import {
 } from "@/lib/creatello-daily-selection";
 import { hasCreatelloInboxEnv, hasSupabaseAdminEnv } from "@/lib/env";
 import { validateCronSecret } from "@/lib/ops/campaigns";
+import { bearerToken } from "@/lib/secret-compare";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 async function handle(request: Request) {
-  const authorization = request.headers.get("authorization");
-  const token = authorization?.startsWith("Bearer ")
-    ? authorization.slice("Bearer ".length)
-    : null;
+  const token = bearerToken(request);
   if (!validateCronSecret(token)) {
     return NextResponse.json(
       { ok: false, reason: "unauthorized" },

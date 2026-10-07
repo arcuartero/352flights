@@ -35,7 +35,7 @@ La implementación y las pruebas son locales. No se han enviado correos reales, 
 1. Aplicar las migraciones previas pendientes, incluida `20260910120000_scheduled_digest_idempotency.sql`, y después `supabase/migrations/20260925100000_weekly_digest.sql`. La nueva migración es repetible, conserva la configuración diaria y restringe las tablas privadas a `service_role`.
 2. Publicar únicamente mediante commit/push y la integración Git de Vercel, según `AGENTS.md`. El workflow semanal debe estar en la rama predeterminada de GitHub para ejecutarse por horario.
 3. Confirmar que están configurados `APP_BASE_URL` y `CRON_SECRET` en GitHub Actions, y Supabase, Resend, `CRON_SECRET` y las dos variables de autenticación de Operaciones en la aplicación.
-4. Revisar la previsualización y el control semanal en `/ops/email-campaigns`. El nuevo control semanal está activado por defecto en la migración; puede pausarse independientemente del diario antes de habilitar el workflow.
+4. Revisar la previsualización y el control semanal en `/ops/email-campaigns`. El nuevo control semanal queda desactivado por defecto en la migración; actívalo desde Operaciones después de revisar la previsualización. Si la migración ya se aplicó con el valor anterior, el ajuste existente no cambia.
 
 ## Confirmaciones, bajas y errores públicos
 

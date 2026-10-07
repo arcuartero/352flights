@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { hasSupabaseAdminEnv } from "@/lib/env";
 import { emailLocales } from "@/lib/email";
+import { clientIp, withinRateLimits } from "@/lib/rate-limit";
 import { subscribeEmailAddress } from "@/lib/subscriptions";
 
 const subscribeSchema = z.object({
@@ -34,6 +35,20 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
+  const allowed = await withinRateLimits([
+    { scope: "subscribe-ip", identifier: clientIp(request), limit: 10, windowSeconds: 600 },
+    { scope: "subscribe-email", identifier: payload.data.email, limit: 3, windowSeconds: 3600 },
+  ]);
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        code: "rate_limited",
+        error: "Too many attempts. Please wait a few minutes and try again.",
+      },
+      { status: 429, headers: { "Retry-After": "600" } },
+    );
+  }
+
   try {
     const result = await subscribeEmailAddress(
       payload.data.email,

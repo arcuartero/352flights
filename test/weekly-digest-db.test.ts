@@ -27,7 +27,7 @@ test("weekly migration is repeatable and preserves daily settings", async () => 
     }>("SELECT * FROM ops_automation_settings")
   ).rows[0];
   assert.equal(settings.daily_digest_enabled, false);
-  assert.equal(settings.weekly_digest_enabled, true);
+  assert.equal(settings.weekly_digest_enabled, false);
   await db.exec(
     "INSERT INTO email_campaigns (send_type) VALUES ('weekly'), ('digest'), ('flash')",
   );

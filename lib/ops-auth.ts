@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { constantTimeEqual } from "@/lib/secret-compare";
+
 /** Shared by the Edge middleware, API handlers and server components/actions. */
 export function isOpsAuthorized(
   authorization: string | null,
@@ -17,7 +19,10 @@ export function isOpsAuthorized(
       character.charCodeAt(0),
     );
     const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    return decoded === credentials.user + ":" + credentials.password;
+    return constantTimeEqual(
+      decoded,
+      credentials.user + ":" + credentials.password,
+    );
   } catch {
     return false;
   }

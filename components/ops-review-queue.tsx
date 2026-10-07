@@ -1618,7 +1618,7 @@ export function OpsReviewQueue({
 
             {seriesLoading ? (
               <div className="ops-empty" role="status">
-                <p>Loading this offer's price history…</p>
+                <p>Loading this offer&apos;s price history…</p>
               </div>
             ) : seriesError ? (
               <div className="ops-banner" role="alert">

@@ -12,7 +12,8 @@ function isPrivatePathname(pathname: string) {
     pathname.startsWith("/preferences/") ||
     pathname === "/api/preferences" ||
     pathname === "/confirm" ||
-    pathname === "/unsubscribe"
+    pathname === "/unsubscribe" ||
+    pathname.startsWith("/api/unsubscribe/")
   );
 }
 
@@ -23,6 +24,8 @@ function applyCachePolicy(response: NextResponse, pathname: string) {
       "private, no-store, max-age=0, must-revalidate",
     );
     response.headers.set("Vercel-CDN-Cache-Control", "no-store");
+    // These URLs carry subscriber tokens; never forward them in the Referer header.
+    response.headers.set("Referrer-Policy", "no-referrer");
     return response;
   }
 
@@ -57,5 +60,6 @@ export const config = {
     "/api/preferences",
     "/confirm",
     "/unsubscribe",
+    "/api/unsubscribe/:path*",
   ],
 };

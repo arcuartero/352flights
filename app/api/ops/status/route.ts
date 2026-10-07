@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unknown status resource" }, { status: 400, headers });
   }
   // Call handlers in-process, retaining their authentication, with no internal HTTP invocations.
-  const pending = new Map<Function, Promise<Response>>();
+  const pending = new Map<(typeof handlers)[keyof typeof handlers], Promise<Response>>();
   const entries = await Promise.all(resources.map(async (key) => {
     try {
       const handler = handlers[key as keyof typeof handlers];
