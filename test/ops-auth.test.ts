@@ -46,7 +46,7 @@ test("unauthorized responses are private and request Basic authentication", () =
   assert.match(result!.headers.get("WWW-Authenticate")!, /Basic/);
 });
 
-test("ops pages and API fail closed and require matching credentials", () => {
+test("ops pages and API fail closed and require matching credentials", async () => {
   const user = process.env.OPS_BASIC_AUTH_USER;
   const password = process.env.OPS_BASIC_AUTH_PASSWORD;
   try {
@@ -57,21 +57,21 @@ test("ops pages and API fail closed and require matching credentials", () => {
       delete process.env.OPS_BASIC_AUTH_USER;
       delete process.env.OPS_BASIC_AUTH_PASSWORD;
       assert.equal(ensureOpsAuthorized(request())?.status, 401);
-      assert.equal(middleware(request()).status, 401);
+      assert.equal((await middleware(request())).status, 401);
       process.env.OPS_BASIC_AUTH_USER = "test-ops";
       assert.equal(ensureOpsAuthorized(request())?.status, 401);
-      assert.equal(middleware(request()).status, 401);
+      assert.equal((await middleware(request())).status, 401);
       process.env.OPS_BASIC_AUTH_PASSWORD = "test:password";
       for (const invalid of [undefined, "Basic %%%", basic("test-ops:wrong"), "Bearer test"]) {
         assert.equal(ensureOpsAuthorized(request(invalid))?.status, 401);
-        assert.equal(middleware(request(invalid)).status, 401);
+        assert.equal((await middleware(request(invalid))).status, 401);
       }
       const valid = request(basic("test-ops:test:password"));
       assert.equal(ensureOpsAuthorized(valid), null);
-      assert.equal(middleware(valid).status, 200);
-      assert.match(middleware(valid).headers.get("cache-control") ?? "", /no-store/);
+      assert.equal((await middleware(valid)).status, 200);
+      assert.match((await middleware(valid)).headers.get("cache-control") ?? "", /no-store/);
     }
-    assert.equal(middleware(new NextRequest("https://example.test/")).status, 200);
+    assert.equal((await middleware(new NextRequest("https://example.test/"))).status, 200);
   } finally {
     if (user === undefined) delete process.env.OPS_BASIC_AUTH_USER;
     else process.env.OPS_BASIC_AUTH_USER = user;

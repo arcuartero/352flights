@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { ensureOpsAuthorized } from "@/lib/ops-auth";
+import { isOpsAuthorized, unauthorizedOpsResponse } from "@/lib/ops-auth";
+import { opsLoginAllowed } from "@/lib/ops-login-throttle";
 
 function isPrivatePathname(pathname: string) {
   return (
@@ -37,7 +38,17 @@ function localizedResponse(request: NextRequest) {
   return applyCachePolicy(response, request.nextUrl.pathname);
 }
 
-export function middleware(request: NextRequest) {
+function tooManyOpsAttempts() {
+  return new NextResponse("Too many failed sign-in attempts. Try again later.", {
+    status: 429,
+    headers: {
+      "Retry-After": "900",
+      "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+    },
+  });
+}
+
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   if (
     pathname === "/ops" ||
@@ -45,8 +56,13 @@ export function middleware(request: NextRequest) {
     pathname === "/api/ops" ||
     pathname.startsWith("/api/ops/")
   ) {
-    const unauthorized = ensureOpsAuthorized(request);
-    if (unauthorized) return unauthorized;
+    const authorization = request.headers.get("authorization");
+    // The browser's first, header-less request only triggers the login prompt.
+    if (!authorization) return unauthorizedOpsResponse();
+    const authorized = isOpsAuthorized(authorization);
+    // A locked-out client is refused even with the right password, so guessing reveals nothing.
+    if (!(await opsLoginAllowed(request, !authorized))) return tooManyOpsAttempts();
+    if (!authorized) return unauthorizedOpsResponse();
   }
   return localizedResponse(request);
 }
