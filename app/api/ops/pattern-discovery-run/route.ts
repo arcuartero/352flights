@@ -1,3 +1,4 @@
+import { ensureOpsAuthorized } from "@/lib/ops-auth";
 import { access, constants } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -24,45 +25,6 @@ const ROUTING_VALUES = new Set([
   "ANY",
 ]);
 
-function unauthorizedResponse() {
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
-    },
-  });
-}
-
-async function ensureAuthorized(request: Request) {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (!expectedUser || !expectedPassword) {
-    return null;
-  }
-
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Basic ")) {
-    return unauthorizedResponse();
-  }
-
-  try {
-    const encoded = authorization.slice("Basic ".length);
-    const decoded = atob(encoded);
-    const separatorIndex = decoded.indexOf(":");
-    const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-    if (user !== expectedUser || password !== expectedPassword) {
-      return unauthorizedResponse();
-    }
-  } catch {
-    return unauthorizedResponse();
-  }
-
-  return null;
-}
-
 async function pathExists(targetPath: string) {
   try {
     await access(targetPath, constants.F_OK);
@@ -77,37 +39,38 @@ function vpsFailureReason(error: unknown) {
     return null;
   }
 
-  return error.message.match(/VPS scanner agent failed:\s*([a-z0-9_]+)/i)?.[1] ?? null;
+  return (
+    error.message.match(/VPS scanner agent failed:\s*([a-z0-9_]+)/i)?.[1] ??
+    null
+  );
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await ensureAuthorized(request);
+  const unauthorized = ensureOpsAuthorized(request);
   if (unauthorized) {
     return unauthorized;
   }
 
-  let routeFilter:
-    | {
-        originAirport: string;
-        destinationAirport: string;
-        maxStops: string;
-      }
-    | null = null;
+  let routeFilter: {
+    originAirport: string;
+    destinationAirport: string;
+    maxStops: string;
+  } | null = null;
 
   try {
     const rawBody = await request.text();
-    const payload = (rawBody.trim() ? JSON.parse(rawBody) : {}) as
-      | {
-          route?: {
-            originAirport?: string;
-            destinationAirport?: string;
-            maxStops?: string;
-          };
-        }
-      | null;
+    const payload = (rawBody.trim() ? JSON.parse(rawBody) : {}) as {
+      route?: {
+        originAirport?: string;
+        destinationAirport?: string;
+        maxStops?: string;
+      };
+    } | null;
     if (payload?.route !== undefined) {
-      const originAirport = payload.route.originAirport?.trim().toUpperCase() ?? "";
-      const destinationAirport = payload.route.destinationAirport?.trim().toUpperCase() ?? "";
+      const originAirport =
+        payload.route.originAirport?.trim().toUpperCase() ?? "";
+      const destinationAirport =
+        payload.route.destinationAirport?.trim().toUpperCase() ?? "";
       const maxStops = payload.route.maxStops?.trim().toUpperCase() ?? "";
       if (
         !AIRPORT_CODE_PATTERN.test(originAirport) ||
@@ -118,7 +81,8 @@ export async function POST(request: Request) {
           {
             ok: false,
             reason: "invalid_route_scope",
-            detail: "A route scan requires valid origin, destination, and routing values.",
+            detail:
+              "A route scan requires valid origin, destination, and routing values.",
           },
           { status: 400 },
         );
@@ -135,7 +99,10 @@ export async function POST(request: Request) {
       {
         ok: false,
         reason: "invalid_request",
-        detail: error instanceof Error ? error.message : "The request body is not valid JSON.",
+        detail:
+          error instanceof Error
+            ? error.message
+            : "The request body is not valid JSON.",
       },
       { status: 400 },
     );
@@ -159,12 +126,16 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       const agentReason = vpsFailureReason(error);
-      const isConflict = agentReason === "already_running" || agentReason === "scanner_busy";
+      const isConflict =
+        agentReason === "already_running" || agentReason === "scanner_busy";
       return NextResponse.json(
         {
           ok: false,
           reason: agentReason ?? "vps_pattern_discovery_start_failed",
-          detail: error instanceof Error ? error.message : "Unknown VPS Dates Scanner error.",
+          detail:
+            error instanceof Error
+              ? error.message
+              : "Unknown VPS Dates Scanner error.",
         },
         { status: isConflict ? 409 : 502 },
       );
@@ -205,7 +176,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const scriptPath = path.join(scannerRoot, "scripts", "run-local-pattern-discovery.sh");
+  const scriptPath = path.join(
+    scannerRoot,
+    "scripts",
+    "run-local-pattern-discovery.sh",
+  );
   if (!(await pathExists(scriptPath))) {
     return NextResponse.json(
       {

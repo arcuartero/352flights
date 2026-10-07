@@ -2,7 +2,11 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import type { OpsPriceIntelligenceData, OpsPricePoint, OpsPriceSeries } from "@/lib/ops";
+import type {
+  OpsPriceIntelligenceData,
+  OpsPricePoint,
+  OpsPriceSeries,
+} from "@/lib/ops/types";
 import {
   formatNightsLabel,
   formatRoutePatternLabel,
@@ -231,19 +235,35 @@ function applySortCriterion(
   },
 ) {
   if (criterion === "price-asc") {
-    return compareNullableNumber(helpers.priceValue(left), helpers.priceValue(right), "asc");
+    return compareNullableNumber(
+      helpers.priceValue(left),
+      helpers.priceValue(right),
+      "asc",
+    );
   }
 
   if (criterion === "price-desc") {
-    return compareNullableNumber(helpers.priceValue(left), helpers.priceValue(right), "desc");
+    return compareNullableNumber(
+      helpers.priceValue(left),
+      helpers.priceValue(right),
+      "desc",
+    );
   }
 
   if (criterion === "nights-asc") {
-    return compareNullableNumber(helpers.nightValue(left), helpers.nightValue(right), "asc");
+    return compareNullableNumber(
+      helpers.nightValue(left),
+      helpers.nightValue(right),
+      "asc",
+    );
   }
 
   if (criterion === "nights-desc") {
-    return compareNullableNumber(helpers.nightValue(left), helpers.nightValue(right), "desc");
+    return compareNullableNumber(
+      helpers.nightValue(left),
+      helpers.nightValue(right),
+      "desc",
+    );
   }
 
   return helpers.freshnessValue(right) - helpers.freshnessValue(left);
@@ -251,7 +271,10 @@ function applySortCriterion(
 
 function buildPath(points: Array<{ x: number; y: number }>) {
   return points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .map(
+      (point, index) =>
+        `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+    )
     .join(" ");
 }
 
@@ -309,7 +332,10 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
   const plotHeight = svgHeight - margin.top - margin.bottom;
   const min = values.length > 0 ? Math.min(...values) : 0;
   const max = values.length > 0 ? Math.max(...values) : 0;
-  const chartPadding = min === max ? Math.max(8, max * 0.06 || 8) : Math.max((max - min) * 0.12, 8);
+  const chartPadding =
+    min === max
+      ? Math.max(8, max * 0.06 || 8)
+      : Math.max((max - min) * 0.12, 8);
   const chartMin = Math.max(0, min - chartPadding);
   const chartMax = max + chartPadding;
   const coordinates =
@@ -318,7 +344,9 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
       : values.map((value, index) => ({
           x:
             margin.left +
-            (values.length === 1 ? plotWidth / 2 : (index / (values.length - 1)) * plotWidth),
+            (values.length === 1
+              ? plotWidth / 2
+              : (index / (values.length - 1)) * plotWidth),
           y:
             margin.top +
             plotHeight -
@@ -330,7 +358,11 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
   const activeSnapshot = series.points[activeIndex] ?? null;
   const activePointRatio = activePoint ? activePoint.x / svgWidth : 0.5;
   const tooltipPlacement =
-    activePointRatio > 0.82 ? "is-right" : activePointRatio < 0.18 ? "is-left" : "is-center";
+    activePointRatio > 0.82
+      ? "is-right"
+      : activePointRatio < 0.18
+        ? "is-left"
+        : "is-center";
   const yTicks = Array.from({ length: 4 }, (_, index) => {
     const ratio = index / 3;
     const value = chartMax - (chartMax - chartMin) * ratio;
@@ -341,9 +373,12 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
   });
   const xTickIndexes = Array.from(
     new Set(
-      [0, Math.floor((coordinates.length - 1) / 3), Math.floor(((coordinates.length - 1) * 2) / 3), coordinates.length - 1].filter(
-        (index) => index >= 0,
-      ),
+      [
+        0,
+        Math.floor((coordinates.length - 1) / 3),
+        Math.floor(((coordinates.length - 1) * 2) / 3),
+        coordinates.length - 1,
+      ].filter((index) => index >= 0),
     ),
   );
 
@@ -407,7 +442,13 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
                 />
                 <text
                   className="price-chart__axis-label price-chart__axis-label--x"
-                  textAnchor={index === 0 ? "start" : index === coordinates.length - 1 ? "end" : "middle"}
+                  textAnchor={
+                    index === 0
+                      ? "start"
+                      : index === coordinates.length - 1
+                        ? "end"
+                        : "middle"
+                  }
                   x={point.x}
                   y={margin.top + plotHeight + 22}
                 >
@@ -434,7 +475,11 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
                 } ${index === activeIndex ? "is-active" : ""}`}
                 cx={point.x}
                 cy={point.y}
-                r={index === coordinates.length - 1 || index === activeIndex ? 5 : 3}
+                r={
+                  index === coordinates.length - 1 || index === activeIndex
+                    ? 5
+                    : 3
+                }
               />
               <circle
                 className="price-chart__hit-area"
@@ -458,10 +503,16 @@ function RouteTrendChart({ series }: { series: OpsPriceSeries }) {
               top: `${(activePoint.y / svgHeight) * 100}%`,
             }}
           >
-            <strong>{formatCurrency(activeSnapshot.price, activeSnapshot.currency)}</strong>
+            <strong>
+              {formatCurrency(activeSnapshot.price, activeSnapshot.currency)}
+            </strong>
             <span>{formatChartDate(activeSnapshot.scannedAt)}</span>
-            <span>Out {formatTravelDateWithWeekday(activeSnapshot.departureDate)}</span>
-            <span>Back {formatTravelDateWithWeekday(activeSnapshot.returnDate)}</span>
+            <span>
+              Out {formatTravelDateWithWeekday(activeSnapshot.departureDate)}
+            </span>
+            <span>
+              Back {formatTravelDateWithWeekday(activeSnapshot.returnDate)}
+            </span>
           </div>
         ) : null}
       </div>
@@ -558,7 +609,9 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
   const [maxPriceFilter, setMaxPriceFilter] = useState("");
   const [sortBy, setSortBy] = useState<string[]>(["freshness"]);
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
-  const [selectedSeriesKey, setSelectedSeriesKey] = useState<string | null>(null);
+  const [selectedSeriesKey, setSelectedSeriesKey] = useState<string | null>(
+    null,
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSnapshotTableOpen, setIsSnapshotTableOpen] = useState(false);
 
@@ -573,19 +626,23 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
   const filteredSeries = useMemo(() => {
     const search = deferredSearch.trim().toLowerCase();
     const filtered = data.series.filter((series) => {
-      const matchesBucket = bucketFilter === "all" || series.routeBucket === bucketFilter;
+      const matchesBucket =
+        bucketFilter === "all" || series.routeBucket === bucketFilter;
       if (!matchesBucket) {
         return false;
       }
 
-      const matchesStops = stopsFilter === "all" || series.maxStops === stopsFilter;
+      const matchesStops =
+        stopsFilter === "all" || series.maxStops === stopsFilter;
       if (!matchesStops) {
         return false;
       }
 
       const matchesAirline =
         airlineFilter === "all" ||
-        extractAirlineFilterValues(series.latestAirlineSummary).includes(airlineFilter);
+        extractAirlineFilterValues(series.latestAirlineSummary).includes(
+          airlineFilter,
+        );
       if (!matchesAirline) {
         return false;
       }
@@ -683,7 +740,8 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
   }, [isModalOpen]);
 
   const selectedSeries =
-    filteredSeries.find((series) => series.seriesKey === selectedSeriesKey) ?? null;
+    filteredSeries.find((series) => series.seriesKey === selectedSeriesKey) ??
+    null;
   const selectedSeriesMonthlyLows = useMemo(
     () => (selectedSeries ? buildMonthlyLows(selectedSeries) : []),
     [selectedSeries],
@@ -694,7 +752,9 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
       return [];
     }
 
-    const seriesKeys = new Set(filteredSeries.map((series) => series.seriesKey));
+    const seriesKeys = new Set(
+      filteredSeries.map((series) => series.seriesKey),
+    );
     return data.tableRows.filter((row) => seriesKeys.has(row.seriesKey));
   }, [data.tableRows, filteredSeries]);
 
@@ -706,21 +766,24 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
 
   const bucketOptions = useMemo(
     () =>
-      ["all", ...new Set(data.series.map((series) => series.routeBucket))]
-        .map((bucket) => ({
+      ["all", ...new Set(data.series.map((series) => series.routeBucket))].map(
+        (bucket) => ({
           value: bucket,
-          label: bucket === "all" ? "All buckets" : formatRelativeBucket(bucket),
-        })),
+          label:
+            bucket === "all" ? "All buckets" : formatRelativeBucket(bucket),
+        }),
+      ),
     [data.series],
   );
 
   const stopOptions = useMemo(
     () =>
-      ["all", ...new Set(data.series.map((series) => series.maxStops))]
-        .map((value) => ({
+      ["all", ...new Set(data.series.map((series) => series.maxStops))].map(
+        (value) => ({
           value,
           label: value === "all" ? "All routing" : formatStops(value),
-        })),
+        }),
+      ),
     [data.series],
   );
 
@@ -754,7 +817,10 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
     }
 
     return sortBy
-      .map((value) => sortOptions.find((option) => option.value === value)?.label ?? value)
+      .map(
+        (value) =>
+          sortOptions.find((option) => option.value === value)?.label ?? value,
+      )
       .join(" + ");
   }, [sortBy]);
 
@@ -766,7 +832,9 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
       }
 
       const withoutFreshness =
-        value !== "freshness" ? current.filter((item) => item !== "freshness") : current;
+        value !== "freshness"
+          ? current.filter((item) => item !== "freshness")
+          : current;
       return [...withoutFreshness, value];
     });
   }
@@ -821,86 +889,100 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
           <strong>{areFiltersOpen ? "Hide" : "Show"}</strong>
         </button>
         <div className="ops-filter-panel__body">
-        <label className="price-control price-control--search">
-          <span>Search route</span>
-          <input
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="London, LIS, long haul..."
-            type="search"
-            value={searchValue}
-          />
-        </label>
+          <label className="price-control price-control--search">
+            <span>Search route</span>
+            <input
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="London, LIS, long haul..."
+              type="search"
+              value={searchValue}
+            />
+          </label>
 
-        <label className="price-control">
-          <span>Bucket</span>
-          <select onChange={(event) => setBucketFilter(event.target.value)} value={bucketFilter}>
-            {bucketOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="price-control">
+            <span>Bucket</span>
+            <select
+              onChange={(event) => setBucketFilter(event.target.value)}
+              value={bucketFilter}
+            >
+              {bucketOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="price-control">
-          <span>Routing</span>
-          <select onChange={(event) => setStopsFilter(event.target.value)} value={stopsFilter}>
-            {stopOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="price-control">
+            <span>Routing</span>
+            <select
+              onChange={(event) => setStopsFilter(event.target.value)}
+              value={stopsFilter}
+            >
+              {stopOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="price-control">
-          <span>Airline</span>
-          <select onChange={(event) => setAirlineFilter(event.target.value)} value={airlineFilter}>
-            {airlineOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="price-control">
+            <span>Airline</span>
+            <select
+              onChange={(event) => setAirlineFilter(event.target.value)}
+              value={airlineFilter}
+            >
+              {airlineOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="price-control">
-          <span>Max live price</span>
-          <input
-            inputMode="numeric"
-            min="0"
-            onChange={(event) => setMaxPriceFilter(event.target.value)}
-            placeholder="Any price"
-            step="1"
-            type="number"
-            value={maxPriceFilter}
-          />
-        </label>
+          <label className="price-control">
+            <span>Max live price</span>
+            <input
+              inputMode="numeric"
+              min="0"
+              onChange={(event) => setMaxPriceFilter(event.target.value)}
+              placeholder="Any price"
+              step="1"
+              type="number"
+              value={maxPriceFilter}
+            />
+          </label>
 
-        <label className="price-control">
-          <span>Sort by</span>
-          <details className="price-sort-menu">
-            <summary>{activeSortSummary}</summary>
-            <div className="price-sort-menu__panel">
-              {sortOptions.map((option) => {
-                const activeIndex = sortBy.indexOf(option.value);
-                return (
-                  <label className="price-sort-menu__option" key={option.value}>
-                    <input
-                      checked={activeIndex !== -1}
-                      onChange={() => toggleSortOption(option.value)}
-                      type="checkbox"
-                    />
-                    <span>{option.label}</span>
-                    {activeIndex !== -1 ? (
-                      <strong className="price-sort-menu__priority">{activeIndex + 1}</strong>
-                    ) : null}
-                  </label>
-                );
-              })}
-            </div>
-          </details>
-        </label>
+          <label className="price-control">
+            <span>Sort by</span>
+            <details className="price-sort-menu">
+              <summary>{activeSortSummary}</summary>
+              <div className="price-sort-menu__panel">
+                {sortOptions.map((option) => {
+                  const activeIndex = sortBy.indexOf(option.value);
+                  return (
+                    <label
+                      className="price-sort-menu__option"
+                      key={option.value}
+                    >
+                      <input
+                        checked={activeIndex !== -1}
+                        onChange={() => toggleSortOption(option.value)}
+                        type="checkbox"
+                      />
+                      <span>{option.label}</span>
+                      {activeIndex !== -1 ? (
+                        <strong className="price-sort-menu__priority">
+                          {activeIndex + 1}
+                        </strong>
+                      ) : null}
+                    </label>
+                  );
+                })}
+              </div>
+            </details>
+          </label>
         </div>
       </section>
 
@@ -910,7 +992,9 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
             className={`price-card ${series.seriesKey === selectedSeriesKey ? "is-active" : ""}`}
             key={series.seriesKey}
             aria-controls="price-route-dialog"
-            aria-expanded={isModalOpen && series.seriesKey === selectedSeriesKey}
+            aria-expanded={
+              isModalOpen && series.seriesKey === selectedSeriesKey
+            }
             onClick={() => {
               setSelectedSeriesKey(series.seriesKey);
               setIsModalOpen(true);
@@ -919,11 +1003,20 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
           >
             <div className="price-card__header">
               <div>
-                <p className="ops-tag">{formatRelativeBucket(series.routeBucket)}</p>
-                <h3>{formatRoutePatternLabel(series.routeLabel, series.patternLabel)}</h3>
+                <p className="ops-tag">
+                  {formatRelativeBucket(series.routeBucket)}
+                </p>
+                <h3>
+                  {formatRoutePatternLabel(
+                    series.routeLabel,
+                    series.patternLabel,
+                  )}
+                </h3>
               </div>
               <strong>
-                {series.latestPrice !== null ? formatCurrency(series.latestPrice) : "n/a"}
+                {series.latestPrice !== null
+                  ? formatCurrency(series.latestPrice)
+                  : "n/a"}
               </strong>
             </div>
             <p className="price-card__meta">
@@ -954,7 +1047,9 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
 
         {filteredRows.length === 0 ? (
           <div className="ops-empty">
-            <p>No snapshots match the current search, filters, and sort view.</p>
+            <p>
+              No snapshots match the current search, filters, and sort view.
+            </p>
           </div>
         ) : (
           <>
@@ -966,7 +1061,9 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
               type="button"
             >
               <span>
-                {isSnapshotTableOpen ? "Hide snapshot table" : "Show snapshot table"}
+                {isSnapshotTableOpen
+                  ? "Hide snapshot table"
+                  : "Show snapshot table"}
               </span>
               <strong>{filteredRows.length} rows</strong>
             </button>
@@ -978,7 +1075,10 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
                 role="table"
                 aria-label="Croned price history"
               >
-                <div className="price-table__row price-table__row--head" role="row">
+                <div
+                  className="price-table__row price-table__row--head"
+                  role="row"
+                >
                   <span role="columnheader">Route</span>
                   <span role="columnheader">Bucket</span>
                   <span role="columnheader">Travel dates</span>
@@ -990,23 +1090,32 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
                 {filteredRows.slice(0, 180).map((row) => (
                   <div className="price-table__row" key={row.id} role="row">
                     <span role="cell">
-                      <strong className="price-table__inline-label">Route</strong>
-                      {formatRoutePatternLabel(row.routeLabel, row.patternLabel)}
+                      <strong className="price-table__inline-label">
+                        Route
+                      </strong>
+                      {formatRoutePatternLabel(
+                        row.routeLabel,
+                        row.patternLabel,
+                      )}
                     </span>
                     <span role="cell">
-                      <strong className="price-table__inline-label">Bucket</strong>
+                      <strong className="price-table__inline-label">
+                        Bucket
+                      </strong>
                       {formatRelativeBucket(row.routeBucket)}
                     </span>
                     <span role="cell">
-                      <strong className="price-table__inline-label">Travel dates</strong>
+                      <strong className="price-table__inline-label">
+                        Travel dates
+                      </strong>
                       {formatTravelDateWithWeekday(row.departureDate)} to{" "}
                       {formatTravelDateWithWeekday(row.returnDate)}
                       {row.outboundDepartureAt && row.outboundArrivalAt ? (
                         <>
                           <br />
                           <small>
-                            Out {formatFlightClock(row.outboundDepartureAt)} {"->"}{" "}
-                            {formatFlightClock(row.outboundArrivalAt)}
+                            Out {formatFlightClock(row.outboundDepartureAt)}{" "}
+                            {"->"} {formatFlightClock(row.outboundArrivalAt)}
                           </small>
                         </>
                       ) : null}
@@ -1014,34 +1123,46 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
                         <>
                           <br />
                           <small>
-                            Back {formatFlightClock(row.returnDepartureAt)} {"->"}{" "}
-                            {formatFlightClock(row.returnArrivalAt)}
+                            Back {formatFlightClock(row.returnDepartureAt)}{" "}
+                            {"->"} {formatFlightClock(row.returnArrivalAt)}
                           </small>
                         </>
                       ) : null}
                     </span>
                     <span role="cell">
-                      <strong className="price-table__inline-label">Trip shape</strong>
+                      <strong className="price-table__inline-label">
+                        Trip shape
+                      </strong>
                       {row.tripNights} nights · {formatStops(row.maxStops)}
                     </span>
                     <span role="cell">
-                      <strong className="price-table__inline-label">Airline</strong>
+                      <strong className="price-table__inline-label">
+                        Airline
+                      </strong>
                       {row.airlineSummary ?? "Pending"}
                     </span>
                     <span role="cell">
-                      <strong className="price-table__inline-label">Price</strong>
+                      <strong className="price-table__inline-label">
+                        Price
+                      </strong>
                       {formatCurrency(row.price, row.currency)}
                       {row.bookingUrl ? (
                         <>
                           <br />
-                          <a href={row.bookingUrl} rel="noreferrer" target="_blank">
+                          <a
+                            href={row.bookingUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
                             Open in Skyscanner
                           </a>
                         </>
                       ) : null}
                     </span>
                     <span role="cell">
-                      <strong className="price-table__inline-label">Croned at</strong>
+                      <strong className="price-table__inline-label">
+                        Croned at
+                      </strong>
                       {formatDateTime(row.scannedAt)}
                       <br />
                       <small>{formatVerifiedAge(row.scannedAt)}</small>
@@ -1104,19 +1225,30 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
                   {selectedSeries.latestTripNights !== null
                     ? `latest cheapest ${formatNightsLabel(selectedSeries.latestTripNights)}`
                     : "no winner yet"}{" "}
-                  · {formatStops(selectedSeries.maxStops)} · {selectedSeries.points.length} cron snapshots
+                  · {formatStops(selectedSeries.maxStops)} ·{" "}
+                  {selectedSeries.points.length} cron snapshots
                 </p>
                 <p>
-                  Latest airline: {selectedSeries.latestAirlineSummary ?? "Awaiting itinerary detail"}
+                  Latest airline:{" "}
+                  {selectedSeries.latestAirlineSummary ??
+                    "Awaiting itinerary detail"}
                 </p>
                 {selectedSeries.latestOutboundDepartureAt &&
                 selectedSeries.latestOutboundArrivalAt &&
                 selectedSeries.latestReturnDepartureAt &&
                 selectedSeries.latestReturnArrivalAt ? (
                   <p>
-                    Latest timing: out {formatFlightWeekdayClock(selectedSeries.latestOutboundDepartureAt)}{" "}
-                    {"->"} {formatFlightClock(selectedSeries.latestOutboundArrivalAt)} · back{" "}
-                    {formatFlightWeekdayClock(selectedSeries.latestReturnDepartureAt)} {"->"}{" "}
+                    Latest timing: out{" "}
+                    {formatFlightWeekdayClock(
+                      selectedSeries.latestOutboundDepartureAt,
+                    )}{" "}
+                    {"->"}{" "}
+                    {formatFlightClock(selectedSeries.latestOutboundArrivalAt)}{" "}
+                    · back{" "}
+                    {formatFlightWeekdayClock(
+                      selectedSeries.latestReturnDepartureAt,
+                    )}{" "}
+                    {"->"}{" "}
                     {formatFlightClock(selectedSeries.latestReturnArrivalAt)}
                     {selectedSeries.latestDestinationStayHours !== null
                       ? ` · stay ${formatStayDaysAndHours(selectedSeries.latestDestinationStayHours)}`
@@ -1125,7 +1257,11 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
                 ) : null}
                 {selectedSeries.latestBookingUrl ? (
                   <p>
-                    <a href={selectedSeries.latestBookingUrl} rel="noreferrer" target="_blank">
+                    <a
+                      href={selectedSeries.latestBookingUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
                       Open this search in Skyscanner
                     </a>
                   </p>
@@ -1172,16 +1308,23 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
                     <span>{month.label}</span>
                     <strong>
                       {month.point !== null
-                        ? formatCurrency(month.point.price, month.point.currency)
+                        ? formatCurrency(
+                            month.point.price,
+                            month.point.currency,
+                          )
                         : "n/a"}
                     </strong>
                     {month.point ? (
                       <>
                         <p>
-                          Out {formatTravelDateWithWeekday(month.point.departureDate)}
+                          Out{" "}
+                          {formatTravelDateWithWeekday(
+                            month.point.departureDate,
+                          )}
                         </p>
                         <p>
-                          Back {formatTravelDateWithWeekday(month.point.returnDate)}
+                          Back{" "}
+                          {formatTravelDateWithWeekday(month.point.returnDate)}
                         </p>
                         <p>
                           {month.point.destinationStayHours !== null
@@ -1191,7 +1334,11 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
                               : "Duration n/a"}
                         </p>
                         {month.point.bookingUrl ? (
-                          <a href={month.point.bookingUrl} rel="noreferrer" target="_blank">
+                          <a
+                            href={month.point.bookingUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
                             Open in Skyscanner
                           </a>
                         ) : null}

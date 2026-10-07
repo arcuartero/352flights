@@ -1,6 +1,10 @@
 import "server-only";
+import { weeklyEmailCopy } from "@/lib/weekly-email-copy";
 
-import { buildEditorialSections, type EditorialSectionKey } from "@/lib/editorial-sections";
+import {
+  buildEditorialSections,
+  type EditorialSectionKey,
+} from "@/lib/editorial-sections";
 import { getResendEnv, getSiteUrl } from "@/lib/env";
 import { type CampaignSendType } from "@/lib/ops-shared";
 
@@ -80,7 +84,9 @@ type SendResendEmailInput = {
 const RESEND_NOREPLY_FROM = "352 Flights <noreply@352flights.com>";
 const RESEND_ALERTS_FROM = "352 Flights <alerts@352flights.com>";
 
-export function getResendFromEmail(emailType: SendResendEmailInput["emailType"]) {
+export function getResendFromEmail(
+  emailType: SendResendEmailInput["emailType"],
+) {
   return emailType === "campaign" || emailType === "campaign_test"
     ? RESEND_ALERTS_FROM
     : RESEND_NOREPLY_FROM;
@@ -151,7 +157,10 @@ type EmailCopy = {
     unsubscribeBody: string;
     unsubscribeAction: string;
   };
-  editorial: Record<EditorialSectionKey, { label: string; description: string }>;
+  editorial: Record<
+    EditorialSectionKey,
+    { label: string; description: string }
+  >;
   welcome: {
     confirmedSubject: string;
     pendingSubject: string;
@@ -192,7 +201,9 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     stops: { NON_STOP: "Non-stop only", ONE_STOP_OR_FEWER: "Up to 1 stop" },
     unknownStops: (value) => value.replaceAll("_", " "),
     drop: (percent) =>
-      percent === null ? "below the recent baseline" : `${percent}% below the recent baseline`,
+      percent === null
+        ? "below the recent baseline"
+        : `${percent}% below the recent baseline`,
     baselineStillForming: "Baseline still forming",
     multipleCarriers: "Multiple carriers",
     headlineFlash: "New reasons to pack your bags !",
@@ -211,9 +222,11 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     emptyFlashPreview: "Urgent Luxembourg flight alert.",
     emptyDigestPreview: "Fresh Luxembourg fare drops from your watchlist.",
     singleSubject: (city, price) => `${city} from ${price}`,
-    multiSubject: (city, price, remaining) => `${city} from ${price} + ${remaining} more fares`,
+    multiSubject: (city, price, remaining) =>
+      `${city} from ${price} + ${remaining} more fares`,
     singlePreview: (route, price) => `${route} at ${price}.`,
-    multiPreview: (count, city, price) => `${count} matching fares, led by ${city} at ${price}.`,
+    multiPreview: (count, city, price) =>
+      `${count} matching fares, led by ${city} at ${price}.`,
     labels: {
       price: "Price",
       travelDates: "Travel dates",
@@ -228,7 +241,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       homepage: "Homepage",
     },
     travelDateRange: (from, to) => `${from} to ${to}`,
-    timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
+    timing: (label, departure, arrival) =>
+      `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} nights · ${stops}`,
     nights: (nights) => `${nights} nights`,
     skyscannerNote: (dealCount) =>
@@ -240,7 +254,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editPreferences: "Edit preferences",
     managePreferences: "Manage preferences",
     unsubscribe: "Unsubscribe",
-    footerReason: "You are receiving this because you asked for Luxembourg flight deals matched to your route profile.",
+    footerReason:
+      "You are receiving this because you asked for Luxembourg flight deals matched to your route profile.",
     campaign: {
       belowReference: "below your reference",
       viewFlight: "View flight",
@@ -255,19 +270,23 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editorial: {
       fresh_price_drops: {
         label: "Fresh price drops",
-        description: "The sharpest newly verified fares sitting well below their recent baseline.",
+        description:
+          "The sharpest newly verified fares sitting well below their recent baseline.",
       },
       good_options_next_30_days: {
         label: "Good options for next 30 days",
-        description: "Trips leaving soon enough to book now without waiting for a future season.",
+        description:
+          "Trips leaving soon enough to book now without waiting for a future season.",
       },
       best_weekend_escapes: {
         label: "Best weekend escapes",
-        description: "Shorter Luxembourg trips of 2 to 4 nights built around the weekend.",
+        description:
+          "Shorter Luxembourg trips of 2 to 4 nights built around the weekend.",
       },
       best_long_stays: {
         label: "Best long stays",
-        description: "Longer trips above 4 nights that stretch into a more substantial break.",
+        description:
+          "Longer trips above 4 nights that stretch into a more substantial break.",
       },
     },
     welcome: {
@@ -277,12 +296,16 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingPreview: "Confirm your email and choose the alerts you want.",
       confirmedHeadline: "Tailor your travel alerts to your preferences.",
       pendingHeadline: "One more step before takeoff.",
-      confirmedIntro: "We are sending your private access link again so you can update your alerts.",
-      pendingIntro: "One quick confirmation finishes the double opt-in. Then you can tailor the feed to the trips you actually want.",
+      confirmedIntro:
+        "We are sending your private access link again so you can update your alerts.",
+      pendingIntro:
+        "One quick confirmation finishes the double opt-in. Then you can tailor the feed to the trips you actually want.",
       linkedTo: "Linked to:",
       alertSetupTitle: "Your alert setup",
-      alertSetupBody: "Choose the kind of flight deals you want to see and how often you hear from us.",
-      confirmBody: "After confirming, edit your preferences to control destinations, budget, routing, and email cadence.",
+      alertSetupBody:
+        "Choose the kind of flight deals you want to see and how often you hear from us.",
+      confirmBody:
+        "After confirming, edit your preferences to control destinations, budget, routing, and email cadence.",
       primaryConfirmed: "Edit preferences",
       primaryPending: "Confirm subscription",
       preferencesLink: "Edit my preferences",
@@ -305,10 +328,15 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     verifiedHoursAgo: (hours) => `Verifie il y a ${hours} h`,
     verifiedDaysAgo: (days) => `Verifie il y a ${days} j`,
     stayHours: (hours) => `${hours} h sur place`,
-    stops: { NON_STOP: "Vol direct uniquement", ONE_STOP_OR_FEWER: "Jusqu'a 1 escale" },
+    stops: {
+      NON_STOP: "Vol direct uniquement",
+      ONE_STOP_OR_FEWER: "Jusqu'a 1 escale",
+    },
     unknownStops: (value) => value.replaceAll("_", " "),
     drop: (percent) =>
-      percent === null ? "sous la reference recente" : `${percent} % sous la reference recente`,
+      percent === null
+        ? "sous la reference recente"
+        : `${percent} % sous la reference recente`,
     baselineStillForming: "Reference encore en construction",
     multipleCarriers: "Plusieurs compagnies",
     headlineFlash: "Des nouvelles raisons de faire vos valises !",
@@ -325,11 +353,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     emptyFlashSubject: `Alerte urgente ${BRAND_NAME}`,
     emptyDigestSubject: `Resume quotidien ${BRAND_NAME}`,
     emptyFlashPreview: "Alerte urgente de vols depuis Luxembourg.",
-    emptyDigestPreview: "Nouvelles baisses de prix depuis Luxembourg dans votre liste.",
+    emptyDigestPreview:
+      "Nouvelles baisses de prix depuis Luxembourg dans votre liste.",
     singleSubject: (city, price) => `${city} des ${price}`,
-    multiSubject: (city, price, remaining) => `${city} des ${price} + ${remaining} autres tarifs`,
+    multiSubject: (city, price, remaining) =>
+      `${city} des ${price} + ${remaining} autres tarifs`,
     singlePreview: (route, price) => `${route} a ${price}.`,
-    multiPreview: (count, city, price) => `${count} tarifs compatibles, avec ${city} a ${price}.`,
+    multiPreview: (count, city, price) =>
+      `${count} tarifs compatibles, avec ${city} a ${price}.`,
     labels: {
       price: "Prix",
       travelDates: "Dates",
@@ -344,7 +375,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       homepage: "Accueil",
     },
     travelDateRange: (from, to) => `${from} au ${to}`,
-    timing: (label, departure, arrival) => `${label} : ${departure} -> ${arrival}`,
+    timing: (label, departure, arrival) =>
+      `${label} : ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} nuits · ${stops}`,
     nights: (nights) => `${nights} nuits`,
     skyscannerNote: (dealCount) =>
@@ -356,22 +388,26 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editPreferences: "Modifier mes preferences",
     managePreferences: "Gerer mes preferences",
     unsubscribe: "Se desabonner",
-    footerReason: "Vous recevez cet email parce que vous avez demande des offres de vols depuis Luxembourg selon votre profil.",
+    footerReason:
+      "Vous recevez cet email parce que vous avez demande des offres de vols depuis Luxembourg selon votre profil.",
     campaign: {
       belowReference: "sous votre référence",
       viewFlight: "Voir le vol",
       associatedWith: "Associé à",
       editTitle: "Modifier les préférences",
-      editBody: "Ajustez les aéroports, les dates, les compagnies et les filtres de prix.",
+      editBody:
+        "Ajustez les aéroports, les dates, les compagnies et les filtres de prix.",
       editAction: "Modifier mes préférences",
       unsubscribeTitle: "Vous ne souhaitez plus recevoir ces alertes ?",
-      unsubscribeBody: "Vous pouvez désactiver ou supprimer cette alerte à tout moment.",
+      unsubscribeBody:
+        "Vous pouvez désactiver ou supprimer cette alerte à tout moment.",
       unsubscribeAction: "Me désabonner",
     },
     editorial: {
       fresh_price_drops: {
         label: "Baisses de prix recentes",
-        description: "Les tarifs verifies les plus nets sous leur reference recente.",
+        description:
+          "Les tarifs verifies les plus nets sous leur reference recente.",
       },
       good_options_next_30_days: {
         label: "Bonnes options dans les 30 jours",
@@ -390,20 +426,26 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       confirmedSubject: `Vos liens ${BRAND_NAME} sont prets`,
       pendingSubject: `Confirmez votre inscription ${BRAND_NAME}`,
       confirmedPreview: "Votre lien prive de preferences est pret.",
-      pendingPreview: "Confirmez votre email et choisissez les alertes souhaitees.",
+      pendingPreview:
+        "Confirmez votre email et choisissez les alertes souhaitees.",
       confirmedHeadline: "Ajustez vos alertes de voyages à vos envies.",
       pendingHeadline: "Encore une étape avant le décollage.",
-      confirmedIntro: "Nous vous renvoyons votre lien prive pour modifier vos alertes.",
-      pendingIntro: "Une confirmation rapide termine le double opt-in. Vous pourrez ensuite regler le flux selon vos voyages.",
+      confirmedIntro:
+        "Nous vous renvoyons votre lien prive pour modifier vos alertes.",
+      pendingIntro:
+        "Une confirmation rapide termine le double opt-in. Vous pourrez ensuite regler le flux selon vos voyages.",
       linkedTo: "Associe a :",
       alertSetupTitle: "Configuration de vos alertes",
-      alertSetupBody: "Choisissez les offres que vous voulez voir et la frequence de nos emails.",
-      confirmBody: "Apres confirmation, modifiez vos preferences de destination, budget, itineraire et frequence.",
+      alertSetupBody:
+        "Choisissez les offres que vous voulez voir et la frequence de nos emails.",
+      confirmBody:
+        "Apres confirmation, modifiez vos preferences de destination, budget, itineraire et frequence.",
       primaryConfirmed: "Modifier mes preferences",
       primaryPending: "Confirmer l'inscription",
       preferencesLink: "Modifier mes preferences",
       notYouTitle: "Désabonnement instantané.",
-      notYouBody: "Si ce n'etait pas vous, vous pouvez vous desabonner immediatement.",
+      notYouBody:
+        "Si ce n'etait pas vous, vous pouvez vous desabonner immediatement.",
       unsubscribeNow: "Me desabonner",
       alreadyConfirmed: "Deja confirme ?",
       emailLabel: "Email",
@@ -421,10 +463,15 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     verifiedHoursAgo: (hours) => `Vor ${hours} Std. geprueft`,
     verifiedDaysAgo: (days) => `Vor ${days} Tg. geprueft`,
     stayHours: (hours) => `${hours} Std. am Ziel`,
-    stops: { NON_STOP: "Nur Direktfluege", ONE_STOP_OR_FEWER: "Bis zu 1 Stopp" },
+    stops: {
+      NON_STOP: "Nur Direktfluege",
+      ONE_STOP_OR_FEWER: "Bis zu 1 Stopp",
+    },
     unknownStops: (value) => value.replaceAll("_", " "),
     drop: (percent) =>
-      percent === null ? "unter dem aktuellen Vergleichswert" : `${percent} % unter dem aktuellen Vergleichswert`,
+      percent === null
+        ? "unter dem aktuellen Vergleichswert"
+        : `${percent} % unter dem aktuellen Vergleichswert`,
     baselineStillForming: "Vergleichswert wird noch gebildet",
     multipleCarriers: "Mehrere Airlines",
     headlineFlash: "Neue Gründe gefunden, die Koffer zu packen.",
@@ -443,9 +490,11 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     emptyFlashPreview: "Dringender Flugdeal ab Luxemburg.",
     emptyDigestPreview: "Neue Preisrueckgaenge aus deiner Luxemburg-Watchlist.",
     singleSubject: (city, price) => `${city} ab ${price}`,
-    multiSubject: (city, price, remaining) => `${city} ab ${price} + ${remaining} weitere Tarife`,
+    multiSubject: (city, price, remaining) =>
+      `${city} ab ${price} + ${remaining} weitere Tarife`,
     singlePreview: (route, price) => `${route} fuer ${price}.`,
-    multiPreview: (count, city, price) => `${count} passende Tarife, angefuehrt von ${city} fuer ${price}.`,
+    multiPreview: (count, city, price) =>
+      `${count} passende Tarife, angefuehrt von ${city} fuer ${price}.`,
     labels: {
       price: "Preis",
       travelDates: "Reisedaten",
@@ -460,7 +509,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       homepage: "Startseite",
     },
     travelDateRange: (from, to) => `${from} bis ${to}`,
-    timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
+    timing: (label, departure, arrival) =>
+      `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} Naechte · ${stops}`,
     nights: (nights) => `${nights} Naechte`,
     skyscannerNote: (dealCount) =>
@@ -472,7 +522,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editPreferences: "Praeferenzen bearbeiten",
     managePreferences: "Praeferenzen verwalten",
     unsubscribe: "Abmelden",
-    footerReason: "Du erhaeltst diese E-Mail, weil du Flugangebote ab Luxemburg passend zu deinem Profil angefordert hast.",
+    footerReason:
+      "Du erhaeltst diese E-Mail, weil du Flugangebote ab Luxemburg passend zu deinem Profil angefordert hast.",
     campaign: {
       belowReference: "unter deinem Vergleichswert",
       viewFlight: "Flug ansehen",
@@ -481,13 +532,15 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       editBody: "Passe Flughäfen, Daten, Airlines und Preisfilter an.",
       editAction: "Meine Präferenzen ändern",
       unsubscribeTitle: "Möchtest du diese Alerts nicht mehr erhalten?",
-      unsubscribeBody: "Du kannst diesen Alert jederzeit deaktivieren oder löschen.",
+      unsubscribeBody:
+        "Du kannst diesen Alert jederzeit deaktivieren oder löschen.",
       unsubscribeAction: "Abmelden",
     },
     editorial: {
       fresh_price_drops: {
         label: "Neue Preisrueckgaenge",
-        description: "Die staerksten neu geprueften Tarife unter ihrem aktuellen Vergleichswert.",
+        description:
+          "Die staerksten neu geprueften Tarife unter ihrem aktuellen Vergleichswert.",
       },
       good_options_next_30_days: {
         label: "Gute Optionen in den naechsten 30 Tagen",
@@ -495,7 +548,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       },
       best_weekend_escapes: {
         label: "Beste Wochenendtrips",
-        description: "Kuerzere Reisen von 2 bis 4 Naechten rund ums Wochenende.",
+        description:
+          "Kuerzere Reisen von 2 bis 4 Naechten rund ums Wochenende.",
       },
       best_long_stays: {
         label: "Beste laengere Aufenthalte",
@@ -506,15 +560,20 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       confirmedSubject: `Deine ${BRAND_NAME}-Links sind bereit`,
       pendingSubject: `Bestaetige dein ${BRAND_NAME}-Abo`,
       confirmedPreview: "Dein privater Praeferenz-Link ist bereit.",
-      pendingPreview: "Bestaetige deine E-Mail und waehle deine gewuenschten Alerts.",
+      pendingPreview:
+        "Bestaetige deine E-Mail und waehle deine gewuenschten Alerts.",
       confirmedHeadline: "Passe deine Reisealarme an deine Wünsche an.",
       pendingHeadline: "Noch ein Schritt bis zum Abflug.",
-      confirmedIntro: "Wir senden dir deinen privaten Link erneut, damit du deine Alerts anpassen kannst.",
-      pendingIntro: "Eine kurze Bestaetigung schliesst den Double-Opt-in ab. Danach passt du den Feed an deine Reisen an.",
+      confirmedIntro:
+        "Wir senden dir deinen privaten Link erneut, damit du deine Alerts anpassen kannst.",
+      pendingIntro:
+        "Eine kurze Bestaetigung schliesst den Double-Opt-in ab. Danach passt du den Feed an deine Reisen an.",
       linkedTo: "Verknuepft mit:",
       alertSetupTitle: "Deine Alert-Einstellungen",
-      alertSetupBody: "Waehle, welche Flugangebote du sehen moechtest und wie oft wir dich kontaktieren.",
-      confirmBody: "Nach der Bestaetigung kannst du Ziele, Budget, Route und E-Mail-Rhythmus bearbeiten.",
+      alertSetupBody:
+        "Waehle, welche Flugangebote du sehen moechtest und wie oft wir dich kontaktieren.",
+      confirmBody:
+        "Nach der Bestaetigung kannst du Ziele, Budget, Route und E-Mail-Rhythmus bearbeiten.",
       primaryConfirmed: "Praeferenzen bearbeiten",
       primaryPending: "Abo bestaetigen",
       preferencesLink: "Meine Praeferenzen bearbeiten",
@@ -528,7 +587,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
   pt: {
     htmlLang: "pt",
     intlLocale: "pt-PT",
-    tagline: "Voos baratos a partir do Luxemburgo, pensados para viagens reais.",
+    tagline:
+      "Voos baratos a partir do Luxemburgo, pensados para viagens reais.",
     flexibleDates: "Datas flexiveis",
     notAvailable: "n/d",
     verifiedRecently: "Verificado recentemente",
@@ -540,7 +600,9 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     stops: { NON_STOP: "Apenas direto", ONE_STOP_OR_FEWER: "Ate 1 escala" },
     unknownStops: (value) => value.replaceAll("_", " "),
     drop: (percent) =>
-      percent === null ? "abaixo da referencia recente" : `${percent}% abaixo da referencia recente`,
+      percent === null
+        ? "abaixo da referencia recente"
+        : `${percent}% abaixo da referencia recente`,
     baselineStillForming: "Referencia ainda em formacao",
     multipleCarriers: "Varias companhias",
     headlineFlash: "Novos motivos para fazer as malas !",
@@ -557,11 +619,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     emptyFlashSubject: `Alerta imediato ${BRAND_NAME}`,
     emptyDigestSubject: `Resumo diario ${BRAND_NAME}`,
     emptyFlashPreview: "Alerta urgente de voos a partir do Luxemburgo.",
-    emptyDigestPreview: "Novas quedas de preco da sua lista de voos do Luxemburgo.",
+    emptyDigestPreview:
+      "Novas quedas de preco da sua lista de voos do Luxemburgo.",
     singleSubject: (city, price) => `${city} desde ${price}`,
-    multiSubject: (city, price, remaining) => `${city} desde ${price} + ${remaining} tarifas`,
+    multiSubject: (city, price, remaining) =>
+      `${city} desde ${price} + ${remaining} tarifas`,
     singlePreview: (route, price) => `${route} por ${price}.`,
-    multiPreview: (count, city, price) => `${count} tarifas compativeis, com ${city} por ${price}.`,
+    multiPreview: (count, city, price) =>
+      `${count} tarifas compativeis, com ${city} por ${price}.`,
     labels: {
       price: "Preco",
       travelDates: "Datas",
@@ -576,7 +641,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       homepage: "Inicio",
     },
     travelDateRange: (from, to) => `${from} a ${to}`,
-    timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
+    timing: (label, departure, arrival) =>
+      `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} noites · ${stops}`,
     nights: (nights) => `${nights} noites`,
     skyscannerNote: (dealCount) =>
@@ -588,7 +654,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editPreferences: "Editar preferencias",
     managePreferences: "Gerir preferencias",
     unsubscribe: "Cancelar subscricao",
-    footerReason: "Recebe este email porque pediu ofertas de voos do Luxemburgo de acordo com o seu perfil.",
+    footerReason:
+      "Recebe este email porque pediu ofertas de voos do Luxemburgo de acordo com o seu perfil.",
     campaign: {
       belowReference: "abaixo da sua referência",
       viewFlight: "Ver voo",
@@ -603,7 +670,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editorial: {
       fresh_price_drops: {
         label: "Quedas de preco recentes",
-        description: "As tarifas verificadas mais fortes abaixo da sua referencia recente.",
+        description:
+          "As tarifas verificadas mais fortes abaixo da sua referencia recente.",
       },
       good_options_next_30_days: {
         label: "Boas opcoes nos proximos 30 dias",
@@ -611,7 +679,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       },
       best_weekend_escapes: {
         label: "Melhores escapadas de fim de semana",
-        description: "Viagens curtas de 2 a 4 noites em torno do fim de semana.",
+        description:
+          "Viagens curtas de 2 a 4 noites em torno do fim de semana.",
       },
       best_long_stays: {
         label: "Melhores estadias longas",
@@ -623,14 +692,19 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingSubject: `Confirme a sua subscricao ${BRAND_NAME}`,
       confirmedPreview: "O seu link privado de preferencias esta pronto.",
       pendingPreview: "Confirme o email e escolha os alertas que pretende.",
-      confirmedHeadline: "Ajuste os seus alertas de viagem às suas preferências.",
+      confirmedHeadline:
+        "Ajuste os seus alertas de viagem às suas preferências.",
       pendingHeadline: "Só falta um passo para descolar.",
-      confirmedIntro: "Enviamos novamente o seu link privado para poder atualizar os alertas.",
-      pendingIntro: "Uma confirmacao rapida conclui o double opt-in. Depois podera ajustar o feed as suas viagens.",
+      confirmedIntro:
+        "Enviamos novamente o seu link privado para poder atualizar os alertas.",
+      pendingIntro:
+        "Uma confirmacao rapida conclui o double opt-in. Depois podera ajustar o feed as suas viagens.",
       linkedTo: "Associado a:",
       alertSetupTitle: "Configuracao dos alertas",
-      alertSetupBody: "Escolha que ofertas quer ver e com que frequencia quer receber emails.",
-      confirmBody: "Depois de confirmar, edite destinos, orcamento, rotas e frequencia de email.",
+      alertSetupBody:
+        "Escolha que ofertas quer ver e com que frequencia quer receber emails.",
+      confirmBody:
+        "Depois de confirmar, edite destinos, orcamento, rotas e frequencia de email.",
       primaryConfirmed: "Editar preferencias",
       primaryPending: "Confirmar subscricao",
       preferencesLink: "Editar as minhas preferencias",
@@ -656,7 +730,9 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     stops: { NON_STOP: "Solo diretto", ONE_STOP_OR_FEWER: "Fino a 1 scalo" },
     unknownStops: (value) => value.replaceAll("_", " "),
     drop: (percent) =>
-      percent === null ? "sotto il riferimento recente" : `${percent}% sotto il riferimento recente`,
+      percent === null
+        ? "sotto il riferimento recente"
+        : `${percent}% sotto il riferimento recente`,
     baselineStillForming: "Riferimento ancora in formazione",
     multipleCarriers: "Piu compagnie",
     headlineFlash: "Nuovi motivi per fare le valigie !",
@@ -673,11 +749,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     emptyFlashSubject: `Allerta immediata ${BRAND_NAME}`,
     emptyDigestSubject: `Riepilogo giornaliero ${BRAND_NAME}`,
     emptyFlashPreview: "Allerta urgente voli dal Lussemburgo.",
-    emptyDigestPreview: "Nuovi cali di prezzo dalla tua lista voli dal Lussemburgo.",
+    emptyDigestPreview:
+      "Nuovi cali di prezzo dalla tua lista voli dal Lussemburgo.",
     singleSubject: (city, price) => `${city} da ${price}`,
-    multiSubject: (city, price, remaining) => `${city} da ${price} + ${remaining} altre tariffe`,
+    multiSubject: (city, price, remaining) =>
+      `${city} da ${price} + ${remaining} altre tariffe`,
     singlePreview: (route, price) => `${route} a ${price}.`,
-    multiPreview: (count, city, price) => `${count} tariffe compatibili, con ${city} a ${price}.`,
+    multiPreview: (count, city, price) =>
+      `${count} tariffe compatibili, con ${city} a ${price}.`,
     labels: {
       price: "Prezzo",
       travelDates: "Date",
@@ -692,7 +771,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       homepage: "Home",
     },
     travelDateRange: (from, to) => `${from} - ${to}`,
-    timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
+    timing: (label, departure, arrival) =>
+      `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} notti · ${stops}`,
     nights: (nights) => `${nights} notti`,
     skyscannerNote: (dealCount) =>
@@ -704,7 +784,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editPreferences: "Modifica preferenze",
     managePreferences: "Gestisci preferenze",
     unsubscribe: "Annulla iscrizione",
-    footerReason: "Ricevi questa email perche hai richiesto offerte voli dal Lussemburgo in base al tuo profilo.",
+    footerReason:
+      "Ricevi questa email perche hai richiesto offerte voli dal Lussemburgo in base al tuo profilo.",
     campaign: {
       belowReference: "sotto il tuo riferimento",
       viewFlight: "Vedi volo",
@@ -713,13 +794,15 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       editBody: "Modifica aeroporti, date, compagnie e filtri di prezzo.",
       editAction: "Modifica le mie preferenze",
       unsubscribeTitle: "Vuoi smettere di ricevere questi avvisi?",
-      unsubscribeBody: "Puoi disattivare o eliminare questo avviso quando vuoi.",
+      unsubscribeBody:
+        "Puoi disattivare o eliminare questo avviso quando vuoi.",
       unsubscribeAction: "Annulla iscrizione",
     },
     editorial: {
       fresh_price_drops: {
         label: "Cali di prezzo recenti",
-        description: "Le tariffe appena verificate piu forti sotto il riferimento recente.",
+        description:
+          "Le tariffe appena verificate piu forti sotto il riferimento recente.",
       },
       good_options_next_30_days: {
         label: "Buone opzioni nei prossimi 30 giorni",
@@ -741,12 +824,16 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       pendingPreview: "Conferma l'email e scegli gli alert che vuoi.",
       confirmedHeadline: "Adatta i tuoi avvisi di viaggio alle tue preferenze.",
       pendingHeadline: "Ancora un passo prima del decollo.",
-      confirmedIntro: "Ti inviamo di nuovo il link privato per aggiornare gli alert.",
-      pendingIntro: "Una rapida conferma completa il double opt-in. Poi potrai adattare il feed ai tuoi viaggi.",
+      confirmedIntro:
+        "Ti inviamo di nuovo il link privato per aggiornare gli alert.",
+      pendingIntro:
+        "Una rapida conferma completa il double opt-in. Poi potrai adattare il feed ai tuoi viaggi.",
       linkedTo: "Collegato a:",
       alertSetupTitle: "Impostazioni alert",
-      alertSetupBody: "Scegli che offerte vuoi vedere e con quale frequenza ricevere email.",
-      confirmBody: "Dopo la conferma, modifica destinazioni, budget, itinerari e frequenza email.",
+      alertSetupBody:
+        "Scegli che offerte vuoi vedere e con quale frequenza ricevere email.",
+      confirmBody:
+        "Dopo la conferma, modifica destinazioni, budget, itinerari e frequenza email.",
       primaryConfirmed: "Modifica preferenze",
       primaryPending: "Conferma iscrizione",
       preferencesLink: "Modifica le mie preferenze",
@@ -772,7 +859,9 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     stops: { NON_STOP: "Solo directos", ONE_STOP_OR_FEWER: "Hasta 1 escala" },
     unknownStops: (value) => value.replaceAll("_", " "),
     drop: (percent) =>
-      percent === null ? "por debajo de la referencia reciente" : `${percent}% por debajo de la referencia reciente`,
+      percent === null
+        ? "por debajo de la referencia reciente"
+        : `${percent}% por debajo de la referencia reciente`,
     baselineStillForming: "Referencia todavia en formacion",
     multipleCarriers: "Varias aerolineas",
     headlineFlash: "Nuevas razones para hacer tus maletas !",
@@ -789,11 +878,14 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     emptyFlashSubject: `Alerta inmediata ${BRAND_NAME}`,
     emptyDigestSubject: `Resumen diario ${BRAND_NAME}`,
     emptyFlashPreview: "Alerta urgente de vuelos desde Luxemburgo.",
-    emptyDigestPreview: "Nuevas bajadas de precio desde Luxemburgo en tu lista.",
+    emptyDigestPreview:
+      "Nuevas bajadas de precio desde Luxemburgo en tu lista.",
     singleSubject: (city, price) => `${city} desde ${price}`,
-    multiSubject: (city, price, remaining) => `${city} desde ${price} + ${remaining} tarifas mas`,
+    multiSubject: (city, price, remaining) =>
+      `${city} desde ${price} + ${remaining} tarifas mas`,
     singlePreview: (route, price) => `${route} por ${price}.`,
-    multiPreview: (count, city, price) => `${count} tarifas compatibles, empezando por ${city} a ${price}.`,
+    multiPreview: (count, city, price) =>
+      `${count} tarifas compatibles, empezando por ${city} a ${price}.`,
     labels: {
       price: "Precio",
       travelDates: "Fechas",
@@ -808,7 +900,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       homepage: "Inicio",
     },
     travelDateRange: (from, to) => `${from} a ${to}`,
-    timing: (label, departure, arrival) => `${label}: ${departure} -> ${arrival}`,
+    timing: (label, departure, arrival) =>
+      `${label}: ${departure} -> ${arrival}`,
     tripShape: (nights, stops) => `${nights} noches · ${stops}`,
     nights: (nights) => `${nights} noches`,
     skyscannerNote: (dealCount) =>
@@ -820,7 +913,8 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
     editPreferences: "Editar preferencias",
     managePreferences: "Gestionar preferencias",
     unsubscribe: "Darse de baja",
-    footerReason: "Recibes este email porque pediste ofertas de vuelos desde Luxemburgo adaptadas a tu perfil.",
+    footerReason:
+      "Recibes este email porque pediste ofertas de vuelos desde Luxemburgo adaptadas a tu perfil.",
     campaign: {
       belowReference: "por debajo de tu referencia",
       viewFlight: "Ver vuelo",
@@ -829,40 +923,51 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
       editBody: "Ajusta aeropuertos, fechas, compañías y filtros de precio.",
       editAction: "Modificar mis preferencias",
       unsubscribeTitle: "¿Deseas dejar de recibir estas alertas?",
-      unsubscribeBody: "Puedes desactivar o eliminar esta alerta cuando quieras.",
+      unsubscribeBody:
+        "Puedes desactivar o eliminar esta alerta cuando quieras.",
       unsubscribeAction: "Darme de baja",
     },
     editorial: {
       fresh_price_drops: {
         label: "Bajadas recientes",
-        description: "Las tarifas verificadas mas fuertes por debajo de su referencia reciente.",
+        description:
+          "Las tarifas verificadas mas fuertes por debajo de su referencia reciente.",
       },
       good_options_next_30_days: {
         label: "Buenas opciones en los proximos 30 dias",
-        description: "Viajes suficientemente cercanos como para reservar ahora.",
+        description:
+          "Viajes suficientemente cercanos como para reservar ahora.",
       },
       best_weekend_escapes: {
         label: "Mejores escapadas de fin de semana",
-        description: "Viajes cortos de 2 a 4 noches alrededor del fin de semana.",
+        description:
+          "Viajes cortos de 2 a 4 noches alrededor del fin de semana.",
       },
       best_long_stays: {
         label: "Mejores estancias largas",
-        description: "Viajes de mas de 4 noches para una escapada mas completa.",
+        description:
+          "Viajes de mas de 4 noches para una escapada mas completa.",
       },
     },
     welcome: {
       confirmedSubject: `Tus enlaces de ${BRAND_NAME} estan listos`,
       pendingSubject: `Confirma tu suscripcion a ${BRAND_NAME}`,
-      confirmedPreview: "Tu enlace privado para editar preferencias esta listo.",
-      pendingPreview: "Confirma tu email y elige las alertas que quieres recibir.",
+      confirmedPreview:
+        "Tu enlace privado para editar preferencias esta listo.",
+      pendingPreview:
+        "Confirma tu email y elige las alertas que quieres recibir.",
       confirmedHeadline: "Ajusta tus alertas de viaje a tus preferencias.",
       pendingHeadline: "Solo falta un paso para despegar.",
-      confirmedIntro: "Te enviamos otra vez tu enlace privado para que puedas actualizar tus alertas.",
-      pendingIntro: "Una confirmacion rapida completa el double opt-in. Despues podras ajustar el feed a los viajes que realmente quieres.",
+      confirmedIntro:
+        "Te enviamos otra vez tu enlace privado para que puedas actualizar tus alertas.",
+      pendingIntro:
+        "Una confirmacion rapida completa el double opt-in. Despues podras ajustar el feed a los viajes que realmente quieres.",
       linkedTo: "Vinculado a:",
       alertSetupTitle: "Configuracion de tus alertas",
-      alertSetupBody: "Elige que ofertas quieres ver y con que frecuencia quieres que te escribamos.",
-      confirmBody: "Despues de confirmar, edita destinos, presupuesto, rutas y frecuencia de emails.",
+      alertSetupBody:
+        "Elige que ofertas quieres ver y con que frecuencia quieres que te escribamos.",
+      confirmBody:
+        "Despues de confirmar, edita destinos, presupuesto, rutas y frecuencia de emails.",
       primaryConfirmed: "Editar preferencias",
       primaryPending: "Confirmar suscripcion",
       preferencesLink: "Editar mis preferencias",
@@ -878,33 +983,86 @@ const emailCopy: Record<EmailLocale, EmailCopy> = {
 const campaignRouteCopy: Record<EmailLocale, CampaignRouteCopy> = {
   en: {
     title: (destinationCity) => `Luxembourg to ${destinationCity}`,
-    weekdays: { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" },
+    weekdays: {
+      Mon: "Monday",
+      Tue: "Tuesday",
+      Wed: "Wednesday",
+      Thu: "Thursday",
+      Fri: "Friday",
+      Sat: "Saturday",
+      Sun: "Sunday",
+    },
     nextPattern: (departure, arrival) => `${departure} -> ${arrival} next week`,
   },
   fr: {
     title: (destinationCity) => `Luxembourg vers ${destinationCity}`,
-    weekdays: { Mon: "lundi", Tue: "mardi", Wed: "mercredi", Thu: "jeudi", Fri: "vendredi", Sat: "samedi", Sun: "dimanche" },
-    nextPattern: (departure, arrival) => `${departure} -> ${arrival} semaine prochaine`,
+    weekdays: {
+      Mon: "lundi",
+      Tue: "mardi",
+      Wed: "mercredi",
+      Thu: "jeudi",
+      Fri: "vendredi",
+      Sat: "samedi",
+      Sun: "dimanche",
+    },
+    nextPattern: (departure, arrival) =>
+      `${departure} -> ${arrival} semaine prochaine`,
   },
   de: {
     title: (destinationCity) => `Luxemburg nach ${destinationCity}`,
-    weekdays: { Mon: "Montag", Tue: "Dienstag", Wed: "Mittwoch", Thu: "Donnerstag", Fri: "Freitag", Sat: "Samstag", Sun: "Sonntag" },
-    nextPattern: (departure, arrival) => `${departure} -> ${arrival} nächste Woche`,
+    weekdays: {
+      Mon: "Montag",
+      Tue: "Dienstag",
+      Wed: "Mittwoch",
+      Thu: "Donnerstag",
+      Fri: "Freitag",
+      Sat: "Samstag",
+      Sun: "Sonntag",
+    },
+    nextPattern: (departure, arrival) =>
+      `${departure} -> ${arrival} nächste Woche`,
   },
   pt: {
     title: (destinationCity) => `Luxemburgo para ${destinationCity}`,
-    weekdays: { Mon: "segunda-feira", Tue: "terça-feira", Wed: "quarta-feira", Thu: "quinta-feira", Fri: "sexta-feira", Sat: "sábado", Sun: "domingo" },
-    nextPattern: (departure, arrival) => `${departure} -> ${arrival} na próxima semana`,
+    weekdays: {
+      Mon: "segunda-feira",
+      Tue: "terça-feira",
+      Wed: "quarta-feira",
+      Thu: "quinta-feira",
+      Fri: "sexta-feira",
+      Sat: "sábado",
+      Sun: "domingo",
+    },
+    nextPattern: (departure, arrival) =>
+      `${departure} -> ${arrival} na próxima semana`,
   },
   it: {
     title: (destinationCity) => `Da Lussemburgo a ${destinationCity}`,
-    weekdays: { Mon: "lunedì", Tue: "martedì", Wed: "mercoledì", Thu: "giovedì", Fri: "venerdì", Sat: "sabato", Sun: "domenica" },
-    nextPattern: (departure, arrival) => `${departure} -> ${arrival} della prossima settimana`,
+    weekdays: {
+      Mon: "lunedì",
+      Tue: "martedì",
+      Wed: "mercoledì",
+      Thu: "giovedì",
+      Fri: "venerdì",
+      Sat: "sabato",
+      Sun: "domenica",
+    },
+    nextPattern: (departure, arrival) =>
+      `${departure} -> ${arrival} della prossima settimana`,
   },
   es: {
     title: (destinationCity) => `Luxemburgo a ${destinationCity}`,
-    weekdays: { Mon: "lunes", Tue: "martes", Wed: "miércoles", Thu: "jueves", Fri: "viernes", Sat: "sábado", Sun: "domingo" },
-    nextPattern: (departure, arrival) => `${departure} -> ${arrival} semana próxima`,
+    weekdays: {
+      Mon: "lunes",
+      Tue: "martes",
+      Wed: "miércoles",
+      Thu: "jueves",
+      Fri: "viernes",
+      Sat: "sábado",
+      Sun: "domingo",
+    },
+    nextPattern: (departure, arrival) =>
+      `${departure} -> ${arrival} semana próxima`,
   },
 };
 
@@ -928,7 +1086,9 @@ export function normalizeEmailLocale(value: unknown): EmailLocale {
   }
 
   const normalized = value.toLowerCase().split("-")[0];
-  return emailLocales.includes(normalized as EmailLocale) ? (normalized as EmailLocale) : "en";
+  return emailLocales.includes(normalized as EmailLocale)
+    ? (normalized as EmailLocale)
+    : "en";
 }
 
 function getCopy(locale?: EmailLocale | null) {
@@ -945,13 +1105,15 @@ function splitCampaignRouteLabel(routeLabel: string) {
 
   return {
     routeLabel: routeLabel.slice(0, dividerIndex).trim(),
-    patternLabel: routeLabel.slice(dividerIndex + divider.length).trim() || null,
+    patternLabel:
+      routeLabel.slice(dividerIndex + divider.length).trim() || null,
   };
 }
 
 function formatCampaignRouteLabel(deal: RenderableDeal) {
   const { routeLabel } = splitCampaignRouteLabel(deal.routeLabel);
-  const airportName = multiCityAirportNames[deal.destinationAirport.toUpperCase()];
+  const airportName =
+    multiCityAirportNames[deal.destinationAirport.toUpperCase()];
 
   if (!airportName) {
     return routeLabel;
@@ -963,14 +1125,19 @@ function formatCampaignRouteLabel(deal: RenderableDeal) {
     : `${routeLabel} (${cityAndAirport})`;
 }
 
-function localizeCampaignPattern(patternLabel: string | null, locale?: EmailLocale | null) {
+function localizeCampaignPattern(
+  patternLabel: string | null,
+  locale?: EmailLocale | null,
+) {
   if (!patternLabel) {
     return null;
   }
 
   const normalizedLocale = normalizeEmailLocale(locale);
   const routeCopy = campaignRouteCopy[normalizedLocale];
-  const match = patternLabel.match(/^([A-Za-z]{3})\s*->\s*(next\s+)?([A-Za-z]{3})$/i);
+  const match = patternLabel.match(
+    /^([A-Za-z]{3})\s*->\s*(next\s+)?([A-Za-z]{3})$/i,
+  );
 
   if (!match) {
     return null;
@@ -990,18 +1157,28 @@ function localizeCampaignPattern(patternLabel: string | null, locale?: EmailLoca
     : `${departure} -> ${arrival}`;
 }
 
-function formatCampaignDealTitle(deal: RenderableDeal, locale?: EmailLocale | null) {
+function formatCampaignDealTitle(
+  deal: RenderableDeal,
+  locale?: EmailLocale | null,
+) {
   const normalizedLocale = normalizeEmailLocale(locale);
   return campaignRouteCopy[normalizedLocale].title(deal.destinationCity);
 }
 
-function formatCampaignDealPattern(deal: RenderableDeal, locale?: EmailLocale | null) {
+function formatCampaignDealPattern(
+  deal: RenderableDeal,
+  locale?: EmailLocale | null,
+) {
   const normalizedLocale = normalizeEmailLocale(locale);
   const { patternLabel } = splitCampaignRouteLabel(deal.routeLabel);
   return localizeCampaignPattern(patternLabel, normalizedLocale);
 }
 
-function formatCurrency(value: number, locale?: EmailLocale | null, currency: string = "EUR") {
+function formatCurrency(
+  value: number,
+  locale?: EmailLocale | null,
+  currency: string = "EUR",
+) {
   const copy = getCopy(locale);
   return new Intl.NumberFormat(copy.intlLocale, {
     style: "currency",
@@ -1010,7 +1187,10 @@ function formatCurrency(value: number, locale?: EmailLocale | null, currency: st
   }).format(value);
 }
 
-function formatDateWithWeekday(value: string | null, locale?: EmailLocale | null) {
+function formatDateWithWeekday(
+  value: string | null,
+  locale?: EmailLocale | null,
+) {
   if (!value) {
     return getCopy(locale).flexibleDates;
   }
@@ -1046,7 +1226,11 @@ function formatCampaignDateRange(
   return `${departure} — ${arrival}`;
 }
 
-function formatCampaignTiming(label: string, departure: string, arrival: string) {
+function formatCampaignTiming(
+  label: string,
+  departure: string,
+  arrival: string,
+) {
   return `${label} ${departure} — ${arrival}`;
 }
 
@@ -1062,7 +1246,10 @@ function formatFlightClock(value: string | null, locale?: EmailLocale | null) {
   }).format(new Date(value));
 }
 
-function formatFlightWeekdayClock(value: string | null, locale?: EmailLocale | null) {
+function formatFlightWeekdayClock(
+  value: string | null,
+  locale?: EmailLocale | null,
+) {
   if (!value) {
     return getCopy(locale).notAvailable;
   }
@@ -1084,7 +1271,11 @@ function formatStayHours(value: number | null, locale?: EmailLocale | null) {
   return getCopy(locale).stayHours(rounded);
 }
 
-function formatVerifiedAge(value: string | null, locale?: EmailLocale | null, now: Date = new Date()) {
+function formatVerifiedAge(
+  value: string | null,
+  locale?: EmailLocale | null,
+  now: Date = new Date(),
+) {
   const copy = getCopy(locale);
   if (!value) {
     return copy.verifiedRecently;
@@ -1149,8 +1340,14 @@ function renderPlainEmailAddress(value: string) {
   ].join("");
 }
 
-function buildDealHeadline(sendType: CampaignSendType, deals: RenderableDeal[], locale?: EmailLocale | null) {
+function buildDealHeadline(
+  sendType: CampaignSendType,
+  deals: RenderableDeal[],
+  locale?: EmailLocale | null,
+) {
   const copy = getCopy(locale);
+  if (sendType === "weekly")
+    return weeklyEmailCopy[normalizeEmailLocale(locale)].title;
   if (sendType === "flash") {
     return copy.headlineFlash;
   }
@@ -1165,9 +1362,17 @@ export function buildCampaignSubject(
 ) {
   const copy = getCopy(locale);
   const [topDeal] = deals;
+  if (sendType === "weekly") {
+    const label = weeklyEmailCopy[normalizeEmailLocale(locale)].subject;
+    return topDeal
+      ? `${label}: ${copy.singleSubject(topDeal.destinationCity, formatCurrency(topDeal.dealPrice, locale))}`
+      : label;
+  }
 
   if (!topDeal) {
-    return sendType === "flash" ? copy.emptyFlashSubject : copy.emptyDigestSubject;
+    return sendType === "flash"
+      ? copy.emptyFlashSubject
+      : copy.emptyDigestSubject;
   }
 
   const price = formatCurrency(topDeal.dealPrice, locale);
@@ -1184,9 +1389,13 @@ export function buildCampaignPreviewText(
   locale?: EmailLocale | null,
 ) {
   const copy = getCopy(locale);
+  if (sendType === "weekly")
+    return weeklyEmailCopy[normalizeEmailLocale(locale)].intro;
   const [topDeal] = deals;
   if (!topDeal) {
-    return sendType === "flash" ? copy.emptyFlashPreview : copy.emptyDigestPreview;
+    return sendType === "flash"
+      ? copy.emptyFlashPreview
+      : copy.emptyDigestPreview;
   }
 
   const price = formatCurrency(topDeal.dealPrice, locale);
@@ -1203,10 +1412,16 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
   const headline = buildDealHeadline(input.sendType, input.deals, locale);
   const dealCount = input.deals.length;
   const intro =
-    input.sendType === "flash" ? copy.introFlash(dealCount) : copy.introDigest(dealCount);
+    input.sendType === "weekly"
+      ? weeklyEmailCopy[locale].intro
+      : input.sendType === "flash"
+        ? copy.introFlash(dealCount)
+        : copy.introDigest(dealCount);
   const skyscannerNote = copy.skyscannerNote(dealCount);
   const logoUrl = `${siteUrl}/v2-logo.png`;
-  const heroImageUrl = versionEmailAsset(`${siteUrl}/email-airplane-window.jpg`);
+  const heroImageUrl = versionEmailAsset(
+    `${siteUrl}/email-airplane-window.jpg`,
+  );
   const iconUrl = (name: string) =>
     versionEmailAsset(`${siteUrl}/email-icons/${name}.png`);
 
@@ -1214,7 +1429,11 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
     const routeLabel = formatCampaignRouteLabel(deal);
     const localizedTitle = formatCampaignDealTitle(deal, locale);
     const localizedPattern = formatCampaignDealPattern(deal, locale);
-    const travelDates = formatCampaignDateRange(deal.departureDate, deal.returnDate, locale);
+    const travelDates = formatCampaignDateRange(
+      deal.departureDate,
+      deal.returnDate,
+      locale,
+    );
     const outboundTiming =
       deal.outboundDepartureAt && deal.outboundArrivalAt
         ? formatCampaignTiming(
@@ -1232,7 +1451,9 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
           )
         : null;
     const dropPercent =
-      deal.dropRatio === null ? null : Math.max(0, Math.round((1 - deal.dropRatio) * 100));
+      deal.dropRatio === null
+        ? null
+        : Math.max(0, Math.round((1 - deal.dropRatio) * 100));
     const discountPill =
       dropPercent && dropPercent > 0
         ? `<span style="display: inline-block; margin-left: 8px; padding: 5px 9px; border-radius: 7px; background-color: #d8f5df; color: #15853d; font-size: 13px; line-height: 16px; font-weight: 800; vertical-align: middle;">&#9660;&nbsp;${dropPercent}%</span>`
@@ -1477,11 +1698,15 @@ export function renderCampaignEmail(input: RenderCampaignEmailInput) {
           ]
         : []),
       ...(deal.destinationStayHours !== null
-        ? [`${copy.labels.timeInDestination}: ${formatStayHours(deal.destinationStayHours, locale)}`]
+        ? [
+            `${copy.labels.timeInDestination}: ${formatStayHours(deal.destinationStayHours, locale)}`,
+          ]
         : []),
       `${copy.labels.tripShape}: ${copy.tripShape(deal.tripNights, formatStops(deal.maxStops, locale))}`,
       `${copy.labels.airline}: ${deal.airlineSummary ?? copy.multipleCarriers}`,
-      ...(deal.bookingUrl ? [`${copy.campaign.viewFlight}: ${deal.bookingUrl}`] : []),
+      ...(deal.bookingUrl
+        ? [`${copy.campaign.viewFlight}: ${deal.bookingUrl}`]
+        : []),
       `${copy.labels.discount}: ${formatDrop(deal.dropRatio, locale)}`,
       "",
     ]),
@@ -1499,12 +1724,24 @@ export function renderWelcomeEmail(input: RenderWelcomeEmailInput) {
   const copy = getCopy(locale);
   const siteUrl = getSiteUrl();
   const welcome = copy.welcome;
-  const subject = input.alreadyConfirmed ? welcome.confirmedSubject : welcome.pendingSubject;
-  const previewText = input.alreadyConfirmed ? welcome.confirmedPreview : welcome.pendingPreview;
-  const headline = input.alreadyConfirmed ? welcome.confirmedHeadline : welcome.pendingHeadline;
-  const intro = input.alreadyConfirmed ? welcome.confirmedIntro : welcome.pendingIntro;
-  const primaryLabel = input.alreadyConfirmed ? welcome.primaryConfirmed : welcome.primaryPending;
-  const primaryUrl = input.alreadyConfirmed ? input.managePreferencesUrl : input.confirmUrl;
+  const subject = input.alreadyConfirmed
+    ? welcome.confirmedSubject
+    : welcome.pendingSubject;
+  const previewText = input.alreadyConfirmed
+    ? welcome.confirmedPreview
+    : welcome.pendingPreview;
+  const headline = input.alreadyConfirmed
+    ? welcome.confirmedHeadline
+    : welcome.pendingHeadline;
+  const intro = input.alreadyConfirmed
+    ? welcome.confirmedIntro
+    : welcome.pendingIntro;
+  const primaryLabel = input.alreadyConfirmed
+    ? welcome.primaryConfirmed
+    : welcome.primaryPending;
+  const primaryUrl = input.alreadyConfirmed
+    ? input.managePreferencesUrl
+    : input.confirmUrl;
   const heroImageUrl = versionEmailAsset(
     `${siteUrl}/${input.alreadyConfirmed ? "email-alerts-airport.jpg" : "email-airplane-window.jpg"}`,
   );
@@ -1720,7 +1957,9 @@ export async function sendResendEmail(input: SendResendEmailInput) {
       subject: input.subject,
       html: input.html,
       text: input.text,
-      ...(input.replyTo || env.RESEND_REPLY_TO_EMAIL
+      ...((
+        input.replyTo !== undefined ? input.replyTo : env.RESEND_REPLY_TO_EMAIL
+      )
         ? { replyTo: input.replyTo ?? env.RESEND_REPLY_TO_EMAIL }
         : {}),
       tags: [
@@ -1744,12 +1983,18 @@ export async function sendResendEmail(input: SendResendEmailInput) {
     }),
   });
 
-  const payload = (await response.json().catch(() => null)) as
-    | { id?: string; message?: string; error?: string }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    id?: string;
+    message?: string;
+    error?: string;
+  } | null;
 
   if (!response.ok || !payload?.id) {
-    throw new Error(payload?.message ?? payload?.error ?? "Resend rejected the email request.");
+    throw new Error(
+      payload?.message ??
+        payload?.error ??
+        "Resend rejected the email request.",
+    );
   }
 
   return payload.id;

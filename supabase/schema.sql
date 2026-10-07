@@ -22,7 +22,55 @@ alter table public.newsletter_subscribers
   add column if not exists confirmed_at timestamptz,
   add column if not exists unsubscribed_at timestamptz,
   add column if not exists welcome_email_sent_at timestamptz,
+  add column if not exists travel_email_consent boolean not null default false,
+  add column if not exists travel_email_consented_at timestamptz,
+  add column if not exists travel_email_consent_version text,
+  add column if not exists travel_email_consent_locale text,
   add column if not exists updated_at timestamptz not null default timezone('utc', now());
+
+create table if not exists public.subscriber_travel_email_consent_events (
+  id uuid primary key default gen_random_uuid(),
+  subscriber_id uuid not null references public.newsletter_subscribers(id) on delete cascade,
+  consented boolean not null,
+  text_version text not null,
+  locale text not null,
+  source text not null check (source in ('signup', 'preferences', 'unsubscribe')),
+  recorded_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists subscriber_travel_email_consent_events_subscriber_idx
+  on public.subscriber_travel_email_consent_events (subscriber_id, recorded_at desc);
+
+create or replace function public.record_travel_email_consent_event()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.travel_email_consent then
+      insert into public.subscriber_travel_email_consent_events
+        (subscriber_id, consented, text_version, locale, source, recorded_at)
+      values
+        (new.id, true, new.travel_email_consent_version, new.travel_email_consent_locale,
+         'signup', new.travel_email_consented_at);
+    end if;
+  elsif new.travel_email_consent is distinct from old.travel_email_consent then
+    insert into public.subscriber_travel_email_consent_events
+      (subscriber_id, consented, text_version, locale, source)
+    values
+      (new.id, new.travel_email_consent,
+       coalesce(new.travel_email_consent_version, old.travel_email_consent_version),
+       coalesce(new.travel_email_consent_locale, old.travel_email_consent_locale),
+       case when new.status = 'unsubscribed' then 'unsubscribe' else 'preferences' end);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists record_travel_email_consent_event on public.newsletter_subscribers;
+create trigger record_travel_email_consent_event
+after insert or update of travel_email_consent on public.newsletter_subscribers
+for each row execute function public.record_travel_email_consent_event();
 
 create unique index if not exists newsletter_subscribers_preference_token_idx
   on public.newsletter_subscribers (preference_token);
@@ -404,7 +452,7 @@ alter table public.deal_candidates
 create table if not exists public.email_campaigns (
   id uuid primary key default gen_random_uuid(),
   send_type text not null
-    check (send_type in ('digest', 'flash')),
+    check (send_type in ('digest', 'flash', 'weekly')),
   subject text not null,
   preview_text text not null,
   from_email text not null,
@@ -441,6 +489,8 @@ create table if not exists public.ops_automation_settings (
   id text primary key default 'default'
     check (id = 'default'),
   daily_digest_enabled boolean not null default false,
+  weekly_digest_enabled boolean not null default true,
+  last_weekly_sent_on date,
   daily_digest_hour integer not null default 9
     check (daily_digest_hour between 0 and 23),
   daily_digest_minute integer not null default 5
@@ -933,6 +983,7 @@ revoke all on function public.reconcile_stale_price_scan_runs(integer) from publ
 grant execute on function public.reconcile_stale_price_scan_runs(integer) to service_role;
 
 alter table public.newsletter_subscribers enable row level security;
+alter table public.subscriber_travel_email_consent_events enable row level security;
 alter table public.subscriber_preferences enable row level security;
 alter table public.subscriber_custom_alerts enable row level security;
 alter table public.subscriber_route_preferences enable row level security;

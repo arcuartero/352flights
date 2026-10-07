@@ -1,3 +1,4 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import { ActiveRoutesBoard } from "@/components/active-routes-board";
 import { OpsSubnav } from "@/components/ops-subnav";
 import { getOpsActiveRoutesData } from "@/lib/active-routes";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function OpsActiveRoutesPage() {
+  await assertOpsAccess();
   noStore();
   const data = await getOpsActiveRoutesData();
 

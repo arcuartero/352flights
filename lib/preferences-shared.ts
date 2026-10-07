@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { locales } from "@/lib/locales";
 
 import routes from "@/data/lux-routes.json";
 import { formatRouteStayLabel } from "@/lib/route-stay";
@@ -246,12 +247,14 @@ export const defaultPreferenceValues = {
   latestArrivalHour: null as number | null,
   minDestinationStayHours: null as number | null,
   deliveryModes: ["daily_digest"] as DeliveryModeValue[],
+  travelEmailConsent: false,
   customAlertRules: [] as CustomAlertRuleValue[],
 };
 
 export const preferencePayloadSchema = z
   .object({
     token: z.string().uuid(),
+    locale: z.enum(locales),
     preferredBuckets: z.array(z.enum(bucketValues)).min(1),
     selectedRoutes: z.array(z.string()).min(1),
     maxStopsPreferences: z.array(z.enum(maxStopsPreferenceValues)).min(1),
@@ -263,6 +266,7 @@ export const preferencePayloadSchema = z
     latestArrivalHour: z.number().int().min(0).max(23).nullable(),
     minDestinationStayHours: z.number().int().positive().max(336).nullable(),
     deliveryModes: z.array(z.enum(deliveryModeValues)).min(1),
+    travelEmailConsent: z.boolean(),
     customAlertRules: z.array(customAlertRuleSchema).max(8),
   })
   .superRefine((value, context) => {
@@ -322,5 +326,5 @@ export type PreferencesBundle = {
   emailConfirmed: boolean;
   status: string;
   unsubscribePath: string;
-  form: Omit<PreferencePayload, "token">;
+  form: Omit<PreferencePayload, "token" | "locale">;
 };

@@ -96,12 +96,12 @@ The internal review board lives at:
 http://localhost:3000/ops
 ```
 
-If `OPS_BASIC_AUTH_USER` and `OPS_BASIC_AUTH_PASSWORD` are set, the route is protected with HTTP Basic Auth.
+`OPS_BASIC_AUTH_USER` and `OPS_BASIC_AUTH_PASSWORD` are required for Operations, including local development. Missing or incomplete credentials deny access. Middleware, API handlers, server pages and actions share the same authorization rule.
 
 The ops board now also includes:
 
 - subscriber preference summaries
-- a matched send queue for digest and flash campaigns
+- a matched send queue for daily, weekly and flash campaigns
 - a recent campaign history panel backed by Supabase logs
 - a manual social-content selection flow that sends neutral, signed offer packages to Creatello
 
@@ -147,6 +147,7 @@ The API route uses the service role key on the server, so RLS can stay enabled.
 
 - `digest` campaigns to subscribers whose saved profile matches reviewed digest deals
 - `flash` campaigns to subscribers whose saved profile matches reviewed flash deals
+- `weekly` best-of campaigns with up to six matching destinations from reviewed or sent offers from the last seven days, for subscribers who selected `weekly_best_of`
 
 Matching logic currently checks:
 
@@ -193,12 +194,14 @@ For the cheap online setup, keep the web on Vercel and run the 11-hour scanner o
 
 `.github/workflows/scan-lux-deals.yml` can run the scanner manually.
 
-`.github/workflows/send-daily-digest.yml` can trigger the scheduled digest endpoint every 5 minutes, while `/ops` decides the actual Luxembourg local send time.
+`.github/workflows/send-daily-digest.yml` triggers the daily endpoint hourly at minute 17. `.github/workflows/send-weekly-digest.yml` triggers the weekly endpoint hourly at minute 27. `/ops` controls each automation and their shared Luxembourg local send time.
 
 The schedule is:
 
-- every day at `08:00` Luxembourg time (`Europe/Luxembourg`)
-- implemented via two UTC schedules plus a local-time guard so daylight saving time is handled correctly
+- daily: once per local calendar day at the time selected in `/ops` (default `09:05`)
+- weekly: Monday at that same time, with catch-up attempts during the week
+- both use `Europe/Luxembourg` calendar guards, including daylight saving time
+- manual runs bypass the time/pause guard but never the daily/weekly duplicate guard
 
 Add these repository secrets before enabling it:
 
@@ -230,3 +233,7 @@ To make the digest cron actually run in GitHub:
 1. Add click tracking and booking-link instrumentation per route.
 2. Add deal deduping/expiry heuristics beyond the manual `expired` state.
 3. Tighten sender reputation with a verified domain and domain-level monitoring.
+
+## September 2026 improvements
+
+See [implementation and activation notes](docs/improvements-2026-09-26.md) for the weekly database migration, dependency verification, subscription actions and the new module layout.

@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
-import type { OpsPricePoint, OpsPriceSeries } from "@/lib/ops";
+import type { OpsPricePoint, OpsPriceSeries } from "@/lib/ops/types";
 import { buildEditorialSections } from "@/lib/editorial-sections";
 import {
   formatNightsLabel,
@@ -282,7 +282,9 @@ function explainDealContext(deal: ReviewDeal) {
   }
 
   if (deal.destinationStayHours !== null) {
-    sentences.push(`You still get ${formatStayDaysAndHours(deal.destinationStayHours)} on the ground.`);
+    sentences.push(
+      `You still get ${formatStayDaysAndHours(deal.destinationStayHours)} on the ground.`,
+    );
   }
 
   if (deal.verifiedAt) {
@@ -389,7 +391,10 @@ function formatPriceChange(current: number | null, previous: number | null) {
 
 function buildPath(points: Array<{ x: number; y: number }>) {
   return points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .map(
+      (point, index) =>
+        `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+    )
     .join(" ");
 }
 
@@ -423,7 +428,10 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
   const plotHeight = svgHeight - margin.top - margin.bottom;
   const min = values.length > 0 ? Math.min(...values) : 0;
   const max = values.length > 0 ? Math.max(...values) : 0;
-  const chartPadding = min === max ? Math.max(8, max * 0.06 || 8) : Math.max((max - min) * 0.12, 8);
+  const chartPadding =
+    min === max
+      ? Math.max(8, max * 0.06 || 8)
+      : Math.max((max - min) * 0.12, 8);
   const chartMin = Math.max(0, min - chartPadding);
   const chartMax = max + chartPadding;
   const coordinates =
@@ -432,7 +440,9 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
       : values.map((value, index) => ({
           x:
             margin.left +
-            (values.length === 1 ? plotWidth / 2 : (index / (values.length - 1)) * plotWidth),
+            (values.length === 1
+              ? plotWidth / 2
+              : (index / (values.length - 1)) * plotWidth),
           y:
             margin.top +
             plotHeight -
@@ -444,7 +454,11 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
   const activeSnapshot = series.points[activeIndex] ?? null;
   const activePointRatio = activePoint ? activePoint.x / svgWidth : 0.5;
   const tooltipPlacement =
-    activePointRatio > 0.82 ? "is-right" : activePointRatio < 0.18 ? "is-left" : "is-center";
+    activePointRatio > 0.82
+      ? "is-right"
+      : activePointRatio < 0.18
+        ? "is-left"
+        : "is-center";
   const yTicks = Array.from({ length: 4 }, (_, index) => {
     const ratio = index / 3;
     const value = chartMax - (chartMax - chartMin) * ratio;
@@ -455,9 +469,12 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
   });
   const xTickIndexes = Array.from(
     new Set(
-      [0, Math.floor((coordinates.length - 1) / 3), Math.floor(((coordinates.length - 1) * 2) / 3), coordinates.length - 1].filter(
-        (index) => index >= 0,
-      ),
+      [
+        0,
+        Math.floor((coordinates.length - 1) / 3),
+        Math.floor(((coordinates.length - 1) * 2) / 3),
+        coordinates.length - 1,
+      ].filter((index) => index >= 0),
     ),
   );
 
@@ -513,7 +530,18 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
                   className="price-chart__axis-tick"
                   d={`M ${point.x} ${margin.top + plotHeight} L ${point.x} ${margin.top + plotHeight + 6}`}
                 />
-                <text className="price-chart__axis-label price-chart__axis-label--x" textAnchor={index === 0 ? "start" : index === coordinates.length - 1 ? "end" : "middle"} x={point.x} y={margin.top + plotHeight + 22}>
+                <text
+                  className="price-chart__axis-label price-chart__axis-label--x"
+                  textAnchor={
+                    index === 0
+                      ? "start"
+                      : index === coordinates.length - 1
+                        ? "end"
+                        : "middle"
+                  }
+                  x={point.x}
+                  y={margin.top + plotHeight + 22}
+                >
                   {formatChartDate(snapshot.scannedAt)}
                 </text>
               </g>
@@ -537,7 +565,11 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
                 } ${index === activeIndex ? "is-active" : ""}`}
                 cx={point.x}
                 cy={point.y}
-                r={index === coordinates.length - 1 || index === activeIndex ? 5 : 3}
+                r={
+                  index === coordinates.length - 1 || index === activeIndex
+                    ? 5
+                    : 3
+                }
               />
               <circle
                 className="price-chart__hit-area"
@@ -561,10 +593,16 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
               top: `${(activePoint.y / svgHeight) * 100}%`,
             }}
           >
-            <strong>{formatCurrency(activeSnapshot.price, activeSnapshot.currency)}</strong>
+            <strong>
+              {formatCurrency(activeSnapshot.price, activeSnapshot.currency)}
+            </strong>
             <span>{formatChartDate(activeSnapshot.scannedAt)}</span>
-            <span>Out {formatTravelDateWithWeekday(activeSnapshot.departureDate)}</span>
-            <span>Back {formatTravelDateWithWeekday(activeSnapshot.returnDate)}</span>
+            <span>
+              Out {formatTravelDateWithWeekday(activeSnapshot.departureDate)}
+            </span>
+            <span>
+              Back {formatTravelDateWithWeekday(activeSnapshot.returnDate)}
+            </span>
           </div>
         ) : null}
       </div>
@@ -593,7 +631,8 @@ function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
             </p>
             {latest.destinationStayHours !== null ? (
               <p className="price-chart__detail-line">
-                Stay {formatStayDaysAndHoursCompact(latest.destinationStayHours)}
+                Stay{" "}
+                {formatStayDaysAndHoursCompact(latest.destinationStayHours)}
               </p>
             ) : null}
           </div>
@@ -620,9 +659,10 @@ function buildMonthlyLows(series: OpsPriceSeries, now: Date = new Date()) {
   return Array.from({ length: 12 }, (_, index) => {
     const value = new Date(referenceYear, index, 1);
     const key = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
-    const point = series.points
-      .filter((seriesPoint) => seriesPoint.departureDate?.startsWith(key))
-      .sort((left, right) => left.price - right.price)[0] ?? null;
+    const point =
+      series.points
+        .filter((seriesPoint) => seriesPoint.departureDate?.startsWith(key))
+        .sort((left, right) => left.price - right.price)[0] ?? null;
 
     return {
       key,
@@ -678,19 +718,35 @@ function applySortCriterion(
   },
 ) {
   if (criterion === "price-asc") {
-    return compareNullableNumber(helpers.priceValue(left), helpers.priceValue(right), "asc");
+    return compareNullableNumber(
+      helpers.priceValue(left),
+      helpers.priceValue(right),
+      "asc",
+    );
   }
 
   if (criterion === "price-desc") {
-    return compareNullableNumber(helpers.priceValue(left), helpers.priceValue(right), "desc");
+    return compareNullableNumber(
+      helpers.priceValue(left),
+      helpers.priceValue(right),
+      "desc",
+    );
   }
 
   if (criterion === "nights-asc") {
-    return compareNullableNumber(helpers.nightValue(left), helpers.nightValue(right), "asc");
+    return compareNullableNumber(
+      helpers.nightValue(left),
+      helpers.nightValue(right),
+      "asc",
+    );
   }
 
   if (criterion === "nights-desc") {
-    return compareNullableNumber(helpers.nightValue(left), helpers.nightValue(right), "desc");
+    return compareNullableNumber(
+      helpers.nightValue(left),
+      helpers.nightValue(right),
+      "desc",
+    );
   }
 
   return helpers.freshnessValue(right) - helpers.freshnessValue(left);
@@ -729,10 +785,13 @@ export function OpsReviewQueue({
 
   const bucketOptions = useMemo(
     () =>
-      ["all", ...new Set(deals.map((deal) => deal.routeBucket))].map((bucket) => ({
-        value: bucket,
-        label: bucket === "all" ? "All buckets" : formatRelativeBucket(bucket),
-      })),
+      ["all", ...new Set(deals.map((deal) => deal.routeBucket))].map(
+        (bucket) => ({
+          value: bucket,
+          label:
+            bucket === "all" ? "All buckets" : formatRelativeBucket(bucket),
+        }),
+      ),
     [deals],
   );
 
@@ -749,7 +808,11 @@ export function OpsReviewQueue({
     () =>
       [
         "all",
-        ...new Set(deals.flatMap((deal) => extractAirlineFilterValues(deal.airlineSummary))),
+        ...new Set(
+          deals.flatMap((deal) =>
+            extractAirlineFilterValues(deal.airlineSummary),
+          ),
+        ),
       ].map((value) => ({
         value,
         label: value === "all" ? "All airlines" : value,
@@ -771,7 +834,10 @@ export function OpsReviewQueue({
     }
 
     return sortBy
-      .map((value) => sortOptions.find((option) => option.value === value)?.label ?? value)
+      .map(
+        (value) =>
+          sortOptions.find((option) => option.value === value)?.label ?? value,
+      )
       .join(" + ");
   }, [sortBy]);
 
@@ -783,7 +849,9 @@ export function OpsReviewQueue({
       }
 
       const withoutFreshness =
-        value !== "freshness" ? current.filter((item) => item !== "freshness") : current;
+        value !== "freshness"
+          ? current.filter((item) => item !== "freshness")
+          : current;
       return [...withoutFreshness, value];
     });
   }
@@ -848,7 +916,15 @@ export function OpsReviewQueue({
 
       return left.title.localeCompare(right.title);
     });
-  }, [airlineFilter, bucketFilter, deals, deferredSearch, maxPriceValue, sortBy, stopsFilter]);
+  }, [
+    airlineFilter,
+    bucketFilter,
+    deals,
+    deferredSearch,
+    maxPriceValue,
+    sortBy,
+    stopsFilter,
+  ]);
 
   const editorialSections = useMemo(
     () =>
@@ -866,7 +942,9 @@ export function OpsReviewQueue({
     [deals, selectedDealId],
   );
 
-  const selectedSeries = selectedDealId ? seriesByDealId[selectedDealId] ?? null : null;
+  const selectedSeries = selectedDealId
+    ? (seriesByDealId[selectedDealId] ?? null)
+    : null;
 
   useEffect(() => {
     if (!selectedDealId || !selectedDeal?.patternKey) {
@@ -897,17 +975,24 @@ export function OpsReviewQueue({
           detail?: string;
         };
         if (!response.ok || !payload.ok) {
-          throw new Error(payload.detail ?? "Price history could not be loaded.");
+          throw new Error(
+            payload.detail ?? "Price history could not be loaded.",
+          );
         }
         return payload.series ?? null;
       })
       .then((series) => {
-        setSeriesByDealId((current) => ({ ...current, [selectedDealId]: series }));
+        setSeriesByDealId((current) => ({
+          ...current,
+          [selectedDealId]: series,
+        }));
       })
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
           setSeriesError(
-            error instanceof Error ? error.message : "Price history could not be loaded.",
+            error instanceof Error
+              ? error.message
+              : "Price history could not be loaded.",
           );
         }
       })
@@ -937,8 +1022,11 @@ export function OpsReviewQueue({
   }, [selectedSeries]);
 
   const totalPages =
-    totalNewDeals === null ? null : Math.max(1, Math.ceil(totalNewDeals / pageSize));
-  const hasNextPage = totalPages === null ? deals.length === pageSize : page < totalPages;
+    totalNewDeals === null
+      ? null
+      : Math.max(1, Math.ceil(totalNewDeals / pageSize));
+  const hasNextPage =
+    totalPages === null ? deals.length === pageSize : page < totalPages;
 
   useEffect(() => {
     const visibleIds = new Set(filteredDeals.map((deal) => deal.id));
@@ -946,11 +1034,14 @@ export function OpsReviewQueue({
   }, [filteredDeals]);
 
   const allVisibleSelected =
-    filteredDeals.length > 0 && filteredDeals.every((deal) => selectedDealIds.includes(deal.id));
+    filteredDeals.length > 0 &&
+    filteredDeals.every((deal) => selectedDealIds.includes(deal.id));
 
   function toggleDealSelection(id: string) {
     setSelectedDealIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
     );
   }
 
@@ -972,11 +1063,15 @@ export function OpsReviewQueue({
         </div>
         <p>
           {filteredDeals.length} visible now ·{" "}
-          {totalNewDeals === null ? "total could not be verified" : `${totalNewDeals} total new`}
+          {totalNewDeals === null
+            ? "total could not be verified"
+            : `${totalNewDeals} total new`}
         </p>
       </div>
 
-      <section className={`ops-review-controls ${areFiltersOpen ? "is-open" : ""}`}>
+      <section
+        className={`ops-review-controls ${areFiltersOpen ? "is-open" : ""}`}
+      >
         <button
           aria-expanded={areFiltersOpen}
           className="ops-filter-panel__toggle"
@@ -987,86 +1082,100 @@ export function OpsReviewQueue({
           <strong>{areFiltersOpen ? "Hide" : "Show"}</strong>
         </button>
         <div className="ops-filter-panel__body">
-        <label className="ops-review-control ops-review-control--search">
-          <span>Search route</span>
-          <input
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Madrid, Ryanair, weekend..."
-            type="search"
-            value={searchValue}
-          />
-        </label>
+          <label className="ops-review-control ops-review-control--search">
+            <span>Search route</span>
+            <input
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="Madrid, Ryanair, weekend..."
+              type="search"
+              value={searchValue}
+            />
+          </label>
 
-        <label className="ops-review-control">
-          <span>Bucket</span>
-          <select onChange={(event) => setBucketFilter(event.target.value)} value={bucketFilter}>
-            {bucketOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="ops-review-control">
+            <span>Bucket</span>
+            <select
+              onChange={(event) => setBucketFilter(event.target.value)}
+              value={bucketFilter}
+            >
+              {bucketOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="ops-review-control">
-          <span>Routing</span>
-          <select onChange={(event) => setStopsFilter(event.target.value)} value={stopsFilter}>
-            {stopOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="ops-review-control">
+            <span>Routing</span>
+            <select
+              onChange={(event) => setStopsFilter(event.target.value)}
+              value={stopsFilter}
+            >
+              {stopOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="ops-review-control">
-          <span>Airline</span>
-          <select onChange={(event) => setAirlineFilter(event.target.value)} value={airlineFilter}>
-            {airlineOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="ops-review-control">
+            <span>Airline</span>
+            <select
+              onChange={(event) => setAirlineFilter(event.target.value)}
+              value={airlineFilter}
+            >
+              {airlineOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="ops-review-control">
-          <span>Max deal price</span>
-          <input
-            inputMode="numeric"
-            min="0"
-            onChange={(event) => setMaxPriceFilter(event.target.value)}
-            placeholder="Any price"
-            step="1"
-            type="number"
-            value={maxPriceFilter}
-          />
-        </label>
+          <label className="ops-review-control">
+            <span>Max deal price</span>
+            <input
+              inputMode="numeric"
+              min="0"
+              onChange={(event) => setMaxPriceFilter(event.target.value)}
+              placeholder="Any price"
+              step="1"
+              type="number"
+              value={maxPriceFilter}
+            />
+          </label>
 
-        <label className="ops-review-control">
-          <span>Sort by</span>
-          <details className="price-sort-menu">
-            <summary>{activeSortSummary}</summary>
-            <div className="price-sort-menu__panel">
-              {sortOptions.map((option) => {
-                const activeIndex = sortBy.indexOf(option.value);
-                return (
-                  <label className="price-sort-menu__option" key={option.value}>
-                    <input
-                      checked={activeIndex !== -1}
-                      onChange={() => toggleSortOption(option.value)}
-                      type="checkbox"
-                    />
-                    <span>{option.label}</span>
-                    {activeIndex !== -1 ? (
-                      <strong className="price-sort-menu__priority">{activeIndex + 1}</strong>
-                    ) : null}
-                  </label>
-                );
-              })}
-            </div>
-          </details>
-        </label>
+          <label className="ops-review-control">
+            <span>Sort by</span>
+            <details className="price-sort-menu">
+              <summary>{activeSortSummary}</summary>
+              <div className="price-sort-menu__panel">
+                {sortOptions.map((option) => {
+                  const activeIndex = sortBy.indexOf(option.value);
+                  return (
+                    <label
+                      className="price-sort-menu__option"
+                      key={option.value}
+                    >
+                      <input
+                        checked={activeIndex !== -1}
+                        onChange={() => toggleSortOption(option.value)}
+                        type="checkbox"
+                      />
+                      <span>{option.label}</span>
+                      {activeIndex !== -1 ? (
+                        <strong className="price-sort-menu__priority">
+                          {activeIndex + 1}
+                        </strong>
+                      ) : null}
+                    </label>
+                  );
+                })}
+              </div>
+            </details>
+          </label>
         </div>
       </section>
 
@@ -1101,7 +1210,12 @@ export function OpsReviewQueue({
             <div className="ops-review-bulk__actions">
               <form action={bulkReviewDealAction}>
                 {selectedDealIds.map((id) => (
-                  <input key={`reviewed-${id}`} name="id" type="hidden" value={id} />
+                  <input
+                    key={`reviewed-${id}`}
+                    name="id"
+                    type="hidden"
+                    value={id}
+                  />
                 ))}
                 <input name="status" type="hidden" value="reviewed" />
                 <button
@@ -1114,7 +1228,12 @@ export function OpsReviewQueue({
               </form>
               <form action={bulkReviewDealAction}>
                 {selectedDealIds.map((id) => (
-                  <input key={`expired-${id}`} name="id" type="hidden" value={id} />
+                  <input
+                    key={`expired-${id}`}
+                    name="id"
+                    type="hidden"
+                    value={id}
+                  />
                 ))}
                 <input name="status" type="hidden" value="expired" />
                 <button
@@ -1133,7 +1252,10 @@ export function OpsReviewQueue({
               <div className="ops-deal-section__header">
                 <div>
                   <p className="ops-panel__eyebrow">{section.label}</p>
-                  <h3>{section.items.length} deal{section.items.length === 1 ? "" : "s"}</h3>
+                  <h3>
+                    {section.items.length} deal
+                    {section.items.length === 1 ? "" : "s"}
+                  </h3>
                 </div>
                 <p>{section.description}</p>
               </div>
@@ -1149,7 +1271,9 @@ export function OpsReviewQueue({
                   </label>
                   <div className="ops-deal__main">
                     <div className="ops-deal__heading">
-                      <p className="ops-tag">{formatRelativeBucket(deal.routeBucket)}</p>
+                      <p className="ops-tag">
+                        {formatRelativeBucket(deal.routeBucket)}
+                      </p>
                       <h3>{deal.title}</h3>
                     </div>
                     <p className="ops-deal__summary">{deal.summary}</p>
@@ -1160,7 +1284,12 @@ export function OpsReviewQueue({
                     <dl className="ops-deal__facts">
                       <div>
                         <dt>Route</dt>
-                        <dd>{formatRoutePatternLabel(deal.routeLabel, deal.patternLabel)}</dd>
+                        <dd>
+                          {formatRoutePatternLabel(
+                            deal.routeLabel,
+                            deal.patternLabel,
+                          )}
+                        </dd>
                       </div>
                       <div>
                         <dt>Travel window</dt>
@@ -1172,10 +1301,14 @@ export function OpsReviewQueue({
                       <div>
                         <dt>Flight times</dt>
                         <dd>
-                          {deal.outboundDepartureAt && deal.outboundArrivalAt ? (
+                          {deal.outboundDepartureAt &&
+                          deal.outboundArrivalAt ? (
                             <>
-                              Out {formatFlightWeekdayClock(deal.outboundDepartureAt)} {"->"}{" "}
-                              {formatFlightClock(deal.outboundArrivalAt)}
+                              Out{" "}
+                              {formatFlightWeekdayClock(
+                                deal.outboundDepartureAt,
+                              )}{" "}
+                              {"->"} {formatFlightClock(deal.outboundArrivalAt)}
                             </>
                           ) : (
                             "Awaiting timing detail"
@@ -1183,15 +1316,20 @@ export function OpsReviewQueue({
                           {deal.returnDepartureAt && deal.returnArrivalAt ? (
                             <>
                               <br />
-                              Back {formatFlightWeekdayClock(deal.returnDepartureAt)} {"->"}{" "}
-                              {formatFlightClock(deal.returnArrivalAt)}
+                              Back{" "}
+                              {formatFlightWeekdayClock(
+                                deal.returnDepartureAt,
+                              )}{" "}
+                              {"->"} {formatFlightClock(deal.returnArrivalAt)}
                             </>
                           ) : null}
                         </dd>
                       </div>
                       <div>
                         <dt>Time in destination</dt>
-                        <dd>{formatStayDaysAndHours(deal.destinationStayHours)}</dd>
+                        <dd>
+                          {formatStayDaysAndHours(deal.destinationStayHours)}
+                        </dd>
                       </div>
                       <div>
                         <dt>Deal price</dt>
@@ -1206,7 +1344,9 @@ export function OpsReviewQueue({
                               {deal.baselineHistoryDays ? (
                                 <>
                                   <br />
-                                  <small>{deal.baselineHistoryDays}d history</small>
+                                  <small>
+                                    {deal.baselineHistoryDays}d history
+                                  </small>
                                 </>
                               ) : null}
                             </>
@@ -1238,12 +1378,17 @@ export function OpsReviewQueue({
                             >
                               i
                             </button>
-                            <span className="ops-help-tooltip__bubble" role="tooltip">
-                              Flash if the price is {FLASH_RATIO_PERCENT}% or less of the baseline.
-                              Digest if it is above {FLASH_RATIO_PERCENT}% but still at or below{" "}
-                              {REVIEW_RATIO_PERCENT}%. No deal is created if it stays above{" "}
-                              {REVIEW_RATIO_PERCENT}% or if there are fewer than{" "}
-                              {MIN_BASELINE_POINTS} historical prices.
+                            <span
+                              className="ops-help-tooltip__bubble"
+                              role="tooltip"
+                            >
+                              Flash if the price is {FLASH_RATIO_PERCENT}% or
+                              less of the baseline. Digest if it is above{" "}
+                              {FLASH_RATIO_PERCENT}% but still at or below{" "}
+                              {REVIEW_RATIO_PERCENT}%. No deal is created if it
+                              stays above {REVIEW_RATIO_PERCENT}% or if there
+                              are fewer than {MIN_BASELINE_POINTS} historical
+                              prices.
                             </span>
                           </span>
                         </dt>
@@ -1252,12 +1397,15 @@ export function OpsReviewQueue({
                       <div>
                         <dt>Trip shape</dt>
                         <dd>
-                          {deal.tripNights} nights · {formatStops(deal.maxStops)}
+                          {deal.tripNights} nights ·{" "}
+                          {formatStops(deal.maxStops)}
                         </dd>
                       </div>
                       <div>
                         <dt>Airline</dt>
-                        <dd>{deal.airlineSummary ?? "Awaiting itinerary detail"}</dd>
+                        <dd>
+                          {deal.airlineSummary ?? "Awaiting itinerary detail"}
+                        </dd>
                       </div>
                       <div>
                         <dt>Verified</dt>
@@ -1294,14 +1442,20 @@ export function OpsReviewQueue({
                     <form action={reviewDealAction}>
                       <input name="id" type="hidden" value={deal.id} />
                       <input name="status" type="hidden" value="reviewed" />
-                      <button className="ops-button ops-button--approve" type="submit">
+                      <button
+                        className="ops-button ops-button--approve"
+                        type="submit"
+                      >
                         Mark reviewed
                       </button>
                     </form>
                     <form action={reviewDealAction}>
                       <input name="id" type="hidden" value={deal.id} />
                       <input name="status" type="hidden" value="expired" />
-                      <button className="ops-button ops-button--ghost" type="submit">
+                      <button
+                        className="ops-button ops-button--ghost"
+                        type="submit"
+                      >
                         Expire
                       </button>
                     </form>
@@ -1354,14 +1508,18 @@ export function OpsReviewQueue({
             <div className="price-focus__header">
               <div>
                 <h2 id="review-deal-dialog-title">
-                  {formatRoutePatternLabel(selectedDeal.routeLabel, selectedDeal.patternLabel)}
+                  {formatRoutePatternLabel(
+                    selectedDeal.routeLabel,
+                    selectedDeal.patternLabel,
+                  )}
                 </h2>
                 <p>
                   {selectedDisplaySeries
                     ? `Scans ${formatSearchRange(selectedDisplaySeries)}`
                     : `Scans ${selectedDeal.patternLabel ?? formatNightsLabel(selectedDeal.tripNights)}`}{" "}
                   ·{" "}
-                  {selectedDisplaySeries && selectedDisplaySeries.latestTripNights !== null
+                  {selectedDisplaySeries &&
+                  selectedDisplaySeries.latestTripNights !== null
                     ? `latest cheapest ${formatNightsLabel(selectedDisplaySeries.latestTripNights)}`
                     : "no winner yet"}{" "}
                   · {formatStops(selectedDeal.maxStops)} ·{" "}
@@ -1370,27 +1528,58 @@ export function OpsReviewQueue({
                     : "No chart history yet"}
                 </p>
                 <p>
-                  Latest airline: {selectedDisplaySeries?.latestAirlineSummary ?? selectedDeal.airlineSummary ?? "Awaiting itinerary detail"}
+                  Latest airline:{" "}
+                  {selectedDisplaySeries?.latestAirlineSummary ??
+                    selectedDeal.airlineSummary ??
+                    "Awaiting itinerary detail"}
                 </p>
-                {(selectedDisplaySeries?.latestOutboundDepartureAt ?? selectedDeal.outboundDepartureAt) &&
-                (selectedDisplaySeries?.latestOutboundArrivalAt ?? selectedDeal.outboundArrivalAt) &&
-                (selectedDisplaySeries?.latestReturnDepartureAt ?? selectedDeal.returnDepartureAt) &&
-                (selectedDisplaySeries?.latestReturnArrivalAt ?? selectedDeal.returnArrivalAt) ? (
+                {(selectedDisplaySeries?.latestOutboundDepartureAt ??
+                  selectedDeal.outboundDepartureAt) &&
+                (selectedDisplaySeries?.latestOutboundArrivalAt ??
+                  selectedDeal.outboundArrivalAt) &&
+                (selectedDisplaySeries?.latestReturnDepartureAt ??
+                  selectedDeal.returnDepartureAt) &&
+                (selectedDisplaySeries?.latestReturnArrivalAt ??
+                  selectedDeal.returnArrivalAt) ? (
                   <p>
                     Latest timing: out{" "}
-                    {formatFlightWeekdayClock(selectedDisplaySeries?.latestOutboundDepartureAt ?? selectedDeal.outboundDepartureAt)}{" "}
+                    {formatFlightWeekdayClock(
+                      selectedDisplaySeries?.latestOutboundDepartureAt ??
+                        selectedDeal.outboundDepartureAt,
+                    )}{" "}
                     {"->"}{" "}
-                    {formatFlightClock(selectedDisplaySeries?.latestOutboundArrivalAt ?? selectedDeal.outboundArrivalAt)} · back{" "}
-                    {formatFlightWeekdayClock(selectedDisplaySeries?.latestReturnDepartureAt ?? selectedDeal.returnDepartureAt)} {"->"}{" "}
-                    {formatFlightClock(selectedDisplaySeries?.latestReturnArrivalAt ?? selectedDeal.returnArrivalAt)}
-                    {(selectedDisplaySeries?.latestDestinationStayHours ?? selectedDeal.destinationStayHours) !== null
+                    {formatFlightClock(
+                      selectedDisplaySeries?.latestOutboundArrivalAt ??
+                        selectedDeal.outboundArrivalAt,
+                    )}{" "}
+                    · back{" "}
+                    {formatFlightWeekdayClock(
+                      selectedDisplaySeries?.latestReturnDepartureAt ??
+                        selectedDeal.returnDepartureAt,
+                    )}{" "}
+                    {"->"}{" "}
+                    {formatFlightClock(
+                      selectedDisplaySeries?.latestReturnArrivalAt ??
+                        selectedDeal.returnArrivalAt,
+                    )}
+                    {(selectedDisplaySeries?.latestDestinationStayHours ??
+                      selectedDeal.destinationStayHours) !== null
                       ? ` · stay ${formatStayDaysAndHoursCompact(selectedDisplaySeries?.latestDestinationStayHours ?? selectedDeal.destinationStayHours)}`
                       : ""}
                   </p>
                 ) : null}
-                {(selectedDisplaySeries?.latestBookingUrl ?? selectedDeal.bookingUrl) ? (
+                {(selectedDisplaySeries?.latestBookingUrl ??
+                selectedDeal.bookingUrl) ? (
                   <p>
-                    <a href={selectedDisplaySeries?.latestBookingUrl ?? selectedDeal.bookingUrl ?? "#"} rel="noreferrer" target="_blank">
+                    <a
+                      href={
+                        selectedDisplaySeries?.latestBookingUrl ??
+                        selectedDeal.bookingUrl ??
+                        "#"
+                      }
+                      rel="noreferrer"
+                      target="_blank"
+                    >
                       Open this search in Skyscanner
                     </a>
                   </p>
@@ -1442,21 +1631,39 @@ export function OpsReviewQueue({
                 <section className="price-monthly-lows">
                   <div className="price-monthly-lows__header">
                     <span>Monthly lows</span>
-                    <p>Lowest price by departure month for this route and rule.</p>
+                    <p>
+                      Lowest price by departure month for this route and rule.
+                    </p>
                   </div>
                   <div className="price-monthly-lows__grid">
                     {selectedSeriesMonthlyLows.map((month) => (
-                      <article className="price-monthly-lows__card" key={month.key}>
+                      <article
+                        className="price-monthly-lows__card"
+                        key={month.key}
+                      >
                         <span>{month.label}</span>
                         <strong>
                           {month.point !== null
-                            ? formatCurrency(month.point.price, month.point.currency)
+                            ? formatCurrency(
+                                month.point.price,
+                                month.point.currency,
+                              )
                             : "n/a"}
                         </strong>
                         {month.point ? (
                           <>
-                            <p>Out {formatTravelDateWithWeekday(month.point.departureDate)}</p>
-                            <p>Back {formatTravelDateWithWeekday(month.point.returnDate)}</p>
+                            <p>
+                              Out{" "}
+                              {formatTravelDateWithWeekday(
+                                month.point.departureDate,
+                              )}
+                            </p>
+                            <p>
+                              Back{" "}
+                              {formatTravelDateWithWeekday(
+                                month.point.returnDate,
+                              )}
+                            </p>
                             <p>
                               {month.point.destinationStayHours !== null
                                 ? `Stay ${formatStayDaysAndHoursCompact(month.point.destinationStayHours)}`
@@ -1465,7 +1672,11 @@ export function OpsReviewQueue({
                                   : "Duration n/a"}
                             </p>
                             {month.point.bookingUrl ? (
-                              <a href={month.point.bookingUrl} rel="noreferrer" target="_blank">
+                              <a
+                                href={month.point.bookingUrl}
+                                rel="noreferrer"
+                                target="_blank"
+                              >
                                 Open in Skyscanner
                               </a>
                             ) : null}
@@ -1480,7 +1691,10 @@ export function OpsReviewQueue({
               </>
             ) : (
               <div className="ops-empty">
-                <p>No historical prices are available for this exact route and rule yet.</p>
+                <p>
+                  No historical prices are available for this exact route and
+                  rule yet.
+                </p>
               </div>
             )}
           </section>
@@ -1490,23 +1704,37 @@ export function OpsReviewQueue({
       {page > 1 || hasNextPage ? (
         <nav aria-label="New deals pages" className="ops-review-pagination">
           {page > 1 ? (
-            <a className="ops-button ops-button--ghost" href={`/ops?dealsPage=${page - 1}`}>
+            <a
+              className="ops-button ops-button--ghost"
+              href={`/ops?dealsPage=${page - 1}`}
+            >
               Previous 50
             </a>
           ) : (
-            <span aria-disabled="true" className="ops-button ops-button--ghost is-disabled">
+            <span
+              aria-disabled="true"
+              className="ops-button ops-button--ghost is-disabled"
+            >
               Previous 50
             </span>
           )}
           <span>
-            {totalPages === null ? `Page ${page} · total unverified` : `Page ${page} of ${totalPages}`}
+            {totalPages === null
+              ? `Page ${page} · total unverified`
+              : `Page ${page} of ${totalPages}`}
           </span>
           {hasNextPage ? (
-            <a className="ops-button ops-button--ghost" href={`/ops?dealsPage=${page + 1}`}>
+            <a
+              className="ops-button ops-button--ghost"
+              href={`/ops?dealsPage=${page + 1}`}
+            >
               Next 50
             </a>
           ) : (
-            <span aria-disabled="true" className="ops-button ops-button--ghost is-disabled">
+            <span
+              aria-disabled="true"
+              className="ops-button ops-button--ghost is-disabled"
+            >
               Next 50
             </span>
           )}

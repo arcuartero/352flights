@@ -1,3 +1,4 @@
+import { ensureOpsAuthorized } from "@/lib/ops-auth";
 import { NextResponse } from "next/server";
 
 import type {
@@ -21,7 +22,8 @@ function serializeError(error: unknown) {
     return {
       error: error.name || "Error",
       detail: error.message || "Unknown error",
-      stack: process.env.NODE_ENV !== "production" ? error.stack ?? null : null,
+      stack:
+        process.env.NODE_ENV !== "production" ? (error.stack ?? null) : null,
     };
   }
 
@@ -30,15 +32,6 @@ function serializeError(error: unknown) {
     detail: typeof error === "string" ? error : "Unknown scanner status error",
     stack: null,
   };
-}
-
-function unauthorizedResponse() {
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
-    },
-  });
 }
 
 type VpsJournalEvent = {
@@ -54,7 +47,9 @@ function parseSystemdTimestamp(value: string | undefined) {
 }
 
 function parseVpsJournalEvent(line: string): VpsJournalEvent | null {
-  const match = line.match(/\[(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})Z\]\s*(.*)$/);
+  const match = line.match(
+    /\[(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})Z\]\s*(.*)$/,
+  );
   if (!match) return null;
 
   const [, calendarDate, clockTime, rawMessage] = match;
@@ -79,7 +74,10 @@ function splitLogMeta(message: string) {
   try {
     return {
       message: baseMessage,
-      meta: JSON.parse(message.slice(markerIndex + marker.length)) as Record<string, unknown>,
+      meta: JSON.parse(message.slice(markerIndex + marker.length)) as Record<
+        string,
+        unknown
+      >,
     };
   } catch {
     return { message: baseMessage, meta: null };
@@ -122,7 +120,10 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
   const { message, meta } = splitLogMeta(event.message);
   const id = `${event.timestampIso}:${message}`;
 
-  if (message === "Starting local scanner." || message === "Starting local Lux flight scan.") {
+  if (
+    message === "Starting local scanner." ||
+    message === "Starting local Lux flight scan."
+  ) {
     return {
       id,
       timestamp: event.timestampIso,
@@ -163,10 +164,15 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
   }
 
   if (message.startsWith("Pattern no results: ")) {
-    const parsed = parseNoResultDetail(message.replace("Pattern no results: ", ""));
+    const parsed = parseNoResultDetail(
+      message.replace("Pattern no results: ", ""),
+    );
     const reasonCode = asText(meta?.reason_code) ?? "no_results";
     const reasonLabel = asText(meta?.reason_label) ?? "No results";
-    const reason = asText(meta?.reason) ?? parsed.reason ?? parseNoResultReason(parsed.routeDetail);
+    const reason =
+      asText(meta?.reason) ??
+      parsed.reason ??
+      parseNoResultReason(parsed.routeDetail);
 
     return {
       id,
@@ -212,8 +218,12 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
         reviewRatio: asNumber(meta?.review_ratio),
         effectiveReviewRatio: asNumber(meta?.effective_review_ratio),
         bootstrapReviewRatio: asNumber(meta?.bootstrap_review_ratio),
-        bootstrapVisibleDealTarget: asNumber(meta?.bootstrap_visible_deal_target),
-        visibleDealsForDestination: asNumber(meta?.visible_deals_for_destination),
+        bootstrapVisibleDealTarget: asNumber(
+          meta?.bootstrap_visible_deal_target,
+        ),
+        visibleDealsForDestination: asNumber(
+          meta?.visible_deals_for_destination,
+        ),
         dealMode: asText(meta?.deal_mode),
         routingRelaxed: asBoolean(meta?.routing_relaxed),
         routingRelaxedReason: asText(meta?.routing_relaxed_reason),
@@ -226,7 +236,10 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
     const parsed = parseNoResultDetail(message.replace("Deal skipped: ", ""));
     const reasonCode = asText(meta?.reason_code) ?? "not_an_offer";
     const reasonLabel = asText(meta?.reason_label) ?? "Not an offer";
-    const reason = asText(meta?.reason) ?? parsed.reason ?? "Price was tracked, but not promoted as an offer.";
+    const reason =
+      asText(meta?.reason) ??
+      parsed.reason ??
+      "Price was tracked, but not promoted as an offer.";
 
     return {
       id,
@@ -264,8 +277,12 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
         reviewRatio: asNumber(meta?.review_ratio),
         effectiveReviewRatio: asNumber(meta?.effective_review_ratio),
         bootstrapReviewRatio: asNumber(meta?.bootstrap_review_ratio),
-        bootstrapVisibleDealTarget: asNumber(meta?.bootstrap_visible_deal_target),
-        visibleDealsForDestination: asNumber(meta?.visible_deals_for_destination),
+        bootstrapVisibleDealTarget: asNumber(
+          meta?.bootstrap_visible_deal_target,
+        ),
+        visibleDealsForDestination: asNumber(
+          meta?.visible_deals_for_destination,
+        ),
         dealMode: asText(meta?.deal_mode),
         routingRelaxed: asBoolean(meta?.routing_relaxed),
         routingRelaxedReason: asText(meta?.routing_relaxed_reason),
@@ -284,7 +301,10 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
     };
   }
 
-  if (message.startsWith("Deal live sync: ") || message.startsWith("Fare live sync: ")) {
+  if (
+    message.startsWith("Deal live sync: ") ||
+    message.startsWith("Fare live sync: ")
+  ) {
     const prefix = message.startsWith("Deal live sync: ")
       ? "Deal live sync: "
       : "Fare live sync: ";
@@ -347,7 +367,10 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
     };
   }
 
-  if (message.startsWith("Pattern hard error: ") || message.startsWith("Pattern error: ")) {
+  if (
+    message.startsWith("Pattern hard error: ") ||
+    message.startsWith("Pattern error: ")
+  ) {
     return {
       id,
       timestamp: event.timestampIso,
@@ -381,7 +404,10 @@ function toVpsLogLine(event: VpsJournalEvent): LocalScannerLogLine | null {
 }
 
 function isVpsScannerStartMessage(message: string) {
-  return message === "Starting local scanner." || message === "Starting local Lux flight scan.";
+  return (
+    message === "Starting local scanner." ||
+    message === "Starting local Lux flight scan."
+  );
 }
 
 function isVpsScannerTerminalMessage(message: string) {
@@ -394,16 +420,28 @@ function isVpsScannerTerminalMessage(message: string) {
   );
 }
 
-function findLatestVpsRunStartIndex(events: VpsJournalEvent[], running: boolean, startTimestamp: string | null) {
-  const startMs = startTimestamp ? new Date(startTimestamp).getTime() : Number.NaN;
+function findLatestVpsRunStartIndex(
+  events: VpsJournalEvent[],
+  running: boolean,
+  startTimestamp: string | null,
+) {
+  const startMs = startTimestamp
+    ? new Date(startTimestamp).getTime()
+    : Number.NaN;
 
   if (running && Number.isFinite(startMs)) {
-    const firstEventAfterServiceStart = events.findIndex((event) => event.timestampMs >= startMs);
+    const firstEventAfterServiceStart = events.findIndex(
+      (event) => event.timestampMs >= startMs,
+    );
     if (firstEventAfterServiceStart >= 0) {
       const runStartAfterServiceStart = events.findIndex(
-        (event, index) => index >= firstEventAfterServiceStart && isVpsScannerStartMessage(event.message),
+        (event, index) =>
+          index >= firstEventAfterServiceStart &&
+          isVpsScannerStartMessage(event.message),
       );
-      return runStartAfterServiceStart >= 0 ? runStartAfterServiceStart : firstEventAfterServiceStart;
+      return runStartAfterServiceStart >= 0
+        ? runStartAfterServiceStart
+        : firstEventAfterServiceStart;
     }
   }
 
@@ -416,8 +454,16 @@ function findLatestVpsRunStartIndex(events: VpsJournalEvent[], running: boolean,
   return events.length > 0 ? 0 : -1;
 }
 
-function sliceLatestVpsRunEvents(events: VpsJournalEvent[], running: boolean, startTimestamp: string | null) {
-  const startIndex = findLatestVpsRunStartIndex(events, running, startTimestamp);
+function sliceLatestVpsRunEvents(
+  events: VpsJournalEvent[],
+  running: boolean,
+  startTimestamp: string | null,
+) {
+  const startIndex = findLatestVpsRunStartIndex(
+    events,
+    running,
+    startTimestamp,
+  );
   if (startIndex === -1) {
     return [];
   }
@@ -427,16 +473,23 @@ function sliceLatestVpsRunEvents(events: VpsJournalEvent[], running: boolean, st
   }
 
   const terminalIndex = events.findIndex(
-    (event, index) => index >= startIndex && isVpsScannerTerminalMessage(event.message),
+    (event, index) =>
+      index >= startIndex && isVpsScannerTerminalMessage(event.message),
   );
-  return events.slice(startIndex, terminalIndex >= 0 ? terminalIndex + 1 : undefined);
+  return events.slice(
+    startIndex,
+    terminalIndex >= 0 ? terminalIndex + 1 : undefined,
+  );
 }
 
-function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTotals {
+function summarizeLogLines(
+  logLines: LocalScannerLogLine[],
+): LocalScannerRunTotals {
   return logLines.reduce<LocalScannerRunTotals>(
     (totals, line) => {
       if (line.label === "Route") totals.routesStarted += 1;
-      if (line.label === "Pattern" || line.label === "Rule") totals.patternsStarted += 1;
+      if (line.label === "Pattern" || line.label === "Rule")
+        totals.patternsStarted += 1;
       if (line.label === "Found") totals.found += 1;
       if (line.label === "No results") totals.noResults += 1;
       if (line.label === "Timed out") totals.timedOut += 1;
@@ -458,7 +511,9 @@ function summarizeLogLines(logLines: LocalScannerLogLine[]): LocalScannerRunTota
   );
 }
 
-function summarizeNoResults(logLines: LocalScannerLogLine[]): LocalScannerBreakdownItem[] {
+function summarizeNoResults(
+  logLines: LocalScannerLogLine[],
+): LocalScannerBreakdownItem[] {
   const counts = new Map<string, LocalScannerBreakdownItem>();
   for (const line of logLines) {
     if (line.label !== "No results") continue;
@@ -490,7 +545,8 @@ function isProgressForActiveService(
 ) {
   if (!serviceStartedAt) return true;
   const differenceMs = Math.abs(
-    new Date(progress.startedAt).getTime() - new Date(serviceStartedAt).getTime(),
+    new Date(progress.startedAt).getTime() -
+      new Date(serviceStartedAt).getTime(),
   );
   return Number.isFinite(differenceMs) && differenceMs <= 5 * 60_000;
 }
@@ -514,9 +570,8 @@ function mergePersistedProgress(
 
   const totalRoutes = progress.routesPlanned || status.totalRoutes;
   const startedRoutes = progress.routesStarted;
-  const remainingRoutes = totalRoutes === null
-    ? null
-    : Math.max(totalRoutes - startedRoutes, 0);
+  const remainingRoutes =
+    totalRoutes === null ? null : Math.max(totalRoutes - startedRoutes, 0);
 
   return {
     ...status,
@@ -532,7 +587,9 @@ function mergePersistedProgress(
     currentPatternLabel: isVpsProgress
       ? status.currentPatternLabel
       : progress.currentRuleLabel,
-    currentPatternWindowLabel: isVpsProgress ? status.currentPatternWindowLabel : null,
+    currentPatternWindowLabel: isVpsProgress
+      ? status.currentPatternWindowLabel
+      : null,
     latestCompletedAt: null,
     latestFinishedAt: null,
     latestActivity: isVpsProgress
@@ -542,14 +599,19 @@ function mergePersistedProgress(
       ? status.recentLogLines
       : progress.recentEvents.length > 0
         ? progress.recentEvents
-        : [{
-          id: `persisted:${progress.runKey}:${progress.lastProgressAt ?? progress.updatedAt}`,
-          timestamp: progress.lastProgressAt ?? progress.heartbeatAt ?? progress.updatedAt,
-          label: "Mac scanner",
-          detail: `${progress.routesStarted}/${totalRoutes ?? "?"} routes started`,
-          secondaryDetail: `${progress.foundPrices} verified prices · ${progress.indicativePrices} calendar prices · ${progress.patternsScanned} rules processed`,
-          tone: "progress" as const,
-        }],
+        : [
+            {
+              id: `persisted:${progress.runKey}:${progress.lastProgressAt ?? progress.updatedAt}`,
+              timestamp:
+                progress.lastProgressAt ??
+                progress.heartbeatAt ??
+                progress.updatedAt,
+              label: "Mac scanner",
+              detail: `${progress.routesStarted}/${totalRoutes ?? "?"} routes started`,
+              secondaryDetail: `${progress.foundPrices} verified prices · ${progress.indicativePrices} calendar prices · ${progress.patternsScanned} rules processed`,
+              tone: "progress" as const,
+            },
+          ],
     liveTotals: {
       routesStarted: progress.routesStarted,
       patternsStarted: progress.patternsScanned,
@@ -569,7 +631,8 @@ function mergePersistedProgress(
 
 function routeProgressFromMessage(message: string | null) {
   const match = message?.match(/Route start:\s*(\d+)\/(\d+)\s*.\s*(.*)$/);
-  if (!match) return { startedRoutes: null, totalRoutes: null, currentRouteLabel: null };
+  if (!match)
+    return { startedRoutes: null, totalRoutes: null, currentRouteLabel: null };
 
   return {
     startedRoutes: Number.parseInt(match[1], 10),
@@ -579,22 +642,46 @@ function routeProgressFromMessage(message: string | null) {
 }
 
 function currentPatternFromMessage(message: string | null) {
-  const match = message?.match(/Pattern start:\s*\d+\/\d+\s*.\s*.*?\s+([A-Z][a-z]{2}\s*->.*)$/);
+  const match = message?.match(
+    /Pattern start:\s*\d+\/\d+\s*.\s*.*?\s+([A-Z][a-z]{2}\s*->.*)$/,
+  );
   return match?.[1] ?? null;
 }
 
-function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScannerStatus {
+function vpsStatusToLocalScannerStatus(
+  status: VpsScannerAgentStatus,
+): LocalScannerStatus {
   const events = status.journal
     .map((line) => parseVpsJournalEvent(line))
     .filter(Boolean)
-    .sort((left, right) => left!.timestampMs - right!.timestampMs) as VpsJournalEvent[];
-  const startTimestamp = parseSystemdTimestamp(status.service.ExecMainStartTimestamp);
-  const exitTimestamp = parseSystemdTimestamp(status.service.ExecMainExitTimestamp);
-  const runEvents = sliceLatestVpsRunEvents(events, status.running, startTimestamp);
-  const logLines = runEvents.map((event) => toVpsLogLine(event)).filter(Boolean) as LocalScannerLogLine[];
-  const latestRouteStart = [...runEvents].reverse().find((event) => event.message.startsWith("Route start: ")) ?? null;
-  const latestPatternStart = [...runEvents].reverse().find((event) => event.message.startsWith("Pattern start: ")) ?? null;
-  const routeProgress = routeProgressFromMessage(latestRouteStart?.message ?? null);
+    .sort(
+      (left, right) => left!.timestampMs - right!.timestampMs,
+    ) as VpsJournalEvent[];
+  const startTimestamp = parseSystemdTimestamp(
+    status.service.ExecMainStartTimestamp,
+  );
+  const exitTimestamp = parseSystemdTimestamp(
+    status.service.ExecMainExitTimestamp,
+  );
+  const runEvents = sliceLatestVpsRunEvents(
+    events,
+    status.running,
+    startTimestamp,
+  );
+  const logLines = runEvents
+    .map((event) => toVpsLogLine(event))
+    .filter(Boolean) as LocalScannerLogLine[];
+  const latestRouteStart =
+    [...runEvents]
+      .reverse()
+      .find((event) => event.message.startsWith("Route start: ")) ?? null;
+  const latestPatternStart =
+    [...runEvents]
+      .reverse()
+      .find((event) => event.message.startsWith("Pattern start: ")) ?? null;
+  const routeProgress = routeProgressFromMessage(
+    latestRouteStart?.message ?? null,
+  );
   const remainingRoutes =
     routeProgress.totalRoutes !== null && routeProgress.startedRoutes !== null
       ? Math.max(routeProgress.totalRoutes - routeProgress.startedRoutes, 0)
@@ -603,7 +690,9 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
   const liveTotals = summarizeLogLines(logLines);
   const noResultBreakdown = summarizeNoResults(logLines);
   const runStartTimestamp = startTimestamp ?? logLines[0]?.timestamp ?? null;
-  const runExitTimestamp = status.running ? null : (logLines.at(-1)?.timestamp ?? exitTimestamp);
+  const runExitTimestamp = status.running
+    ? null
+    : (logLines.at(-1)?.timestamp ?? exitTimestamp);
 
   return {
     available: true,
@@ -617,7 +706,9 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
     latestCompletedAt: runExitTimestamp,
     latestFinishedAt: status.running ? null : runExitTimestamp,
     currentRouteLabel: routeProgress.currentRouteLabel,
-    currentPatternLabel: currentPatternFromMessage(latestPatternStart?.message ?? null),
+    currentPatternLabel: currentPatternFromMessage(
+      latestPatternStart?.message ?? null,
+    ),
     currentPatternWindowLabel: null,
     latestActivity: lastScannerLine?.detail ?? null,
     recentLogLines: logLines.slice(-120),
@@ -631,29 +722,8 @@ function vpsStatusToLocalScannerStatus(status: VpsScannerAgentStatus): LocalScan
 }
 
 export async function GET(request: Request) {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (expectedUser && expectedPassword) {
-    const authorization = request.headers.get("authorization");
-    if (!authorization?.startsWith("Basic ")) {
-      return unauthorizedResponse();
-    }
-
-    try {
-      const encoded = authorization.slice("Basic ".length);
-      const decoded = atob(encoded);
-      const separatorIndex = decoded.indexOf(":");
-      const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-      const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-      if (user !== expectedUser || password !== expectedPassword) {
-        return unauthorizedResponse();
-      }
-    } catch {
-      return unauthorizedResponse();
-    }
-  }
+  const unauthorized = ensureOpsAuthorized(request);
+  if (unauthorized) return unauthorized;
 
   try {
     const [control, persistedProgress] = await Promise.all([
@@ -691,16 +761,19 @@ export async function GET(request: Request) {
       null,
     );
 
-    return NextResponse.json({
-      ...status,
-      pendingAction: control.pendingCommand?.action ?? null,
-      pendingCommandStatus: control.pendingCommand?.status ?? null,
-      controllerLastSeenAt: control.lastSeenAt,
-    }, {
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
+    return NextResponse.json(
+      {
+        ...status,
+        pendingAction: control.pendingCommand?.action ?? null,
+        pendingCommandStatus: control.pendingCommand?.status ?? null,
+        controllerLastSeenAt: control.lastSeenAt,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      },
+    );
   } catch (error) {
     const payload = serializeError(error);
 

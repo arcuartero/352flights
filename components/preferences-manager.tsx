@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
+import { travelEmailConsentCopy, travelEmailExistingSubscriberCopy } from "@/lib/travel-email-consent";
 
 import {
   bucketOptionMap,
@@ -109,6 +110,7 @@ function buildSimpleFormState(bundle: PreferencesBundle): PreferenceFormState {
     latestArrivalHour: bundle.form.latestArrivalHour,
     minDestinationStayHours: bundle.form.minDestinationStayHours,
     deliveryModes: bundle.form.deliveryModes,
+    travelEmailConsent: bundle.form.travelEmailConsent,
     customAlertRules: bundle.form.customAlertRules,
   };
 }
@@ -125,6 +127,7 @@ export function PreferencesManager() {
   const [isPending, startTransition] = useTransition();
   const [isAccessPending, startAccessTransition] = useTransition();
   const [accessEmail, setAccessEmail] = useState("");
+  const [accessTravelEmailConsent, setAccessTravelEmailConsent] = useState(false);
   const [accessMessage, setAccessMessage] = useState<ScreenState>({
     phase: "idle",
     message: "Enter the email you used with +352 Flights and we will resend your personal access link.",
@@ -231,7 +234,7 @@ export function PreferencesManager() {
                       headers: {
                         "Content-Type": "application/json",
                       },
-                      body: JSON.stringify({ email, locale }),
+                      body: JSON.stringify({ email, locale, travelEmailConsent: accessTravelEmailConsent }),
                     });
 
                     const payload = (await response.json()) as SubscriptionApiPayload;
@@ -275,6 +278,16 @@ export function PreferencesManager() {
                   value={accessEmail}
                 />
               </label>
+
+              <label className="travel-email-consent travel-email-consent--preferences">
+                <input
+                  checked={accessTravelEmailConsent}
+                  onChange={(event) => setAccessTravelEmailConsent(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>{travelEmailConsentCopy[locale]}</span>
+              </label>
+              <p className="travel-email-consent__hint">{travelEmailExistingSubscriberCopy[locale]}</p>
 
               <button className="preferences-submit" disabled={isAccessPending} type="submit">
                 {isAccessPending ? "Sending..." : "Email me my link"}
@@ -550,6 +563,7 @@ export function PreferencesManager() {
                 },
                 body: JSON.stringify({
                   token: bundle.token,
+                  locale,
                   preferredBuckets: form.preferredBuckets,
                   selectedRoutes: deriveSelectedRoutesFromBuckets(form.preferredBuckets),
                   maxStopsPreferences: form.maxStopsPreferences,
@@ -561,6 +575,7 @@ export function PreferencesManager() {
                   latestArrivalHour: form.latestArrivalHour,
                   minDestinationStayHours: form.minDestinationStayHours,
                   deliveryModes: form.deliveryModes,
+                  travelEmailConsent: form.travelEmailConsent,
                   customAlertRules: form.customAlertRules,
                 }),
               });
@@ -834,6 +849,24 @@ export function PreferencesManager() {
               })}
             </div>
           </div>
+        </section>
+
+        <section className="preferences-section">
+          <div className="preferences-section__intro">
+            <p className="preferences-label">Optional travel emails</p>
+            <h2>More travel ideas, separate from flight alerts</h2>
+          </div>
+          <label className="travel-email-consent travel-email-consent--preferences">
+            <input
+              checked={form.travelEmailConsent}
+              onChange={(event) => setForm((current) => ({
+                ...current,
+                travelEmailConsent: event.target.checked,
+              }))}
+              type="checkbox"
+            />
+            <span>{travelEmailConsentCopy[locale]}</span>
+          </label>
         </section>
 
         <section className="preferences-section">

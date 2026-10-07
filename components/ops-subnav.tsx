@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   CalendarSearch,
+  Activity,
+  Cookie,
   ChartNoAxesCombined,
   FileJson2,
   Images,
@@ -27,6 +29,7 @@ const links = [
     label: "Price intelligence",
     icon: ChartNoAxesCombined,
   },
+  { href: "/ops/analytics", label: "Google Analytics", icon: Activity },
   {
     href: "/ops/scanner-live",
     label: "Price Scanner",
@@ -57,6 +60,7 @@ const links = [
     label: "Destination photos",
     icon: Images,
   },
+  { href: "/ops/cookie-banner", label: "Cookie Banner", icon: Cookie },
 ];
 
 const pageCopy: Record<string, { eyebrow: string; title: string; description: string }> = {
@@ -70,6 +74,7 @@ const pageCopy: Record<string, { eyebrow: string; title: string; description: st
     title: "Price intelligence",
     description: "Read the price history behind every public deal and spot meaningful movements.",
   },
+  "/ops/analytics": { eyebrow: "Audience insights", title: "Google Analytics", description: "See consented visitors and aggregate privacy choices." },
   "/ops/scanner-live": {
     eyebrow: "Live operations",
     title: "Price scanner",
@@ -100,6 +105,7 @@ const pageCopy: Record<string, { eyebrow: string; title: string; description: st
     title: "Destination photos",
     description: "Manage the imagery customers see across destination and deal cards.",
   },
+  "/ops/cookie-banner": { eyebrow: "Privacy controls", title: "Cookie Banner", description: "Configure visitor consent and cookie preferences." },
 };
 
 export function OpsSubnav() {

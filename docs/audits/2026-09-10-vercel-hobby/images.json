@@ -1,0 +1,42 @@
+[
+  {
+    "source": "public/deals-hero-airplane-cabin-4.jpeg",
+    "target": "public/deals-hero-airplane-cabin-4.webp",
+    "width": 5632,
+    "height": 2816,
+    "before": 1263082,
+    "after": 547256
+  },
+  {
+    "source": "public/404-luggage-tags-transparent.png",
+    "target": "public/404-luggage-tags-transparent.webp",
+    "width": 1254,
+    "height": 1254,
+    "before": 891883,
+    "after": 88998
+  },
+  {
+    "source": "app/icon.png",
+    "target": "app/icon.png",
+    "width": 1254,
+    "height": 1254,
+    "before": 543674,
+    "after": 140390
+  },
+  {
+    "source": "public/email-airplane-window.jpg",
+    "target": "public/email-airplane-window.jpg",
+    "width": 900,
+    "height": 1350,
+    "before": 318582,
+    "after": 174523
+  },
+  {
+    "source": "public/email-alerts-airport.jpg",
+    "target": "public/email-alerts-airport.jpg",
+    "width": 450,
+    "height": 600,
+    "before": 91235,
+    "after": 50729
+  }
+]

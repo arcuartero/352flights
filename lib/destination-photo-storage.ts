@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { revalidateTag, unstable_cache } from "next/cache";
 
 import unsplashDestinationPhotos from "@/data/unsplash-destination-photos.json";
@@ -158,7 +159,7 @@ const getCachedDestinationPhotoUrlMap = unstable_cache(
   { revalidate: 3600, tags: ["destination-photos"] },
 );
 
-export async function getDestinationPhotoUrlMap(): Promise<Record<string, string>> {
+export const getDestinationPhotoUrlMap = cache(async function getDestinationPhotoUrlMap(): Promise<Record<string, string>> {
   try {
     return await getCachedDestinationPhotoUrlMap();
   } catch {
@@ -169,7 +170,7 @@ export async function getDestinationPhotoUrlMap(): Promise<Record<string, string
       ]),
     );
   }
-}
+});
 
 export async function uploadDestinationPhoto(input: {
   slug: string;

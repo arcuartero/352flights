@@ -1,0 +1,10 @@
+# Deployment upload only; keep these files in Git for local tools and CI.
+docs/
+coverage/
+test/
+*.zip
+logs/
+.scanner-vps.lock
+tsconfig.tsbuildinfo
+# Python runs on Mac/VPS/GitHub, never inside a Vercel Function.
+scanner/

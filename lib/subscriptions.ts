@@ -10,6 +10,7 @@ import {
   type EmailLocale,
 } from "@/lib/email";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { TRAVEL_EMAIL_CONSENT_VERSION } from "@/lib/travel-email-consent";
 
 type SubscriberLookupRow = {
   id: string;
@@ -47,7 +48,7 @@ function buildSubscriptionUrls(subscriber: Pick<
 const subscriberSelect =
   "id,email,status,preference_token,confirmation_token,unsubscribe_token,email_confirmed,onboarding_completed,preferred_locale";
 
-export async function subscribeEmailAddress(email: string, locale?: EmailLocale) {
+export async function subscribeEmailAddress(email: string, locale?: EmailLocale, travelEmailConsent = false) {
   const supabase = getSupabaseAdminClient();
   const nowIso = new Date().toISOString();
   const preferredLocale = normalizeEmailLocale(locale);
@@ -108,6 +109,10 @@ export async function subscribeEmailAddress(email: string, locale?: EmailLocale)
         status: "pending",
         email_confirmed: false,
         onboarding_completed: false,
+        travel_email_consent: travelEmailConsent,
+        travel_email_consented_at: travelEmailConsent ? nowIso : null,
+        travel_email_consent_version: travelEmailConsent ? TRAVEL_EMAIL_CONSENT_VERSION : null,
+        travel_email_consent_locale: travelEmailConsent ? preferredLocale : null,
         updated_at: nowIso,
       })
       .select(subscriberSelect)
@@ -264,6 +269,10 @@ export async function unsubscribeSubscriberByToken(token: string) {
     .update({
       status: "unsubscribed",
       unsubscribed_at: new Date().toISOString(),
+      travel_email_consent: false,
+      travel_email_consented_at: null,
+      travel_email_consent_version: null,
+      travel_email_consent_locale: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", query.data.id);

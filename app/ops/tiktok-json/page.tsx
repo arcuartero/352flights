@@ -1,3 +1,4 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import { OpsSubnav } from "@/components/ops-subnav";
 import { TikTokJsonGenerator } from "@/components/tiktok-json-generator";
 
@@ -11,10 +12,13 @@ function currentMonthKey() {
   }).formatToParts(new Date());
   const year = parts.find((part) => part.type === "year")?.value;
   const month = parts.find((part) => part.type === "month")?.value;
-  return year && month ? `${year}-${month}` : new Date().toISOString().slice(0, 7);
+  return year && month
+    ? `${year}-${month}`
+    : new Date().toISOString().slice(0, 7);
 }
 
-export default function OpsTikTokJsonPage() {
+export default async function OpsTikTokJsonPage() {
+  await assertOpsAccess();
   const initialMonth = currentMonthKey();
 
   return (
@@ -27,7 +31,8 @@ export default function OpsTikTokJsonPage() {
               <span className="ops-panel__eyebrow">Contenido social</span>
               <h2>Social content</h2>
               <p>
-                Pide propuestas, elige las ofertas manualmente y crea el JSON en tiempo real.
+                Pide propuestas, elige las ofertas manualmente y crea el JSON en
+                tiempo real.
               </p>
             </div>
           </div>

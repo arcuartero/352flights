@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { hasSupabaseAdminEnv } from "@/lib/env";
-import { getPreferencesByToken, savePreferencesByToken } from "@/lib/preferences";
+import {
+  getPreferencesByToken,
+  savePreferencesByToken,
+} from "@/lib/preferences";
 import { preferencePayloadSchema } from "@/lib/preferences-shared";
 
 const tokenSchema = z.string().uuid();
@@ -29,24 +32,40 @@ export async function GET(request: Request) {
 
   if (!hasSupabaseAdminEnv()) {
     return privateJson(
-      { error: "Supabase is not configured for preferences yet." },
+      {
+        error:
+          "Preferences are temporarily unavailable. Please try again later.",
+      },
       { status: 503 },
     );
   }
 
-  const result = await getPreferencesByToken(parsedToken.data);
-  if (!result.ok) {
+  try {
+    const result = await getPreferencesByToken(parsedToken.data);
+    if (!result.ok) {
+      return privateJson(
+        {
+          error:
+            result.status === 404
+              ? "We could not find that preference link."
+              : "We could not load your preferences right now.",
+        },
+        { status: result.status === 404 ? 404 : 500 },
+      );
+    }
+    return privateJson(result.bundle);
+  } catch {
     return privateJson(
-      { error: result.error },
-      { status: result.status },
+      { error: "We could not load your preferences right now." },
+      { status: 500 },
     );
   }
-
-  return privateJson(result.bundle);
 }
 
 export async function POST(request: Request) {
-  const payload = preferencePayloadSchema.safeParse(await request.json());
+  const payload = preferencePayloadSchema.safeParse(
+    await request.json().catch(() => null),
+  );
   if (!payload.success) {
     return privateJson(
       { error: "Your preference form is incomplete or invalid." },
@@ -56,7 +75,10 @@ export async function POST(request: Request) {
 
   if (!hasSupabaseAdminEnv()) {
     return privateJson(
-      { error: "Supabase is not configured for preferences yet." },
+      {
+        error:
+          "Preferences are temporarily unavailable. Please try again later.",
+      },
       { status: 503 },
     );
   }
@@ -72,9 +94,7 @@ export async function POST(request: Request) {
     return privateJson(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "We could not save your preferences right now.",
+          "We could not save your preferences right now. Please try again later.",
       },
       { status: 500 },
     );

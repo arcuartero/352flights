@@ -1,0 +1,69 @@
+ M .github/workflows/send-daily-digest.yml
+ M app/[locale]/[...segments]/page.tsx
+ M app/api/cron/ops-alerts/route.ts
+ M app/deals/[city]/page.tsx
+ M app/deals/search/page.tsx
+ M app/globals.css
+ M app/icon.png
+ M app/ops/actions.ts
+ M app/sitemap.ts
+ M components/active-routes-board.tsx
+ M components/date-scan-run-history.tsx
+ M components/deals-city-page-content.tsx
+ M components/deals-search-page-content.tsx
+ M components/local-pattern-discovery-status.tsx
+ M components/local-scanner-status.tsx
+ M components/price-scan-run-history.tsx
+ M components/public-deals-explorer.tsx
+ M components/site-chrome.tsx
+ M components/v2-not-found.tsx
+ M components/vps-scanner-control-panel.tsx
+ M components/web-activity-log.tsx
+ M lib/destination-photo-storage.ts
+ M lib/email.ts
+ M lib/ops.ts
+ M lib/price-scan-runs.ts
+ M lib/public-fare-cache.ts
+ M middleware.ts
+ M next.config.ts
+ D public/404-luggage-tags-transparent.png
+ D public/404-luggage-tags.jpg
+ D public/deals-hero-airplane-cabin-2.jpeg
+ D public/deals-hero-airplane-cabin-3.jpeg
+ D public/deals-hero-airplane-cabin-4.jpeg
+ D public/deals-hero-airplane-cabin.png
+ D public/deals-hero-dark-scene.png
+ D public/deals-hero-light-scene.png
+ D public/deals-hero-static.png
+ M public/email-airplane-window.jpg
+ M public/email-alerts-airport.jpg
+?? .github/workflows/ops-maintenance.yml
+?? .vercelignore
+?? AGENTS.md
+?? app/api/ops/status/route.ts
+?? components/public-deals-url-state.tsx
+?? docs/audits/2026-09-10-vercel-hobby/README.md
+?? docs/audits/2026-09-10-vercel-hobby/browser-checks.json
+?? docs/audits/2026-09-10-vercel-hobby/browser-polling.json
+?? docs/audits/2026-09-10-vercel-hobby/build-after.txt
+?? docs/audits/2026-09-10-vercel-hobby/build-before.txt
+?? docs/audits/2026-09-10-vercel-hobby/deployment-sources.json
+?? docs/audits/2026-09-10-vercel-hobby/files.txt
+?? docs/audits/2026-09-10-vercel-hobby/http-results.json
+?? docs/audits/2026-09-10-vercel-hobby/images.json
+?? docs/audits/2026-09-10-vercel-hobby/localized-search.json
+?? docs/audits/2026-09-10-vercel-hobby/sizes.json
+?? docs/audits/2026-09-10-vercel-hobby/tests.txt
+?? docs/audits/2026-09-10-vercel-hobby/traces.json
+?? docs/audits/2026-09-10-vercel-hobby/typecheck.txt
+?? lib/digest-idempotency.ts
+?? lib/digest-schedule.ts
+?? lib/ops-polling-client.ts
+?? lib/ops-polling.ts
+?? lib/scheduled-digest-store.ts
+?? public/404-luggage-tags-transparent.webp
+?? public/deals-hero-airplane-cabin-4.webp
+?? supabase/migrations/20260910120000_scheduled_digest_idempotency.sql
+?? test/digest-idempotency.test.ts
+?? test/digest-schedule.test.ts
+?? test/ops-polling.test.ts

@@ -8,11 +8,14 @@ import { subscribeEmailAddress } from "@/lib/subscriptions";
 const subscribeSchema = z.object({
   email: z.string().trim().email(),
   locale: z.enum(emailLocales).optional(),
+  travelEmailConsent: z.boolean().optional().default(false),
 });
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
-  const payload = subscribeSchema.safeParse(await request.json());
+  const payload = subscribeSchema.safeParse(
+    await request.json().catch(() => null),
+  );
 
   if (!payload.success) {
     return NextResponse.json(
@@ -26,13 +29,17 @@ export async function POST(request: Request) {
       {
         code: "storage_unavailable",
         error:
-          "Subscription storage is not configured yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to activate captures.",
+          "Subscriptions are temporarily unavailable. Please try again later.",
       },
       { status: 503 },
     );
   }
   try {
-    const result = await subscribeEmailAddress(payload.data.email, payload.data.locale);
+    const result = await subscribeEmailAddress(
+      payload.data.email,
+      payload.data.locale,
+      payload.data.travelEmailConsent,
+    );
 
     if (result.sendWelcomeEmail) {
       after(async () => {
@@ -68,20 +75,11 @@ export async function POST(request: Request) {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    const message =
-      error instanceof Error && error.message.includes("schema cache")
-        ? "The subscription database is not ready yet. Run the SQL setup in Supabase first."
-        : error instanceof Error
-          ? error.message
-          : "We could not save your subscription right now.";
-
     return NextResponse.json(
       {
-        code:
-          error instanceof Error && error.message.includes("schema cache")
-            ? "database_not_ready"
-            : "subscription_failed",
-        error: message,
+        code: "subscription_failed",
+        error:
+          "We could not save your subscription right now. Please try again later.",
       },
       { status: 500 },
     );

@@ -187,7 +187,7 @@ export function V2NotFound() {
               height={1254}
               priority
               sizes="(max-width: 760px) 84vw, 42vw"
-              src="/404-luggage-tags-transparent.png"
+              src="/404-luggage-tags-transparent.webp"
               width={1254}
             />
           </figure>

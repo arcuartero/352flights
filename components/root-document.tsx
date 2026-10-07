@@ -5,8 +5,11 @@ import { NewsletterPopup } from "@/components/newsletter-popup";
 import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 import { SiteChrome } from "@/components/site-chrome";
 import { WebActivityLog } from "@/components/web-activity-log";
+import { CookieBanner } from "@/components/cookie-banner";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { LanguageProvider } from "@/lib/i18n";
 import { htmlLangTags, type Locale } from "@/lib/locales";
+import "@/app/cookie-banner.css";
 
 const themeBootScript = `
 (() => {
@@ -49,6 +52,8 @@ export function RootDocument({
           <NewsletterPopup />
           <WebActivityLog />
           <ScrollToTopButton />
+          <CookieBanner />
+          <AnalyticsTracker />
         </LanguageProvider>
       </body>
     </html>

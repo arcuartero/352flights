@@ -1,0 +1,45 @@
+name: Maintain Scanner and Ops Alerts
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 * * * *"
+
+concurrency:
+  group: ops-maintenance
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger ops maintenance
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "Missing APP_BASE_URL secret."
+            exit 1
+          fi
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CRON_SECRET secret."
+            exit 1
+          fi
+
+          URL="${APP_BASE_URL%/}/api/cron/ops-alerts"
+
+          response=$(curl -sS -w '\n%{http_code}' -X POST "$URL" \
+            -H "Authorization: Bearer $CRON_SECRET")
+
+          body=$(printf '%s\n' "$response" | sed '$d')
+          status=$(printf '%s\n' "$response" | tail -n 1)
+
+          echo "$body"
+
+          if [ "$status" -ge 400 ]; then
+            echo "Ops maintenance endpoint returned HTTP $status"
+            exit 1
+          fi

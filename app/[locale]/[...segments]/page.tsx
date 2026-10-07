@@ -22,9 +22,11 @@ import {
 
 export const revalidate = 1800;
 
+// Generate public paths on demand, then reuse the ISR result.
+export function generateStaticParams() { return []; }
+
 type LocalizedDealsPageProps = {
   params: Promise<{ locale: string; segments: string[] }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type ResolvedLocalizedDealsRoute =
@@ -101,12 +103,11 @@ export async function generateMetadata({
 
 export default async function LocalizedDealsPage({
   params,
-  searchParams,
 }: LocalizedDealsPageProps) {
   const route = await resolveLocalizedDealsRoute(params);
 
   if (route.kind === "search") {
-    return <DealsSearchPageContent locale={route.locale} searchParams={searchParams} />;
+    return <DealsSearchPageContent locale={route.locale} />;
   }
 
   if (route.kind === "legal") {
@@ -121,7 +122,7 @@ export default async function LocalizedDealsPage({
     <DealsCityPageContent
       locale={route.locale}
       params={Promise.resolve({ city: route.citySlug })}
-      searchParams={searchParams}
+
     />
   );
 }

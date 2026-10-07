@@ -76,7 +76,7 @@ Para cambiar el contenido de una identidad existente debe incrementarse `revisio
 - País: se añade cuando el aeropuerto existe en el catálogo local.
 - Horarios: se añaden si están presentes en el snapshot, en formato local `HH:mm`.
 - `checkedAt`: timestamp de la comprobación del snapshot.
-- `expiresAt`: 24 horas después de `checkedAt`, que es la política de frescura pública actual de 352 Flights.
+- `expiresAt`: 24 horas después de `checkedAt`, política propia de Creatello. La web usa una ventana de siete días y un [flujo de renovación independiente](public-fare-renewal.md).
 - `sourcePageUrl`: URL pública original de Skyscanner.
 
 Las duraciones no se calculan a partir de horarios locales de aeropuertos distintos. El scanner guarda `outbound_duration_minutes` y `return_duration_minutes` usando las duraciones proporcionadas por el proveedor; solo esos valores fiables habilitan el paquete automático `flight-deals-352`. `travel-offer` y `cheap-flights-tiktok` no los requieren.

@@ -1,7 +1,10 @@
 import { V2Landing } from "@/components/v2-landing";
 import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
-import { buildHomeBoardDestinations, buildHomeRecentDrops } from "@/lib/home-board";
-import { getPublicDealsPageData } from "@/lib/ops";
+import {
+  buildHomeBoardDestinations,
+  buildHomeRecentDrops,
+} from "@/lib/home-board";
+import { getPublicDealsPageData } from "@/lib/ops/public-data";
 
 export async function HomePageContent() {
   const [data, destinationPhotoUrls] = await Promise.all([

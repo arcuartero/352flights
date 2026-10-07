@@ -1,3 +1,4 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import { DateScanRunHistory } from "@/components/date-scan-run-history";
 import { LocalPatternDiscoveryStatusWidget } from "@/components/local-pattern-discovery-status";
 import { OpsSubnav } from "@/components/ops-subnav";
@@ -6,6 +7,7 @@ import { getDateScanRunHistory } from "@/lib/date-scan-runs";
 export const dynamic = "force-dynamic";
 
 export default async function OpsDatesScannerPage() {
+  await assertOpsAccess();
   const history = await getDateScanRunHistory(100);
 
   return (

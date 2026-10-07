@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeOpsPolling } from "@/lib/ops-polling-client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
@@ -482,6 +484,7 @@ type LocalScannerStatusWidgetProps = {
 export function LocalScannerStatusWidget({
   displayMode = "floating",
 }: LocalScannerStatusWidgetProps) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
   const [status, setStatus] = useState<LocalScannerStatus | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -500,11 +503,9 @@ export function LocalScannerStatusWidget({
   useEffect(() => {
     let isMounted = true;
 
-    async function loadStatus() {
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/scanner-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -518,12 +519,10 @@ export function LocalScannerStatusWidget({
       }
     }
 
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 7000);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/scanner-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, []);
 
@@ -628,7 +627,7 @@ export function LocalScannerStatusWidget({
     }
 
     return (
-      <section className="ops-scanner-status ops-scanner-status--page is-idle">
+      <section ref={pollingRef} className="ops-scanner-status ops-scanner-status--page is-idle">
         <div className="ops-scanner-status__header">
           <div>
             <p className="ops-panel__eyebrow">Price Scanner</p>
@@ -648,7 +647,7 @@ export function LocalScannerStatusWidget({
     }
 
     return (
-      <section className="ops-scanner-status ops-scanner-status--page is-idle">
+      <section ref={pollingRef} className="ops-scanner-status ops-scanner-status--page is-idle">
         <div className="ops-scanner-status__header">
           <div>
             <p className="ops-panel__eyebrow">Price Scanner</p>
@@ -676,7 +675,8 @@ export function LocalScannerStatusWidget({
   }
 
   return (
-    <aside
+    <section
+      ref={pollingRef}
       aria-live="polite"
       className={`ops-scanner-status ${
         isPageMode ? "ops-scanner-status--page" : "ops-scanner-status--floating"
@@ -1063,6 +1063,6 @@ export function LocalScannerStatusWidget({
           document.body,
         )
         : null}
-    </aside>
+    </section>
   );
 }

@@ -1,11 +1,14 @@
 "use client";
 
+import { subscribeOpsPolling, refreshOpsPolling } from "@/lib/ops-polling-client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/lib/i18n";
+import { travelEmailConsentCopy, travelEmailExistingSubscriberCopy } from "@/lib/travel-email-consent";
 import {
   getLocalizedHomePath,
   parseLocalizedDealsPathname,
@@ -172,6 +175,7 @@ function formatHeaderTimestamp(value: string | null) {
 }
 
 function NextScanCountdown() {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [isRunning, setIsRunning] = useState(false);
 
@@ -186,11 +190,9 @@ function NextScanCountdown() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadStatus() {
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/scanner-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -206,12 +208,10 @@ function NextScanCountdown() {
       }
     }
 
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 10000);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/scanner-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, []);
 
@@ -221,7 +221,7 @@ function NextScanCountdown() {
   }, [nowMs]);
 
   return (
-    <p className="site-chrome__countdown" aria-live="polite">
+    <p ref={(node) => { pollingRef.current = node; }} className="site-chrome__countdown" aria-live="polite">
       <span>{isRunning ? "Next scheduled trigger" : "Next scan"}</span>
       <strong>{countdown}</strong>
       {isRunning ? (
@@ -232,6 +232,7 @@ function NextScanCountdown() {
 }
 
 function ManualScanTrigger({ enabled }: { enabled: boolean }) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [controlAvailable, setControlAvailable] = useState(true);
@@ -245,11 +246,9 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
 
     let isMounted = true;
 
-    async function loadStatus() {
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/scanner-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -280,12 +279,10 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
       }
     }
 
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 10000);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/scanner-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, [enabled, isBusy]);
 
@@ -338,6 +335,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
     } finally {
       window.setTimeout(() => {
         setIsBusy(false);
+      refreshOpsPolling();
       }, 500);
     }
   }
@@ -365,7 +363,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   })();
 
   return (
-    <button
+    <button ref={(node) => { pollingRef.current = node; }}
       aria-label={buttonLabel}
       className={`site-chrome__scan-trigger ${isRunning ? "site-chrome__scan-trigger--danger" : ""}`}
       disabled={isBusy || pendingAction !== null || !controlAvailable}
@@ -387,6 +385,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
 }
 
 function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [latestResultAt, setLatestResultAt] = useState<string | null>(null);
@@ -399,11 +398,9 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
 
     let isMounted = true;
 
-    async function loadStatus() {
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/pattern-discovery-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -428,12 +425,10 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
       }
     }
 
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 15000);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/pattern-discovery-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, [enabled, isBusy]);
 
@@ -509,6 +504,7 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
     } finally {
       window.setTimeout(() => {
         setIsBusy(false);
+      refreshOpsPolling();
       }, 500);
     }
   }
@@ -519,7 +515,7 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
         <span>Last monthly discovery</span>
         <strong>{isRunning ? "Running now" : formatHeaderTimestamp(latestResultAt)}</strong>
       </p>
-      <button
+      <button ref={(node) => { pollingRef.current = node; }}
         className={`site-chrome__scan-trigger site-chrome__scan-trigger--secondary ${
           isRunning ? "site-chrome__scan-trigger--danger" : ""
         }`}
@@ -540,6 +536,7 @@ type PreferencesAccessModalProps = {
 function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
   const { locale, t } = useI18n();
   const [email, setEmail] = useState("");
+  const [travelEmailConsent, setTravelEmailConsent] = useState(false);
   const [message, setMessage] = useState(
     "Enter your email and we will send either your sign-up email or your private preferences link.",
   );
@@ -618,7 +615,7 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
                       headers: {
                         "Content-Type": "application/json",
                       },
-                      body: JSON.stringify({ email: trimmedEmail, locale }),
+                      body: JSON.stringify({ email: trimmedEmail, locale, travelEmailConsent }),
                     });
 
                     const payload = (await response.json()) as SubscriptionApiPayload;
@@ -667,6 +664,16 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
                 </div>
               </label>
 
+              <label className="travel-email-consent travel-email-consent--access">
+                <input
+                  checked={travelEmailConsent}
+                  onChange={(event) => setTravelEmailConsent(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>{travelEmailConsentCopy[locale]}</span>
+              </label>
+              <p className="travel-email-consent__hint">{travelEmailExistingSubscriberCopy[locale]}</p>
+
               <div className="site-chrome__preferences-form-actions">
                 <button className="site-chrome__preferences-primary" disabled={isPending} type="submit">
                   {isPending ? "Sending..." : "Email me my link"}
@@ -683,7 +690,7 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
 
             <p className={`site-chrome__preferences-status is-${messageTone}`}>{message}</p>
             <p className="site-chrome__preferences-footnote">
-              We only use your email to send your preferences link.
+              We will send your preferences link. Additional travel emails require the optional choice above.
             </p>
           </div>
 

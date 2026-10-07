@@ -1,39 +1,41 @@
 import { NextResponse } from "next/server";
 
+/** Shared by the Edge middleware, API handlers and server components/actions. */
+export function isOpsAuthorized(
+  authorization: string | null,
+  credentials = {
+    user: process.env.OPS_BASIC_AUTH_USER,
+    password: process.env.OPS_BASIC_AUTH_PASSWORD,
+  },
+): boolean {
+  if (!credentials.user || !credentials.password || !authorization)
+    return false;
+  const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(authorization);
+  if (!match) return false;
+  try {
+    const bytes = Uint8Array.from(atob(match[1]), (character) =>
+      character.charCodeAt(0),
+    );
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return decoded === credentials.user + ":" + credentials.password;
+  } catch {
+    return false;
+  }
+}
+
 export function unauthorizedOpsResponse() {
   return new NextResponse("Authentication required.", {
     status: 401,
     headers: {
       "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
+      "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+      "Vercel-CDN-Cache-Control": "no-store",
     },
   });
 }
 
 export function ensureOpsAuthorized(request: Request) {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (!expectedUser || !expectedPassword) {
-    return null;
-  }
-
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Basic ")) {
-    return unauthorizedOpsResponse();
-  }
-
-  try {
-    const decoded = atob(authorization.slice("Basic ".length));
-    const separatorIndex = decoded.indexOf(":");
-    const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-    if (user !== expectedUser || password !== expectedPassword) {
-      return unauthorizedOpsResponse();
-    }
-  } catch {
-    return unauthorizedOpsResponse();
-  }
-
-  return null;
+  return isOpsAuthorized(request.headers.get("authorization"))
+    ? null
+    : unauthorizedOpsResponse();
 }

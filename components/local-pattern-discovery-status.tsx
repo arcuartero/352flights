@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeOpsPolling } from "@/lib/ops-polling-client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -103,6 +105,7 @@ type LocalPatternDiscoveryStatusWidgetProps = {
 export function LocalPatternDiscoveryStatusWidget({
   displayMode = "floating",
 }: LocalPatternDiscoveryStatusWidgetProps) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
   const [status, setStatus] = useState<LocalPatternDiscoveryStatus | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -119,18 +122,10 @@ export function LocalPatternDiscoveryStatusWidget({
 
   useEffect(() => {
     let isMounted = true;
-    let isRequestPending = false;
 
-    async function loadStatus() {
-      if (isRequestPending || document.hidden || !navigator.onLine) {
-        return;
-      }
-
-      isRequestPending = true;
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/pattern-discovery-live-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -141,27 +136,13 @@ export function LocalPatternDiscoveryStatusWidget({
         }
       } catch {
         // Quiet polling failure.
-      } finally {
-        isRequestPending = false;
       }
     }
 
-    function refreshVisibleStatus() {
-      if (!document.hidden && navigator.onLine) {
-        void loadStatus();
-      }
-    }
-
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 7000);
-    document.addEventListener("visibilitychange", refreshVisibleStatus);
-    window.addEventListener("online", refreshVisibleStatus);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/pattern-discovery-live-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", refreshVisibleStatus);
-      window.removeEventListener("online", refreshVisibleStatus);
+      unsubscribe();
     };
   }, []);
 
@@ -189,7 +170,7 @@ export function LocalPatternDiscoveryStatusWidget({
 
   if (!status) {
     return (
-      <section
+      <section ref={pollingRef}
         className={`ops-scanner-status ${
           isPageMode ? "ops-scanner-status--page" : "ops-scanner-status--floating"
         } is-idle`}
@@ -209,7 +190,7 @@ export function LocalPatternDiscoveryStatusWidget({
 
   if (!status.available) {
     return (
-      <section
+      <section ref={pollingRef}
         className={`ops-scanner-status ${
           isPageMode ? "ops-scanner-status--page" : "ops-scanner-status--floating"
         } is-idle`}
@@ -240,7 +221,7 @@ export function LocalPatternDiscoveryStatusWidget({
   }
 
   return (
-    <section
+    <section ref={pollingRef}
       aria-live="polite"
       className={`ops-scanner-status ${
         isPageMode ? "ops-scanner-status--page" : "ops-scanner-status--floating"

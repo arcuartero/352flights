@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import { rememberNewsletterSubscription } from "@/lib/newsletter-popup-client";
+import { travelEmailConsentCopy, travelEmailExistingSubscriberCopy } from "@/lib/travel-email-consent";
 import {
   subscriptionErrorMessage,
   subscriptionSuccessMessage,
@@ -15,6 +16,7 @@ import {
 export function V2AlertsModal({ onClose }: { onClose: () => void }) {
   const { locale, t } = useI18n();
   const [email, setEmail] = useState("");
+  const [travelEmailConsent, setTravelEmailConsent] = useState(false);
   const [status, setStatus] = useState<{
     tone: "idle" | "pending" | "success" | "error";
     message: string;
@@ -51,7 +53,7 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
         const response = await fetch("/api/subscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: trimmed, locale }),
+          body: JSON.stringify({ email: trimmed, locale, travelEmailConsent }),
         });
         const payload = (await response.json()) as SubscriptionApiPayload;
         if (!response.ok) {
@@ -136,6 +138,16 @@ export function V2AlertsModal({ onClose }: { onClose: () => void }) {
                 />
               </div>
             </label>
+
+            <label className="travel-email-consent travel-email-consent--modal">
+              <input
+                checked={travelEmailConsent}
+                onChange={(event) => setTravelEmailConsent(event.target.checked)}
+                type="checkbox"
+              />
+              <span>{travelEmailConsentCopy[locale]}</span>
+            </label>
+            <p className="travel-email-consent__hint">{travelEmailExistingSubscriberCopy[locale]}</p>
 
             <div className="v2-modal__actions">
               <button className="v2-modal__primary" disabled={isPending} type="submit">

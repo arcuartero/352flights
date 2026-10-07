@@ -1,10 +1,12 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import { OpsSubnav } from "@/components/ops-subnav";
 import { PriceIntelligenceBoard } from "@/components/price-intelligence-board";
-import { getOpsPriceIntelligenceData } from "@/lib/ops";
+import { getOpsPriceIntelligenceData } from "@/lib/ops/price-intelligence";
 
 export const dynamic = "force-dynamic";
 
 export default async function OpsPricesPage() {
+  await assertOpsAccess();
   const data = await getOpsPriceIntelligenceData().catch((error) => ({
     configured: true,
     schemaReady: false,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getOpsRecentSnapshotsData } from "@/lib/ops";
+import { getOpsRecentSnapshotsData } from "@/lib/ops/queries";
 import { ensureOpsAuthorized } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";

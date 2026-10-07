@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeOpsPolling } from "@/lib/ops-polling-client";
+
 import {
   useEffect,
   useMemo,
@@ -1528,6 +1530,7 @@ function RoutePlannerModal({
 }
 
 export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [selectedRouteSnapshot, setSelectedRouteSnapshot] = useState<ActiveRouteSummary | null>(null);
@@ -1754,11 +1757,9 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
     let isMounted = true;
     let lastProgressSignature: string | null = null;
 
-    async function loadStatus() {
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/pattern-discovery-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -1789,11 +1790,10 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
       }
     }
 
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 10000);
+    const unsubscribe = subscribeOpsPolling("/api/ops/pattern-discovery-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, [router]);
 
@@ -2206,7 +2206,7 @@ export function ActiveRoutesBoard({ data }: { data: OpsActiveRoutesData }) {
         </dl>
       </section>
 
-      <section className="ops-panel ops-panel--wide active-route-grid">
+      <section ref={pollingRef} className="ops-panel ops-panel--wide active-route-grid">
         <div className="ops-panel__header">
           <div>
             <p className="ops-panel__eyebrow">Coverage</p>

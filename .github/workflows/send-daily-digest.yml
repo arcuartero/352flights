@@ -3,7 +3,7 @@ name: Send Daily Lux Digest
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "17 * * * *"
 
 concurrency:
   group: send-daily-digest
