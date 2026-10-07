@@ -334,9 +334,7 @@
 .page-shell--deals-search .deals-explorer__cta,
 .page-shell--deals-city .deals-explorer__cta,
 .page-shell--deals-search .deals-card__cta,
-.page-shell--deals-city .deals-card__cta,
-.page-shell--deals-search .deals-explorer__secondary-link,
-.page-shell--deals-city .deals-explorer__secondary-link {
+.page-shell--deals-city .deals-card__cta {
   min-height: 2.8rem;
   border-radius: 999px;
   font-size: 0.94rem;
@@ -348,13 +346,6 @@
 .page-shell--deals-city .deals-search-card__cta {
   width: 100%;
   white-space: nowrap;
-}
-
-.page-shell--deals-search .deals-explorer__secondary-link,
-.page-shell--deals-city .deals-explorer__secondary-link {
-  border: 1px solid rgba(29, 39, 51, 0.14);
-  background: #ffffff;
-  color: var(--v2-ink);
 }
 
 /* Flight results use the itinerary-first composition from the supplied

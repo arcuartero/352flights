@@ -27,19 +27,12 @@
 
 .deals-search-compact-filters
   .deals-select.is-destination-selected
-  .deals-select__trigger,
-.deals-explorer__toolbar
-  .deals-select.is-destination-selected
   .deals-select__trigger {
   border-color: var(--deals-home-selected-border);
   background: #edf4ff;
 }
 
 .deals-search-compact-filters
-  .deals-select.is-destination-selected
-  .deals-select__trigger
-  strong,
-.deals-explorer__toolbar
   .deals-select.is-destination-selected
   .deals-select__trigger
   strong {
@@ -328,43 +321,6 @@
 }
 
 /* "Direct only" uses the product red when active. */
-.page-shell--deals-search .deals-toggle input,
-.page-shell--deals-city .deals-toggle input {
-  position: relative;
-  flex: 0 0 auto;
-  width: 2.1rem;
-  height: 1.2rem;
-  margin: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--v2-ink) 22%, transparent);
-  appearance: none;
-  cursor: pointer;
-  transition: background 0.25s var(--v2-ease);
-}
-
-.page-shell--deals-search .deals-toggle input::after,
-.page-shell--deals-city .deals-toggle input::after {
-  content: "";
-  position: absolute;
-  top: 0.15rem;
-  left: 0.15rem;
-  width: 0.9rem;
-  height: 0.9rem;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(16, 23, 32, 0.3);
-  transition: transform 0.25s var(--v2-ease);
-}
-
-.page-shell--deals-search .deals-toggle input:checked,
-.page-shell--deals-city .deals-toggle input:checked {
-  background: var(--v2-accent);
-}
-
-.page-shell--deals-search .deals-toggle input:checked::after,
-.page-shell--deals-city .deals-toggle input:checked::after {
-  transform: translateX(0.9rem);
-}
 
 .page-shell--deals-search .deals-search-sidebar .deals-toggle--untitled-field,
 .page-shell--deals-city .deals-search-sidebar .deals-toggle--untitled-field {

@@ -277,8 +277,6 @@
   color: var(--accent);
 }
 
-.deals-explorer__filters,
-.deals-explorer__styles,
 .deals-explorer__section {
   padding: 1.9rem 1.45rem;
   border: 1px solid color-mix(in srgb, var(--line) 92%, transparent);
@@ -288,109 +286,6 @@
     linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 98%, var(--bg) 2%), color-mix(in srgb, var(--panel-strong) 94%, var(--bg-soft) 6%)),
     radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 12%, transparent), transparent 32%);
   box-shadow: var(--shadow-sm);
-}
-
-.deals-explorer__hero + .deals-explorer__filters {
-  margin-top: -6.4rem;
-}
-
-.deals-explorer__filters {
-  position: relative;
-  z-index: 2;
-  overflow: visible;
-  isolation: isolate;
-  background: transparent;
-}
-
-.deals-explorer__filters::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel-strong) 98%, var(--bg) 2%), color-mix(in srgb, var(--panel-strong) 94%, var(--bg-soft) 6%)),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 12%, transparent), transparent 32%);
-  pointer-events: none;
-}
-
-.deals-explorer__filters > * {
-  position: relative;
-  z-index: 1;
-}
-
-.deals-explorer__hero {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: end;
-  width: 100vw;
-  margin-inline: calc(50% - 50vw);
-  margin-top: -5.75rem;
-  min-height: clamp(35rem, 54vw, 47rem);
-  padding: clamp(10.4rem, 14vw, 12.6rem) max(1.4rem, calc((100vw - 1180px) / 2 + 1.4rem)) clamp(8.4rem, 13vw, 10rem);
-  overflow: visible;
-  background: var(--bg);
-  isolation: isolate;
-}
-
-.deals-explorer__hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background:
-    linear-gradient(90deg, rgba(8, 14, 28, 0.92) 0%, rgba(8, 14, 28, 0.88) 24%, rgba(8, 14, 28, 0.58) 46%, rgba(8, 14, 28, 0.14) 66%, rgba(8, 14, 28, 0.02) 100%),
-    linear-gradient(180deg, rgba(8, 14, 28, 0.18) 0%, rgba(8, 14, 28, 0.14) 34%, rgba(8, 14, 28, 0.32) 56%, rgba(8, 14, 28, 0.56) 78%, rgba(8, 14, 28, 0.72) 100%),
-    radial-gradient(circle at 18% 40%, rgba(212, 149, 53, 0.18), transparent 28%),
-    radial-gradient(circle at 52% 26%, rgba(255, 244, 220, 0.14), transparent 20%),
-    url("/deals-hero-airplane-cabin-4.webp");
-  background-position: 0 0, 0 0, 0 0, 0 0, 100% 26%;
-  background-repeat: no-repeat;
-  background-size: auto, auto, auto, auto, 104% auto;
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    #000 0%,
-    #000 48%,
-    rgba(0, 0, 0, 0.96) 62%,
-    rgba(0, 0, 0, 0.72) 76%,
-    rgba(0, 0, 0, 0.34) 88%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    180deg,
-    #000 0%,
-    #000 48%,
-    rgba(0, 0, 0, 0.96) 62%,
-    rgba(0, 0, 0, 0.72) 76%,
-    rgba(0, 0, 0, 0.34) 88%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-
-.deals-explorer__hero::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -5.5rem;
-  height: 11rem;
-  z-index: -1;
-  background:
-    radial-gradient(66% 110% at 0% 50%, color-mix(in srgb, var(--bg) 20%, transparent) 0%, transparent 72%),
-    radial-gradient(66% 110% at 100% 50%, color-mix(in srgb, var(--bg) 20%, transparent) 0%, transparent 72%),
-    linear-gradient(
-      180deg,
-      transparent 0%,
-      color-mix(in srgb, var(--bg) 14%, transparent) 18%,
-      color-mix(in srgb, var(--bg) 42%, transparent) 34%,
-      color-mix(in srgb, var(--bg) 96%, transparent) 50%,
-      color-mix(in srgb, var(--bg) 58%, transparent) 70%,
-      transparent 100%
-    );
-  pointer-events: none;
 }
 
 .deals-explorer__featured {
@@ -408,10 +303,6 @@
   z-index: 30;
   backdrop-filter: blur(18px);
   box-shadow: 0 18px 34px rgba(8, 14, 28, 0.18);
-}
-
-.deals-explorer__filters {
-  overflow: visible;
 }
 
 .deals-search-layout {
@@ -501,8 +392,7 @@
   gap: 0.55rem;
 }
 
-.deals-search-sidebar .deals-explorer__primary-link,
-.deals-search-sidebar .deals-explorer__secondary-link {
+.deals-search-sidebar .deals-explorer__primary-link {
   width: 100%;
 }
 

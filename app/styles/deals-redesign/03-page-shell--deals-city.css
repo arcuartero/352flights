@@ -626,7 +626,6 @@
   gap: 0.55rem;
 }
 
-.page-shell--deals-city .deals-search-fixed-route .deals-control--origin-fixed strong,
 .page-shell--deals-city .deals-search-fixed-route__destination strong {
   min-height: auto;
   padding: 0;
@@ -644,17 +643,11 @@
   color: #6d7988;
 }
 
-.page-shell--deals-city .deals-control--static strong,
-.page-shell--deals-city .deals-select__trigger,
-.page-shell--deals-city .deals-toggle {
+.page-shell--deals-city .deals-select__trigger {
   min-height: 2.55rem;
   border-radius: 0.9rem;
   background: #fff;
   box-shadow: 0 1px 0 rgba(29, 39, 51, 0.03);
-}
-
-.page-shell--deals-city .deals-search-fixed-route .deals-control--origin-fixed strong {
-  font-size: 1.15rem;
 }
 
 .page-shell--deals-city .deals-search-fixed-route__destination strong {
@@ -669,14 +662,6 @@
   --deals-home-selected-border: rgba(35, 100, 223, 0.42);
 }
 
-.page-shell--deals-search
-  .deals-search-sidebar__section--home-route
-  .deals-control--origin-fixed
-  strong,
-.page-shell--deals-city
-  .deals-search-sidebar__section--home-route
-  .deals-control--origin-fixed
-  strong,
 .page-shell--deals-city
   .deals-search-sidebar__section--home-route
   .deals-search-fixed-route__destination
@@ -718,9 +703,7 @@
   .deals-date-picker__trigger,
 .page-shell--deals-city
   .deals-search-sidebar__section--home-controls
-  .deals-date-picker__trigger,
-.page-shell--deals-search .deals-search-sidebar__section--home-controls .deals-toggle,
-.page-shell--deals-city .deals-search-sidebar__section--home-controls .deals-toggle {
+  .deals-date-picker__trigger {
   min-height: 2.85rem;
   border: 1px solid var(--deals-home-control-border);
   border-radius: 0.85rem;

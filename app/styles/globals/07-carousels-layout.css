@@ -1,14 +1,4 @@
 
-.deals-explorer__carousel-button--hero:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
-  background: color-mix(in srgb, #162039 86%, rgba(8, 14, 28, 0.76));
-}
-
-.deals-explorer__carousel-button--hero svg {
-  width: 1.35rem;
-  height: 1.35rem;
-}
-
 .deals-explorer__section-head h2 {
   font-size: clamp(1.35rem, 2.5vw, 2.2rem);
   line-height: 1;
@@ -37,27 +27,6 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.85rem;
   align-items: stretch;
-}
-
-.deals-explorer__opportunity-viewport {
-  --opportunity-visible: 3;
-  --opportunity-gap: 0.85rem;
-  overflow: hidden;
-  padding-top: 0.2rem;
-}
-
-.deals-explorer__opportunity-stage {
-  position: relative;
-  margin-inline: 0;
-}
-
-.deals-explorer__carousel-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  margin-top: 0.85rem;
-  margin-bottom: 2.15rem;
 }
 
 .deals-explorer__carousel-dot {
@@ -91,39 +60,6 @@
   transform: scale(1.26);
 }
 
-.deals-explorer__opportunity-hero-nav {
-  position: absolute;
-  top: 1.15rem;
-  right: 1.15rem;
-  z-index: 5;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-
-.deals-explorer__opportunity-track {
-  display: flex;
-  gap: var(--opportunity-gap);
-  align-items: stretch;
-  will-change: transform;
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.deals-explorer__style-viewport {
-  --style-visible: 3;
-  --style-gap: 0.9rem;
-  overflow: hidden;
-  padding-top: 0.2rem;
-}
-
-.deals-explorer__style-track {
-  display: flex;
-  gap: var(--style-gap);
-  align-items: stretch;
-  will-change: transform;
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
 .deals-explorer__empty {
   padding: 1.2rem 1.25rem;
   border: 1px solid var(--line);
@@ -132,196 +68,14 @@
 }
 
 .deals-explorer__empty h3,
-.deals-card__title h3,
-.deals-style-card strong {
+.deals-card__title h3 {
   margin: 0;
   color: var(--text-strong);
-}
-
-.deals-style-card strong {
-  font-size: 1.48rem;
-  line-height: 1.08;
 }
 
 .deals-explorer__empty p {
   margin: 0.45rem 0 0;
   color: var(--muted);
-}
-
-.deals-explorer__empty--landing {
-  display: grid;
-  justify-items: center;
-  gap: 0.2rem;
-  padding: 3.2rem 1.5rem 3.4rem;
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--line-strong) 88%, transparent);
-  text-align: center;
-}
-
-.deals-explorer__empty--landing h3 {
-  font-family: var(--font-display), serif;
-  font-size: 1.65rem;
-  letter-spacing: -0.02em;
-}
-
-.deals-explorer__empty--landing p {
-  max-width: 34rem;
-  line-height: 1.6;
-}
-
-.deals-explorer__empty-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 4.4rem;
-  height: 4.4rem;
-  margin-bottom: 0.8rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-soft) 85%, transparent);
-  color: color-mix(in srgb, var(--accent) 90%, white 10%);
-}
-
-.deals-explorer__empty-icon svg {
-  width: 2.6rem;
-  height: 2.6rem;
-}
-
-.deals-explorer__empty-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.7rem;
-  margin-top: 1.35rem;
-}
-
-.deals-style-card {
-  position: relative;
-  display: grid;
-  flex: 0 0 calc((100% - (var(--style-gap) * (var(--style-visible) - 1))) / var(--style-visible));
-  min-height: 100%;
-  min-height: 24.5rem;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 1.2rem;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--panel-strong) 90%, transparent);
-  color: inherit;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    transform var(--ease-standard),
-    border-color var(--ease-standard),
-    box-shadow var(--ease-standard);
-}
-
-.deals-style-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  box-shadow: var(--shadow-sm);
-}
-
-.deals-style-card.is-active {
-  border-color: color-mix(in srgb, var(--accent) 58%, transparent);
-  box-shadow: 0 16px 28px rgba(8, 14, 28, 0.18);
-}
-
-.deals-style-card__media,
-.deals-style-card__media img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.deals-style-card__media img {
-  object-fit: cover;
-}
-
-.deals-style-card__overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(8, 14, 28, 0.2) 0%, rgba(8, 14, 28, 0.52) 38%, rgba(8, 14, 28, 0.88) 100%),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 20%, transparent), transparent 34%);
-}
-
-.deals-style-card__content {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 0.65rem;
-  min-height: 100%;
-  padding: 0.9rem 0.95rem 0.95rem;
-  align-content: space-between;
-}
-
-.deals-style-card__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
-  color: var(--text-strong);
-  font-size: 1.55rem;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line-strong) 82%, transparent);
-}
-
-.deals-style-card__copy {
-  display: grid;
-  gap: 0.65rem;
-  align-content: end;
-  margin-top: auto;
-}
-
-.deals-style-card__copy p {
-  display: -webkit-box;
-  overflow: hidden;
-  min-height: 3.2em;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.deals-style-card__icon--weekend {
-  color: #cfe4ff;
-}
-
-.deals-style-card__icon--weeklong {
-  color: #d8e7a2;
-}
-
-.deals-style-card__icon--school {
-  color: #d49cff;
-}
-
-.deals-style-card__icon--direct {
-  color: #9db9ff;
-}
-
-.deals-style-card__icon--beach {
-  color: #9be0a6;
-}
-
-.deals-style-card__icon--city {
-  color: #d8dff5;
-}
-
-.deals-style-card span {
-  color: color-mix(in srgb, #f4eee3 76%, transparent);
-}
-
-.deals-style-card em {
-  color: var(--accent);
-  font-style: normal;
-  font-weight: 750;
-  font-size: 1.52rem;
-  line-height: 1;
-}
-
-.deals-style-card p {
-  color: color-mix(in srgb, #fffaf1 86%, transparent);
 }
 
 .deals-explorer__newsletter {
