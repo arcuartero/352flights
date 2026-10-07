@@ -7,6 +7,7 @@ import { V2Outro } from "@/components/v2-outro";
 import { isContactSegment } from "@/lib/contact-localization";
 import { getLegalPageFromSegment } from "@/lib/legal-localization";
 import { getLocalizedHomePath, isLocalizedHomeLocale } from "@/lib/locales";
+import { BrandLogo } from "@/components/brand-logo";
 
 import "../../home.css";
 import "../../deals/deals-redesign.css";
@@ -41,7 +42,7 @@ export default async function LocalizedDealsLayout({
           className="v2-topbar__brand"
           href={getLocalizedHomePath(locale)}
         >
-          <img src="/v2-logo.png" alt="352 Flights" />
+          <BrandLogo priority />
         </Link>
         <div className="v2-topbar__actions">
           <LanguageSelector />

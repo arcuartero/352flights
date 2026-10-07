@@ -348,6 +348,7 @@ export function DestinationPhotoManager({
             <article className="destination-photo-card" key={destination.slug}>
               <div className="destination-photo-card__preview">
                 {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- ops-only preview of the uploaded file
                   <img alt={destination.city} src={photo.url} />
                 ) : (
                   <div className="destination-photo-card__empty">

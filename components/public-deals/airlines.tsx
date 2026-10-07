@@ -24,6 +24,7 @@ export function AirlineLogo({
   return (
     <span className="deals-airline-logo" title={airlineName}>
       {canShowAirlineLogo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- 64px third-party airline logo with onError fallback
         <img
           alt={t("deals.a11y.airlineLogo", { airline: airlineName })}
           loading="lazy"

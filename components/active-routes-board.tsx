@@ -96,10 +96,6 @@ const ACTIVE_ROUTE_COLUMN_MIN_WIDTHS = Object.fromEntries(
   ACTIVE_ROUTE_COLUMN_DEFS.map((column) => [column.key, column.minWidth]),
 ) as ActiveRouteColumnWidths;
 
-function formatRelativeBucket(bucket: string) {
-  return formatStayBucketListLabel([bucket]);
-}
-
 function formatStops(value: string) {
   if (value === "NON_STOP") {
     return "Non-stop only";

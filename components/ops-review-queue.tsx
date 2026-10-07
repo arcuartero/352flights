@@ -65,18 +65,6 @@ function formatCurrency(value: number, currency: string = "EUR") {
   }).format(value);
 }
 
-function formatDate(value: string | null) {
-  if (!value) {
-    return "n/a";
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
 function formatDateWithWeekday(value: string | null) {
   if (!value) {
     return "n/a";
@@ -375,20 +363,6 @@ function buildFallbackSeriesFromDeal(deal: ReviewDeal): OpsPriceSeries {
   };
 }
 
-function formatPriceChange(current: number | null, previous: number | null) {
-  if (current === null || previous === null) {
-    return "No previous run yet";
-  }
-
-  const delta = current - previous;
-  if (delta === 0) {
-    return "Flat versus prior cron";
-  }
-
-  const direction = delta < 0 ? "down" : "up";
-  return `${formatCurrency(Math.abs(delta))} ${direction} versus prior cron`;
-}
-
 function buildPath(points: Array<{ x: number; y: number }>) {
   return points
     .map(
@@ -396,21 +370,6 @@ function buildPath(points: Array<{ x: number; y: number }>) {
         `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
     )
     .join(" ");
-}
-
-function chartCoordinates(values: number[], width: number, height: number) {
-  if (values.length === 0) {
-    return [];
-  }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-
-  return values.map((value, index) => ({
-    x: values.length === 1 ? width / 2 : (index / (values.length - 1)) * width,
-    y: height - ((value - min) / range) * height,
-  }));
 }
 
 function ReviewTrendChart({ series }: { series: OpsPriceSeries }) {
@@ -752,6 +711,14 @@ function applySortCriterion(
   return helpers.freshnessValue(right) - helpers.freshnessValue(left);
 }
 
+const SORT_OPTIONS: SortOption[] = [
+  { value: "freshness", label: "Latest scan first" },
+  { value: "price-asc", label: "Lowest price first" },
+  { value: "price-desc", label: "Highest price first" },
+  { value: "nights-asc", label: "Fewest nights first" },
+  { value: "nights-desc", label: "Most nights first" },
+];
+
 export function OpsReviewQueue({
   deals,
   totalNewDeals,
@@ -820,14 +787,6 @@ export function OpsReviewQueue({
     [deals],
   );
 
-  const sortOptions: SortOption[] = [
-    { value: "freshness", label: "Latest scan first" },
-    { value: "price-asc", label: "Lowest price first" },
-    { value: "price-desc", label: "Highest price first" },
-    { value: "nights-asc", label: "Fewest nights first" },
-    { value: "nights-desc", label: "Most nights first" },
-  ];
-
   const activeSortSummary = useMemo(() => {
     if (sortBy.length === 0) {
       return "Latest scan first";
@@ -836,7 +795,7 @@ export function OpsReviewQueue({
     return sortBy
       .map(
         (value) =>
-          sortOptions.find((option) => option.value === value)?.label ?? value,
+          SORT_OPTIONS.find((option) => option.value === value)?.label ?? value,
       )
       .join(" + ");
   }, [sortBy]);
@@ -1152,7 +1111,7 @@ export function OpsReviewQueue({
             <details className="price-sort-menu">
               <summary>{activeSortSummary}</summary>
               <div className="price-sort-menu__panel">
-                {sortOptions.map((option) => {
+                {SORT_OPTIONS.map((option) => {
                   const activeIndex = sortBy.indexOf(option.value);
                   return (
                     <label

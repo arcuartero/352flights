@@ -90,7 +90,7 @@ export async function POST(request: Request) {
         ? "Preferences saved. Your Luxembourg flight profile is live."
         : "Preferences saved. Confirm your email from the welcome message to activate alerts.",
     });
-  } catch (error) {
+  } catch {
     return privateJson(
       {
         error:

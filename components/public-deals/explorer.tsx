@@ -42,7 +42,6 @@ import {
 } from "@/lib/locales";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import { disableDirectOnlyWhenOnlyConnectingFares } from "@/lib/public-deals-query";
-import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
 import { getLocalizedDestinationName } from "@/lib/destination-localization";
 import {
   buildDealsSearchHref,
@@ -56,28 +55,21 @@ import {
   type DurationFilter,
   type DurationFilterValue,
   type DealSearchFilters,
-  type TripFilter,
   type WhenFilter,
 } from "@/lib/public-deals-search";
 import {
   type AirlineFilterOption,
   type MobileResultsPanel,
   type PublicDealsExplorerProps,
-  type QuickChip,
   type SearchCityGroup,
-  type TravelStyleCard,
 } from "@/components/public-deals/types";
 import {
-  applyQuickChip,
   areDealSearchFiltersEqual,
   buildAvailabilityOptions,
   buildDestinationOptions,
   buildDurationOptions,
   compareDealsBySort,
   countDealsPerDestination,
-  getActiveQuickChips,
-  getChipTitle,
-  getDealTheme,
   getDestinationCountKey,
   getDestinationHeroDescription,
   getDestinationPhotoSrc,
@@ -86,11 +78,7 @@ import {
   getSearchResultsCopy,
   groupSearchCityDeals,
   hasMatchingDealsForFilters,
-  isQuickChipAvailable,
-  isWeekendDeal,
-  isWeeklongDeal,
   matchesDealSearchFilters,
-  resetQuickChip,
   takeLimitedDeals,
 } from "@/components/public-deals/filters";
 import {
@@ -102,15 +90,12 @@ import {
   DEPARTURE_WEEKDAY_OPTIONS,
   DURATION_FILTER_VALUES,
   RESULTS_PAGE_SIZE_OPTIONS,
-  SEARCH_QUICK_CHIPS,
-  TRIP_OPTIONS,
   WHEN_OPTIONS,
 } from "@/components/public-deals/constants";
 import {
   formatCurrency,
   formatVerifiedAge,
   getDealAirlineNames,
-  getTravelStyleVisual,
   normalizeAirlineName,
   normalizeDestinationKey,
 } from "@/components/public-deals/formatters";
@@ -119,13 +104,10 @@ import {
   DealsAirlineFilter,
 } from "@/components/public-deals/airlines";
 import {
-  CarouselChevronIcon,
   FooterSealHeartIcon,
   LuxembourgSealIcon,
-  SignalIcon,
 } from "@/components/public-deals/icons";
 import {
-  FeaturedOpportunityCard,
   ResultsLoadMore,
   SearchResultCard,
 } from "@/components/public-deals/fare-cards";
@@ -147,7 +129,7 @@ export function PublicDealsExplorer({
   initialSearchResult,
   initialSharedFareId = null,
   initialSort = DEFAULT_DEAL_SEARCH_SORT,
-  mode = "landing",
+  mode,
   lockedDestinationCity,
   searchPathname = "/deals/search",
 }: PublicDealsExplorerProps) {
@@ -177,11 +159,10 @@ export function PublicDealsExplorer({
     },
     [lockedDestinationFilter],
   );
-  const appliedFilters = useMemo(() => {
-    const baseFilters =
-      mode === "landing" ? DEFAULT_DEAL_SEARCH_FILTERS : initialFilters;
-    return coerceFiltersForMode(baseFilters);
-  }, [coerceFiltersForMode, initialFilters, mode]);
+  const appliedFilters = useMemo(
+    () => coerceFiltersForMode(initialFilters),
+    [coerceFiltersForMode, initialFilters],
+  );
   const [draftFilters, setDraftFilters] = useState<DealSearchFilters>({
     ...appliedFilters,
   });
@@ -189,18 +170,13 @@ export function PublicDealsExplorer({
     useState<DealSearchFilters>({
       ...appliedFilters,
     });
-  const [sortOrder, setSortOrder] = useState<DealSearchSort>(
-    mode === "landing" ? DEFAULT_DEAL_SEARCH_SORT : initialSort,
-  );
-  const [featuredStartIndex, setFeaturedStartIndex] = useState(0);
+  const [sortOrder, setSortOrder] = useState<DealSearchSort>(initialSort);
   const [selectedOpportunityDealId, setSelectedOpportunityDealId] = useState<
     string | null
   >(null);
   const [selectedOpportunityDeals, setSelectedOpportunityDeals] = useState<
     CampaignPreviewDeal[]
   >([]);
-  const [styleStartIndex, setStyleStartIndex] = useState(0);
-  const [styleVisibleCount, setStyleVisibleCount] = useState(5);
   const [resultsPage, setResultsPage] = useState(1);
   const [resultsPageSize, setResultsPageSize] = useState<number>(
     DEFAULT_RESULTS_PAGE_SIZE,
@@ -328,23 +304,6 @@ export function PublicDealsExplorer({
     urlReadyPath,
   ]);
 
-  useEffect(() => {
-    const computeVisibleCount = () => {
-      if (window.innerWidth < 980) {
-        return 1;
-      }
-
-      return 3;
-    };
-
-    const syncVisibleCount = () => {
-      const nextCount = computeVisibleCount();
-      setStyleVisibleCount(nextCount);
-    };
-    syncVisibleCount();
-    window.addEventListener("resize", syncVisibleCount);
-    return () => window.removeEventListener("resize", syncVisibleCount);
-  }, []);
 
   useEffect(() => {
     if (mode !== "results" && mode !== "city") {
@@ -559,15 +518,6 @@ export function PublicDealsExplorer({
     sourceDeals,
   ]);
 
-  const draftQuickChips = useMemo(
-    () => getActiveQuickChips(draftFilters),
-    [draftFilters],
-  );
-  const appliedQuickChips = useMemo(
-    () => getActiveQuickChips(effectiveFilters),
-    [effectiveFilters],
-  );
-
   const featuredNow = useMemo(
     () => takeLimitedDeals(filteredDeals, 12, 1),
     [filteredDeals],
@@ -578,8 +528,6 @@ export function PublicDealsExplorer({
     () => getSearchResultsCopy(effectiveFilters, t),
     [effectiveFilters, t],
   );
-  const spotlightDeal =
-    featuredNow[0] ?? sourceDeals.find((deal) => deal.dealPrice > 0) ?? null;
   const destinationCounts = useMemo(() => {
     if (mode === "results" && serverSearchResult) {
       return new Map(Object.entries(serverSearchResult.destinationCounts));
@@ -649,22 +597,6 @@ export function PublicDealsExplorer({
         (deal) => deal.id === selectedOpportunityDealId,
       )
     : -1;
-  const featuredWindowSize = 1;
-  const featuredPageCount = Math.max(
-    1,
-    Math.ceil(featuredNow.length / featuredWindowSize),
-  );
-  const clampedFeaturedStartIndex = Math.min(
-    featuredStartIndex,
-    Math.max(0, featuredNow.length - featuredWindowSize),
-  );
-  const featuredCurrentPage = Math.min(
-    featuredPageCount,
-    Math.floor(clampedFeaturedStartIndex / featuredWindowSize) + 1,
-  );
-  const canMoveFeaturedPrev = clampedFeaturedStartIndex > 0;
-  const canMoveFeaturedNext =
-    clampedFeaturedStartIndex + featuredWindowSize < featuredNow.length;
 
   useEffect(() => {
     if (mode !== "results") {
@@ -742,45 +674,6 @@ export function PublicDealsExplorer({
     });
   }, [groupedOpportunityDeals, mode]);
 
-  useEffect(() => {
-    setFeaturedStartIndex((current) =>
-      Math.min(current, Math.max(0, featuredNow.length - featuredWindowSize)),
-    );
-  }, [featuredNow.length, featuredWindowSize]);
-
-  useEffect(() => {
-    if (mode !== "landing" || featuredNow.length <= featuredWindowSize) {
-      return;
-    }
-
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-
-    const autoplay = window.setInterval(() => {
-      setFeaturedStartIndex((current) => {
-        const maxStartIndex = Math.max(
-          0,
-          featuredNow.length - featuredWindowSize,
-        );
-        return current >= maxStartIndex ? 0 : current + featuredWindowSize;
-      });
-    }, 5000);
-
-    return () => window.clearInterval(autoplay);
-  }, [featuredNow.length, featuredWindowSize, mode]);
-
-  const destinationCount = useMemo(
-    () =>
-      mode === "results" && serverSearchResult
-        ? serverSearchResult.facets.destinations.length
-        : new Set(
-            sourceDeals.map(
-              (deal) => `${deal.destinationAirport}-${deal.destinationCity}`,
-            ),
-          ).size,
-    [mode, serverSearchResult, sourceDeals],
-  );
   const destinationOptions = useMemo<SelectOption[]>(() => {
     if (destinationCatalog) {
       return [
@@ -899,24 +792,6 @@ export function PublicDealsExplorer({
       }),
     ).map((option) => ({ ...option, label: t(`deals.when.${option.value}`) }));
   }, [draftFilters, mode, now, serverSearchResult, sourceDeals, t]);
-  const resultsTripOptions = useMemo<SelectOption[]>(() => {
-    if (mode === "results" && serverSearchResult) {
-      return serverSearchResult.facets.tripValues.map((value) => ({
-        value,
-        label: t(`deals.trip.${value}`),
-      }));
-    }
-    return buildAvailabilityOptions(
-      TRIP_OPTIONS,
-      sourceDeals,
-      draftFilters,
-      now,
-      (value) => ({
-        ...draftFilters,
-        tripFilter: value as TripFilter,
-      }),
-    ).map((option) => ({ ...option, label: t(`deals.trip.${option.value}`) }));
-  }, [draftFilters, mode, now, serverSearchResult, sourceDeals, t]);
   const resultsDurationOptions = useMemo<SelectOption[]>(() => {
     if (mode !== "results" || !serverSearchResult) {
       return buildDurationOptions(sourceDeals, draftFilters, now, t);
@@ -974,9 +849,6 @@ export function PublicDealsExplorer({
         matchesDealSearchFilters(deal, filtersWithoutDirectOnly, now),
     );
   }, [draftFilters, mode, now, serverSearchResult, sourceDeals]);
-  const visibleSearchQuickChips = shouldShowDirectOnlyOption
-    ? SEARCH_QUICK_CHIPS
-    : SEARCH_QUICK_CHIPS.filter((chip) => chip !== "direct");
 
   useEffect(() => {
     const availableDurationValues = new Set(
@@ -1090,19 +962,6 @@ export function PublicDealsExplorer({
       }),
     );
   }, [coerceFiltersForMode, mobileResultsPanel]);
-
-  const searchHref = buildDealsHrefForMode(draftFilters);
-
-  const maxDiscount = useMemo(() => {
-    const values = filteredDeals
-      .map((deal) =>
-        deal.dropRatio === null
-          ? null
-          : Math.max(0, Math.round((1 - deal.dropRatio) * 100)),
-      )
-      .filter((value): value is number => value !== null);
-    return values.length > 0 ? Math.max(...values) : null;
-  }, [filteredDeals]);
   const cityHeroDeal = mode === "city" ? (filteredDeals[0] ?? null) : null;
   const cityLowestPrice =
     mode === "city" ? getLowestPrice(filteredDeals) : null;
@@ -1127,133 +986,6 @@ export function PublicDealsExplorer({
         selectedSearchGroup?.city ??
         t("common.destination"))
       : t("deals.searchResults");
-
-  const travelStyles = useMemo<TravelStyleCard[]>(() => {
-    const cards = [
-      {
-        key: "weekend",
-        label: t("deals.travelStyle.weekend.label"),
-        description: t("deals.travelStyle.weekend.description"),
-        deals: filteredDeals.filter((deal) => isWeekendDeal(deal)),
-        chip: "weekend" as QuickChip,
-        icon: "✈️",
-        accentClass: "deals-style-card__icon--weekend",
-      },
-      {
-        key: "weeklong",
-        label: t("deals.travelStyle.weeklong.label"),
-        description: t("deals.travelStyle.weeklong.description"),
-        deals: filteredDeals.filter((deal) => isWeeklongDeal(deal)),
-        chip: "weeklong" as QuickChip,
-        icon: "🗓️",
-        accentClass: "deals-style-card__icon--weeklong",
-      },
-      {
-        key: "school",
-        label: t("deals.travelStyle.school.label"),
-        description: t("deals.travelStyle.school.description"),
-        deals: filteredDeals.filter((deal) =>
-          Boolean(
-            getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate),
-          ),
-        ),
-        chip: "school_holidays" as QuickChip,
-        icon: "🎓",
-        accentClass: "deals-style-card__icon--school",
-      },
-      {
-        key: "cheap_direct",
-        label: t("deals.travelStyle.direct.label"),
-        description: t("deals.travelStyle.direct.description"),
-        deals: filteredDeals.filter(
-          (deal) => deal.maxStops === "NON_STOP" && deal.dealPrice <= 80,
-        ),
-        chip: "cheap_direct" as QuickChip,
-        icon: "🛫",
-        accentClass: "deals-style-card__icon--direct",
-      },
-      {
-        key: "beach",
-        label: t("deals.travelStyle.beach.label"),
-        description: t("deals.travelStyle.beach.description"),
-        deals: filteredDeals.filter((deal) => getDealTheme(deal) === "beach"),
-        chip: "beach" as QuickChip,
-        icon: "🌴",
-        accentClass: "deals-style-card__icon--beach",
-      },
-      {
-        key: "city",
-        label: t("deals.travelStyle.city.label"),
-        description: t("deals.travelStyle.city.description"),
-        deals: filteredDeals.filter((deal) => getDealTheme(deal) === "city"),
-        chip: "city" as QuickChip,
-        icon: "🏙️",
-        accentClass: "deals-style-card__icon--city",
-      },
-    ];
-
-    return cards
-      .map((card) => ({
-        ...getTravelStyleVisual(card.key),
-        key: card.key,
-        label: card.label,
-        description: card.description,
-        fromPrice: getLowestPrice(card.deals),
-        matches: card.deals.length,
-        chip: card.chip,
-        icon: card.icon,
-        accentClass: card.accentClass,
-      }))
-      .filter((card) => card.matches > 0);
-  }, [filteredDeals, t]);
-  const styleNavigationHrefs = useMemo(() => {
-    return new Map(
-      travelStyles.map((style) => [
-        style.key,
-        style.chip
-          ? buildDealsSearchHref(
-              appliedQuickChips.has(style.chip)
-                ? resetQuickChip(style.chip, appliedFilters)
-                : applyQuickChip(style.chip, appliedFilters),
-              getLocalizedDealsSearchPath(locale),
-            )
-          : getLocalizedDealsSearchPath(locale),
-      ]),
-    );
-  }, [appliedFilters, appliedQuickChips, locale, travelStyles]);
-
-  useEffect(() => {
-    if (mode !== "landing") {
-      return;
-    }
-
-    for (const href of styleNavigationHrefs.values()) {
-      router.prefetch(href);
-    }
-  }, [mode, router, styleNavigationHrefs]);
-
-  const styleWindowSize = styleVisibleCount;
-  const stylePageCount = Math.max(
-    1,
-    Math.ceil(travelStyles.length / styleWindowSize),
-  );
-  const clampedStyleStartIndex = Math.min(
-    styleStartIndex,
-    Math.max(0, travelStyles.length - styleWindowSize),
-  );
-  const styleCurrentPage = Math.min(
-    stylePageCount,
-    Math.floor(clampedStyleStartIndex / styleWindowSize) + 1,
-  );
-  const canMoveStylePrev = clampedStyleStartIndex > 0;
-  const canMoveStyleNext =
-    clampedStyleStartIndex + styleWindowSize < travelStyles.length;
-
-  useEffect(() => {
-    setStyleStartIndex((current) =>
-      Math.min(current, Math.max(0, travelStyles.length - styleWindowSize)),
-    );
-  }, [styleWindowSize, travelStyles.length]);
 
   const openOpportunityModal = useCallback(
     (deals: CampaignPreviewDeal[], dealId: string) => {
@@ -1281,25 +1013,6 @@ export function PublicDealsExplorer({
     setSelectedOpportunityDealId(null);
     setSelectedOpportunityDeals([]);
   }, []);
-
-  const quickChipAvailability = useMemo(() => {
-    if (mode === "results" && serverSearchResult) {
-      return new Map(
-        SEARCH_QUICK_CHIPS.map((chip) => [
-          chip,
-          serverSearchResult.facets.quickChips[
-            chip as keyof typeof serverSearchResult.facets.quickChips
-          ] ?? false,
-        ]),
-      );
-    }
-    return new Map(
-      SEARCH_QUICK_CHIPS.map((chip) => [
-        chip,
-        isQuickChipAvailable(chip, draftFilters, sourceDeals, now),
-      ]),
-    );
-  }, [draftFilters, mode, now, serverSearchResult, sourceDeals]);
 
   const renderMobileResultsControls = () => (
     <>
@@ -1913,58 +1626,21 @@ export function PublicDealsExplorer({
     <div
       className={`deals-explorer${mode === "results" || mode === "city" ? " deals-explorer--results" : ""}`}
     >
-      {mode !== "landing" ? (
-        <Suspense fallback={null}>
-          <PublicDealsUrlState onChange={applyUrlQuery} />
-        </Suspense>
-      ) : null}
+      <Suspense fallback={null}>
+        <PublicDealsUrlState onChange={applyUrlQuery} />
+      </Suspense>
       <LocalizedPageMetadata
         description={
           mode === "city"
             ? getDestinationHeroDescription(rawCityHeroTitle, t, cityHeroTitle)
-            : mode === "results"
-              ? t("deals.results.defaultDesc")
-              : t("deals.landingLede")
+            : t("deals.results.defaultDesc")
         }
         title={
           mode === "city"
             ? t("deals.cityMetaTitle", { city: cityHeroTitle })
-            : mode === "results"
-              ? t("deals.searchResults")
-              : `${t("deals.landingTitleLine1")} ${t("deals.landingTitleLine2")}`
+            : t("deals.searchResults")
         }
       />
-      {mode === "landing" ? (
-        <section className="deals-explorer__hero">
-          <div className="deals-explorer__intro">
-            <p className="deals-explorer__hero-kicker">
-              {t("deals.landingKicker")}
-            </p>
-            <h1>
-              {t("deals.landingTitleLine1")}
-              <br />
-              <span className="deals-explorer__headline-accent">
-                {t("deals.landingTitleLine2")}
-              </span>
-            </h1>
-            <p className="deals-explorer__lede">{t("deals.landingLede")}</p>
-            <div className="deals-explorer__hero-actions">
-              <Link
-                className="deals-explorer__cta deals-explorer__cta--hero"
-                href={searchHref}
-              >
-                {t("deals.exploreLiveDeals")}
-              </Link>
-              <a
-                className="deals-explorer__secondary-link deals-explorer__secondary-link--hero"
-                href="#deal-alerts"
-              >
-                {t("deals.getDailyAlerts")}
-              </a>
-            </div>
-          </div>
-        </section>
-      ) : null}
 
       {mode === "results" ? (
         <nav
@@ -1977,174 +1653,7 @@ export function PublicDealsExplorer({
         </nav>
       ) : null}
 
-      {mode === "landing" ? (
-        <section className="deals-explorer__filters">
-          <div className="deals-explorer__toolbar">
-            <div className="deals-control deals-control--static deals-control--origin-fixed">
-              <span>{t("common.from")}</span>
-              <strong>{t("common.luxembourg")}</strong>
-            </div>
-
-            <DealsSelect
-              className="is-destination-selected"
-              label={t("common.to")}
-              mobileDestinationSheet
-              onChange={(nextValue) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  destinationFilter: nextValue,
-                }))
-              }
-              options={destinationOptions}
-              popularOptionValues={popularDestinationValues}
-              value={draftFilters.destinationFilter}
-            />
-
-            <DealsDatePicker
-              dateFrom={draftFilters.dateFrom}
-              dateTo={draftFilters.dateTo}
-              label={t("common.when")}
-              onChange={(selection) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  ...selection,
-                }))
-              }
-              presetOptions={resultsWhenOptions}
-              value={draftFilters.whenFilter}
-            />
-
-            <DealsSelect
-              label={t("common.tripType")}
-              onChange={(nextValue) =>
-                setDraftFilters((current) => ({
-                  ...current,
-                  tripFilter: nextValue as TripFilter,
-                }))
-              }
-              options={resultsTripOptions}
-              value={draftFilters.tripFilter}
-            />
-
-            <PublicDealsPriceRange
-              bounds={priceBounds}
-              label={t("common.priceRange")}
-              legacyMaximum={legacyPriceMaximum}
-              onChange={updatePriceRange}
-              priceMax={draftFilters.priceMax}
-              priceMin={draftFilters.priceMin}
-              prices={priceHistogramValues}
-            />
-
-            <label
-              className={`deals-toggle${!directOnlyOptionAvailable && !draftFilters.directOnly ? " is-disabled" : ""}`}
-            >
-              <input
-                checked={draftFilters.directOnly}
-                disabled={
-                  !directOnlyOptionAvailable && !draftFilters.directOnly
-                }
-                onChange={(event) =>
-                  setDraftFilters((current) => ({
-                    ...current,
-                    directOnly: event.target.checked,
-                  }))
-                }
-                type="checkbox"
-              />
-              <span>{t("common.directOnly")}</span>
-            </label>
-
-            <Link className="deals-explorer__cta" href={searchHref}>
-              {t("common.viewDeals")}
-            </Link>
-          </div>
-
-          <div className="deals-explorer__chips">
-            {visibleSearchQuickChips.map((chip) => (
-              <button
-                aria-pressed={draftQuickChips.has(chip)}
-                className={`deals-explorer__chip${draftQuickChips.has(chip) ? " is-active" : ""}${!quickChipAvailability.get(chip) ? " is-disabled" : ""}`}
-                disabled={!quickChipAvailability.get(chip)}
-                key={chip}
-                onClick={() => {
-                  if (!quickChipAvailability.get(chip)) {
-                    return;
-                  }
-                  setDraftFilters((current) =>
-                    draftQuickChips.has(chip)
-                      ? resetQuickChip(chip, current)
-                      : applyQuickChip(chip, current),
-                  );
-                }}
-                type="button"
-              >
-                {getChipTitle(chip, t)}
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {mode === "landing" ? (
-        <section
-          className="deals-explorer__signals deals-explorer__signals--below-search"
-          aria-label={t("deals.a11y.liveDealSignals")}
-        >
-          <div>
-            <span className="deals-explorer__signal-icon" aria-hidden="true">
-              <SignalIcon kind="destinations" />
-            </span>
-            <div className="deals-explorer__signal-copy">
-              <strong>
-                {destinationCount > 0
-                  ? t("deals.signals.destinationCount", {
-                      count: destinationCount,
-                    })
-                  : t("deals.signals.newDestinations")}
-              </strong>
-              <span>
-                {destinationCount > 0
-                  ? t("deals.signals.liveFromLuxembourg")
-                  : t("deals.signals.scannedFromLuxembourg")}
-              </span>
-            </div>
-          </div>
-          <div>
-            <span className="deals-explorer__signal-icon" aria-hidden="true">
-              <SignalIcon kind="checked" />
-            </span>
-            <div className="deals-explorer__signal-copy">
-              <strong>
-                {data.updatedAt
-                  ? t("deals.signals.latestScan")
-                  : t("deals.signals.fareBoard")}
-              </strong>
-              <span>
-                {data.updatedAt
-                  ? formatVerifiedAge(data.updatedAt, t)
-                  : t("deals.updatedAsDealsLand")}
-              </span>
-            </div>
-          </div>
-          <div>
-            <span
-              className="deals-explorer__signal-icon deals-explorer__signal-icon--accent"
-              aria-hidden="true"
-            >
-              <SignalIcon kind="discount" />
-            </span>
-            <div className="deals-explorer__signal-copy">
-              <strong>
-                {maxDiscount !== null
-                  ? t("deals.signals.largestDrop", { pct: maxDiscount })
-                  : t("deals.signals.priceContext")}
-              </strong>
-              <span>{t("deals.signals.historyBasis")}</span>
-            </div>
-          </div>
-        </section>
-      ) : mode === "city" ? (
+      {mode === "city" ? (
         <section className="deals-city-page">
           <div className="deals-city-page__content">
             <section className="deals-city-page__hero">
@@ -2329,11 +1838,6 @@ export function PublicDealsExplorer({
                       <div className="deals-search-expanded__results">
                         {paginatedResultDeals.map((deal) => (
                           <SearchResultCard
-                            combinationsCount={
-                              destinationCounts.get(
-                                getDestinationCountKey(deal),
-                              ) ?? 1
-                            }
                             key={`results-${selectedSearchGroup.key}-${deal.id}`}
                             deal={deal}
                             showMobileAirlineName
@@ -2438,11 +1942,6 @@ export function PublicDealsExplorer({
                     <div className="deals-search-expanded__results">
                       {paginatedResultDeals.map((deal) => (
                         <SearchResultCard
-                          combinationsCount={
-                            destinationCounts.get(
-                              getDestinationCountKey(deal),
-                            ) ?? 1
-                          }
                           key={`results-${selectedSearchGroup.key}-${deal.id}`}
                           deal={deal}
                           showCityLabel
@@ -2469,11 +1968,6 @@ export function PublicDealsExplorer({
                     <div className="deals-search-expanded__results">
                       {paginatedResultDeals.map((deal) => (
                         <SearchResultCard
-                          combinationsCount={
-                            destinationCounts.get(
-                              getDestinationCountKey(deal),
-                            ) ?? 1
-                          }
                           key={`results-all-${deal.id}`}
                           deal={deal}
                           showCityLabel
@@ -2501,226 +1995,6 @@ export function PublicDealsExplorer({
           </section>
         </div>
       )}
-
-      {mode === "landing" ? (
-        <section className="deals-explorer__featured">
-          <h2 className="sr-only">{t("deals.results.defaultTitle")}</h2>
-
-          {opportunityDeals.length === 0 ? (
-            <div className="deals-explorer__empty deals-explorer__empty--landing">
-              <span className="deals-explorer__empty-icon" aria-hidden="true">
-                <SignalIcon kind="destinations" />
-              </span>
-              <h3>{t("deals.boardRefreshingTitle")}</h3>
-              <p>{t("deals.boardRefreshingDesc")}</p>
-              <div className="deals-explorer__empty-actions">
-                <a className="deals-explorer__cta" href="#deal-alerts">
-                  {t("deals.getNotifiedFirst")}
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="deals-explorer__opportunity-stage">
-              {featuredPageCount > 1 ? (
-                <div
-                  className="deals-explorer__opportunity-hero-nav"
-                  aria-label={t("deals.a11y.featuredDestinations")}
-                >
-                  <span className="deals-explorer__carousel-page">
-                    {featuredCurrentPage}/{featuredPageCount}
-                  </span>
-                  <button
-                    aria-label={t("deals.a11y.previousFeatured")}
-                    className="deals-explorer__carousel-button deals-explorer__carousel-button--hero"
-                    disabled={!canMoveFeaturedPrev}
-                    onClick={() =>
-                      setFeaturedStartIndex((current) =>
-                        Math.max(0, current - featuredWindowSize),
-                      )
-                    }
-                    type="button"
-                  >
-                    <CarouselChevronIcon direction="previous" />
-                  </button>
-                  <button
-                    aria-label={t("deals.a11y.nextFeatured")}
-                    className="deals-explorer__carousel-button deals-explorer__carousel-button--hero"
-                    disabled={!canMoveFeaturedNext}
-                    onClick={() =>
-                      setFeaturedStartIndex((current) =>
-                        Math.min(
-                          Math.max(0, featuredNow.length - featuredWindowSize),
-                          current + featuredWindowSize,
-                        ),
-                      )
-                    }
-                    type="button"
-                  >
-                    <CarouselChevronIcon direction="next" />
-                  </button>
-                </div>
-              ) : null}
-              <div
-                className="deals-explorer__opportunity-viewport deals-explorer__opportunity-viewport--hero"
-                style={
-                  {
-                    "--opportunity-visible": String(featuredWindowSize),
-                  } as CSSProperties
-                }
-              >
-                <div
-                  className="deals-explorer__opportunity-track deals-explorer__opportunity-track--hero"
-                  style={{
-                    transform: `translateX(-${clampedFeaturedStartIndex * 100}%)`,
-                  }}
-                >
-                  {featuredNow.map((deal) => (
-                    <FeaturedOpportunityCard
-                      combinationsCount={
-                        destinationCounts.get(getDestinationCountKey(deal)) ?? 1
-                      }
-                      destinationPhotoUrls={destinationPhotoUrls}
-                      key={`featured-${deal.id}`}
-                      deal={deal}
-                      onOpen={() => openOpportunityModal(featuredNow, deal.id)}
-                      variant="hero"
-                    />
-                  ))}
-                </div>
-              </div>
-              {featuredNow.length > 1 ? (
-                <div
-                  className="deals-explorer__carousel-dots"
-                  aria-label={t("deals.a11y.featuredSlides")}
-                >
-                  {featuredNow.map((deal, index) => (
-                    <button
-                      aria-current={
-                        index === clampedFeaturedStartIndex ? "true" : undefined
-                      }
-                      aria-label={t("deals.a11y.showFeatured", {
-                        number: index + 1,
-                      })}
-                      className={`deals-explorer__carousel-dot${
-                        index === clampedFeaturedStartIndex ? " is-active" : ""
-                      }`}
-                      key={`featured-dot-${deal.id}`}
-                      onClick={() => setFeaturedStartIndex(index)}
-                      type="button"
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          )}
-        </section>
-      ) : null}
-
-      {mode === "landing" && travelStyles.length > 0 ? (
-        <section className="deals-explorer__styles">
-          <div className="deals-explorer__section-head">
-            <div>
-              <h2>{t("deals.travelStylesTitle")}</h2>
-              <p>{t("deals.travelStylesDesc")}</p>
-            </div>
-            {stylePageCount > 1 ? (
-              <div className="deals-explorer__carousel-nav">
-                <span className="deals-explorer__carousel-page">
-                  {styleCurrentPage}/{stylePageCount}
-                </span>
-                <button
-                  aria-label={t("deals.a11y.previousTravelStyles")}
-                  className="deals-explorer__carousel-button"
-                  disabled={!canMoveStylePrev}
-                  onClick={() =>
-                    setStyleStartIndex((current) =>
-                      Math.max(0, current - styleWindowSize),
-                    )
-                  }
-                  type="button"
-                >
-                  <CarouselChevronIcon direction="previous" />
-                </button>
-                <button
-                  aria-label={t("deals.a11y.nextTravelStyles")}
-                  className="deals-explorer__carousel-button"
-                  disabled={!canMoveStyleNext}
-                  onClick={() =>
-                    setStyleStartIndex((current) =>
-                      Math.min(
-                        Math.max(0, travelStyles.length - styleWindowSize),
-                        current + styleWindowSize,
-                      ),
-                    )
-                  }
-                  type="button"
-                >
-                  <CarouselChevronIcon direction="next" />
-                </button>
-              </div>
-            ) : null}
-          </div>
-
-          <div
-            className="deals-explorer__style-viewport"
-            style={
-              {
-                "--style-visible": String(styleWindowSize),
-              } as CSSProperties
-            }
-          >
-            <div
-              className="deals-explorer__style-track"
-              style={{
-                transform: `translateX(calc((((100% - (var(--style-gap) * (var(--style-visible) - 1))) / var(--style-visible)) + var(--style-gap)) * -${clampedStyleStartIndex}))`,
-              }}
-            >
-              {travelStyles.map((style) => (
-                <Link
-                  className={`deals-style-card${style.chip && appliedQuickChips.has(style.chip) ? " is-active" : ""}`}
-                  href={
-                    styleNavigationHrefs.get(style.key) ??
-                    getLocalizedDealsSearchPath(locale)
-                  }
-                  key={style.key}
-                >
-                  <div className="deals-style-card__media" aria-hidden="true">
-                    <LandmarkPhoto
-                      alt={t("deals.a11y.styleBackground", {
-                        style: style.label,
-                      })}
-                      destinationCity={style.imageCity}
-                      landmarkTitle={style.imageLandmarkTitle}
-                      photoSrc={getDestinationPhotoSrc(
-                        destinationPhotoUrls,
-                        style.imageCity,
-                      )}
-                    />
-                    <div className="deals-style-card__overlay" />
-                  </div>
-                  <div className="deals-style-card__content">
-                    <span
-                      className={`deals-style-card__icon ${style.accentClass}`}
-                      aria-hidden="true"
-                    >
-                      {style.icon}
-                    </span>
-                    <div className="deals-style-card__copy">
-                      <strong>{style.label}</strong>
-                      <p>{style.description}</p>
-                      <em>
-                        {style.fromPrice !== null
-                          ? `${t("common.from").toLowerCase()} ${formatCurrency(style.fromPrice)}`
-                          : t("deals.noLiveFareYet")}
-                      </em>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
 
       <section className="deals-explorer__newsletter" id="deal-alerts">
         <div className="deals-explorer__newsletter-float deals-explorer__newsletter-float--top-left">

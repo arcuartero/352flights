@@ -44,18 +44,6 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
-function formatTravelDate(value: string | null) {
-  if (!value) {
-    return "n/a";
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
 function formatTravelDateWithWeekday(value: string | null) {
   if (!value) {
     return "n/a";
@@ -601,6 +589,14 @@ function buildMonthlyLows(series: OpsPriceSeries, now: Date = new Date()) {
   return months;
 }
 
+const SORT_OPTIONS: SortOption[] = [
+  { value: "freshness", label: "Latest scan first" },
+  { value: "price-asc", label: "Lowest price first" },
+  { value: "price-desc", label: "Highest price first" },
+  { value: "nights-asc", label: "Fewest nights first" },
+  { value: "nights-desc", label: "Most nights first" },
+];
+
 export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
   const [searchValue, setSearchValue] = useState("");
   const [bucketFilter, setBucketFilter] = useState("all");
@@ -803,14 +799,6 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
     [data.series],
   );
 
-  const sortOptions: SortOption[] = [
-    { value: "freshness", label: "Latest scan first" },
-    { value: "price-asc", label: "Lowest price first" },
-    { value: "price-desc", label: "Highest price first" },
-    { value: "nights-asc", label: "Fewest nights first" },
-    { value: "nights-desc", label: "Most nights first" },
-  ];
-
   const activeSortSummary = useMemo(() => {
     if (sortBy.length === 0) {
       return "Latest scan first";
@@ -819,7 +807,7 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
     return sortBy
       .map(
         (value) =>
-          sortOptions.find((option) => option.value === value)?.label ?? value,
+          SORT_OPTIONS.find((option) => option.value === value)?.label ?? value,
       )
       .join(" + ");
   }, [sortBy]);
@@ -959,7 +947,7 @@ export function PriceIntelligenceBoard({ data }: PriceIntelligenceBoardProps) {
             <details className="price-sort-menu">
               <summary>{activeSortSummary}</summary>
               <div className="price-sort-menu__panel">
-                {sortOptions.map((option) => {
+                {SORT_OPTIONS.map((option) => {
                   const activeIndex = sortBy.indexOf(option.value);
                   return (
                     <label

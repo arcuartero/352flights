@@ -20,7 +20,7 @@ export type PublicDealsExplorerProps = {
   initialSearchResult?: PublicDealsSearchResult;
   initialSharedFareId?: string | null;
   initialSort?: DealSearchSort;
-  mode?: "landing" | "results" | "city";
+  mode: "results" | "city";
   lockedDestinationCity?: string;
   searchPathname?: string;
 };

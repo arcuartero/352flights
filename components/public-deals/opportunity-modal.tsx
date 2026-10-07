@@ -180,7 +180,6 @@ export function FeaturedOpportunityModal({
 
           <DealFlightCard
             className="deals-search-card deals-search-card--modal"
-            combinationsCount={combinationsCount}
             deal={deal}
             showBooking={false}
             showCityLabel={false}

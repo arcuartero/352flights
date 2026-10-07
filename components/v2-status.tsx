@@ -3,6 +3,7 @@ import { Heart } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { LanguageSelector } from "@/components/language-selector";
+import { BrandLogo } from "@/components/brand-logo";
 
 type V2StatusNote = {
   label: string;
@@ -36,7 +37,7 @@ export function V2Status({
     <div className="v2 v2-status">
       <header className="v2-topbar">
         <Link className="v2-topbar__brand" href="/" aria-label="352 Flights">
-          <img src="/v2-logo.png" alt="352 Flights" />
+          <BrandLogo priority />
         </Link>
         <div className="v2-topbar__actions">
           <LanguageSelector />

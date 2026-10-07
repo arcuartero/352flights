@@ -19,7 +19,6 @@ import {
   weekdayOptions,
   type BucketValue,
   type CustomAlertRuleValue,
-  type DeliveryModeValue,
   type MaxStopsPreferenceValue,
   type PreferencesBundle,
   type WeekdayValue,

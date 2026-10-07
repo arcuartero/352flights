@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { getSiteUrl } from "@/lib/env";
-import { getLocalizedHomePath, htmlLangTags, locales, type Locale } from "@/lib/locales";
+import { htmlLangTags, locales, type Locale } from "@/lib/locales";
 
 export type LegalPageKey = "privacy" | "cookies" | "terms";
 

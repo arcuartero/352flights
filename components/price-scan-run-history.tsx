@@ -616,6 +616,8 @@ export function PriceScanRunHistory({ error, runs }: Props) {
   const loadedPatternRunIds = useRef(new Set<string>());
   const expandedRunIds = useRef(new Set<string>());
   const runningPatternRunIds = useRef(new Set<string>());
+  // Polling starts once; it only needs to know whether the server render had any runs.
+  const startedWithoutRuns = useRef(runs.length === 0);
   const visibleRuns = liveRuns.slice(0, runLimit);
   const resumableRunId = liveRuns.find(
     (run) =>
@@ -643,7 +645,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
           setLiveRuns(payload.runs);
           setLiveError(null);
           setRunLimit((current) =>
-            runs.length === 0
+            startedWithoutRuns.current
               ? Math.min(10, Math.max(payload.runs.length, 1))
               : Math.min(current, Math.max(payload.runs.length, 1)),
           );

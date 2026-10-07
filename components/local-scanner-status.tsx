@@ -7,7 +7,6 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 
 import type {
-  LocalScannerBreakdownItem,
   LocalScannerLogLine,
   LocalScannerNoResultDiagnostic,
   LocalScannerRunTotals,

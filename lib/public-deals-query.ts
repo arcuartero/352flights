@@ -16,7 +16,6 @@ import {
   type DealSearchSort,
   type DepartureWeekdayFilter,
   type DurationFilter,
-  type ThemeFilter,
   type TripFilter,
   type WhenFilter,
 } from "@/lib/public-deals-search";

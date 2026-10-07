@@ -82,12 +82,6 @@ export function PublicDealCard({
     `${deal.tripNights} ${deal.tripNights === 1 ? t("deals.night") : t("deals.nights")}`,
     formatDepartureMonth(deal.departureDate, locale, t).toLowerCase(),
   ].join(" · ");
-  const moreDealsCount = Math.max(0, combinationsCount - 1);
-  const ctaLabel =
-    moreDealsCount > 0
-      ? t("deals.card.seeDealAndMore", { count: moreDealsCount })
-      : t("deals.card.seeDeal");
-
   return (
     <article className={`deals-card${compact ? " deals-card--compact" : ""}`}>
       <figure className="deals-card__media">
@@ -400,7 +394,6 @@ export function SearchCityGroupCard({
 
 export function DealFlightCard({
   deal,
-  combinationsCount,
   className,
   showCityLabel = true,
   showBooking = true,
@@ -418,7 +411,6 @@ export function DealFlightCard({
   layout = "default",
 }: {
   deal: CampaignPreviewDeal;
-  combinationsCount: number;
   className?: string;
   showCityLabel?: boolean;
   showBooking?: boolean;
@@ -913,20 +905,17 @@ export function DealFlightCard({
 
 export function SearchResultCard({
   deal,
-  combinationsCount,
   showCityLabel = false,
   showMobileAirlineName = false,
   showMobileCityLabel = true,
 }: {
   deal: CampaignPreviewDeal;
-  combinationsCount: number;
   showCityLabel?: boolean;
   showMobileAirlineName?: boolean;
   showMobileCityLabel?: boolean;
 }) {
   return (
     <DealFlightCard
-      combinationsCount={combinationsCount}
       deal={deal}
       shiftDurationLeft
       showCityLabel={showCityLabel}

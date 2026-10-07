@@ -53,19 +53,6 @@ const CLOSING = {
 const ORIGINS: Record<string, Record<CreatelloLanguage, string>> = {
   LUX: { es: "Luxemburgo", en: "Luxembourg", fr: "Luxembourg", de: "Luxemburg", pt: "Luxemburgo" },
 };
-const COUNTRY_DATA: Record<string, { code: string; flag: string; names: Record<CreatelloLanguage, string> }> = {
-  GB:{code:"GB",flag:"🇬🇧",names:{es:"Reino Unido",en:"United Kingdom",fr:"Royaume-Uni",de:"Vereinigtes Königreich",pt:"Reino Unido"}},
-  FR:{code:"FR",flag:"🇫🇷",names:{es:"Francia",en:"France",fr:"France",de:"Frankreich",pt:"França"}},
-  ES:{code:"ES",flag:"🇪🇸",names:{es:"España",en:"Spain",fr:"Espagne",de:"Spanien",pt:"Espanha"}},
-  IT:{code:"IT",flag:"🇮🇹",names:{es:"Italia",en:"Italy",fr:"Italie",de:"Italien",pt:"Itália"}},
-  PT:{code:"PT",flag:"🇵🇹",names:{es:"Portugal",en:"Portugal",fr:"Portugal",de:"Portugal",pt:"Portugal"}},
-  DE:{code:"DE",flag:"🇩🇪",names:{es:"Alemania",en:"Germany",fr:"Allemagne",de:"Deutschland",pt:"Alemanha"}},
-  AT:{code:"AT",flag:"🇦🇹",names:{es:"Austria",en:"Austria",fr:"Autriche",de:"Österreich",pt:"Áustria"}},
-  BE:{code:"BE",flag:"🇧🇪",names:{es:"Bélgica",en:"Belgium",fr:"Belgique",de:"Belgien",pt:"Bélgica"}},
-  NL:{code:"NL",flag:"🇳🇱",names:{es:"Países Bajos",en:"Netherlands",fr:"Pays-Bas",de:"Niederlande",pt:"Países Baixos"}},
-  IE:{code:"IE",flag:"🇮🇪",names:{es:"Irlanda",en:"Ireland",fr:"Irlande",de:"Irland",pt:"Irlanda"}},
-  CH:{code:"CH",flag:"🇨🇭",names:{es:"Suiza",en:"Switzerland",fr:"Suisse",de:"Schweiz",pt:"Suíça"}},
-};
 const AIRPORT_COUNTRY: Record<string,string> = {
   LHR:"GB",LGW:"GB",STN:"GB",LCY:"GB",EDI:"GB",MAN:"GB",CDG:"FR",ORY:"FR",NCE:"FR",MRS:"FR",TLS:"FR",BOD:"FR",BCN:"ES",MAD:"ES",PMI:"ES",AGP:"ES",ALC:"ES",SVQ:"ES",VLC:"ES",IBZ:"ES",FCO:"IT",CIA:"IT",MXP:"IT",LIN:"IT",BGY:"IT",NAP:"IT",VCE:"IT",LIS:"PT",OPO:"PT",FAO:"PT",BER:"DE",MUC:"DE",FRA:"DE",HAM:"DE",VIE:"AT",BRU:"BE",AMS:"NL",DUB:"IE",ZRH:"CH",GVA:"CH",
   HDF:"DE",GWT:"DE",BOJ:"BG",VAR:"BG",BVC:"CV",RAI:"CV",SID:"CV",VXE:"CV",PRG:"CZ",CGO:"CN",ZAD:"HR",BWK:"HR",DBV:"HR",CPH:"DK",HRG:"EG",RMF:"EG",LJU:"SI",TFS:"ES",LPA:"ES",XRY:"ES",LEI:"ES",BIO:"ES",FUE:"ES",GRO:"ES",ACE:"ES",MAH:"ES",SPC:"ES",JFK:"US",EWR:"US",HEL:"FI",RVN:"FI",FSC:"FR",CLY:"FR",AJA:"FR",BIA:"FR",BIQ:"FR",MPL:"FR",TLN:"FR",ATH:"GR",KGS:"GR",CFU:"GR",CHQ:"GR",HER:"GR",RHO:"GR",GPA:"GR",SKG:"GR",ZTH:"GR",BUD:"HU",RMI:"IT",PSR:"IT",BRI:"IT",BLQ:"IT",BZO:"IT",BDS:"IT",CAG:"IT",CTA:"IT",FLR:"IT",SUF:"IT",OLB:"IT",PMO:"IT",QSR:"IT",NRT:"JP",MLA:"MT",RAK:"MA",AGA:"MA",TIV:"ME",OSL:"NO",KRK:"PL",WAW:"PL",FNC:"PT",PXO:"PT",OTP:"RO",DSS:"SN",ARN:"SE",TUN:"TN",DJE:"TN",NBE:"TN",MIR:"TN",IST:"TR",AYT:"TR",ADB:"TR",DXB:"AE",DWC:"AE",AUH:"AE",

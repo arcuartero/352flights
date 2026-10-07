@@ -10,6 +10,7 @@ import {
   readCookieChoices, saveCookieChoices, openCookiePreferencesEvent, type CookieChoices,
   type CookieConfig, type CookieDecision,
 } from "@/lib/cookie-consent";
+import { BrandLogo } from "@/components/brand-logo";
 
 const policyLabels = {
   en: { cookies: "Cookie policy", privacy: "Privacy policy" },
@@ -89,7 +90,7 @@ export function CookieBanner() {
       {open && <div aria-hidden="true" className="cookie-ui__backdrop" />}
       {open ? (
         <section aria-label={preferences ? copy.preferencesTitle : copy.title} aria-modal="true" className={`cookie-ui__panel ${preferences ? "cookie-ui__panel--preferences" : ""}`} role="dialog">
-          <img alt="+352 Flights" className="cookie-ui__logo" height={497} src="/v2-logo.png" width={1633} />
+          <BrandLogo alt="+352 Flights" className="cookie-ui__logo" />
           <header className="cookie-ui__heading">
             <h2>{preferences ? copy.preferencesTitle : copy.title}</h2>
             {(preferences || config.showClose) && <button aria-label={copy.close} className="cookie-ui__close" onClick={() => {
