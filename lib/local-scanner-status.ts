@@ -838,11 +838,6 @@ export async function resolveScannerRoot() {
   return null;
 }
 
-async function readTotalRoutes(scannerRoot: string) {
-  const routes = await readRouteSeeds(scannerRoot);
-  return routes ? routes.length : null;
-}
-
 async function readRouteSeeds(scannerRoot: string) {
   try {
     const contents = await readFile(path.join(scannerRoot, "data", "lux-routes.json"), "utf-8");

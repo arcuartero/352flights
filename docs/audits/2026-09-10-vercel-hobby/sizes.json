@@ -1,0 +1,13 @@
+{
+  "before": {
+    "public": 23788,
+    ".next/server": 13580,
+    ".next/static": 2780
+  },
+  "after": {
+    "public": 2004,
+    ".next/server": 13080,
+    ".next/static": 2796
+  },
+  "unit": "KiB allocated by du -sk, immediately after build, before runtime ISR generation"
+}

@@ -96,12 +96,12 @@ The internal review board lives at:
 http://localhost:3000/ops
 ```
 
-If `OPS_BASIC_AUTH_USER` and `OPS_BASIC_AUTH_PASSWORD` are set, the route is protected with HTTP Basic Auth.
+`OPS_BASIC_AUTH_USER` and `OPS_BASIC_AUTH_PASSWORD` are required for Operations, including local development. Missing or incomplete credentials deny access. Middleware, API handlers, server pages and actions share the same authorization rule.
 
 The ops board now also includes:
 
 - subscriber preference summaries
-- a matched send queue for digest and flash campaigns
+- a matched send queue for daily, weekly and flash campaigns
 - a recent campaign history panel backed by Supabase logs
 - a manual social-content selection flow that sends neutral, signed offer packages to Creatello
 
@@ -162,6 +162,7 @@ an offer: any difference makes Creatello cancel that publication.
 
 - `digest` campaigns to subscribers whose saved profile matches reviewed digest deals
 - `flash` campaigns to subscribers whose saved profile matches reviewed flash deals
+- `weekly` best-of campaigns with up to six matching destinations from reviewed or sent offers from the last seven days, for subscribers who selected `weekly_best_of`
 
 Matching logic currently checks:
 
@@ -204,16 +205,28 @@ Behavior:
 
 For the cheap online setup, keep the web on Vercel and run the 11-hour scanner on a small VPS with local storage plus sync. See `docs/cheap-online-setup.md`.
 
+## Tests
+
+- `npm run typecheck`, `npm run lint` (fails on any warning) and `npm test` (unit and PGlite database tests).
+- `npm run test:e2e` runs the Playwright subscription flow against `next dev` on port 3100 with
+  Supabase and Resend replaced by `e2e/mock-backend.mjs`. It uses the installed Google Chrome,
+  builds into `.next-e2e`, and can run while `npm run dev` is up.
+- Scanner: `cd scanner && uv run python -m unittest discover -s tests`.
+
+`.github/workflows/ci.yml` runs all of the above on every push to `main` and every pull request.
+
 ## GitHub Actions
 
 `.github/workflows/scan-lux-deals.yml` can run the scanner manually.
 
-`.github/workflows/send-daily-digest.yml` can trigger the scheduled digest endpoint every 5 minutes, while `/ops` decides the actual Luxembourg local send time.
+`.github/workflows/scheduled-jobs.yml` is the single scheduler: every hour at minute 17 it calls the daily digest, weekly digest and ops-alert endpoints (each decides whether work is due), and at 07 and 19 UTC it also triggers the Creatello morning and evening deliveries. It works the same whether the app runs on Vercel or another host. A manual run can target one job and forces the digests. `/ops` controls each automation and their shared Luxembourg local send time.
 
 The schedule is:
 
-- every day at `08:00` Luxembourg time (`Europe/Luxembourg`)
-- implemented via two UTC schedules plus a local-time guard so daylight saving time is handled correctly
+- daily: once per local calendar day at the time selected in `/ops` (default `09:05`)
+- weekly: Monday at that same time, with catch-up attempts during the week
+- both use `Europe/Luxembourg` calendar guards, including daylight saving time
+- manual runs bypass the time/pause guard but never the daily/weekly duplicate guard
 
 Add these repository secrets before enabling it:
 
@@ -237,7 +250,11 @@ To make the digest cron actually run in GitHub:
    - `CRON_SECRET`
 4. Open the `Actions` tab and enable workflows if GitHub asks.
 5. Trigger `Scan Lux Flight Deals` manually only if you want to test GitHub Actions.
-6. Trigger `Send Daily Lux Digest` once after deployment to verify the cron endpoint.
+   The scanner authenticates to `/api/public-deals/revalidate` with
+   `PUBLIC_CACHE_REVALIDATION_SECRET` or, if unset, `CRON_SECRET`. The Mac/VPS
+   scanner `.env` needs one of them too; the Supabase service-role key is no
+   longer accepted by that endpoint.
+6. Trigger `Scheduled Jobs` manually once after deployment to verify the cron endpoints.
 7. After that, the digest schedule will keep running automatically.
 
 ## Next Steps
@@ -245,3 +262,7 @@ To make the digest cron actually run in GitHub:
 1. Add click tracking and booking-link instrumentation per route.
 2. Add deal deduping/expiry heuristics beyond the manual `expired` state.
 3. Tighten sender reputation with a verified domain and domain-level monitoring.
+
+## September 2026 improvements
+
+See [implementation and activation notes](docs/improvements-2026-09-26.md) for the weekly database migration, dependency verification, subscription actions and the new module layout.

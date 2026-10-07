@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeOpsPolling, refreshOpsPolling } from "@/lib/ops-polling-client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Database, FileText, RefreshCw } from "lucide-react";
 
@@ -123,6 +125,7 @@ function runSummary(run: DateScanRun) {
 }
 
 export function DateScanRunHistory({ error, runs }: Props) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [liveRuns, setLiveRuns] = useState(runs);
   const [liveError, setLiveError] = useState(error);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -130,12 +133,12 @@ export function DateScanRunHistory({ error, runs }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const refreshingRef = useRef(false);
 
-  async function refresh() {
-    if (refreshingRef.current || document.visibilityState === "hidden") return;
+  async function receiveStatus(response: globalThis.Response) {
+    if (refreshingRef.current || document.hidden || !navigator.onLine) return;
     refreshingRef.current = true;
     setRefreshing(true);
     try {
-      const response = await fetch("/api/ops/date-scan-runs", { cache: "no-store" });
+
       const payload = (await response.json()) as Response;
       if (!response.ok || !payload.ok) throw new Error(payload.ok ? "No se pudo actualizar." : payload.detail ?? payload.reason);
       setLiveRuns(payload.runs);
@@ -149,8 +152,7 @@ export function DateScanRunHistory({ error, runs }: Props) {
   }
 
   useEffect(() => {
-    const interval = window.setInterval(() => void refresh(), 4_000);
-    return () => window.clearInterval(interval);
+    return subscribeOpsPolling("/api/ops/date-scan-runs", receiveStatus, pollingRef.current);
   }, []);
 
   const aggregate = useMemo(() => ({
@@ -165,14 +167,14 @@ export function DateScanRunHistory({ error, runs }: Props) {
   }), [liveRuns]);
 
   return (
-    <section className="ops-panel ops-panel--wide price-scan-history date-scan-history">
+    <section ref={pollingRef} className="ops-panel ops-panel--wide price-scan-history date-scan-history">
       <div className="price-scan-history__header">
         <div>
           <p className="ops-panel__eyebrow">Historial persistente</p>
           <h2>Date Scanner analysis</h2>
           <p>Cada ejecución queda guardada desde el inicio, se actualiza en directo y conserva su resultado final.</p>
         </div>
-        <button className="ops-button ops-button--ghost" onClick={() => void refresh()} type="button">
+        <button className="ops-button ops-button--ghost" onClick={() => refreshOpsPolling()} type="button">
           <RefreshCw aria-hidden="true" className={refreshing ? "is-spinning" : undefined} size={15} />
           Actualizar
         </button>

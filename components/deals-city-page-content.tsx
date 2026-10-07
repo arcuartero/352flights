@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PublicDealsExplorer } from "@/components/public-deals-explorer";
+import { PublicDealsExplorer } from "@/components/public-deals/explorer";
 import routes from "@/data/lux-routes.json";
+import { dealsSeoCopy, getLocalizedDealsBreadcrumb } from "@/lib/deals-seo";
 import {
-  dealsSeoCopy,
-  getLocalizedDealsBreadcrumb,
-} from "@/lib/deals-seo";
-import { getDestinationContent, getDestinationTheme } from "@/lib/destination-content";
+  getDestinationContent,
+  getDestinationTheme,
+} from "@/lib/destination-content";
 import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { getDestinationCityFromSlug } from "@/lib/destination-routes";
-import { matchesDestinationSlug, toDestinationSlug } from "@/lib/destination-slugs";
+import {
+  matchesDestinationSlug,
+  toDestinationSlug,
+} from "@/lib/destination-slugs";
 import { getSiteUrl } from "@/lib/env";
 import { getAirportCountryCode } from "@/lib/airport-countries";
 import {
@@ -18,7 +21,8 @@ import {
   getLocalizedDestinationName,
 } from "@/lib/destination-localization";
 import { getLocalizedDestinationPath, type Locale } from "@/lib/locales";
-import { getPublicCityDealsPageData, type PublicDealsPageData } from "@/lib/ops";
+import { getPublicCityDealsPageData } from "@/lib/ops/public-data";
+import { type PublicDealsPageData } from "@/lib/ops/types";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import { disableDirectOnlyWhenOnlyConnectingFares } from "@/lib/public-deals-query";
 import {
@@ -31,7 +35,6 @@ type DealsCityPageContentProps = {
   params: Promise<{
     city: string;
   }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type InternalLinkGroup = {
@@ -136,7 +139,8 @@ function buildCityJsonLd(
         name: `${localizedCityName} Airport`,
         iataCode: deal.destinationAirport,
       },
-      departureTime: deal.outboundDepartureAt ?? deal.departureDate ?? undefined,
+      departureTime:
+        deal.outboundDepartureAt ?? deal.departureDate ?? undefined,
       arrivalTime: deal.outboundArrivalAt ?? undefined,
     },
     position: index + 1,
@@ -217,9 +221,12 @@ function buildInternalLinkGroups(
     matchesDestinationSlug(route.destination_city, citySlug),
   )?.destination_airport;
   const countryCode = getAirportCountryCode(cityCountryCode ?? "");
-  const countryName = getLocalizedCountryName(countryCode, locale) ?? content.country;
+  const countryName =
+    getLocalizedCountryName(countryCode, locale) ?? content.country;
   const countryLinks = destinations
-    .filter((item) => item.countryCode === countryCode && item.slug !== citySlug)
+    .filter(
+      (item) => item.countryCode === countryCode && item.slug !== citySlug,
+    )
     .slice(0, 8)
     .map((item) => ({
       href: getLocalizedDestinationPath(locale, item.slug),
@@ -246,7 +253,9 @@ function buildInternalLinkGroups(
     },
     {
       kind: "filters" as const,
-      title: copy.filtersGroup(getLocalizedDestinationName(content.titleLabel, locale)),
+      title: copy.filtersGroup(
+        getLocalizedDestinationName(content.titleLabel, locale),
+      ),
       links: [
         {
           href: `${getLocalizedDestinationPath(locale, citySlug)}?trip=weekend`,
@@ -265,7 +274,10 @@ function buildInternalLinkGroups(
   ].filter((group) => group.links.length > 0);
 }
 
-function filterCityDealsPageData(data: PublicDealsPageData, citySlug: string): PublicDealsPageData {
+function filterCityDealsPageData(
+  data: PublicDealsPageData,
+  citySlug: string,
+): PublicDealsPageData {
   const cityDeals = data.deals
     .filter((deal) => matchesDestinationSlug(deal.destinationCity, citySlug))
     .sort((left, right) => {
@@ -282,7 +294,9 @@ function filterCityDealsPageData(data: PublicDealsPageData, citySlug: string): P
     sections: data.sections
       .map((section) => ({
         ...section,
-        items: section.items.filter((deal) => matchesDestinationSlug(deal.destinationCity, citySlug)),
+        items: section.items.filter((deal) =>
+          matchesDestinationSlug(deal.destinationCity, citySlug),
+        ),
       }))
       .filter((section) => section.items.length > 0),
   };
@@ -301,10 +315,15 @@ function CityInternalLinks({
   const linkGroups = buildInternalLinkGroups(locale, cityName, citySlug);
 
   return (
-    <section className="deals-city-internal-links" aria-labelledby="city-internal-links-title">
+    <section
+      className="deals-city-internal-links"
+      aria-labelledby="city-internal-links-title"
+    >
       <div className="deals-city-internal-links__inner">
         <div>
-          <p className="deals-city-internal-links__kicker">{copy.internalKicker}</p>
+          <p className="deals-city-internal-links__kicker">
+            {copy.internalKicker}
+          </p>
           <h2 id="city-internal-links-title">{copy.internalTitle}</h2>
         </div>
         <div className="deals-city-internal-links__groups">
@@ -332,7 +351,6 @@ function CityInternalLinks({
 export async function DealsCityPageContent({
   locale,
   params,
-  searchParams,
 }: DealsCityPageContentProps) {
   const resolvedParams = await params;
   const citySlug = toDestinationSlug(decodeURIComponent(resolvedParams.city));
@@ -341,21 +359,16 @@ export async function DealsCityPageContent({
     notFound();
   }
 
-  const [destinationPhotoUrls, resolvedSearchParams, data] = await Promise.all([
+  const [destinationPhotoUrls, data] = await Promise.all([
     getDestinationPhotoUrlMap(),
-    searchParams,
     getPublicCityDealsPageData(citySlug),
   ]);
   const cityData = filterCityDealsPageData(data, citySlug);
   const cityName = cityData.deals[0]?.destinationCity ?? knownCityName;
   const jsonLd = buildCityJsonLd(locale, cityName, citySlug, cityData.deals);
-  const sharedFareParam = resolvedSearchParams.fare;
-  const initialSharedFareId = Array.isArray(sharedFareParam)
-    ? sharedFareParam[0] ?? null
-    : sharedFareParam ?? null;
   const initialFilters = disableDirectOnlyWhenOnlyConnectingFares(
     cityData.deals,
-    parseDealSearchFilters(resolvedSearchParams),
+    parseDealSearchFilters({}),
     new Date(),
   );
 
@@ -370,13 +383,16 @@ export async function DealsCityPageContent({
         destinationCatalog={DESTINATION_CATALOG}
         destinationPhotoUrls={destinationPhotoUrls}
         initialFilters={initialFilters}
-        initialSharedFareId={initialSharedFareId}
-        initialSort={parseDealSearchSort(resolvedSearchParams)}
+        initialSort={parseDealSearchSort({})}
         lockedDestinationCity={cityName}
         mode="city"
         searchPathname={getLocalizedDestinationPath(locale, citySlug)}
       />
-      <CityInternalLinks locale={locale} cityName={cityName} citySlug={citySlug} />
+      <CityInternalLinks
+        locale={locale}
+        cityName={cityName}
+        citySlug={citySlug}
+      />
     </main>
   );
 }

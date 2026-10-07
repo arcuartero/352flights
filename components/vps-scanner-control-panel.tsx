@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { subscribeOpsPolling, refreshOpsPolling } from "@/lib/ops-polling-client";
+
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import type { VpsScannerAgentStatus } from "@/lib/vps-scanner-agent";
 
@@ -38,22 +40,21 @@ function isStatusError(status: StatusResponse | null): status is Extract<StatusR
 }
 
 export function VpsScannerControlPanel() {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function loadStatus() {
-    const response = await fetch("/api/ops/vps-scanner/status", { cache: "no-store" });
-    const payload = (await response.json()) as StatusResponse;
-    setStatus(payload);
+    refreshOpsPolling();
   }
 
   useEffect(() => {
     let mounted = true;
 
-    async function poll() {
+    async function poll(response: Response) {
       try {
-        const response = await fetch("/api/ops/vps-scanner/status", { cache: "no-store" });
+
         const payload = (await response.json()) as StatusResponse;
         if (mounted) setStatus(payload);
       } catch {
@@ -63,11 +64,10 @@ export function VpsScannerControlPanel() {
       }
     }
 
-    void poll();
-    const interval = window.setInterval(poll, 10_000);
+    const unsubscribe = subscribeOpsPolling("/api/ops/vps-scanner/status", poll, pollingRef.current);
     return () => {
       mounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, []);
 
@@ -96,7 +96,7 @@ export function VpsScannerControlPanel() {
   }
 
   return (
-    <section className="ops-panel ops-panel--wide vps-scanner-panel">
+    <section ref={(node) => { pollingRef.current = node; }} className="ops-panel ops-panel--wide vps-scanner-panel">
       <div className="ops-panel__header">
         <div>
           <p className="ops-panel__eyebrow">VPS Scanner</p>

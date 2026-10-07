@@ -1,3 +1,4 @@
+import { ensureOpsAuthorized } from "@/lib/ops-auth";
 import { NextResponse } from "next/server";
 
 import {
@@ -8,52 +9,18 @@ import { toDestinationSlug } from "@/lib/destination-slugs";
 
 export const dynamic = "force-dynamic";
 
-function unauthorizedResponse() {
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
-    },
-  });
-}
-
-function isAuthorized(request: Request) {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (!expectedUser || !expectedPassword) {
-    return true;
-  }
-
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Basic ")) {
-    return false;
-  }
-
-  try {
-    const decoded = Buffer.from(
-      authorization.slice("Basic ".length),
-      "base64",
-    ).toString("utf8");
-    const separatorIndex = decoded.indexOf(":");
-    const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-    return user === expectedUser && password === expectedPassword;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return unauthorizedResponse();
-  }
+  const unauthorized = ensureOpsAuthorized(request);
+  if (unauthorized) return unauthorized;
 
   try {
     const formData = await request.formData();
-    const destinationCity = String(formData.get("destinationCity") ?? "").trim();
-    const destinationSlug = String(formData.get("destinationSlug") ?? "").trim();
+    const destinationCity = String(
+      formData.get("destinationCity") ?? "",
+    ).trim();
+    const destinationSlug = String(
+      formData.get("destinationSlug") ?? "",
+    ).trim();
     const file = formData.get("photo");
     const slug = destinationSlug || toDestinationSlug(destinationCity);
 
@@ -95,9 +62,8 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!isAuthorized(request)) {
-    return unauthorizedResponse();
-  }
+  const unauthorized = ensureOpsAuthorized(request);
+  if (unauthorized) return unauthorized;
 
   try {
     const { searchParams } = new URL(request.url);

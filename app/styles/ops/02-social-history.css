@@ -1,0 +1,756 @@
+
+.social-content-selected-list__actions {
+  display: flex;
+  gap: 0.28rem;
+}
+
+.tiktok-json-generator .social-content-selected-list__actions button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tiktok-json-generator .social-content-selected-list__actions button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  color: var(--text-strong);
+}
+
+.tiktok-json-generator .social-content-selected-list__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.social-content-carousel {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-strong) 58%, transparent);
+}
+
+.social-content-carousel__heading,
+.social-content-carousel__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.social-content-carousel__heading > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.social-content-carousel__heading > strong,
+.social-content-carousel__heading > span {
+  color: var(--text-strong);
+}
+
+.social-content-carousel__heading > span {
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.social-content-carousel__stage {
+  display: grid;
+  margin-top: 0.85rem;
+  place-items: center;
+}
+
+.social-content-carousel__slide {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: min(100%, 17rem);
+  aspect-ratio: 9 / 16;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(79, 164, 255, 0.74), transparent 28%),
+    radial-gradient(circle at 20% 75%, rgba(255, 93, 125, 0.48), transparent 34%),
+    linear-gradient(155deg, #07192f 0%, #12386b 48%, #091325 100%);
+  color: #fff;
+  box-shadow: 0 18px 40px rgba(0, 7, 20, 0.34);
+}
+
+.social-content-carousel__slide::before,
+.social-content-carousel__slide::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 50%;
+}
+
+.social-content-carousel__slide::before {
+  top: 22%;
+  right: -32%;
+  width: 14rem;
+  height: 14rem;
+}
+
+.social-content-carousel__slide::after {
+  right: -4rem;
+  bottom: -3rem;
+  width: 11rem;
+  height: 11rem;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.social-content-carousel__slide--travel-offer-glass {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.3), transparent 22%),
+    linear-gradient(150deg, #083344, #155e75 48%, #0f172a);
+}
+
+.social-content-carousel__slide--travel-offer-dark,
+.social-content-carousel__slide--flight-deals-352 {
+  background:
+    radial-gradient(circle at 78% 28%, rgba(217, 70, 239, 0.38), transparent 25%),
+    linear-gradient(150deg, #020617, #172554 58%, #09090b);
+}
+
+.social-content-carousel__slide--cheap-flights-tiktok {
+  background:
+    radial-gradient(circle at 70% 20%, rgba(250, 204, 21, 0.42), transparent 26%),
+    linear-gradient(155deg, #172554, #2563eb 52%, #0f172a);
+}
+
+.social-content-carousel__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.34rem;
+  letter-spacing: 0.08em;
+}
+
+.social-content-carousel__brand span {
+  padding: 0.28rem 0.38rem;
+  border-radius: 5px;
+  background: #fff;
+  color: #0b4ea2;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.social-content-carousel__brand strong {
+  font-size: 0.72rem;
+}
+
+.social-content-carousel__copy {
+  display: grid;
+  gap: 0.65rem;
+  margin: auto 0;
+}
+
+.social-content-carousel__copy small {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.social-content-carousel__copy h3 {
+  margin: 0;
+  font-size: clamp(2.35rem, 5vw, 3.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+}
+
+.social-content-carousel__copy p {
+  max-width: 15rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.social-content-carousel__price {
+  display: grid;
+  width: max-content;
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9px;
+  background: rgba(2, 6, 23, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.social-content-carousel__price span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.social-content-carousel__price strong {
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.social-content-carousel__cta {
+  align-self: flex-start;
+  padding: 0.55rem 0.76rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f2f5c;
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.social-content-carousel__page {
+  position: absolute;
+  right: 1rem;
+  bottom: 1.12rem;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.social-content-carousel__controls {
+  justify-content: center;
+  margin-top: 0.8rem;
+}
+
+.tiktok-json-generator .social-content-carousel__controls > button {
+  display: grid;
+  width: 2.25rem;
+  max-width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel-strong);
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.tiktok-json-generator .social-content-carousel__controls > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.social-content-carousel__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
+  max-width: 12rem;
+  overflow-x: auto;
+}
+
+.tiktok-json-generator .social-content-carousel__dots button {
+  width: 0.48rem;
+  min-width: 0.48rem;
+  max-width: 0.48rem;
+  height: 0.48rem;
+  min-height: 0.48rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line-strong);
+  cursor: pointer;
+}
+
+.tiktok-json-generator .social-content-carousel__dots button.is-active {
+  background: var(--accent-strong);
+}
+
+.social-content-json-details {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.social-content-json-details > summary {
+  color: var(--text-strong);
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.social-content-json-actions {
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+.tiktok-json-preview {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(115px, 1fr));
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-bottom: 0.3rem;
+}
+
+.tiktok-json-preview article {
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--panel-strong) 72%, transparent);
+}
+
+.tiktok-json-preview article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.tiktok-json-preview article span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.tiktok-json-preview article p {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.tiktok-json-preview--travel-offers article small {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--text);
+  font-size: 0.74rem;
+}
+
+.tiktok-json-message {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+}
+
+.tiktok-json-message--warning {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+}
+
+.tiktok-json-message--error {
+  border-color: color-mix(in srgb, #ef4444 45%, var(--line));
+  background: color-mix(in srgb, #ef4444 8%, var(--panel));
+}
+
+.tiktok-json-message--success {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
+  background: color-mix(in srgb, var(--success) 8%, var(--panel));
+}
+
+.tiktok-json-message ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.tiktok-json-editor {
+  display: block;
+  margin-top: 0.8rem;
+}
+
+.tiktok-json-editor textarea {
+  display: block;
+  width: 100%;
+  min-height: 34rem;
+  resize: vertical;
+  padding: 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, #020817 86%, var(--panel));
+  color: #dbeafe;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.tiktok-json-skeleton {
+  display: grid;
+  gap: 0.7rem;
+  min-height: 12rem;
+}
+
+.tiktok-json-skeleton span {
+  display: block;
+  height: 3rem;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--panel-strong), var(--line), var(--panel-strong));
+  background-size: 200% 100%;
+  animation: tiktok-json-shimmer 1.2s linear infinite;
+}
+
+.tiktok-json-skeleton span:nth-child(2) { height: 6rem; }
+
+.is-spinning { animation: tiktok-json-spin 0.8s linear infinite; }
+
+@keyframes tiktok-json-spin { to { transform: rotate(360deg); } }
+@keyframes tiktok-json-shimmer { to { background-position: -200% 0; } }
+
+@media (max-width: 900px) {
+  .tiktok-json-generator { grid-template-columns: 1fr; }
+  .tiktok-json-preview { grid-template-columns: repeat(5, minmax(145px, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .tiktok-json-panel { padding: 0.8rem; }
+  .tiktok-json-menu { grid-template-columns: 1fr; }
+  .tiktok-json-generator__config,
+  .tiktok-json-generator__output { padding: 0.85rem; }
+  .tiktok-json-generator__output-head { align-items: stretch; flex-direction: column; }
+  .tiktok-json-generator__output-head .ops-button { width: 100%; }
+  .tiktok-json-editor textarea { min-height: 28rem; font-size: 0.72rem; }
+  .social-content-candidate { grid-template-columns: auto minmax(0, 1fr); }
+  .social-content-candidate__price { grid-column: 2; justify-items: start; text-align: left; }
+  .social-content-candidate__verified { grid-column: 2; }
+  .social-content-selected-list article { grid-template-columns: auto minmax(0, 1fr); }
+  .social-content-selected-list__actions { grid-column: 1 / -1; justify-content: flex-end; }
+  .social-content-json-actions { display: grid; grid-template-columns: 1fr; }
+}
+
+.vps-scanner-panel {
+  margin-bottom: 1rem;
+}
+
+.vps-scanner-panel__facts {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 1rem 0 0;
+}
+
+.vps-scanner-panel__facts div {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  padding: 0.8rem;
+}
+
+.vps-scanner-panel__facts dt {
+  color: var(--muted-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.vps-scanner-panel__facts dd {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 0.35rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.vps-scanner-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.vps-scanner-panel__logs {
+  margin-top: 1rem;
+}
+
+.vps-scanner-panel__logs summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.vps-scanner-panel__logs pre {
+  background: #08111f;
+  border-radius: 8px;
+  color: #dbeafe;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0.75rem 0 0;
+  max-height: 26rem;
+  overflow: auto;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
+
+.price-scan-history {
+  display: grid;
+  gap: 1rem;
+  width: min(calc(100% - 0.5rem), var(--max-width));
+  margin: 1rem auto 0;
+}
+
+.price-scan-history__header,
+.price-scan-history__section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.price-scan-history__header h2,
+.price-scan-history__section-head h3 {
+  margin: 0;
+  color: var(--text-strong);
+}
+
+.price-scan-history__header h2 {
+  margin-top: 0.18rem;
+  font-size: 1.8rem;
+}
+
+.price-scan-history__header p,
+.price-scan-history__section-head p,
+.price-scan-history__empty p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.price-scan-history__range {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 11rem;
+}
+
+.price-scan-history__range span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.price-scan-history__range select {
+  min-height: 2.7rem;
+  padding: 0 2.2rem 0 0.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-muted) 88%, transparent);
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.price-scan-history__empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.price-scan-history__empty strong {
+  color: var(--text-strong);
+}
+
+.price-scan-history__definitions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.2rem;
+  padding: 0.8rem 0;
+  border-block: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.price-scan-history__definitions strong {
+  color: var(--text-strong);
+}
+
+.price-scan-history__aggregate {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.price-scan-history__aggregate div,
+.price-scan-history__run-metrics div {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-muted) 90%, transparent);
+}
+
+.price-scan-history__aggregate span,
+.price-scan-history__run-metrics span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.price-scan-history__aggregate strong,
+.price-scan-history__run-metrics strong {
+  color: var(--text-strong);
+  font-size: 1.1rem;
+  line-height: 1.1;
+}
+
+.price-scan-history__aggregate .is-success strong {
+  color: var(--success);
+}
+
+.price-scan-history__aggregate .is-error strong {
+  color: var(--error);
+}
+
+.price-scan-history__aggregate .is-rate {
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  background: color-mix(in srgb, var(--accent-soft) 54%, var(--panel-muted) 46%);
+}
+
+.indicative-price-coverage {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1.15rem;
+  border: var(--border-soft);
+  border-radius: 1.3rem;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.indicative-price-coverage__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.indicative-price-coverage__header h2 {
+  margin: 0.18rem 0 0;
+  color: var(--text-strong);
+  font-size: 1.55rem;
+}
+
+.indicative-price-coverage__header p {
+  max-width: 48rem;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.indicative-price-coverage__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.indicative-price-coverage__metrics div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-muted) 90%, transparent);
+}
+
+.indicative-price-coverage__metrics span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.indicative-price-coverage__metrics strong {
+  color: var(--text-strong);
+  font-size: 1.1rem;
+}
+
+.indicative-price-coverage__state {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.9rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
+.indicative-price-coverage__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.indicative-price-coverage table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.indicative-price-coverage th,
+.indicative-price-coverage td {
+  padding: 0.7rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.indicative-price-coverage th {
+  color: var(--text-strong);
+  font-size: 0.67rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.indicative-price-coverage td strong,
+.indicative-price-coverage td small {
+  display: block;
+}
+
+.indicative-price-coverage td strong {
+  color: var(--text-strong);
+}
+
+@media (max-width: 760px) {
+  .indicative-price-coverage__header {
+    display: grid;
+  }
+
+  .indicative-price-coverage__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.date-scan-history__route-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.date-scan-history__route-list > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) minmax(120px, 1fr) minmax(120px, .8fr) minmax(220px, 1.4fr);
+  gap: 12px;
+  align-items: center;
+  padding: 11px 13px;
+  border: 1px solid var(--ops-border, rgba(148, 163, 184, .16));
+  border-radius: 8px;
+  color: var(--ops-muted, #aab3c2);
+  font-size: 12px;
+}

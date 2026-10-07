@@ -1,0 +1,284 @@
+[
+  {
+    "path": "/",
+    "status": 200,
+    "cache": "s-maxage=3600",
+    "cdn": null,
+    "nextCache": "HIT",
+    "bytes": 514674,
+    "canonical": "http://localhost:3000",
+    "hreflang": 7,
+    "jsonld": false,
+    "lang": "en-LU"
+  },
+  {
+    "path": "/fr",
+    "status": 200,
+    "cache": "s-maxage=3600",
+    "cdn": null,
+    "nextCache": "HIT",
+    "bytes": 516036,
+    "canonical": "http://localhost:3000/fr",
+    "hreflang": 7,
+    "jsonld": false,
+    "lang": "fr-LU"
+  },
+  {
+    "path": "/de",
+    "status": 200,
+    "cache": "s-maxage=3600",
+    "cdn": null,
+    "nextCache": "HIT",
+    "bytes": 515554,
+    "canonical": "http://localhost:3000/de",
+    "hreflang": 7,
+    "jsonld": false,
+    "lang": "de-LU"
+  },
+  {
+    "path": "/pt",
+    "status": 200,
+    "cache": "s-maxage=3600",
+    "cdn": null,
+    "nextCache": "HIT",
+    "bytes": 515681,
+    "canonical": "http://localhost:3000/pt",
+    "hreflang": 7,
+    "jsonld": false,
+    "lang": "pt-LU"
+  },
+  {
+    "path": "/it",
+    "status": 200,
+    "cache": "s-maxage=3600",
+    "cdn": null,
+    "nextCache": "HIT",
+    "bytes": 515568,
+    "canonical": "http://localhost:3000/it",
+    "hreflang": 7,
+    "jsonld": false,
+    "lang": "it-LU"
+  },
+  {
+    "path": "/es",
+    "status": 200,
+    "cache": "s-maxage=3600",
+    "cdn": null,
+    "nextCache": "HIT",
+    "bytes": 515777,
+    "canonical": "http://localhost:3000/es",
+    "hreflang": 7,
+    "jsonld": false,
+    "lang": "es-LU"
+  },
+  {
+    "path": "/deals/search",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "cdn": null,
+    "nextCache": "HIT",
+    "bytes": 239481,
+    "canonical": "http://localhost:3000/deals/search",
+    "hreflang": 0,
+    "jsonld": false,
+    "lang": "en-LU"
+  },
+  {
+    "path": "/deals/milan",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "cdn": null,
+    "nextCache": "MISS",
+    "bytes": 221226,
+    "canonical": "http://localhost:3000/deals/milan",
+    "hreflang": 7,
+    "jsonld": true,
+    "lang": "en-LU"
+  },
+  {
+    "path": "/fr/offres/milan",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "cdn": null,
+    "nextCache": "MISS",
+    "bytes": 222723,
+    "canonical": "http://localhost:3000/fr/offres/milan",
+    "hreflang": 7,
+    "jsonld": true,
+    "lang": "fr-LU"
+  },
+  {
+    "path": "/de/angebote/milan",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "cdn": null,
+    "nextCache": "MISS",
+    "bytes": 223130,
+    "canonical": "http://localhost:3000/de/angebote/milan",
+    "hreflang": 7,
+    "jsonld": true,
+    "lang": "de-LU"
+  },
+  {
+    "path": "/pt/ofertas/milan",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "cdn": null,
+    "nextCache": "MISS",
+    "bytes": 223097,
+    "canonical": "http://localhost:3000/pt/ofertas/milan",
+    "hreflang": 7,
+    "jsonld": true,
+    "lang": "pt-LU"
+  },
+  {
+    "path": "/it/offerte/milan",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "cdn": null,
+    "nextCache": "MISS",
+    "bytes": 222475,
+    "canonical": "http://localhost:3000/it/offerte/milan",
+    "hreflang": 7,
+    "jsonld": true,
+    "lang": "it-LU"
+  },
+  {
+    "path": "/es/ofertas/milan",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "cdn": null,
+    "nextCache": "MISS",
+    "bytes": 222688,
+    "canonical": "http://localhost:3000/es/ofertas/milan",
+    "hreflang": 7,
+    "jsonld": true,
+    "lang": "es-LU"
+  },
+  {
+    "path": "/sitemap.xml",
+    "status": 200,
+    "cache": "public, max-age=0, must-revalidate",
+    "cdn": "public, s-maxage=1800, stale-while-revalidate=1800",
+    "nextCache": "HIT",
+    "bytes": 597919,
+    "urls": 720,
+    "alternates": 5034
+  },
+  {
+    "path": "/ops",
+    "status": 401,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": null,
+    "nextCache": null,
+    "bytes": 24
+  },
+  {
+    "path": "/api/ops/status?resources=scanner-status",
+    "status": 401,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "nextCache": null,
+    "bytes": 24
+  },
+  {
+    "path": "/api/ops/pattern-discovery-status",
+    "status": 401,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "nextCache": null,
+    "bytes": 24
+  },
+  {
+    "path": "/preferences",
+    "status": 200,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "nextCache": null,
+    "bytes": 18895,
+    "hreflang": 0,
+    "jsonld": false,
+    "lang": "en-LU"
+  },
+  {
+    "path": "/confirm",
+    "status": 200,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "nextCache": null,
+    "bytes": 18251,
+    "hreflang": 0,
+    "jsonld": false,
+    "lang": "en-LU"
+  },
+  {
+    "path": "/unsubscribe",
+    "status": 200,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "nextCache": null,
+    "bytes": 18347,
+    "hreflang": 0,
+    "jsonld": false,
+    "lang": "en-LU"
+  },
+  {
+    "path": "/not-a-real-page",
+    "status": 404,
+    "cache": "s-maxage=3600",
+    "cdn": null,
+    "nextCache": "MISS",
+    "bytes": 7722,
+    "hreflang": 0,
+    "jsonld": false
+  },
+  {
+    "path": "/api/public-deals/search?direct=0&budget=80",
+    "status": 200,
+    "cache": "public, max-age=0, must-revalidate",
+    "cdn": "public, s-maxage=1800, stale-while-revalidate=1800",
+    "nextCache": null,
+    "bytes": 40413
+  },
+  {
+    "path": "/ops/scanner-live",
+    "authenticated": true,
+    "status": 200,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "bytes": 24152
+  },
+  {
+    "path": "/ops/dates-scanner",
+    "authenticated": true,
+    "status": 200,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "bytes": 149075
+  },
+  {
+    "path": "/api/ops/status?resources=scanner-status,pattern-discovery-status,pattern-discovery-live-status",
+    "authenticated": true,
+    "status": 200,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store",
+    "bytes": 71542,
+    "resources": {
+      "scanner-status": 200,
+      "pattern-discovery-status": 200,
+      "pattern-discovery-live-status": 200
+    }
+  },
+  {
+    "path": "/api/cron/digest",
+    "status": 401,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store"
+  },
+  {
+    "path": "/api/cron/ops-alerts",
+    "status": 401,
+    "cache": "private, no-store, max-age=0, must-revalidate",
+    "cdn": "no-store"
+  }
+]

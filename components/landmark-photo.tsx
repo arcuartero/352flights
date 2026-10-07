@@ -19,6 +19,7 @@ export function LandmarkPhoto({
   });
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- src is an API route that redirects to Unsplash/Wikipedia
     <img
       alt={alt}
       decoding="async"

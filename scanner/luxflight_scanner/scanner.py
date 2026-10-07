@@ -3241,11 +3241,30 @@ class LuxFlightScanner:
         except Exception as error:  # pragma: no cover - depends on live network behavior
             self._log_progress(f"Scan summary live sync failed: {error}")
 
+    def _renew_public_fares_between_patterns(self) -> None:
+        if not getattr(self.config, "public_fare_revalidation_enabled", False):
+            return
+        now = time.monotonic()
+        if now < getattr(self, "_next_public_renewal_poll", 0):
+            return
+        self._next_public_renewal_poll = now + 60
+        from .public_fare_renewal import PublicFareRenewal
+        try:
+            if not hasattr(self, "_public_fare_renewal"):
+                self._public_fare_renewal = PublicFareRenewal(self)
+            result = self._public_fare_renewal.run(limit=5)
+            if result["checked"] or str(result["cache"]).startswith("pending:"):
+                self._log_progress(f"Public fare renewal: {json.dumps(result)}")
+        except Exception as error:
+            # The hourly worker can retry; discovery must not stop on a DB outage.
+            self._log_progress(f"Public fare renewal pending: {type(error).__name__}")
+
     def scan(
         self,
         limit: int | None = None,
         destination_airports: set[str] | None = None,
     ) -> dict[str, Any]:
+        self._renew_public_fares_between_patterns()
         filtered_routes = [
             route
             for route in self.routes
@@ -3419,6 +3438,7 @@ class LuxFlightScanner:
                 service_month_rows = self.store.route_service_months(route_id, route.max_stops)
                 total_patterns = len(patterns)
                 for pattern_index, pattern in enumerate(patterns, start=1):
+                    self._renew_public_fares_between_patterns()
                     completed_rule_key = "|".join(
                         (
                             route.key,

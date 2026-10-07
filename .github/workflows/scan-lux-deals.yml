@@ -26,7 +26,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install scanner dependencies
-        run: uv sync
+        run: uv sync --frozen
 
       - name: Run scanner
         run: uv run luxflight-scan --json

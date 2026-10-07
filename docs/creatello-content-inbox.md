@@ -4,7 +4,7 @@
 
 ## Dos envíos automáticos diarios
 
-Vercel llama a `GET /api/cron/creatello-daily?slot=morning` todos los días a las `07:15 UTC` y a `GET /api/cron/creatello-daily?slot=evening` a las `19:15 UTC`. En Luxemburgo corresponden a las 09:15 y 21:15 durante el horario de verano, y a las 08:15 y 20:15 durante el horario de invierno. La ruta exige `Authorization: Bearer <CRON_SECRET>`; Vercel añade esta cabecera automáticamente cuando `CRON_SECRET` existe en producción. También admite `POST` con la misma autenticación para una ejecución operativa manual.
+El workflow `Scheduled Jobs` de GitHub Actions llama a `POST /api/cron/creatello-daily?slot=morning` en su ejecución de las `07:17 UTC` y a `POST /api/cron/creatello-daily?slot=evening` en la de las `19:17 UTC` (GitHub puede retrasar unos minutos las ejecuciones programadas; desde ese workflow también se puede lanzar cada franja a mano). En Luxemburgo corresponden a las 09:15 y 21:15 durante el horario de verano, y a las 08:15 y 20:15 durante el horario de invierno. La ruta exige `Authorization: Bearer <CRON_SECRET>`, que el workflow toma del secreto `CRON_SECRET` de GitHub. También admite `POST` con la misma autenticación para una ejecución operativa manual.
 
 En cada franja de cada fecha de Luxemburgo se prepara como máximo un paquete para cada plantilla:
 
@@ -76,7 +76,7 @@ Para cambiar el contenido de una identidad existente debe incrementarse `revisio
 - País: se añade cuando el aeropuerto existe en el catálogo local.
 - Horarios: se añaden si están presentes en el snapshot, en formato local `HH:mm`.
 - `checkedAt`: timestamp de la comprobación del snapshot.
-- `expiresAt`: 24 horas después de `checkedAt`, que es la política de frescura pública actual de 352 Flights.
+- `expiresAt`: 24 horas después de `checkedAt`, política propia de Creatello. La web usa una ventana de siete días y un [flujo de renovación independiente](public-fare-renewal.md).
 - `sourcePageUrl`: URL pública original de Skyscanner.
 
 Las duraciones no se calculan a partir de horarios locales de aeropuertos distintos. El scanner guarda `outbound_duration_minutes` y `return_duration_minutes` usando las duraciones proporcionadas por el proveedor; solo esos valores fiables habilitan el paquete automático `flight-deals-352`. `travel-offer` y `cheap-flights-tiktok` no los requieren.

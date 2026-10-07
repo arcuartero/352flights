@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { assertOpsAccess } from "@/lib/ops-access";
 import { revalidatePath } from "next/cache";
 
 import {
@@ -12,38 +12,16 @@ import {
 import { initialOpsActionState, type OpsActionState } from "@/lib/ops-shared";
 import {
   deleteSubscriber,
-  sendApprovedDealCampaign,
-  sendCampaignTestEmail,
   updateSubscriber,
   updateDealStatus,
+} from "@/lib/ops/mutations";
+import {
+  sendApprovedDealCampaign,
+  runScheduledDigest,
+  runScheduledWeeklyDigest,
+  sendCampaignTestEmail,
   updateDigestAutomation,
-} from "@/lib/ops";
-
-async function assertOpsAccess() {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (!expectedUser || !expectedPassword) {
-    return;
-  }
-
-  const headerStore = await headers();
-  const authorization = headerStore.get("authorization");
-
-  if (!authorization?.startsWith("Basic ")) {
-    throw new Error("Unauthorized ops action.");
-  }
-
-  const encoded = authorization.slice("Basic ".length);
-  const decoded = Buffer.from(encoded, "base64").toString("utf-8");
-  const separatorIndex = decoded.indexOf(":");
-  const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-  const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-  if (user !== expectedUser || password !== expectedPassword) {
-    throw new Error("Unauthorized ops action.");
-  }
-}
+} from "@/lib/ops/campaigns";
 
 export async function reviewDealAction(formData: FormData) {
   await assertOpsAccess();
@@ -98,7 +76,11 @@ export async function updateSubscriberAction(formData: FormData) {
   const emailConfirmed = formData.get("emailConfirmed") === "on";
   const onboardingCompleted = formData.get("onboardingCompleted") === "on";
 
-  if (status !== "pending" && status !== "active" && status !== "unsubscribed") {
+  if (
+    status !== "pending" &&
+    status !== "active" &&
+    status !== "unsubscribed"
+  ) {
     throw new Error("Invalid subscriber status.");
   }
 
@@ -131,16 +113,27 @@ export async function sendCampaignAction(
     await assertOpsAccess();
 
     const sendType = String(formData.get("sendType") ?? "");
-    if (sendType !== "digest" && sendType !== "flash") {
+    if (
+      sendType !== "digest" &&
+      sendType !== "flash" &&
+      sendType !== "weekly"
+    ) {
       return {
         tone: "error",
         message: "Invalid campaign type.",
       };
     }
 
-    const result = await sendApprovedDealCampaign({
-      sendType,
-    });
+    const result =
+      sendType === "weekly"
+        ? await runScheduledWeeklyDigest({ force: true })
+        : sendType === "digest"
+          ? await runScheduledDigest({ force: true })
+          : await sendApprovedDealCampaign({ sendType });
+
+    if ("reason" in result) {
+      return { tone: "success", message: result.reason };
+    }
 
     revalidatePath("/ops");
 
@@ -155,7 +148,9 @@ export async function sendCampaignAction(
     return {
       tone: "error",
       message:
-        error instanceof Error ? error.message : "The campaign could not be sent right now.",
+        error instanceof Error
+          ? error.message
+          : "The campaign could not be sent right now.",
     };
   }
 }
@@ -170,7 +165,11 @@ export async function sendCampaignTestAction(
     const sendType = String(formData.get("sendType") ?? "");
     const testEmail = String(formData.get("testEmail") ?? "").trim();
 
-    if (sendType !== "digest" && sendType !== "flash") {
+    if (
+      sendType !== "digest" &&
+      sendType !== "flash" &&
+      sendType !== "weekly"
+    ) {
       return {
         tone: "error",
         message: "Invalid campaign type.",
@@ -190,7 +189,9 @@ export async function sendCampaignTestAction(
     return {
       tone: "error",
       message:
-        error instanceof Error ? error.message : "The test email could not be sent right now.",
+        error instanceof Error
+          ? error.message
+          : "The test email could not be sent right now.",
     };
   }
 }
@@ -215,6 +216,7 @@ export async function saveDigestAutomationAction(
 
     const result = await updateDigestAutomation({
       enabled,
+      weeklyEnabled: formData.get("weeklyEnabled") === "on",
       localTime,
       testEmail: testEmail || null,
     });
@@ -223,9 +225,7 @@ export async function saveDigestAutomationAction(
 
     return {
       tone: "success",
-      message: result.enabled
-        ? `Daily digest automation saved for ${result.localTime} Europe/Luxembourg.`
-        : "Daily digest automation has been paused.",
+      message: `Daily and weekly automation settings saved. Schedule: ${result.localTime} Europe/Luxembourg.`,
     };
   } catch (error) {
     return {
@@ -271,7 +271,9 @@ export async function saveRoutePlannerRulesAction(input: {
   revalidatePath("/ops/active-routes");
 }
 
-export async function createAutomaticRoutePlannerRulesAction(input: { routeId: string }) {
+export async function createAutomaticRoutePlannerRulesAction(input: {
+  routeId: string;
+}) {
   await assertOpsAccess();
 
   const result = await createAutomaticRoutePlannerSearchRules(input);
@@ -302,7 +304,9 @@ export async function saveManyRoutePlannerRulesAction(input: {
 }) {
   await assertOpsAccess();
 
-  const routes = input.routes.filter((route) => route.routeId && route.months.length > 0);
+  const routes = input.routes.filter(
+    (route) => route.routeId && route.months.length > 0,
+  );
   if (routes.length === 0) {
     throw new Error("Missing routes to save.");
   }

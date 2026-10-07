@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 
+from luxflight_scanner.cache_revalidation import public_cache_revalidation_secret
 from luxflight_scanner.config import ScannerConfig
 from luxflight_scanner.models import (
     DealCandidate,
@@ -489,7 +490,8 @@ class LocalSupabaseSync:
 
     def _revalidate_public_destinations(self, cities: set[str]) -> dict[str, Any]:
         endpoint = os.getenv("PUBLIC_CACHE_REVALIDATION_URL", "").strip()
-        if not endpoint or not cities:
+        secret = public_cache_revalidation_secret()
+        if not endpoint or not secret or not cities:
             return {
                 "status": "skipped",
                 "destinations": sorted(cities),
@@ -499,7 +501,7 @@ class LocalSupabaseSync:
             response = httpx.post(
                 endpoint,
                 headers={
-                    "Authorization": f"Bearer {self.config.supabase_service_role_key}",
+                    "Authorization": f"Bearer {secret}",
                     "Content-Type": "application/json",
                 },
                 json={"cities": sorted(cities)},

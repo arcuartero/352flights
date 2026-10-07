@@ -1,6 +1,6 @@
 import { getDestinationTheme } from "@/lib/destination-content";
 import { getMatchingLuxSchoolHoliday } from "@/lib/lux-school-holidays";
-import type { PublicDealsPageData } from "@/lib/ops";
+import type { PublicDealsPageData } from "@/lib/ops/types";
 import type { CampaignPreviewDeal } from "@/lib/ops-shared";
 import {
   getPublicAirlineNames,
@@ -16,7 +16,6 @@ import {
   type DealSearchSort,
   type DepartureWeekdayFilter,
   type DurationFilter,
-  type ThemeFilter,
   type TripFilter,
   type WhenFilter,
 } from "@/lib/public-deals-search";
@@ -79,6 +78,8 @@ export type PublicDealsSearchResult = {
   onboardingMessage: string | null;
   deals: CampaignPreviewDeal[];
   total: number;
+  offset: number;
+  nextOffset: number | null;
   limit: number;
   updatedAt: string | null;
   destinationCounts: Record<string, number>;
@@ -138,9 +139,13 @@ function normalizeDestination(value: string) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
-function getDurationValue(deal: CampaignPreviewDeal): Exclude<DurationFilter, "any"> {
+function getDurationValue(
+  deal: CampaignPreviewDeal,
+): Exclude<DurationFilter, "any"> {
   const nights = Math.max(1, deal.tripNights);
-  return nights >= 6 ? "6_plus" : (String(nights) as Exclude<DurationFilter, "any">);
+  return nights >= 6
+    ? "6_plus"
+    : (String(nights) as Exclude<DurationFilter, "any">);
 }
 
 function getDepartureWeekday(value: string | null): DepartureWeekdayFilter {
@@ -159,12 +164,20 @@ function getDepartureWeekday(value: string | null): DepartureWeekdayFilter {
 }
 
 function isWeekendDeal(deal: CampaignPreviewDeal) {
-  return normalizeDestination(deal.routeBucket).includes("weekend") || deal.tripNights <= 4;
+  return (
+    normalizeDestination(deal.routeBucket).includes("weekend") ||
+    deal.tripNights <= 4
+  );
 }
 
-function matchesWhen(deal: CampaignPreviewDeal, filters: DealSearchFilters, now: Date) {
+function matchesWhen(
+  deal: CampaignPreviewDeal,
+  filters: DealSearchFilters,
+  now: Date,
+) {
   const departure = deal.departureDate ? new Date(deal.departureDate) : null;
-  if (!departure || Number.isNaN(departure.getTime())) return filters.whenFilter === "any";
+  if (!departure || Number.isNaN(departure.getTime()))
+    return filters.whenFilter === "any";
 
   switch (filters.whenFilter) {
     case "next_30":
@@ -172,7 +185,8 @@ function matchesWhen(deal: CampaignPreviewDeal, filters: DealSearchFilters, now:
     case "next_month":
     case "this_year":
     case "next_year": {
-      const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+      const departureDateKey =
+        deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
       const range = getWhenFilterDateRange(filters.whenFilter, now);
       return Boolean(
         departureDateKey &&
@@ -182,13 +196,16 @@ function matchesWhen(deal: CampaignPreviewDeal, filters: DealSearchFilters, now:
       );
     }
     case "school_holidays":
-      return Boolean(getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate));
+      return Boolean(
+        getMatchingLuxSchoolHoliday(deal.departureDate, deal.returnDate),
+      );
     case "this_weekend":
       return isTripInCurrentWeekend(deal.departureDate, deal.returnDate, now);
     case "weekends":
       return doesTripIncludeWeekend(deal.departureDate, deal.returnDate);
     case "custom": {
-      const departureDateKey = deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+      const departureDateKey =
+        deal.departureDate?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
       return Boolean(
         departureDateKey &&
           filters.dateFrom &&
@@ -204,7 +221,8 @@ function matchesWhen(deal: CampaignPreviewDeal, filters: DealSearchFilters, now:
 
 function matchesTrip(deal: CampaignPreviewDeal, tripFilter: TripFilter) {
   if (tripFilter === "weekend") return isWeekendDeal(deal);
-  if (tripFilter === "weeklong") return deal.tripNights >= 5 && deal.tripNights <= 7;
+  if (tripFilter === "weeklong")
+    return deal.tripNights >= 5 && deal.tripNights <= 7;
   if (tripFilter === "long_stay") return deal.tripNights > 4;
   return true;
 }
@@ -216,14 +234,26 @@ export function matchesPublicDealSearchFilters(
 ) {
   if (deal.dealPrice <= 0 || !matchesWhen(deal, filters, now)) return false;
   if (!matchesTrip(deal, filters.tripFilter)) return false;
-  if (filters.budgetFilter !== "any" && deal.dealPrice > Number(filters.budgetFilter)) return false;
-  if (filters.priceMin !== null && deal.dealPrice < filters.priceMin) return false;
-  if (filters.priceMax !== null && deal.dealPrice > filters.priceMax) return false;
+  if (
+    filters.budgetFilter !== "any" &&
+    deal.dealPrice > Number(filters.budgetFilter)
+  )
+    return false;
+  if (filters.priceMin !== null && deal.dealPrice < filters.priceMin)
+    return false;
+  if (filters.priceMax !== null && deal.dealPrice > filters.priceMax)
+    return false;
 
-  const airlineKeys = getPublicAirlineNames(deal.airlineSummary).map(normalizePublicAirlineName);
-  if (filters.excludedAirlines.some((airline) => airlineKeys.includes(airline))) return false;
+  const airlineKeys = getPublicAirlineNames(deal.airlineSummary).map(
+    normalizePublicAirlineName,
+  );
+  if (filters.excludedAirlines.some((airline) => airlineKeys.includes(airline)))
+    return false;
   const durationFilters = getSelectedDurationFilters(filters);
-  if (durationFilters.length > 0 && !durationFilters.includes(getDurationValue(deal))) {
+  if (
+    durationFilters.length > 0 &&
+    !durationFilters.includes(getDurationValue(deal))
+  ) {
     return false;
   }
   if (filters.directOnly && deal.maxStops !== "NON_STOP") return false;
@@ -237,11 +267,15 @@ export function matchesPublicDealSearchFilters(
   const departureWeekday = getDepartureWeekday(deal.departureDate);
   if (
     departureWeekdayFilters.length > 0 &&
-    (departureWeekday === "any" || !departureWeekdayFilters.includes(departureWeekday))
+    (departureWeekday === "any" ||
+      !departureWeekdayFilters.includes(departureWeekday))
   ) {
     return false;
   }
-  return filters.themeFilter === "any" || getDestinationTheme(deal.destinationCity) === filters.themeFilter;
+  return (
+    filters.themeFilter === "any" ||
+    getDestinationTheme(deal.destinationCity) === filters.themeFilter
+  );
 }
 
 export function disableDirectOnlyWhenOnlyConnectingFares(
@@ -261,7 +295,9 @@ export function disableDirectOnlyWhenOnlyConnectingFares(
       matchesPublicDealSearchFilters(deal, filtersWithConnections, now),
   );
 
-  return !hasDirectFares && hasConnectingFares ? filtersWithConnections : filters;
+  return !hasDirectFares && hasConnectingFares
+    ? filtersWithConnections
+    : filters;
 }
 
 function compareByPrice(left: CampaignPreviewDeal, right: CampaignPreviewDeal) {
@@ -271,7 +307,9 @@ function compareByPrice(left: CampaignPreviewDeal, right: CampaignPreviewDeal) {
 }
 
 function getDepartureTimestamp(deal: CampaignPreviewDeal) {
-  const timestamp = deal.departureDate ? new Date(deal.departureDate).getTime() : Number.NaN;
+  const timestamp = deal.departureDate
+    ? new Date(deal.departureDate).getTime()
+    : Number.NaN;
   return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
 }
 
@@ -279,19 +317,30 @@ function getDestinationStayHours(deal: CampaignPreviewDeal) {
   return deal.destinationStayHours ?? Math.max(0, deal.tripNights * 24);
 }
 
-function compareBest(left: CampaignPreviewDeal, right: CampaignPreviewDeal, now: Date) {
-  const leftPreferred = getDestinationStayHours(left) > BEST_DEAL_PREFERRED_STAY_HOURS;
-  const rightPreferred = getDestinationStayHours(right) > BEST_DEAL_PREFERRED_STAY_HOURS;
+function compareBest(
+  left: CampaignPreviewDeal,
+  right: CampaignPreviewDeal,
+  now: Date,
+) {
+  const leftPreferred =
+    getDestinationStayHours(left) > BEST_DEAL_PREFERRED_STAY_HOURS;
+  const rightPreferred =
+    getDestinationStayHours(right) > BEST_DEAL_PREFERRED_STAY_HOURS;
   if (leftPreferred !== rightPreferred) return leftPreferred ? -1 : 1;
 
   const score = (deal: CampaignPreviewDeal) => {
     const priceScore = 35 / (1 + Math.max(0, deal.dealPrice) / 120);
-    const verifiedAt = deal.verifiedAt ? new Date(deal.verifiedAt).getTime() : Number.NaN;
+    const verifiedAt = deal.verifiedAt
+      ? new Date(deal.verifiedAt).getTime()
+      : Number.NaN;
     const verifiedAge = Number.isFinite(verifiedAt)
       ? Math.max(0, now.getTime() - verifiedAt)
       : BEST_DEAL_FRESHNESS_WINDOW_MS;
     const freshnessScore =
-      12 * (1 - Math.min(verifiedAge, BEST_DEAL_FRESHNESS_WINDOW_MS) / BEST_DEAL_FRESHNESS_WINDOW_MS);
+      12 *
+      (1 -
+        Math.min(verifiedAge, BEST_DEAL_FRESHNESS_WINDOW_MS) /
+          BEST_DEAL_FRESHNESS_WINDOW_MS);
     const directScore = deal.maxStops === "NON_STOP" ? 15 : 0;
     const verifiedDiscount =
       deal.pricePosition !== "new_price" &&
@@ -302,12 +351,27 @@ function compareBest(left: CampaignPreviewDeal, right: CampaignPreviewDeal, now:
         : 0;
     const discountScore = (verifiedDiscount / 0.5) * 30;
     const usefulStayScore =
-      10 * Math.min(1, Math.max(0, getDestinationStayHours(deal) - BEST_DEAL_PREFERRED_STAY_HOURS) / 120);
-    return priceScore + freshnessScore + directScore + discountScore + usefulStayScore;
+      10 *
+      Math.min(
+        1,
+        Math.max(
+          0,
+          getDestinationStayHours(deal) - BEST_DEAL_PREFERRED_STAY_HOURS,
+        ) / 120,
+      );
+    return (
+      priceScore +
+      freshnessScore +
+      directScore +
+      discountScore +
+      usefulStayScore
+    );
   };
 
   const difference = score(right) - score(left);
-  return Math.abs(difference) > Number.EPSILON ? difference : compareByPrice(left, right);
+  return Math.abs(difference) > Number.EPSILON
+    ? difference
+    : compareByPrice(left, right);
 }
 
 export function comparePublicDealsBySort(
@@ -317,10 +381,13 @@ export function comparePublicDealsBySort(
   now: Date,
 ) {
   if (sort === "best") return compareBest(left, right, now);
-  if (sort === "price_desc" && left.dealPrice !== right.dealPrice) return right.dealPrice - left.dealPrice;
+  if (sort === "price_desc" && left.dealPrice !== right.dealPrice)
+    return right.dealPrice - left.dealPrice;
   if (sort === "departure_soonest" || sort === "departure_latest") {
-    const difference = getDepartureTimestamp(left) - getDepartureTimestamp(right);
-    if (difference !== 0) return sort === "departure_soonest" ? difference : -difference;
+    const difference =
+      getDepartureTimestamp(left) - getDepartureTimestamp(right);
+    if (difference !== 0)
+      return sort === "departure_soonest" ? difference : -difference;
   }
   if (sort === "trip_shortest" && left.tripNights !== right.tripNights) {
     return left.tripNights - right.tripNights;
@@ -334,13 +401,27 @@ export function comparePublicDealsBySort(
   return compareByPrice(left, right);
 }
 
-function applyQuickChip(chip: PublicDealsSearchQuickChip, filters: DealSearchFilters) {
+function applyQuickChip(
+  chip: PublicDealsSearchQuickChip,
+  filters: DealSearchFilters,
+) {
   if (chip === "this_weekend" || chip === "school_holidays") {
-    return { ...filters, whenFilter: chip, dateFrom: null, dateTo: null } as DealSearchFilters;
+    return {
+      ...filters,
+      whenFilter: chip,
+      dateFrom: null,
+      dateTo: null,
+    } as DealSearchFilters;
   }
-  if (chip === "weeklong") return { ...filters, tripFilter: "weeklong" as const };
+  if (chip === "weeklong")
+    return { ...filters, tripFilter: "weeklong" as const };
   if (chip === "under_50") {
-    return { ...filters, budgetFilter: "50" as const, priceMin: null, priceMax: null };
+    return {
+      ...filters,
+      budgetFilter: "50" as const,
+      priceMin: null,
+      priceMax: null,
+    };
   }
   if (chip === "direct") return { ...filters, directOnly: true };
   if (chip === "beach" || chip === "city" || chip === "nature") {
@@ -349,10 +430,14 @@ function applyQuickChip(chip: PublicDealsSearchQuickChip, filters: DealSearchFil
   return filters;
 }
 
-function isQuickChipActive(chip: PublicDealsSearchQuickChip, filters: DealSearchFilters) {
+function isQuickChipActive(
+  chip: PublicDealsSearchQuickChip,
+  filters: DealSearchFilters,
+) {
   if (chip === "this_weekend") return filters.whenFilter === "this_weekend";
   if (chip === "weeklong") return filters.tripFilter === "weeklong";
-  if (chip === "school_holidays") return filters.whenFilter === "school_holidays";
+  if (chip === "school_holidays")
+    return filters.whenFilter === "school_holidays";
   if (chip === "under_50") return filters.budgetFilter === "50";
   if (chip === "direct") return filters.directOnly;
   if (chip === "beach" || chip === "city" || chip === "nature") {
@@ -369,11 +454,16 @@ export function getPublicDealsSearchQueryKey(
   filters: DealSearchFilters,
   sort: DealSearchSort,
   limit: number,
+  offset: number = 0,
 ) {
   return JSON.stringify({
-    filters: { ...filters, excludedAirlines: [...filters.excludedAirlines].sort() },
+    filters: {
+      ...filters,
+      excludedAirlines: [...filters.excludedAirlines].sort(),
+    },
     sort,
     limit,
+    offset,
   });
 }
 
@@ -383,21 +473,37 @@ export function buildPublicDealsSearchResult(
   sort: DealSearchSort,
   requestedLimit: number = PUBLIC_DEALS_SEARCH_PAGE_SIZE,
   now: Date = new Date(),
+  requestedOffset: number = 0,
 ): PublicDealsSearchResult {
   const limit = Math.min(
     PUBLIC_DEALS_SEARCH_MAX_LIMIT,
-    Math.max(PUBLIC_DEALS_SEARCH_PAGE_SIZE, Math.round(requestedLimit)),
+    Math.max(
+      PUBLIC_DEALS_SEARCH_PAGE_SIZE,
+      Number.isFinite(requestedLimit)
+        ? Math.round(requestedLimit)
+        : PUBLIC_DEALS_SEARCH_PAGE_SIZE,
+    ),
   );
+  const offset = Number.isFinite(requestedOffset)
+    ? Math.max(0, Math.floor(requestedOffset))
+    : 0;
   const allDeals = data.deals.filter((deal) => deal.dealPrice > 0);
   const filteredDeals = allDeals
     .filter((deal) => matchesPublicDealSearchFilters(deal, filters, now))
-    .sort((left, right) => comparePublicDealsBySort(left, right, sort, now));
+    .sort(
+      (left, right) =>
+        comparePublicDealsBySort(left, right, sort, now) ||
+        left.id.localeCompare(right.id),
+    );
 
-  const destinationCounts = filteredDeals.reduce<Record<string, number>>((counts, deal) => {
-    const key = getDestinationCountKey(deal);
-    counts[key] = (counts[key] ?? 0) + 1;
-    return counts;
-  }, {});
+  const destinationCounts = filteredDeals.reduce<Record<string, number>>(
+    (counts, deal) => {
+      const key = getDestinationCountKey(deal);
+      counts[key] = (counts[key] ?? 0) + 1;
+      return counts;
+    },
+    {},
+  );
 
   const mapGroups = new Map<string, PublicDealsSearchMapCity>();
   filteredDeals.forEach((deal) => {
@@ -438,7 +544,10 @@ export function buildPublicDealsSearchResult(
   const facetDeals = allDeals.filter((deal) =>
     matchesPublicDealSearchFilters(deal, facetFilters, now),
   );
-  const cityCatalog = new Map<string, { label: string; airport: string; globalCount: number }>();
+  const cityCatalog = new Map<
+    string,
+    { label: string; airport: string; globalCount: number }
+  >();
   allDeals.forEach((deal) => {
     const label = deal.destinationCity.trim();
     if (!label) return;
@@ -447,7 +556,11 @@ export function buildPublicDealsSearchResult(
     if (existing) {
       existing.globalCount += 1;
     } else {
-      cityCatalog.set(value, { label, airport: deal.destinationAirport, globalCount: 1 });
+      cityCatalog.set(value, {
+        label,
+        airport: deal.destinationAirport,
+        globalCount: 1,
+      });
     }
   });
 
@@ -456,15 +569,28 @@ export function buildPublicDealsSearchResult(
       const destinationFilters = { ...filters, destinationFilter: value };
       const count = allDeals.reduce(
         (total, deal) =>
-          total + (matchesPublicDealSearchFilters(deal, destinationFilters, now) ? 1 : 0),
+          total +
+          (matchesPublicDealSearchFilters(deal, destinationFilters, now)
+            ? 1
+            : 0),
         0,
       );
-      return { value, label: city.label, airport: city.airport, count, disabled: count === 0 };
+      return {
+        value,
+        label: city.label,
+        airport: city.airport,
+        count,
+        disabled: count === 0,
+      };
     })
     .sort((left, right) => left.label.localeCompare(right.label, "en"));
 
   const popularDestinationValues = [...cityCatalog.entries()]
-    .sort((left, right) => right[1].globalCount - left[1].globalCount || left[0].localeCompare(right[0]))
+    .sort(
+      (left, right) =>
+        right[1].globalCount - left[1].globalCount ||
+        left[0].localeCompare(right[0]),
+    )
     .slice(0, 6)
     .map(([value]) => value);
 
@@ -476,13 +602,17 @@ export function buildPublicDealsSearchResult(
     });
   });
   const hasMatches = (nextFilters: DealSearchFilters) =>
-    allDeals.some((deal) => matchesPublicDealSearchFilters(deal, nextFilters, now));
+    allDeals.some((deal) =>
+      matchesPublicDealSearchFilters(deal, nextFilters, now),
+    );
 
   return {
     configured: data.configured,
     schemaReady: data.schemaReady,
     onboardingMessage: data.onboardingMessage,
-    deals: filteredDeals.slice(0, limit),
+    deals: filteredDeals.slice(offset, offset + limit),
+    offset,
+    nextOffset: offset + limit < filteredDeals.length ? offset + limit : null,
     total: filteredDeals.length,
     limit,
     updatedAt: data.updatedAt,
@@ -503,10 +633,16 @@ export function buildPublicDealsSearchResult(
       whenValues: WHEN_VALUES.filter(
         (value) =>
           value === "any" ||
-          hasMatches({ ...filters, whenFilter: value, dateFrom: null, dateTo: null }),
+          hasMatches({
+            ...filters,
+            whenFilter: value,
+            dateFrom: null,
+            dateTo: null,
+          }),
       ),
       tripValues: TRIP_VALUES.filter(
-        (value) => value === "any" || hasMatches({ ...filters, tripFilter: value }),
+        (value) =>
+          value === "any" || hasMatches({ ...filters, tripFilter: value }),
       ),
       durationValues: DURATION_VALUES.filter((value) =>
         hasMatches({
@@ -519,19 +655,25 @@ export function buildPublicDealsSearchResult(
         .map(([key, label]) => ({ key, label }))
         .sort((left, right) => left.label.localeCompare(right.label, "en")),
       prices: facetDeals.map((deal) => deal.dealPrice),
-      directOnlyAvailable: filters.directOnly || hasMatches({ ...filters, directOnly: true }),
+      directOnlyAvailable:
+        filters.directOnly || hasMatches({ ...filters, directOnly: true }),
       connectingFlightsAvailable: allDeals.some(
         (deal) =>
           deal.maxStops !== "NON_STOP" &&
-          matchesPublicDealSearchFilters(deal, { ...filters, directOnly: false }, now),
+          matchesPublicDealSearchFilters(
+            deal,
+            { ...filters, directOnly: false },
+            now,
+          ),
       ),
       quickChips: Object.fromEntries(
         QUICK_CHIPS.map((chip) => [
           chip,
-          isQuickChipActive(chip, filters) || hasMatches(applyQuickChip(chip, filters)),
+          isQuickChipActive(chip, filters) ||
+            hasMatches(applyQuickChip(chip, filters)),
         ]),
       ) as Record<PublicDealsSearchQuickChip, boolean>,
     },
-    queryKey: getPublicDealsSearchQueryKey(filters, sort, limit),
+    queryKey: getPublicDealsSearchQueryKey(filters, sort, limit, offset),
   };
 }

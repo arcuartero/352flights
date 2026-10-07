@@ -1,3 +1,4 @@
+import { ensureOpsAuthorized } from "@/lib/ops-auth";
 import { NextResponse } from "next/server";
 
 import { getPatternDiscoveryStatus } from "@/lib/pattern-discovery-status";
@@ -10,58 +11,23 @@ function serializeError(error: unknown) {
     return {
       error: error.name || "Error",
       detail: error.message || "Unknown error",
-      stack: process.env.NODE_ENV !== "production" ? error.stack ?? null : null,
+      stack:
+        process.env.NODE_ENV !== "production" ? (error.stack ?? null) : null,
     };
   }
 
   return {
     error: "UnknownError",
-    detail: typeof error === "string" ? error : "Unknown pattern discovery status error",
+    detail:
+      typeof error === "string"
+        ? error
+        : "Unknown pattern discovery status error",
     stack: null,
   };
 }
 
-function unauthorizedResponse() {
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
-    },
-  });
-}
-
-async function ensureAuthorized(request: Request) {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (!expectedUser || !expectedPassword) {
-    return null;
-  }
-
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Basic ")) {
-    return unauthorizedResponse();
-  }
-
-  try {
-    const encoded = authorization.slice("Basic ".length);
-    const decoded = atob(encoded);
-    const separatorIndex = decoded.indexOf(":");
-    const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-    if (user !== expectedUser || password !== expectedPassword) {
-      return unauthorizedResponse();
-    }
-  } catch {
-    return unauthorizedResponse();
-  }
-
-  return null;
-}
-
 export async function GET(request: Request) {
-  const unauthorized = await ensureAuthorized(request);
+  const unauthorized = ensureOpsAuthorized(request);
   if (unauthorized) {
     return unauthorized;
   }

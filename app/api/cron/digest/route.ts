@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 
-import { runScheduledDigest, validateCronSecret } from "@/lib/ops";
+import { runScheduledDigest, validateCronSecret } from "@/lib/ops/campaigns";
+import { bearerToken } from "@/lib/secret-compare";
 
 export async function POST(request: Request) {
-  const authorization = request.headers.get("authorization");
-  const token = authorization?.startsWith("Bearer ")
-    ? authorization.slice("Bearer ".length)
-    : null;
+  const token = bearerToken(request);
 
   if (!validateCronSecret(token)) {
-    return NextResponse.json({ error: "Unauthorized cron request." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized cron request." },
+      { status: 401 },
+    );
   }
 
   try {
@@ -21,7 +22,9 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "Digest automation failed unexpectedly.",
+          error instanceof Error
+            ? error.message
+            : "Digest automation failed unexpectedly.",
       },
       { status: 500 },
     );

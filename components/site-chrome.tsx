@@ -1,11 +1,14 @@
 "use client";
 
+import { subscribeOpsPolling, refreshOpsPolling } from "@/lib/ops-polling-client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/lib/i18n";
+import { travelEmailConsentCopy, travelEmailExistingSubscriberCopy } from "@/lib/travel-email-consent";
 import {
   getLocalizedHomePath,
   parseLocalizedDealsPathname,
@@ -15,148 +18,7 @@ import {
   subscriptionSuccessMessage,
   type SubscriptionApiPayload,
 } from "@/lib/subscription-response";
-
-const SCAN_HOURS = [0, 12] as const;
-const LUX_TIME_ZONE = "Europe/Luxembourg";
-
-function getPageLabel(pathname: string) {
-  if (pathname.startsWith("/ops/active-routes")) {
-    return "Active Routes";
-  }
-
-  if (pathname.startsWith("/ops/email-campaigns")) {
-    return "Email Campaigns";
-  }
-
-  if (pathname.startsWith("/ops/dates-scanner")) {
-    return "Dates Scanner";
-  }
-
-  if (pathname.startsWith("/ops/scanner-live")) {
-    return "Price Scanner";
-  }
-
-  if (pathname.startsWith("/ops/prices")) {
-    return "Price intelligence";
-  }
-
-  if (pathname.startsWith("/ops/tiktok-json")) {
-    return "Social content";
-  }
-
-  if (pathname.startsWith("/ops")) {
-    return "Operations board";
-  }
-
-  if (pathname.startsWith("/preferences")) {
-    return "Subscriber setup";
-  }
-
-  return "Luxembourg edition";
-}
-
-function getZonedParts(date: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-
-  function read(type: Intl.DateTimeFormatPartTypes) {
-    return Number(parts.find((part) => part.type === type)?.value ?? "0");
-  }
-
-  return {
-    year: read("year"),
-    month: read("month"),
-    day: read("day"),
-    hour: read("hour"),
-    minute: read("minute"),
-    second: read("second"),
-  };
-}
-
-function zonedDateTimeToUtcMs(
-  timeZone: string,
-  parts: {
-    year: number;
-    month: number;
-    day: number;
-    hour: number;
-    minute: number;
-    second: number;
-  },
-) {
-  const guess = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    parts.second,
-  );
-  const zonedGuess = getZonedParts(new Date(guess), timeZone);
-  const desiredUtc = Date.UTC(
-    parts.year,
-    parts.month - 1,
-    parts.day,
-    parts.hour,
-    parts.minute,
-    parts.second,
-  );
-  const observedUtc = Date.UTC(
-    zonedGuess.year,
-    zonedGuess.month - 1,
-    zonedGuess.day,
-    zonedGuess.hour,
-    zonedGuess.minute,
-    zonedGuess.second,
-  );
-
-  return guess + (desiredUtc - observedUtc);
-}
-
-function getNextScheduledScanMs(now: Date) {
-  const luxNow = getZonedParts(now, LUX_TIME_ZONE);
-  const nextHour = SCAN_HOURS.find((hour) => hour > luxNow.hour);
-
-  if (nextHour !== undefined) {
-    return zonedDateTimeToUtcMs(LUX_TIME_ZONE, {
-      year: luxNow.year,
-      month: luxNow.month,
-      day: luxNow.day,
-      hour: nextHour,
-      minute: 0,
-      second: 0,
-    });
-  }
-
-  return zonedDateTimeToUtcMs(LUX_TIME_ZONE, {
-    year: luxNow.year,
-    month: luxNow.month,
-    day: luxNow.day + 1,
-    hour: SCAN_HOURS[0],
-    minute: 0,
-    second: 0,
-  });
-}
-
-function formatCountdown(targetMs: number, nowMs: number) {
-  const diffMs = Math.max(targetMs - nowMs, 0);
-  const totalSeconds = Math.floor(diffMs / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return [hours, minutes, seconds]
-    .map((value) => value.toString().padStart(2, "0"))
-    .join(":");
-}
+import { BrandLogo } from "@/components/brand-logo";
 
 function formatHeaderTimestamp(value: string | null) {
   if (!value) {
@@ -171,67 +33,8 @@ function formatHeaderTimestamp(value: string | null) {
   }).format(new Date(value));
 }
 
-function NextScanCountdown() {
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  const [isRunning, setIsRunning] = useState(false);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
-
-    return () => window.clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadStatus() {
-      try {
-        const response = await fetch("/api/ops/scanner-status", {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          return;
-        }
-
-        const payload = (await response.json()) as { running?: boolean };
-        if (!isMounted) {
-          return;
-        }
-
-        setIsRunning(Boolean(payload.running));
-      } catch {
-        // Keep the header quiet if polling fails.
-      }
-    }
-
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 10000);
-
-    return () => {
-      isMounted = false;
-      window.clearInterval(interval);
-    };
-  }, []);
-
-  const countdown = useMemo(() => {
-    const targetMs = getNextScheduledScanMs(new Date(nowMs));
-    return formatCountdown(targetMs, nowMs);
-  }, [nowMs]);
-
-  return (
-    <p className="site-chrome__countdown" aria-live="polite">
-      <span>{isRunning ? "Next scheduled trigger" : "Next scan"}</span>
-      <strong>{countdown}</strong>
-      {isRunning ? (
-        <em className="site-chrome__countdown-note">Skipped while current scan is running</em>
-      ) : null}
-    </p>
-  );
-}
-
 function ManualScanTrigger({ enabled }: { enabled: boolean }) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [controlAvailable, setControlAvailable] = useState(true);
@@ -245,11 +48,9 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
 
     let isMounted = true;
 
-    async function loadStatus() {
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/scanner-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -280,12 +81,10 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
       }
     }
 
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 10000);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/scanner-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, [enabled, isBusy]);
 
@@ -338,6 +137,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
     } finally {
       window.setTimeout(() => {
         setIsBusy(false);
+      refreshOpsPolling();
       }, 500);
     }
   }
@@ -365,7 +165,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   })();
 
   return (
-    <button
+    <button ref={(node) => { pollingRef.current = node; }}
       aria-label={buttonLabel}
       className={`site-chrome__scan-trigger ${isRunning ? "site-chrome__scan-trigger--danger" : ""}`}
       disabled={isBusy || pendingAction !== null || !controlAvailable}
@@ -387,6 +187,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
 }
 
 function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [latestResultAt, setLatestResultAt] = useState<string | null>(null);
@@ -399,11 +200,9 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
 
     let isMounted = true;
 
-    async function loadStatus() {
+    async function loadStatus(response: Response) {
       try {
-        const response = await fetch("/api/ops/pattern-discovery-status", {
-          cache: "no-store",
-        });
+
         if (!response.ok) {
           return;
         }
@@ -428,12 +227,10 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
       }
     }
 
-    void loadStatus();
-    const interval = window.setInterval(loadStatus, 15000);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/pattern-discovery-status", loadStatus, pollingRef.current);
     return () => {
       isMounted = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, [enabled, isBusy]);
 
@@ -509,6 +306,7 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
     } finally {
       window.setTimeout(() => {
         setIsBusy(false);
+      refreshOpsPolling();
       }, 500);
     }
   }
@@ -519,7 +317,7 @@ function MonthlyDiscoveryControls({ enabled }: { enabled: boolean }) {
         <span>Last monthly discovery</span>
         <strong>{isRunning ? "Running now" : formatHeaderTimestamp(latestResultAt)}</strong>
       </p>
-      <button
+      <button ref={(node) => { pollingRef.current = node; }}
         className={`site-chrome__scan-trigger site-chrome__scan-trigger--secondary ${
           isRunning ? "site-chrome__scan-trigger--danger" : ""
         }`}
@@ -540,6 +338,7 @@ type PreferencesAccessModalProps = {
 function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
   const { locale, t } = useI18n();
   const [email, setEmail] = useState("");
+  const [travelEmailConsent, setTravelEmailConsent] = useState(false);
   const [message, setMessage] = useState(
     "Enter your email and we will send either your sign-up email or your private preferences link.",
   );
@@ -618,7 +417,7 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
                       headers: {
                         "Content-Type": "application/json",
                       },
-                      body: JSON.stringify({ email: trimmedEmail, locale }),
+                      body: JSON.stringify({ email: trimmedEmail, locale, travelEmailConsent }),
                     });
 
                     const payload = (await response.json()) as SubscriptionApiPayload;
@@ -667,6 +466,16 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
                 </div>
               </label>
 
+              <label className="travel-email-consent travel-email-consent--access">
+                <input
+                  checked={travelEmailConsent}
+                  onChange={(event) => setTravelEmailConsent(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>{travelEmailConsentCopy[locale]}</span>
+              </label>
+              <p className="travel-email-consent__hint">{travelEmailExistingSubscriberCopy[locale]}</p>
+
               <div className="site-chrome__preferences-form-actions">
                 <button className="site-chrome__preferences-primary" disabled={isPending} type="submit">
                   {isPending ? "Sending..." : "Email me my link"}
@@ -683,7 +492,7 @@ function PreferencesAccessModal({ onClose }: PreferencesAccessModalProps) {
 
             <p className={`site-chrome__preferences-status is-${messageTone}`}>{message}</p>
             <p className="site-chrome__preferences-footnote">
-              We only use your email to send your preferences link.
+              We will send your preferences link. Additional travel emails require the optional choice above.
             </p>
           </div>
 
@@ -750,7 +559,7 @@ export function SiteChrome() {
           {isOpsRoute ? (
             <>
               <span className="site-chrome__ops-logo">
-                <img alt="352 Flights" height={48} src="/v2-logo.png" width={148} />
+                <BrandLogo height={48} width={148} />
               </span>
               <span className="site-chrome__ops-label">Operations</span>
             </>

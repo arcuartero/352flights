@@ -3,10 +3,7 @@
 import { useActionState } from "react";
 
 import { sendCampaignAction, sendCampaignTestAction } from "@/app/ops/actions";
-import {
-  initialOpsActionState,
-  type CampaignPreview,
-} from "@/lib/ops-shared";
+import { initialOpsActionState, type CampaignPreview } from "@/lib/ops-shared";
 
 function formatDateWithWeekday(value: string | null) {
   if (!value) {
@@ -77,7 +74,8 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
   const statusTone = preview.blockedReason ? "error" : liveState.tone;
   const statusMessage = preview.blockedReason
     ? preview.blockedReason
-    : liveState.message || "Ready when the reviewed deals and audience counts look right.";
+    : liveState.message ||
+      "Ready when the reviewed deals and audience counts look right.";
 
   return (
     <article className="ops-send-card">
@@ -86,7 +84,9 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
           <p className="ops-panel__eyebrow">Campaign launch</p>
           <h3>{preview.label}</h3>
         </div>
-        <span className={`ops-send-badge ${preview.isReady ? "is-live" : "is-blocked"}`}>
+        <span
+          className={`ops-send-badge ${preview.isReady ? "is-live" : "is-blocked"}`}
+        >
           {preview.isReady ? "Ready" : "Blocked"}
         </span>
       </div>
@@ -148,13 +148,15 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
                       </p>
                       {deal.outboundDepartureAt && deal.outboundArrivalAt ? (
                         <p>
-                          Out {formatFlightClock(deal.outboundDepartureAt)} {"->"}{" "}
-                          {formatFlightClock(deal.outboundArrivalAt)}
+                          Out {formatFlightClock(deal.outboundDepartureAt)}{" "}
+                          {"->"} {formatFlightClock(deal.outboundArrivalAt)}
                           {deal.returnDepartureAt && deal.returnArrivalAt ? (
                             <>
                               <br />
-                              Back {formatFlightClock(deal.returnDepartureAt)} {"->"}{" "}
-                              {formatFlightClock(deal.returnArrivalAt)}
+                              Back {formatFlightClock(
+                                deal.returnDepartureAt,
+                              )}{" "}
+                              {"->"} {formatFlightClock(deal.returnArrivalAt)}
                             </>
                           ) : null}
                         </p>
@@ -177,10 +179,16 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
 
       <details className="ops-email-preview">
         <summary>Open email preview</summary>
-        <iframe srcDoc={preview.previewHtml} title={`${preview.label} preview`} />
+        <iframe
+          srcDoc={preview.previewHtml}
+          title={`${preview.label} preview`}
+        />
       </details>
 
-      <form action={testAction} className="ops-send-form ops-send-form--stacked">
+      <form
+        action={testAction}
+        className="ops-send-form ops-send-form--stacked"
+      >
         <input name="sendType" type="hidden" value={preview.sendType} />
         <label className="ops-inline-field">
           <span>Send test to</span>
@@ -191,10 +199,16 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
             type="email"
           />
         </label>
-        <button className="ops-button ops-button--ghost" disabled={testPending} type="submit">
+        <button
+          className="ops-button ops-button--ghost"
+          disabled={testPending}
+          type="submit"
+        >
           {testPending ? "Sending test..." : "Send test to myself"}
         </button>
-        <p className={`ops-status ops-status--${testState.tone}`}>{testState.message}</p>
+        <p className={`ops-status ops-status--${testState.tone}`}>
+          {testState.message}
+        </p>
       </form>
 
       <form action={liveAction} className="ops-send-form">
@@ -208,7 +222,9 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
             ? "Sending..."
             : preview.sendType === "flash"
               ? "Send flash alerts"
-              : "Send daily digest"}
+              : preview.sendType === "weekly"
+                ? "Send weekly best-of"
+                : "Send daily digest"}
         </button>
       </form>
 
@@ -217,7 +233,11 @@ function CampaignLaunchCard({ preview }: { preview: CampaignPreview }) {
   );
 }
 
-export function CampaignLauncher({ previews }: { previews: CampaignPreview[] }) {
+export function CampaignLauncher({
+  previews,
+}: {
+  previews: CampaignPreview[];
+}) {
   return (
     <div className="ops-send-grid">
       {previews.map((preview) => (

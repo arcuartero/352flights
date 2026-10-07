@@ -1,3 +1,4 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import { Suspense } from "react";
 
 import {
@@ -17,7 +18,7 @@ import {
   getOpsScannerData,
   getOpsSubscribersData,
   getOpsSummaryData,
-} from "@/lib/ops";
+} from "@/lib/ops/queries";
 import { formatStayBucketLabel } from "@/lib/stay-buckets";
 
 export const dynamic = "force-dynamic";
@@ -105,7 +106,9 @@ function formatAlertDetectedAt(value: string | null) {
   return formatDateTime(value);
 }
 
-function formatAutomatedAlertKind(value: "scanner_not_running" | "route_without_price" | "sync_failure") {
+function formatAutomatedAlertKind(
+  value: "scanner_not_running" | "route_without_price" | "sync_failure",
+) {
   if (value === "scanner_not_running") {
     return "Scanner";
   }
@@ -186,7 +189,9 @@ function explainScannerHealthAlert(alert: {
     const ruleSummary =
       alert.activeRuleLabels.length > 0
         ? `The active rule${alert.activeRuleLabels.length === 1 ? "" : "s"} ${joinNaturalLanguage(alert.activeRuleLabels.slice(0, 3))}${
-            alert.activeRuleLabels.length > 3 ? ` and ${alert.activeRuleLabels.length - 3} more` : ""
+            alert.activeRuleLabels.length > 3
+              ? ` and ${alert.activeRuleLabels.length - 3} more`
+              : ""
           }`
         : `The ${alert.activeRuleCount} active rules`;
     const departureSummary = alert.detectedDepartureSummary
@@ -214,7 +219,8 @@ async function OpsDeferredDetails() {
   ]);
   const dashboard = {
     subscribers: subscribersData.subscribers,
-    subscribersVerified: subscribersData.schemaReady && !subscribersData.onboardingMessage,
+    subscribersVerified:
+      subscribersData.schemaReady && !subscribersData.onboardingMessage,
     subscribersError: subscribersData.onboardingMessage,
     scannerHealth: scannerData.scannerHealth,
     automatedAlerts: scannerData.automatedAlerts,
@@ -253,7 +259,8 @@ async function OpsDeferredDetails() {
     datesCheckedLabel: route.datesScannerLastCheckedAt
       ? formatDateTime(route.datesScannerLastCheckedAt)
       : null,
-    latestPriceLabel: route.latestPrice !== null ? formatCurrency(route.latestPrice) : null,
+    latestPriceLabel:
+      route.latestPrice !== null ? formatCurrency(route.latestPrice) : null,
     latestScannerReasonLabel: route.latestScannerReasonLabel,
     latestScannerReasonAtLabel: route.latestScannerReasonAt
       ? formatDateTime(route.latestScannerReasonAt)
@@ -263,7 +270,9 @@ async function OpsDeferredDetails() {
     activeRuleSummary:
       route.activeRuleLabels.length > 0
         ? `${route.activeRuleLabels.slice(0, 3).join(", ")}${
-            route.activeRuleLabels.length > 3 ? ` +${route.activeRuleLabels.length - 3} more` : ""
+            route.activeRuleLabels.length > 3
+              ? ` +${route.activeRuleLabels.length - 3} more`
+              : ""
           }`
         : null,
     childSummaryLabel: null,
@@ -275,13 +284,12 @@ async function OpsDeferredDetails() {
     exampleBookingUrl: route.exampleBookingUrl,
   });
 
-  const latestRunMissingRouteDetails = dashboard.scannerHealth.latestRunMissingRoutes.map(
-    buildHealthRouteDetail,
-  );
+  const latestRunMissingRouteDetails =
+    dashboard.scannerHealth.latestRunMissingRoutes.map(buildHealthRouteDetail);
 
   const neverSnapshotByDestination = new Map<
     string,
-    (typeof dashboard.scannerHealth.neverSnapshotRoutes)
+    typeof dashboard.scannerHealth.neverSnapshotRoutes
   >();
   for (const route of dashboard.scannerHealth.neverSnapshotRoutes) {
     const key = `${route.destinationAirport}::${route.destinationCity}`;
@@ -290,17 +298,18 @@ async function OpsDeferredDetails() {
     neverSnapshotByDestination.set(key, current);
   }
 
-  const neverSnapshotDestinationDetails: OpsHealthDetailItem[] = [...neverSnapshotByDestination.values()]
+  const neverSnapshotDestinationDetails: OpsHealthDetailItem[] = [
+    ...neverSnapshotByDestination.values(),
+  ]
     .map((routesForDestination) => {
       const [firstRoute] = routesForDestination;
       const destinationLabel = `${firstRoute.destinationCity} (${firstRoute.destinationAirport})`;
-      const worstSeverity: OpsHealthDetailItem["statusTone"] = routesForDestination.some(
-        (route) => route.missedScanRuns >= 5,
-      )
-        ? "critical"
-        : routesForDestination.some((route) => route.missedScanRuns >= 3)
-          ? "warning"
-          : "pending";
+      const worstSeverity: OpsHealthDetailItem["statusTone"] =
+        routesForDestination.some((route) => route.missedScanRuns >= 5)
+          ? "critical"
+          : routesForDestination.some((route) => route.missedScanRuns >= 3)
+            ? "warning"
+            : "pending";
       const latestIssueRoute =
         routesForDestination
           .filter((route) => route.latestScannerReasonLabel)
@@ -317,21 +326,34 @@ async function OpsDeferredDetails() {
         routesForDestination
           .map((route) => route.datesScannerLastCheckedAt)
           .filter((value): value is string => Boolean(value))
-          .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
-      const setupLabels = [...new Set(
-        routesForDestination.map(
-          (route) => `${formatRelativeBucket(route.routeBucket)} · ${formatRoutingLabel(route.routeRouting)}`,
+          .sort(
+            (left, right) =>
+              new Date(right).getTime() - new Date(left).getTime(),
+          )[0] ?? null;
+      const setupLabels = [
+        ...new Set(
+          routesForDestination.map(
+            (route) =>
+              `${formatRelativeBucket(route.routeBucket)} · ${formatRoutingLabel(route.routeRouting)}`,
+          ),
         ),
-      )];
-      const combinedRuleLabels = [...new Set(routesForDestination.flatMap((route) => route.activeRuleLabels))];
-      const combinedDepartureSummaries = [...new Set(
-        routesForDestination
-          .map((route) => route.detectedDepartureSummary)
-          .filter((value): value is string => Boolean(value)),
-      )];
+      ];
+      const combinedRuleLabels = [
+        ...new Set(
+          routesForDestination.flatMap((route) => route.activeRuleLabels),
+        ),
+      ];
+      const combinedDepartureSummaries = [
+        ...new Set(
+          routesForDestination
+            .map((route) => route.detectedDepartureSummary)
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ];
       const exampleRoute =
-        routesForDestination.find((route) => route.exampleBookingUrl || route.examplePatternLabel) ??
-        routesForDestination[0];
+        routesForDestination.find(
+          (route) => route.exampleBookingUrl || route.examplePatternLabel,
+        ) ?? routesForDestination[0];
       const totalRulesInWindow = routesForDestination.reduce(
         (sum, route) => sum + route.activeRuleCount,
         0,
@@ -346,10 +368,14 @@ async function OpsDeferredDetails() {
         )} · ${formatRoutingLabel(
           latestIssueRoute.routeRouting,
         )} · ${latestIssueRoute.latestScannerReasonLabel.toLowerCase()}.`;
-      } else if (routesForDestination.some((route) => route.activeRuleCount === 0)) {
-        explanation += " Some setups still have no active rules in the current scan window.";
+      } else if (
+        routesForDestination.some((route) => route.activeRuleCount === 0)
+      ) {
+        explanation +=
+          " Some setups still have no active rules in the current scan window.";
       } else {
-        explanation += " The destination is tracked, but the current setups still are not producing a usable winner.";
+        explanation +=
+          " The destination is tracked, but the current setups still are not producing a usable winner.";
       }
 
       return {
@@ -371,13 +397,17 @@ async function OpsDeferredDetails() {
           routesForDestination.length === 1 ? "" : "s"
         }`,
         lastSeenLabel: "No snapshot yet",
-        datesCheckedLabel: latestCheckedAt ? formatDateTime(latestCheckedAt) : null,
+        datesCheckedLabel: latestCheckedAt
+          ? formatDateTime(latestCheckedAt)
+          : null,
         latestPriceLabel: null,
-        latestScannerReasonLabel: latestIssueRoute?.latestScannerReasonLabel ?? null,
+        latestScannerReasonLabel:
+          latestIssueRoute?.latestScannerReasonLabel ?? null,
         latestScannerReasonAtLabel: latestIssueRoute?.latestScannerReasonAt
           ? formatDateTime(latestIssueRoute.latestScannerReasonAt)
           : null,
-        latestScannerReasonDetail: latestIssueRoute?.latestScannerReasonDetail ?? null,
+        latestScannerReasonDetail:
+          latestIssueRoute?.latestScannerReasonDetail ?? null,
         detectedDepartureSummary:
           combinedDepartureSummaries.length > 0
             ? combinedDepartureSummaries.slice(0, 2).join(" · ")
@@ -385,7 +415,9 @@ async function OpsDeferredDetails() {
         activeRuleSummary:
           combinedRuleLabels.length > 0
             ? `${combinedRuleLabels.slice(0, 4).join(", ")}${
-                combinedRuleLabels.length > 4 ? ` +${combinedRuleLabels.length - 4} more` : ""
+                combinedRuleLabels.length > 4
+                  ? ` +${combinedRuleLabels.length - 4} more`
+                  : ""
               }`
             : null,
         childSummaryLabel:
@@ -411,10 +443,10 @@ async function OpsDeferredDetails() {
           !dashboard.scannerVerified
             ? "is-unverified"
             : dashboard.automatedAlerts.critical > 0
-            ? "is-critical"
-            : dashboard.automatedAlerts.warning > 0
-              ? "is-warning"
-              : "is-healthy"
+              ? "is-critical"
+              : dashboard.automatedAlerts.warning > 0
+                ? "is-warning"
+                : "is-healthy"
         }`}
         aria-label="Automatic operational alerts"
       >
@@ -427,8 +459,8 @@ async function OpsDeferredDetails() {
             {!dashboard.scannerVerified
               ? "Could not verify scanner status."
               : dashboard.automatedAlerts.total === 0
-              ? "No active operational alerts."
-              : `${dashboard.automatedAlerts.critical} critical · ${dashboard.automatedAlerts.warning} warning`}
+                ? "No active operational alerts."
+                : `${dashboard.automatedAlerts.critical} critical · ${dashboard.automatedAlerts.warning} warning`}
           </p>
         </div>
 
@@ -436,17 +468,22 @@ async function OpsDeferredDetails() {
           <div className="ops-alert-empty" role="status">
             <span className="ops-send-badge is-unverified">Unverified</span>
             <p>
-              Scanner health is temporarily unavailable. This does not mean the scanner is healthy
-              or unhealthy; the check could not be completed.
+              Scanner health is temporarily unavailable. This does not mean the
+              scanner is healthy or unhealthy; the check could not be completed.
             </p>
             {dashboard.scannerError ? (
-              <small className="ops-verification-error">{dashboard.scannerError}</small>
+              <small className="ops-verification-error">
+                {dashboard.scannerError}
+              </small>
             ) : null}
           </div>
         ) : dashboard.automatedAlerts.items.length === 0 ? (
           <div className="ops-alert-empty">
             <span className="ops-send-badge is-live">Healthy</span>
-            <p>Scanner runs, route freshness, and recent Supabase sync signals look normal.</p>
+            <p>
+              Scanner runs, route freshness, and recent Supabase sync signals
+              look normal.
+            </p>
           </div>
         ) : (
           <div className="ops-automated-alerts__list">
@@ -461,7 +498,9 @@ async function OpsDeferredDetails() {
                   </div>
                   <span
                     className={`ops-send-badge ${
-                      alert.severity === "critical" ? "is-critical" : "is-warning"
+                      alert.severity === "critical"
+                        ? "is-critical"
+                        : "is-warning"
                     }`}
                   >
                     {alert.severity === "critical" ? "Critical" : "Warning"}
@@ -469,7 +508,9 @@ async function OpsDeferredDetails() {
                 </div>
                 <p className="ops-automated-alert__summary">{alert.summary}</p>
                 <p className="ops-automated-alert__detail">{alert.detail}</p>
-                <span className="ops-pill">Signal: {formatAlertDetectedAt(alert.detectedAt)}</span>
+                <span className="ops-pill">
+                  Signal: {formatAlertDetectedAt(alert.detectedAt)}
+                </span>
               </article>
             ))}
           </div>
@@ -482,14 +523,22 @@ async function OpsDeferredDetails() {
             <p className="ops-panel__eyebrow">Audience</p>
             <h2>Subscribers</h2>
           </div>
-          <p>Edit core subscriber fields here, or open the saved preference page for the full profile.</p>
+          <p>
+            Edit core subscriber fields here, or open the saved preference page
+            for the full profile.
+          </p>
         </div>
 
         {!dashboard.subscribersVerified ? (
           <div className="ops-empty" role="status">
-            <p>Subscribers are temporarily unavailable. Could not verify this section.</p>
+            <p>
+              Subscribers are temporarily unavailable. Could not verify this
+              section.
+            </p>
             {dashboard.subscribersError ? (
-              <small className="ops-verification-error">{dashboard.subscribersError}</small>
+              <small className="ops-verification-error">
+                {dashboard.subscribersError}
+              </small>
             ) : null}
           </div>
         ) : dashboard.subscribers.length === 0 ? (
@@ -524,10 +573,14 @@ async function OpsDeferredDetails() {
                       {formatSubscriberStatusLabel(subscriber.status)}
                     </span>
                     <span className="ops-pill">
-                      {subscriber.emailConfirmed ? "Email confirmed" : "Email pending"}
+                      {subscriber.emailConfirmed
+                        ? "Email confirmed"
+                        : "Email pending"}
                     </span>
                     <span className="ops-pill">
-                      {subscriber.onboardingCompleted ? "Profile saved" : "Profile incomplete"}
+                      {subscriber.onboardingCompleted
+                        ? "Profile saved"
+                        : "Profile incomplete"}
                     </span>
                   </div>
                 </div>
@@ -577,11 +630,18 @@ async function OpsDeferredDetails() {
                     <summary className="ops-button ops-button--compact ops-button--ghost">
                       Edit subscriber
                     </summary>
-                    <form action={updateSubscriberAction} className="ops-review-controls ops-review-controls--subscribers">
+                    <form
+                      action={updateSubscriberAction}
+                      className="ops-review-controls ops-review-controls--subscribers"
+                    >
                       <input name="id" type="hidden" value={subscriber.id} />
                       <label className="ops-review-control">
                         <span>Email</span>
-                        <input defaultValue={subscriber.email} name="email" type="email" />
+                        <input
+                          defaultValue={subscriber.email}
+                          name="email"
+                          type="email"
+                        />
                       </label>
                       <label className="ops-review-control">
                         <span>Status</span>
@@ -593,10 +653,18 @@ async function OpsDeferredDetails() {
                       </label>
                       <label className="ops-review-control">
                         <span>Home airport</span>
-                        <input defaultValue={subscriber.homeAirport} name="homeAirport" type="text" />
+                        <input
+                          defaultValue={subscriber.homeAirport}
+                          name="homeAirport"
+                          type="text"
+                        />
                       </label>
                       <label className="ops-toggle">
-                        <input defaultChecked={subscriber.emailConfirmed} name="emailConfirmed" type="checkbox" />
+                        <input
+                          defaultChecked={subscriber.emailConfirmed}
+                          name="emailConfirmed"
+                          type="checkbox"
+                        />
                         <span>Email confirmed</span>
                       </label>
                       <label className="ops-toggle">
@@ -607,7 +675,10 @@ async function OpsDeferredDetails() {
                         />
                         <span>Onboarding completed</span>
                       </label>
-                      <button className="ops-button ops-button--compact ops-button--approve" type="submit">
+                      <button
+                        className="ops-button ops-button--compact ops-button--approve"
+                        type="submit"
+                      >
                         Save changes
                       </button>
                     </form>
@@ -615,7 +686,10 @@ async function OpsDeferredDetails() {
 
                   <form action={deleteSubscriberAction}>
                     <input name="id" type="hidden" value={subscriber.id} />
-                    <button className="ops-button ops-button--compact ops-button--ghost" type="submit">
+                    <button
+                      className="ops-button ops-button--compact ops-button--ghost"
+                      type="submit"
+                    >
                       Delete subscriber
                     </button>
                   </form>
@@ -628,7 +702,10 @@ async function OpsDeferredDetails() {
 
       <section className="ops-grid">
         {!dashboard.scannerVerified ? (
-          <section className="ops-panel ops-panel--wide is-unverified" role="status">
+          <section
+            className="ops-panel ops-panel--wide is-unverified"
+            role="status"
+          >
             <div className="ops-panel__header">
               <div>
                 <p className="ops-panel__eyebrow">Health</p>
@@ -638,244 +715,293 @@ async function OpsDeferredDetails() {
             </div>
             <div className="ops-empty">
               <p>
-                Scanner runs, route coverage, and missing-price alerts are temporarily unavailable.
-                Other sections of /ops can still be used.
+                Scanner runs, route coverage, and missing-price alerts are
+                temporarily unavailable. Other sections of /ops can still be
+                used.
               </p>
               {dashboard.scannerError ? (
-                <small className="ops-verification-error">{dashboard.scannerError}</small>
+                <small className="ops-verification-error">
+                  {dashboard.scannerError}
+                </small>
               ) : null}
             </div>
           </section>
         ) : (
           <section className="ops-panel ops-panel--wide">
-          <div className="ops-panel__header">
-            <div>
-              <p className="ops-panel__eyebrow">Health</p>
-              <h2>Scanner health</h2>
-            </div>
-            <p>
-              Uses the scanner&apos;s recorded executions directly; it no longer guesses runs from
-              gaps between saved prices.
-            </p>
-          </div>
-
-          <dl className="ops-send-stats">
-            <div>
-              <dt>Latest recorded run</dt>
-              <dd>{formatDateTime(dashboard.scannerHealth.latestRunAt)}</dd>
-            </div>
-            <div>
-              <dt>Previous recorded run</dt>
-              <dd>{formatDateTime(dashboard.scannerHealth.previousRunAt)}</dd>
-            </div>
-            <div>
-              <dt>Latest run status</dt>
-              <dd>
-                {dashboard.scannerHealth.latestRun
-                  ? dashboard.scannerHealth.latestRun.status.replaceAll("_", " ")
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>Latest run progress</dt>
-              <dd>
-                {dashboard.scannerHealth.latestRun
-                  ? `${dashboard.scannerHealth.latestRun.routesCompleted}/${dashboard.scannerHealth.latestRun.routesPlanned}`
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>Prices / errors</dt>
-              <dd>
-                {dashboard.scannerHealth.latestRun
-                  ? `${dashboard.scannerHealth.latestRun.foundPrices}/${dashboard.scannerHealth.latestRun.errors}`
-                  : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>Latest run price coverage</dt>
-              <dd>
-                {dashboard.scannerHealth.routesSeenInLatestRun}/
-                {dashboard.scannerHealth.routesPlannedInLatestRun}
-              </dd>
-            </div>
-            <div>
-              <dt>Routes flagged</dt>
-              <dd>{dashboard.scannerHealth.routesMissingData}</dd>
-            </div>
-            <OpsHealthNeverSnapshotCard
-              count={dashboard.scannerHealth.routesMissingLatestRun}
-              dialogDescription={
-                dashboard.scannerHealth.latestRunAt
-                  ? `${dashboard.scannerHealth.routesMissingLatestRun} active ${
-                      dashboard.scannerHealth.routesMissingLatestRun === 1 ? "route was" : "routes were"
-                    } included in the latest recorded execution but did not produce a price.`
-                  : "No completed scanner execution is visible yet."
-              }
-              dialogTitle="Routes without a fresh price in the latest run"
-              hintLabel="Open details"
-              countLabel={`${dashboard.scannerHealth.routesMissingLatestRun} route${
-                dashboard.scannerHealth.routesMissingLatestRun === 1 ? "" : "s"
-              }`}
-              items={latestRunMissingRouteDetails}
-              title="No price in latest run"
-            />
-            <OpsHealthNeverSnapshotCard
-              count={neverSnapshotDestinationDetails.length}
-              dialogDescription={
-                neverSnapshotDestinationDetails.length === 1
-                  ? "1 destination still has no route setup with a recorded price snapshot."
-                  : `${neverSnapshotDestinationDetails.length} destinations still have no route setup with a recorded price snapshot.`
-              }
-              dialogTitle="Destinations with no price snapshot yet"
-              hintLabel="Open details"
-              countLabel={`${neverSnapshotDestinationDetails.length} destination${
-                neverSnapshotDestinationDetails.length === 1 ? "" : "s"
-              }`}
-              items={neverSnapshotDestinationDetails}
-              title="Destinations with no price yet"
-            />
-          </dl>
-
-          <div className="ops-health-legend" aria-label="Scanner health severity guide">
-            {(["warning", "critical"] as const).map((severity) => {
-              const explanation = describeScannerHealthSeverity(severity);
-              return (
-                <article className="ops-health-legend__item" key={severity}>
-                  <div className="ops-health-legend__header">
-                    <span
-                      className={`ops-send-badge ${
-                        severity === "critical" ? "is-critical" : "is-warning"
-                      }`}
-                    >
-                      {explanation.label}
-                    </span>
-                    <strong>{explanation.threshold}</strong>
-                  </div>
-                  <p>{explanation.description}</p>
-                </article>
-              );
-            })}
-          </div>
-
-          {dashboard.scannerHealth.recentRunCount === 0 ? (
-            <div className="ops-empty">
-              <p>No completed scan runs are visible yet, so there is no health signal to evaluate.</p>
-            </div>
-          ) : dashboard.scannerHealth.alerts.length === 0 ? (
-            <div className="ops-empty">
+            <div className="ops-panel__header">
+              <div>
+                <p className="ops-panel__eyebrow">Health</p>
+                <h2>Scanner health</h2>
+              </div>
               <p>
-                Healthy right now. Across the last {dashboard.scannerHealth.recentRunCount} recorded
-                scanner executions, every attempted route has produced a fresh price recently.
+                Uses the scanner&apos;s recorded executions directly; it no
+                longer guesses runs from gaps between saved prices.
               </p>
             </div>
-          ) : (
-            <details className="ops-health-alerts-collapsible">
-              <summary className="ops-collapsible__toggle ops-collapsible__toggle--alerts">
-                <div>
-                  <p className="ops-panel__eyebrow">Alert details</p>
-                  <h2>Open flagged route details</h2>
-                </div>
-                <div className="ops-collapsible__meta">
-                  <span>{dashboard.scannerHealth.alerts.length} routes flagged</span>
-                  <strong>Open details</strong>
-                </div>
-              </summary>
-              <div className="ops-collapsible__content">
-                <div className="ops-list">
-                  {dashboard.scannerHealth.alerts.map((alert) => (
-                    <article className="ops-list__item ops-list__item--stacked" key={alert.routeId}>
-                      <div className="ops-list__stack ops-health-alert__details">
-                        <div className="ops-health-alert__header">
-                          <div>
-                            <h3>{alert.routeLabel}</h3>
-                            <p>
-                              {formatRelativeBucket(alert.routeBucket)} · missed {alert.missedScanRuns}{" "}
-                              recent scan runs
-                            </p>
-                          </div>
-                          <span
-                            className={`ops-send-badge ${
-                              alert.severity === "critical" ? "is-critical" : "is-warning"
-                            }`}
-                          >
-                            {alert.severity === "critical" ? "Critical" : "Warning"}
-                          </span>
-                        </div>
-                      <p className="ops-health-alert__explanation">{explainScannerHealthAlert(alert)}</p>
-                      <div className="ops-pill-row">
-                        <span className="ops-pill">Routing: {formatRoutingLabel(alert.routeRouting)}</span>
-                        <span className="ops-pill">Rules in window: {alert.activeRuleCount}</span>
-                        <span className="ops-pill">
-                          Last seen:{" "}
-                          {alert.latestSeenAt
-                            ? `${formatVerifiedAge(alert.latestSeenAt)} · ${formatDateTime(alert.latestSeenAt)}`
-                            : "No snapshot yet"}
-                        </span>
-                        {alert.datesScannerLastCheckedAt ? (
-                          <span className="ops-pill">
-                            Dates checked: {formatDateTime(alert.datesScannerLastCheckedAt)}
-                          </span>
-                        ) : null}
-                        {alert.latestPrice !== null ? (
-                          <span className="ops-pill">Last price: {formatCurrency(alert.latestPrice)}</span>
-                        ) : null}
-                        {alert.latestScannerReasonLabel ? (
-                          <span className="ops-pill">
-                            Scanner reason: {alert.latestScannerReasonLabel}
-                            {alert.latestScannerReasonAt
-                              ? ` · ${formatDateTime(alert.latestScannerReasonAt)}`
-                              : ""}
-                          </span>
-                        ) : null}
-                        {alert.detectedDepartureSummary ? (
-                          <span className="ops-pill">Departures: {alert.detectedDepartureSummary}</span>
-                        ) : null}
-                        {alert.activeRuleLabels.length > 0 ? (
-                          <span className="ops-pill">
-                            Rule set: {alert.activeRuleLabels.slice(0, 3).join(", ")}
-                            {alert.activeRuleLabels.length > 3
-                              ? ` +${alert.activeRuleLabels.length - 3} more`
-                              : ""}
-                          </span>
-                        ) : null}
-                      </div>
-                      {alert.latestScannerReasonLabel && alert.latestScannerReasonDetail ? (
-                        <div className="ops-health-alert__latest-reason">
-                          <strong>Latest scanner reason: {alert.latestScannerReasonLabel}</strong>
-                          <p>{alert.latestScannerReasonDetail}</p>
-                        </div>
-                      ) : null}
-                      {(alert.examplePatternLabel || alert.exampleBookingUrl) ? (
-                        <div className="ops-health-alert__manual">
-                          <div className="ops-health-alert__manual-copy">
-                            <strong>Manual check</strong>
-                            <p>
-                              {alert.examplePatternLabel ? `${alert.examplePatternLabel} · ` : ""}
-                              {alert.exampleDepartureDate && alert.exampleReturnDate
-                                ? `Out ${alert.exampleDepartureDate} · Back ${alert.exampleReturnDate}`
-                                : "No exact date pair available from current rules and detected dates."}
-                            </p>
-                          </div>
-                          {alert.exampleBookingUrl ? (
-                            <a
-                              className="ops-button ops-button--compact ops-button--linkout"
-                              href={alert.exampleBookingUrl}
-                              rel="noreferrer"
-                              target="_blank"
+
+            <dl className="ops-send-stats">
+              <div>
+                <dt>Latest recorded run</dt>
+                <dd>{formatDateTime(dashboard.scannerHealth.latestRunAt)}</dd>
+              </div>
+              <div>
+                <dt>Previous recorded run</dt>
+                <dd>{formatDateTime(dashboard.scannerHealth.previousRunAt)}</dd>
+              </div>
+              <div>
+                <dt>Latest run status</dt>
+                <dd>
+                  {dashboard.scannerHealth.latestRun
+                    ? dashboard.scannerHealth.latestRun.status.replaceAll(
+                        "_",
+                        " ",
+                      )
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>Latest run progress</dt>
+                <dd>
+                  {dashboard.scannerHealth.latestRun
+                    ? `${dashboard.scannerHealth.latestRun.routesCompleted}/${dashboard.scannerHealth.latestRun.routesPlanned}`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>Prices / errors</dt>
+                <dd>
+                  {dashboard.scannerHealth.latestRun
+                    ? `${dashboard.scannerHealth.latestRun.foundPrices}/${dashboard.scannerHealth.latestRun.errors}`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>Latest run price coverage</dt>
+                <dd>
+                  {dashboard.scannerHealth.routesSeenInLatestRun}/
+                  {dashboard.scannerHealth.routesPlannedInLatestRun}
+                </dd>
+              </div>
+              <div>
+                <dt>Routes flagged</dt>
+                <dd>{dashboard.scannerHealth.routesMissingData}</dd>
+              </div>
+              <OpsHealthNeverSnapshotCard
+                count={dashboard.scannerHealth.routesMissingLatestRun}
+                dialogDescription={
+                  dashboard.scannerHealth.latestRunAt
+                    ? `${dashboard.scannerHealth.routesMissingLatestRun} active ${
+                        dashboard.scannerHealth.routesMissingLatestRun === 1
+                          ? "route was"
+                          : "routes were"
+                      } included in the latest recorded execution but did not produce a price.`
+                    : "No completed scanner execution is visible yet."
+                }
+                dialogTitle="Routes without a fresh price in the latest run"
+                hintLabel="Open details"
+                countLabel={`${dashboard.scannerHealth.routesMissingLatestRun} route${
+                  dashboard.scannerHealth.routesMissingLatestRun === 1
+                    ? ""
+                    : "s"
+                }`}
+                items={latestRunMissingRouteDetails}
+                title="No price in latest run"
+              />
+              <OpsHealthNeverSnapshotCard
+                count={neverSnapshotDestinationDetails.length}
+                dialogDescription={
+                  neverSnapshotDestinationDetails.length === 1
+                    ? "1 destination still has no route setup with a recorded price snapshot."
+                    : `${neverSnapshotDestinationDetails.length} destinations still have no route setup with a recorded price snapshot.`
+                }
+                dialogTitle="Destinations with no price snapshot yet"
+                hintLabel="Open details"
+                countLabel={`${neverSnapshotDestinationDetails.length} destination${
+                  neverSnapshotDestinationDetails.length === 1 ? "" : "s"
+                }`}
+                items={neverSnapshotDestinationDetails}
+                title="Destinations with no price yet"
+              />
+            </dl>
+
+            <div
+              className="ops-health-legend"
+              aria-label="Scanner health severity guide"
+            >
+              {(["warning", "critical"] as const).map((severity) => {
+                const explanation = describeScannerHealthSeverity(severity);
+                return (
+                  <article className="ops-health-legend__item" key={severity}>
+                    <div className="ops-health-legend__header">
+                      <span
+                        className={`ops-send-badge ${
+                          severity === "critical" ? "is-critical" : "is-warning"
+                        }`}
+                      >
+                        {explanation.label}
+                      </span>
+                      <strong>{explanation.threshold}</strong>
+                    </div>
+                    <p>{explanation.description}</p>
+                  </article>
+                );
+              })}
+            </div>
+
+            {dashboard.scannerHealth.recentRunCount === 0 ? (
+              <div className="ops-empty">
+                <p>
+                  No completed scan runs are visible yet, so there is no health
+                  signal to evaluate.
+                </p>
+              </div>
+            ) : dashboard.scannerHealth.alerts.length === 0 ? (
+              <div className="ops-empty">
+                <p>
+                  Healthy right now. Across the last{" "}
+                  {dashboard.scannerHealth.recentRunCount} recorded scanner
+                  executions, every attempted route has produced a fresh price
+                  recently.
+                </p>
+              </div>
+            ) : (
+              <details className="ops-health-alerts-collapsible">
+                <summary className="ops-collapsible__toggle ops-collapsible__toggle--alerts">
+                  <div>
+                    <p className="ops-panel__eyebrow">Alert details</p>
+                    <h2>Open flagged route details</h2>
+                  </div>
+                  <div className="ops-collapsible__meta">
+                    <span>
+                      {dashboard.scannerHealth.alerts.length} routes flagged
+                    </span>
+                    <strong>Open details</strong>
+                  </div>
+                </summary>
+                <div className="ops-collapsible__content">
+                  <div className="ops-list">
+                    {dashboard.scannerHealth.alerts.map((alert) => (
+                      <article
+                        className="ops-list__item ops-list__item--stacked"
+                        key={alert.routeId}
+                      >
+                        <div className="ops-list__stack ops-health-alert__details">
+                          <div className="ops-health-alert__header">
+                            <div>
+                              <h3>{alert.routeLabel}</h3>
+                              <p>
+                                {formatRelativeBucket(alert.routeBucket)} ·
+                                missed {alert.missedScanRuns} recent scan runs
+                              </p>
+                            </div>
+                            <span
+                              className={`ops-send-badge ${
+                                alert.severity === "critical"
+                                  ? "is-critical"
+                                  : "is-warning"
+                              }`}
                             >
-                              Skyscanner ↗
-                            </a>
+                              {alert.severity === "critical"
+                                ? "Critical"
+                                : "Warning"}
+                            </span>
+                          </div>
+                          <p className="ops-health-alert__explanation">
+                            {explainScannerHealthAlert(alert)}
+                          </p>
+                          <div className="ops-pill-row">
+                            <span className="ops-pill">
+                              Routing: {formatRoutingLabel(alert.routeRouting)}
+                            </span>
+                            <span className="ops-pill">
+                              Rules in window: {alert.activeRuleCount}
+                            </span>
+                            <span className="ops-pill">
+                              Last seen:{" "}
+                              {alert.latestSeenAt
+                                ? `${formatVerifiedAge(alert.latestSeenAt)} · ${formatDateTime(alert.latestSeenAt)}`
+                                : "No snapshot yet"}
+                            </span>
+                            {alert.datesScannerLastCheckedAt ? (
+                              <span className="ops-pill">
+                                Dates checked:{" "}
+                                {formatDateTime(
+                                  alert.datesScannerLastCheckedAt,
+                                )}
+                              </span>
+                            ) : null}
+                            {alert.latestPrice !== null ? (
+                              <span className="ops-pill">
+                                Last price: {formatCurrency(alert.latestPrice)}
+                              </span>
+                            ) : null}
+                            {alert.latestScannerReasonLabel ? (
+                              <span className="ops-pill">
+                                Scanner reason: {alert.latestScannerReasonLabel}
+                                {alert.latestScannerReasonAt
+                                  ? ` · ${formatDateTime(alert.latestScannerReasonAt)}`
+                                  : ""}
+                              </span>
+                            ) : null}
+                            {alert.detectedDepartureSummary ? (
+                              <span className="ops-pill">
+                                Departures: {alert.detectedDepartureSummary}
+                              </span>
+                            ) : null}
+                            {alert.activeRuleLabels.length > 0 ? (
+                              <span className="ops-pill">
+                                Rule set:{" "}
+                                {alert.activeRuleLabels.slice(0, 3).join(", ")}
+                                {alert.activeRuleLabels.length > 3
+                                  ? ` +${alert.activeRuleLabels.length - 3} more`
+                                  : ""}
+                              </span>
+                            ) : null}
+                          </div>
+                          {alert.latestScannerReasonLabel &&
+                          alert.latestScannerReasonDetail ? (
+                            <div className="ops-health-alert__latest-reason">
+                              <strong>
+                                Latest scanner reason:{" "}
+                                {alert.latestScannerReasonLabel}
+                              </strong>
+                              <p>{alert.latestScannerReasonDetail}</p>
+                            </div>
+                          ) : null}
+                          {alert.examplePatternLabel ||
+                          alert.exampleBookingUrl ? (
+                            <div className="ops-health-alert__manual">
+                              <div className="ops-health-alert__manual-copy">
+                                <strong>Manual check</strong>
+                                <p>
+                                  {alert.examplePatternLabel
+                                    ? `${alert.examplePatternLabel} · `
+                                    : ""}
+                                  {alert.exampleDepartureDate &&
+                                  alert.exampleReturnDate
+                                    ? `Out ${alert.exampleDepartureDate} · Back ${alert.exampleReturnDate}`
+                                    : "No exact date pair available from current rules and detected dates."}
+                                </p>
+                              </div>
+                              {alert.exampleBookingUrl ? (
+                                <a
+                                  className="ops-button ops-button--compact ops-button--linkout"
+                                  href={alert.exampleBookingUrl}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  Skyscanner ↗
+                                </a>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
-                      ) : null}
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </details>
-          )}
+              </details>
+            )}
           </section>
         )}
       </section>
@@ -900,40 +1026,104 @@ async function OpsSummarySection() {
   return (
     <>
       <section className="ops-metrics" aria-label="Operational metrics">
-        <article className={summary.verificationErrors.subscribers ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.subscribers ? "is-unverified" : undefined
+          }
+        >
           <span>Subscribers</span>
-          {metric(summary.metrics.subscribers, summary.verificationErrors.subscribers)}
+          {metric(
+            summary.metrics.subscribers,
+            summary.verificationErrors.subscribers,
+          )}
         </article>
-        <article className={summary.verificationErrors.activeRoutes ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.activeRoutes
+              ? "is-unverified"
+              : undefined
+          }
+        >
           <span>Active routes</span>
-          {metric(summary.metrics.activeRoutes, summary.verificationErrors.activeRoutes)}
+          {metric(
+            summary.metrics.activeRoutes,
+            summary.verificationErrors.activeRoutes,
+          )}
         </article>
-        <article className={summary.verificationErrors.newDeals ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.newDeals ? "is-unverified" : undefined
+          }
+        >
           <span>New deals</span>
-          {metric(summary.metrics.newDeals, summary.verificationErrors.newDeals)}
+          {metric(
+            summary.metrics.newDeals,
+            summary.verificationErrors.newDeals,
+          )}
         </article>
-        <article className={summary.verificationErrors.snapshots24h ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.snapshots24h
+              ? "is-unverified"
+              : undefined
+          }
+        >
           <span>Snapshots in 24h</span>
-          {metric(summary.metrics.snapshots24h, summary.verificationErrors.snapshots24h)}
+          {metric(
+            summary.metrics.snapshots24h,
+            summary.verificationErrors.snapshots24h,
+          )}
         </article>
       </section>
 
       <section className="ops-state-strip" aria-label="Deal lifecycle states">
-        <article className={summary.verificationErrors.newDeals ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.newDeals ? "is-unverified" : undefined
+          }
+        >
           <span>New</span>
-          {metric(summary.dealStateCounts.new, summary.verificationErrors.newDeals)}
+          {metric(
+            summary.dealStateCounts.new,
+            summary.verificationErrors.newDeals,
+          )}
         </article>
-        <article className={summary.verificationErrors.reviewedDeals ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.reviewedDeals
+              ? "is-unverified"
+              : undefined
+          }
+        >
           <span>Reviewed</span>
-          {metric(summary.dealStateCounts.reviewed, summary.verificationErrors.reviewedDeals)}
+          {metric(
+            summary.dealStateCounts.reviewed,
+            summary.verificationErrors.reviewedDeals,
+          )}
         </article>
-        <article className={summary.verificationErrors.sentDeals ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.sentDeals ? "is-unverified" : undefined
+          }
+        >
           <span>Sent</span>
-          {metric(summary.dealStateCounts.sent, summary.verificationErrors.sentDeals)}
+          {metric(
+            summary.dealStateCounts.sent,
+            summary.verificationErrors.sentDeals,
+          )}
         </article>
-        <article className={summary.verificationErrors.expiredDeals ? "is-unverified" : undefined}>
+        <article
+          className={
+            summary.verificationErrors.expiredDeals
+              ? "is-unverified"
+              : undefined
+          }
+        >
           <span>Expired</span>
-          {metric(summary.dealStateCounts.expired, summary.verificationErrors.expiredDeals)}
+          {metric(
+            summary.dealStateCounts.expired,
+            summary.verificationErrors.expiredDeals,
+          )}
         </article>
       </section>
     </>
@@ -945,7 +1135,10 @@ async function OpsReviewQueueSection({ page }: { page: number }) {
 
   if (!queue.schemaReady || queue.onboardingMessage) {
     return (
-      <section className="ops-panel ops-panel--wide is-unverified" role="status">
+      <section
+        className="ops-panel ops-panel--wide is-unverified"
+        role="status"
+      >
         <div className="ops-panel__header">
           <div>
             <p className="ops-panel__eyebrow">Review queue</p>
@@ -955,11 +1148,13 @@ async function OpsReviewQueueSection({ page }: { page: number }) {
         </div>
         <div className="ops-empty">
           <p>
-            Deals are temporarily unavailable. Metrics, scanner status, and subscribers remain
-            independent from this error.
+            Deals are temporarily unavailable. Metrics, scanner status, and
+            subscribers remain independent from this error.
           </p>
           {queue.onboardingMessage ? (
-            <small className="ops-verification-error">{queue.onboardingMessage}</small>
+            <small className="ops-verification-error">
+              {queue.onboardingMessage}
+            </small>
           ) : null}
         </div>
       </section>
@@ -993,20 +1188,30 @@ export default async function OpsPage({
 }: {
   searchParams: Promise<{ dealsPage?: string }>;
 }) {
+  await assertOpsAccess();
   const params = await searchParams;
   const parsedPage = Number.parseInt(params.dealsPage ?? "1", 10);
-  const dealsPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const dealsPage =
+    Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
   return (
     <main className="ops-shell">
       <OpsSubnav />
-      <Suspense fallback={<OpsSectionFallback label="Loading quick summary…" />}>
+      <Suspense
+        fallback={<OpsSectionFallback label="Loading quick summary…" />}
+      >
         <OpsSummarySection />
       </Suspense>
-      <Suspense fallback={<OpsSectionFallback label="Loading scanner and subscribers…" />}>
+      <Suspense
+        fallback={
+          <OpsSectionFallback label="Loading scanner and subscribers…" />
+        }
+      >
         <OpsDeferredDetails />
       </Suspense>
-      <Suspense fallback={<OpsSectionFallback label="Loading the latest 50 deals…" />}>
+      <Suspense
+        fallback={<OpsSectionFallback label="Loading the latest 50 deals…" />}
+      >
         <OpsReviewQueueSection page={dealsPage} />
       </Suspense>
     </main>
