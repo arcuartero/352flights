@@ -36,6 +36,31 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      # Runs against e2e/mock-backend.mjs with the runner's preinstalled Google Chrome.
+      - run: npm run test:e2e
+        env:
+          CI: "true"
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
   scanner:
     runs-on: ubuntu-latest
     defaults:

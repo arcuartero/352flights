@@ -46,6 +46,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The e2e suite builds into its own directory so it never clobbers a running dev server.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+  typescript: { tsconfigPath: process.env.NEXT_TSCONFIG_PATH || "tsconfig.json" },
   reactStrictMode: true,
   poweredByHeader: false,
   // 30-minute fare freshness plus at most 30 minutes of stale CDN serving.

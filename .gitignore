@@ -16,3 +16,6 @@ logs/
 supabase/.temp/
 .vercel/
 *.tsbuildinfo
+.next-e2e/
+playwright-report/
+test-results/

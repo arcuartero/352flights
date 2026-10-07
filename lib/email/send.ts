@@ -30,7 +30,9 @@ export function getResendFromEmail(
 export async function sendResendEmail(input: SendResendEmailInput) {
   const env = getResendEnv();
 
-  const response = await fetch("https://api.resend.com/emails", {
+  // RESEND_API_BASE_URL exists only so the e2e suite can point at its local mock.
+  const baseUrl = process.env.RESEND_API_BASE_URL || "https://api.resend.com";
+  const response = await fetch(`${baseUrl}/emails`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
