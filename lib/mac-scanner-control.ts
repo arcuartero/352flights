@@ -4,6 +4,8 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 
 const MAC_AGENT_ID = "mac";
 const AGENT_ONLINE_WINDOW_MS = 45_000;
+/** A failed command stays visible in Ops for this long, unless a newer command replaces it. */
+const RECENT_FAILURE_WINDOW_MS = 15 * 60_000;
 
 export type MacScannerType = "price_scanner" | "dates_scanner";
 export type MacScannerAction = "start" | "stop";
@@ -38,8 +40,21 @@ export type MacScannerControlState = {
   activeOwner: MacScannerType | null;
   activePid: number | null;
   pendingCommand: CommandRow | null;
+  /** Latest command when it failed recently, so the UI can say why nothing started. */
+  recentFailure: { action: MacScannerAction; error: string; failedAt: string } | null;
   error: string | null;
 };
+
+function recentFailureOf(command: CommandRow | null, now = Date.now()) {
+  if (!command || command.status !== "failed") return null;
+  const failedAt = command.completed_at ?? command.requested_at;
+  if (now - Date.parse(failedAt) > RECENT_FAILURE_WINDOW_MS) return null;
+  return {
+    action: command.action,
+    error: command.error ?? "The Mac controller reported a failure.",
+    failedAt,
+  };
+}
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error ?? "Unknown error");
@@ -50,7 +65,7 @@ export async function getMacScannerControlState(
 ): Promise<MacScannerControlState> {
   try {
     const supabase = getSupabaseAdminClient();
-    const [agentQuery, commandQuery] = await Promise.all([
+    const [agentQuery, commandQuery, latestCommandQuery] = await Promise.all([
       supabase
         .from("scanner_control_agents")
         .select(
@@ -67,6 +82,14 @@ export async function getMacScannerControlState(
         .order("requested_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from("scanner_control_commands")
+        .select("id,scanner_type,action,status,requested_at,claimed_at,completed_at,error")
+        .eq("target_agent_id", MAC_AGENT_ID)
+        .eq("scanner_type", scannerType)
+        .order("requested_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     if (agentQuery.error || commandQuery.error) {
@@ -79,6 +102,7 @@ export async function getMacScannerControlState(
         activeOwner: null,
         activePid: null,
         pendingCommand: null,
+        recentFailure: null,
         error: agentQuery.error?.message ?? commandQuery.error?.message ?? "Unknown error",
       };
     }
@@ -96,6 +120,10 @@ export async function getMacScannerControlState(
       activeOwner: agent?.active_owner ?? null,
       activePid: agent?.active_pid ?? null,
       pendingCommand,
+      // Best effort: a failed lookup only hides the failure notice.
+      recentFailure: latestCommandQuery.error
+        ? null
+        : recentFailureOf(latestCommandQuery.data as CommandRow | null),
       error: null,
     };
   } catch (error) {
@@ -108,6 +136,7 @@ export async function getMacScannerControlState(
       activeOwner: null,
       activePid: null,
       pendingCommand: null,
+      recentFailure: null,
       error: errorMessage(error),
     };
   }
