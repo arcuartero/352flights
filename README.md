@@ -203,7 +203,7 @@ Behavior:
 - the public site only loads qualifying snapshots verified during the previous 24 hours and
   removes repeated copies of the same itinerary
 
-For the cheap online setup, keep the web on Vercel and run the 11-hour scanner on a small VPS with local storage plus sync. See `docs/cheap-online-setup.md`.
+Production runs on Coolify on the OVH VPS; see `docs/deployment.md` for how publishing, rollbacks and migrations work. The long scanner can run on the Mac or the VPS with local storage plus sync; see `docs/cheap-online-setup.md`.
 
 ## Tests
 

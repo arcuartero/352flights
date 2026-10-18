@@ -34,7 +34,6 @@ export function unauthorizedOpsResponse() {
     headers: {
       "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
       "Cache-Control": "private, no-store, max-age=0, must-revalidate",
-      "Vercel-CDN-Cache-Control": "no-store",
     },
   });
 }

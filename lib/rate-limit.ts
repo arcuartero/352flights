@@ -11,7 +11,7 @@ export type RateLimitRule = {
   windowSeconds: number;
 };
 
-/** First hop of X-Forwarded-For as set by Vercel or the reverse proxy; spoofable only when no proxy overwrites it. */
+/** Client IP as forwarded by Coolify's Traefik proxy (X-Real-IP, else the first X-Forwarded-For hop). */
 export function clientIp(request: Request) {
   return (
     request.headers.get("x-real-ip")?.trim() ||

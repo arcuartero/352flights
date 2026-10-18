@@ -24,7 +24,6 @@ function applyCachePolicy(response: NextResponse, pathname: string) {
       "Cache-Control",
       "private, no-store, max-age=0, must-revalidate",
     );
-    response.headers.set("Vercel-CDN-Cache-Control", "no-store");
     // These URLs carry subscriber tokens; never forward them in the Referer header.
     response.headers.set("Referrer-Policy", "no-referrer");
     return response;

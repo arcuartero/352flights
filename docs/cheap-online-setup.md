@@ -1,6 +1,6 @@
-# Setup barato: Vercel + Supabase + Hetzner
+# Setup barato: Coolify (VPS de OVH) + Supabase
 
-Objetivo: la web vive en Vercel, los datos viven en Supabase y el scanner largo vive en un VPS. El scanner guarda primero en el disco del VPS y sincroniza cada tarifa a Supabase mientras avanza. Al terminar hace una sincronización completa de seguridad.
+Objetivo: la web vive en Coolify, en el VPS de OVH (ver `docs/deployment.md`), los datos viven en Supabase y el scanner largo vive en un VPS o en el Mac. El scanner guarda primero en el disco del VPS y sincroniza cada tarifa a Supabase mientras avanza. Al terminar hace una sincronización completa de seguridad.
 
 ## Antes de empezar
 
@@ -10,7 +10,7 @@ Necesitas tener a mano:
 - La clave `SUPABASE_SERVICE_ROLE_KEY`.
 - El repo de GitHub: `https://github.com/arcuartero/352flights.git`.
 
-La clave de Supabase no se pega en GitHub ni en Vercel como texto visible. Solo va en el archivo `.env` privado del VPS.
+La clave de Supabase no se pega en GitHub ni en Coolify como texto visible fuera de sus variables de entorno. Solo va en el archivo `.env` privado del VPS.
 
 ## 1. Crear el servidor en Hetzner
 
@@ -220,7 +220,7 @@ Aplica la configuración:
 sudo systemctl reload caddy
 ```
 
-En Vercel, añade estas variables de entorno a la app:
+En Coolify (app +352 Flights → Environment Variables), añade estas variables y vuelve a desplegar:
 
 ```text
 VPS_SCANNER_AGENT_URL=https://scanner-control.tudominio.com
@@ -228,7 +228,7 @@ VPS_SCANNER_AGENT_TOKEN=el_token_del_vps
 VPS_SCANNER_AGENT_IP=203.0.113.10
 ```
 
-Después redepliega la web. En `/ops/scanner-live` aparecerá una tarjeta `VPS Scanner`
+Después vuelve a desplegar la web desde Coolify. En `/ops/scanner-live` aparecerá una tarjeta `VPS Scanner`
 con botones para lanzar, parar, refrescar y ver logs.
 
 `VPS_SCANNER_AGENT_IP` es un respaldo opcional y debe contener la IP pública real del VPS.
@@ -268,7 +268,7 @@ El agente admite estas acciones adicionales autenticadas:
 
 La acción de inicio acepta únicamente un filtro validado de ruta o una ejecución completa. No
 acepta comandos arbitrarios. El temporizador ejecuta el descubrimiento completo el primer día de
-cada mes; el botón `Run monthly discovery` permite iniciarlo manualmente desde Vercel.
+cada mes; el botón `Run monthly discovery` permite iniciarlo manualmente desde `/ops`.
 
 ## 10. Actualizar código en el VPS
 
@@ -297,4 +297,4 @@ escanear únicamente los patrones genéricos y dejar meses o aerolíneas sin cob
 
 ## Coste esperado
 
-Con el VPS pequeño, el coste principal será el servidor de Hetzner. Vercel puede seguir en gratis y Supabase debería aguantar al principio si no subimos millones de filas.
+Con el VPS pequeño, el coste principal será el servidor de OVH y Supabase debería aguantar al principio si no subimos millones de filas.

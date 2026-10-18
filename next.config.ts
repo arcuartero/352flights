@@ -30,7 +30,7 @@ const reportOnlyPolicy = [
   "report-to csp",
 ].join("; ");
 
-// Applied by Next itself so they hold on any host (Vercel or the reverse proxy in front of the app).
+// Applied by Next itself, so they reach browsers through Coolify's Traefik proxy unchanged.
 const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -56,10 +56,6 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
-      {
-        source: "/sitemap.xml",
-        headers: [{ key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=1800, stale-while-revalidate=1800" }],
-      },
     ];
   },
   images: {
