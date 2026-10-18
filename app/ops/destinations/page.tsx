@@ -1,3 +1,4 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import { DestinationPhotoManager } from "@/components/destination-photo-manager";
 import { OpsSubnav } from "@/components/ops-subnav";
 import routes from "@/data/lux-routes.json";
@@ -41,7 +42,8 @@ function getDestinations() {
     .sort((left, right) => left.city.localeCompare(right.city));
 }
 
-export default function OpsDestinationsPage() {
+export default async function OpsDestinationsPage() {
+  await assertOpsAccess();
   const destinations = getDestinations();
 
   return (
@@ -53,9 +55,9 @@ export default function OpsDestinationsPage() {
             <div>
               <h2>Image library</h2>
               <p>
-                Upload one manual image per destination. Public destination cards will
-                use it automatically and fall back to the generic image when no upload
-                exists.
+                Upload one manual image per destination. Public destination
+                cards will use it automatically and fall back to the generic
+                image when no upload exists.
               </p>
             </div>
           </div>

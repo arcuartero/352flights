@@ -28,6 +28,7 @@ const MAX_ENTRIES = 220;
 const MAX_FETCH_ERROR_BODY_LENGTH = 420;
 const FETCH_ERROR_DEDUP_MS = 30_000;
 const QUIET_POLLING_PATHS = [
+  "/api/ops/status",
   "/api/ops/scanner-status",
   "/api/ops/pattern-discovery-status",
   "/api/ops/pattern-discovery-live-status",

@@ -16,6 +16,7 @@ export function revalidateDestinationFares(cities: string[]) {
   for (const slug of slugs) {
     revalidateTag(getDestinationFaresCacheTag(slug));
   }
+  revalidateTag(HOME_FARES_CACHE_TAG);
   revalidateTag(SEARCH_FARES_CACHE_TAG);
   revalidatePath("/sitemap.xml");
   return slugs;

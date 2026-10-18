@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getOpsEmailCampaignsData } from "@/lib/ops";
+import { getOpsEmailCampaignsData } from "@/lib/ops/campaign-dashboard";
 import { ensureOpsAuthorized } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";

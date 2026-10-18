@@ -27,6 +27,7 @@
 .newsletter-popup__eyebrow { margin: 0 0 1rem; color: var(--popup-blue); font-size: .875rem; font-weight: 600; line-height: 1.5; letter-spacing: .13em; text-transform: uppercase; }
 .newsletter-popup h2 { margin: 0 0 1.9rem; color: var(--popup-ink); font-family: inherit; font-size: clamp(1.85rem, 5vw, 2.45rem); font-weight: 600; line-height: 1.08; letter-spacing: -.035em; text-wrap: balance; }
 .newsletter-popup__form { display: grid; gap: .9rem; }
+.travel-email-consent--popup { color: #596989; text-align: left; }
 .newsletter-popup__field { display: flex; align-items: center; gap: .9rem; min-height: 3.7rem; padding: .7rem 1.1rem; border: 1.5px solid #6894ff; border-radius: 1.05rem; background: #fff; }
 .newsletter-popup__field:focus-within { border-color: var(--popup-blue); box-shadow: 0 0 0 3px #0755e91a; }
 .newsletter-popup__field svg { flex-shrink: 0; }

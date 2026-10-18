@@ -14,6 +14,7 @@ import {
   getLocalizedDestinationPath,
   getLocalizedHomePath,
 } from "@/lib/locales";
+import { BrandLogo } from "@/components/brand-logo";
 
 const copy: Record<
   Locale,
@@ -131,7 +132,7 @@ export function V2NotFound() {
     <div className="v2 v2-not-found">
       <header className="v2-topbar">
         <Link aria-label="352 Flights" className="v2-topbar__brand" href={getLocalizedHomePath(locale)}>
-          <img alt="352 Flights" src="/v2-logo.png" />
+          <BrandLogo priority />
         </Link>
         <div className="v2-topbar__actions">
           <LanguageSelector />
@@ -187,7 +188,7 @@ export function V2NotFound() {
               height={1254}
               priority
               sizes="(max-width: 760px) 84vw, 42vw"
-              src="/404-luggage-tags-transparent.png"
+              src="/404-luggage-tags-transparent.webp"
               width={1254}
             />
           </figure>

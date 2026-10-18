@@ -1,3 +1,4 @@
+import { ensureOpsAuthorized } from "@/lib/ops-auth";
 import { access, appendFile, constants, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -15,45 +16,6 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-function unauthorizedResponse() {
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Lux Ops", charset="UTF-8"',
-    },
-  });
-}
-
-async function ensureAuthorized(request: Request) {
-  const expectedUser = process.env.OPS_BASIC_AUTH_USER;
-  const expectedPassword = process.env.OPS_BASIC_AUTH_PASSWORD;
-
-  if (!expectedUser || !expectedPassword) {
-    return null;
-  }
-
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Basic ")) {
-    return unauthorizedResponse();
-  }
-
-  try {
-    const encoded = authorization.slice("Basic ".length);
-    const decoded = atob(encoded);
-    const separatorIndex = decoded.indexOf(":");
-    const user = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
-    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-    if (user !== expectedUser || password !== expectedPassword) {
-      return unauthorizedResponse();
-    }
-  } catch {
-    return unauthorizedResponse();
-  }
-
-  return null;
-}
 
 async function pathExists(targetPath: string) {
   try {
@@ -131,12 +93,23 @@ function signalProcessGroup(pid: number, signal: NodeJS.Signals) {
 async function cleanupStateFiles(scannerRoot: string) {
   await Promise.allSettled([
     removeStaleLocalScannerLock("dates_scanner"),
-    rm(path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.pid"), {
-      force: true,
-    }),
-    rm(path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.child.pid"), {
-      force: true,
-    }),
+    rm(
+      path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.pid"),
+      {
+        force: true,
+      },
+    ),
+    rm(
+      path.join(
+        scannerRoot,
+        "scanner",
+        "state",
+        "local-pattern-discovery.child.pid",
+      ),
+      {
+        force: true,
+      },
+    ),
   ]);
 }
 
@@ -145,7 +118,7 @@ function wait(ms: number) {
 }
 
 export async function POST(request: Request) {
-  const unauthorized = await ensureAuthorized(request);
+  const unauthorized = ensureOpsAuthorized(request);
   if (unauthorized) {
     return unauthorized;
   }
@@ -164,7 +137,10 @@ export async function POST(request: Request) {
         {
           ok: false,
           reason: "vps_pattern_discovery_stop_failed",
-          detail: error instanceof Error ? error.message : "Unknown VPS Dates Scanner error.",
+          detail:
+            error instanceof Error
+              ? error.message
+              : "Unknown VPS Dates Scanner error.",
         },
         { status: 502 },
       );
@@ -190,9 +166,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const scriptPath = path.join(scannerRoot, "scripts", "run-local-pattern-discovery.sh");
-  const stdoutLog = path.join(scannerRoot, "logs", "local-pattern-discovery.stdout.log");
-  const pidFile = path.join(scannerRoot, "scanner", "state", "local-pattern-discovery.pid");
+  const scriptPath = path.join(
+    scannerRoot,
+    "scripts",
+    "run-local-pattern-discovery.sh",
+  );
+  const stdoutLog = path.join(
+    scannerRoot,
+    "logs",
+    "local-pattern-discovery.stdout.log",
+  );
+  const pidFile = path.join(
+    scannerRoot,
+    "scanner",
+    "state",
+    "local-pattern-discovery.pid",
+  );
   const childPidFile = path.join(
     scannerRoot,
     "scanner",

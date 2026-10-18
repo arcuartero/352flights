@@ -14,6 +14,11 @@ def build_parser() -> argparse.ArgumentParser:
         description="Scan Luxembourg flight routes and surface fare drops."
     )
     parser.add_argument(
+        "--revalidate-public-fares",
+        action="store_true",
+        help="Recheck public itineraries within 24 hours of expiry (requires renewal migration).",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=None,
@@ -131,6 +136,15 @@ def main() -> None:
         return
 
     scanner = LuxFlightScanner(config)
+    if args.revalidate_public_fares:
+        from luxflight_scanner.public_fare_renewal import PublicFareRenewal
+        if not config.has_supabase_credentials:
+            raise SystemExit("Public fare renewal requires Supabase credentials.")
+        report = PublicFareRenewal(scanner).run(limit=args.limit if args.limit is not None else 200)
+        print(json.dumps(report, indent=2))
+        if str(report.get("cache", "")).startswith("pending:"):
+            raise SystemExit(1)
+        return
     route_filter = None
     if args.origin_airport or args.destination_airport or args.max_stops:
         route_filter = {

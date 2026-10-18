@@ -1,0 +1,43 @@
+{
+  "checked_at_utc": "2026-09-10T10:56:44.040210+00:00",
+  "supabase_project": "byehmkysjqrhpdrtdkjk",
+  "migration_version": "20260910120000",
+  "migration_sha256": "f8aecbed730e054f70db6b12434168bb80440c00046ef231ab3714b1cac44f52",
+  "migration_applied_transactionally": true,
+  "migration_history_recorded": true,
+  "database_probe": {
+    "role": "service_role",
+    "duplicate_daily_reservation": "passed_first_payload_preserved",
+    "duplicate_message_reservation": "passed_first_payload_preserved",
+    "acknowledgement": "passed",
+    "rollback": true,
+    "remaining_probe_jobs": 0,
+    "remaining_probe_messages": 0
+  },
+  "postgrest": {
+    "scheduled_digest_jobs": 200,
+    "scheduled_digest_messages": 200,
+    "email_deliveries_scheduled_message_key": 200
+  },
+  "vercel_project": "prj_q2LheyHP1kWAnEdcknnN9xdujiI6",
+  "retention": {
+    "expirationDays": 30,
+    "expirationDaysProduction": 30,
+    "expirationDaysCanceled": 30,
+    "expirationDaysErrored": 30,
+    "deploymentsToKeep": 10
+  },
+  "usage_query": {
+    "from": "2026-08-12",
+    "to": "2026-09-10",
+    "error": "Costs not found (404)"
+  },
+  "cpu_query": {
+    "since": "30d",
+    "error": "payment_required: Observability Plus is required for this query."
+  },
+  "emails_sent": 0,
+  "deployments_created": 0,
+  "retention_changed": false,
+  "deployments_deleted": 0
+}

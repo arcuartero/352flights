@@ -35,6 +35,7 @@ import {
   type TripFilter,
   type WhenFilter,
 } from "@/lib/public-deals-search";
+import { BrandLogo } from "@/components/brand-logo";
 
 const RHYTHMS = [
   {
@@ -705,7 +706,7 @@ export function V2Landing({
           href={getLocalizedHomePath(locale)}
           aria-label="352 Flights"
         >
-          <img src="/v2-logo.png" alt="352 Flights" />
+          <BrandLogo priority />
         </Link>
         <div className="v2-topbar__actions">
           <LanguageSelector />
@@ -1072,6 +1073,7 @@ export function V2Landing({
                       <blockquote>{t(testimonial.quoteKey)}</blockquote>
                       <figcaption>
                         <span className={`v2-tcard__avatar v2-tcard__avatar--${testimonial.tone}`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- small testimonial avatar */}
                           <img alt="" loading="lazy" src={testimonial.photo} />
                         </span>
                         <span className="v2-tcard__id">

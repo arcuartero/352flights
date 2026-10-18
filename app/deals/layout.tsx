@@ -6,6 +6,7 @@ import { RootDocument } from "@/components/root-document";
 import { V2AlertsButton } from "@/components/v2-alerts";
 import { V2Outro } from "@/components/v2-outro";
 import { getSiteUrl } from "@/lib/env";
+import { BrandLogo } from "@/components/brand-logo";
 
 import "../globals.css";
 import "../home.css";
@@ -24,7 +25,7 @@ export default function DealsLayout({ children }: { children: React.ReactNode })
       <div className="deals-redesign">
         <header className="v2-topbar deals-redesign__topbar">
           <Link className="v2-topbar__brand" href="/" aria-label="352 Flights">
-            <img src="/v2-logo.png" alt="352 Flights" />
+            <BrandLogo priority />
           </Link>
           <div className="v2-topbar__actions">
             <LanguageSelector />

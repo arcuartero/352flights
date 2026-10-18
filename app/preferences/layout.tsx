@@ -5,6 +5,7 @@ import { PreferencesTopbarActions } from "@/components/preferences-topbar-action
 import { RootDocument } from "@/components/root-document";
 import { V2Footer } from "@/components/v2-footer";
 import { getSiteUrl } from "@/lib/env";
+import { BrandLogo } from "@/components/brand-logo";
 
 import "../globals.css";
 import "../public-deals-date-picker.css";
@@ -32,7 +33,7 @@ export default function PreferencesLayout({
       <div className="preferences-redesign">
         <header className="v2-topbar preferences-redesign__topbar">
           <Link className="v2-topbar__brand" href="/" aria-label="352 Flights">
-            <img src="/v2-logo.png" alt="352 Flights" />
+            <BrandLogo priority />
           </Link>
           <PreferencesTopbarActions />
         </header>

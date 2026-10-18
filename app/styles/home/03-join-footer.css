@@ -1,0 +1,847 @@
+
+.v2-metrics__grid dt {
+  color: var(--v2-ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   Section 8 · Final CTA — mini minimalist, stacked center
+   ============================================================ */
+
+.v2-join {
+  display: grid;
+  justify-items: center;
+  padding: clamp(5rem, 10vw, 8.5rem) var(--v2-pad) 2rem;
+  text-align: center;
+  background: linear-gradient(180deg, #eef4fd 0%, #e3eefb 100%);
+}
+
+.v2-join h2 {
+  margin-top: 1.2rem;
+  font-size: clamp(1.8rem, 4vw, 2.9rem);
+  line-height: 1.02;
+  white-space: nowrap;
+}
+
+.v2-join h2 em {
+  font-style: italic;
+  color: var(--v2-accent);
+}
+
+.v2-join__form {
+  width: min(100%, 30rem);
+  margin-top: 2.4rem;
+}
+
+.v2 .newsletter-form__controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem;
+  border: 1px solid var(--v2-hairline);
+  border-radius: 0.8rem;
+  background: var(--v2-cream);
+  box-shadow: 0 18px 44px rgba(16, 22, 31, 0.1);
+}
+
+.v2 .newsletter-form__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 1.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--v2-ink);
+  font-size: 0.98rem;
+}
+
+.v2 .newsletter-form__input::placeholder {
+  color: color-mix(in srgb, var(--v2-ink) 55%, transparent);
+}
+
+.v2 .newsletter-form__input:focus {
+  outline: none;
+}
+
+.v2 .newsletter-form__button {
+  min-height: 3.25rem;
+  padding: 0.7rem 1.5rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: var(--v2-accent);
+  color: var(--v2-cream);
+  font-weight: 650;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition:
+    background 0.3s var(--v2-ease),
+    transform 0.3s var(--v2-ease);
+}
+
+.v2 .newsletter-form__button:hover {
+  background: var(--v2-accent-deep);
+  transform: translateY(-1px);
+}
+
+.v2 .newsletter-form__status {
+  margin: 0.9rem 0 0;
+  color: var(--v2-ink-soft);
+  font-size: 0.88rem;
+}
+
+.v2 .newsletter-form__status--success {
+  color: #2c6e49;
+}
+
+.v2 .newsletter-form__status--error {
+  color: #a4452f;
+}
+
+.v2-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  margin-top: clamp(4rem, 8vw, 6.5rem);
+  padding: 1.65rem 0 0.85rem;
+  border-top: 1px solid rgba(29, 39, 51, 0.2);
+  color: rgba(29, 39, 51, 0.76);
+  font-size: clamp(0.93rem, 1vw, 1rem);
+  line-height: 1.4;
+}
+
+.v2-footer__brand,
+.v2-footer__made {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: 400;
+}
+
+.v2-footer__brand span {
+  margin: 0 0.5rem;
+  color: rgba(29, 39, 51, 0.38);
+}
+
+.v2-footer__made {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.v2-footer__heart {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--v2-accent);
+}
+
+.v2-footer__end,
+.v2-footer__home-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.v2-footer__end {
+  gap: 0.65rem;
+}
+
+.v2-footer__home-link {
+  gap: 0.45rem;
+}
+
+.v2-footer__home-link svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* Full-width footer used on standalone pages (deals, preferences). */
+.v2-footer--standalone {
+  width: 100%;
+  margin-top: 0;
+  padding: 1.5rem var(--v2-pad) clamp(2rem, 4vw, 3rem);
+  border-top: 1px solid var(--v2-hairline);
+  background: var(--v2-paper);
+}
+
+.v2-footer nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.v2-footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.7rem;
+  color: inherit;
+  font-weight: 400;
+  text-decoration: none;
+  transition:
+    color 0.25s var(--v2-ease),
+    background 0.25s var(--v2-ease);
+}
+
+.v2-footer a:hover {
+  color: var(--v2-ink);
+  background: rgba(31, 95, 214, 0.08);
+}
+
+.v2-footer a:focus-visible {
+  color: var(--v2-blue-strong);
+  outline: 3px solid rgba(31, 95, 214, 0.2);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Contact — editorial introduction + practical form
+   ============================================================ */
+
+.v2-contact {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--v2-paper);
+}
+
+.v2-contact .v2-topbar {
+  border-bottom: 1px solid rgba(29, 39, 51, 0.12);
+}
+
+.v2-contact__main {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(32rem, 1.08fr);
+  align-items: center;
+  gap: clamp(3rem, 6vw, 7rem);
+  width: min(calc(100% - (2 * var(--v2-pad))), 96rem);
+  margin: 1.75rem auto 2rem;
+  padding: clamp(3.5rem, 6vw, 6rem) clamp(2.5rem, 5vw, 5rem);
+  border: 1px solid rgba(31, 95, 214, 0.13);
+  border-radius: clamp(1.35rem, 2vw, 1.8rem);
+  background:
+    radial-gradient(circle at 16% 35%, rgba(255, 255, 255, 0.92), transparent 39%),
+    linear-gradient(135deg, #eff6ff 0%, #edf5ff 54%, #e8f2ff 100%);
+}
+
+.v2-contact__intro {
+  min-width: 0;
+}
+
+.v2-contact__intro h1 {
+  max-width: 10.5ch;
+  margin-top: 2rem;
+  font-size: clamp(3rem, 4.8vw, 5.25rem);
+  line-height: 0.94;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.v2-contact__lede {
+  max-width: 34rem;
+  margin: 1.6rem 0 0;
+  color: var(--v2-ink-soft);
+  font-size: clamp(1.05rem, 1.3vw, 1.25rem);
+  line-height: 1.55;
+}
+
+.v2-contact__email-option {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 35rem;
+  min-height: 6rem;
+  margin-top: 3rem;
+  padding: 1.1rem 1.45rem;
+  border: 1px solid rgba(31, 95, 214, 0.2);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.v2-contact__email-option--mobile {
+  display: none;
+}
+
+.v2-contact__email-icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  color: #233246;
+}
+
+.v2-contact__email-icon svg {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.v2-contact__email-copy {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.v2-contact__email {
+  color: var(--v2-blue-strong);
+  font-size: clamp(1rem, 1.35vw, 1.2rem);
+  font-weight: 700;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.v2-contact__email:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.v2-contact__email-copy small {
+  color: var(--v2-ink-soft);
+  font-size: 0.94rem;
+  line-height: 1.35;
+}
+
+.v2-contact__panel {
+  min-width: 0;
+  padding: clamp(1.5rem, 2.4vw, 2rem);
+  border: 1px solid rgba(31, 95, 214, 0.18);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 36px rgba(31, 95, 214, 0.08);
+}
+
+.v2-contact-form {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.v2-contact-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.v2-contact-form label {
+  display: grid;
+  gap: 0.48rem;
+  color: var(--v2-ink);
+  font-size: 0.96rem;
+  font-weight: 620;
+  letter-spacing: 0;
+}
+
+.v2-contact-form input,
+.v2-contact-form select,
+.v2-contact-form textarea {
+  width: 100%;
+  border: 1px solid rgba(31, 95, 214, 0.22);
+  border-radius: 0.85rem;
+  background: #fff;
+  color: var(--v2-ink);
+  font-size: 0.98rem;
+  font-weight: 450;
+  letter-spacing: 0;
+  outline: none;
+  text-transform: none;
+  transition: border-color 0.25s var(--v2-ease), box-shadow 0.25s var(--v2-ease);
+}
+
+.v2-contact-form input,
+.v2-contact-form select {
+  min-height: 3.15rem;
+  padding: 0.65rem 0.9rem;
+}
+
+.v2-contact-form select {
+  padding-right: 2.25rem;
+  background:
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%231d2733' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
+      right 0.85rem center no-repeat,
+    #fff;
+  appearance: none;
+  cursor: pointer;
+}
+
+.v2-contact-form textarea {
+  min-height: 7rem;
+  padding: 0.85rem 0.9rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.v2-contact-form input::placeholder,
+.v2-contact-form textarea::placeholder {
+  color: rgba(29, 39, 51, 0.42);
+}
+
+.v2-contact-form input:focus,
+.v2-contact-form select:focus,
+.v2-contact-form textarea:focus {
+  border-color: var(--v2-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v2-blue) 12%, transparent);
+}
+
+.v2-contact-form__honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.v2-contact-form__footer {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.1rem;
+}
+
+.v2-contact-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 3.45rem;
+  padding: 0.85rem 1.25rem;
+  border: 0;
+  border-radius: 0.8rem;
+  background: var(--v2-blue-strong);
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: background 0.25s var(--v2-ease), transform 0.25s var(--v2-ease);
+}
+
+.v2-contact-form button:hover:not(:disabled) {
+  background: #174db3;
+  transform: translateY(-1px);
+}
+
+.v2-contact-form button:focus-visible {
+  outline: 3px solid rgba(31, 95, 214, 0.25);
+  outline-offset: 3px;
+}
+
+.v2-contact-form button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.v2-contact-form__status {
+  min-height: 1.4rem;
+  margin: 0;
+  color: var(--v2-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.v2-contact-form__status:empty {
+  display: none;
+}
+
+.v2-contact-form__status--success {
+  color: #28724c;
+}
+
+.v2-contact-form__status--error {
+  color: #a4452f;
+}
+
+.v2-contact > .v2-footer {
+  width: min(calc(100% - (2 * var(--v2-pad))), 96rem);
+  margin: 0 auto;
+  padding: 1.25rem 0 2rem;
+  background: transparent;
+}
+
+.v2-contact .v2-footer__home-link {
+  color: var(--v2-blue-strong);
+  font-weight: 650;
+}
+
+@media (max-width: 960px) {
+  .v2-contact__main {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    width: calc(100% - 2rem);
+    margin: 1rem auto 1.5rem;
+    padding: 2.25rem 1.5rem;
+  }
+
+  .v2-contact__intro {
+    min-width: 0;
+  }
+
+  .v2-contact__intro h1 {
+    max-width: 12ch;
+    margin-top: 1.35rem;
+  }
+
+  .v2-contact__lede {
+    margin-top: 1.5rem;
+  }
+
+  .v2-contact__email-option--desktop {
+    display: none;
+  }
+
+  .v2-contact__email-option--mobile {
+    display: grid;
+    max-width: none;
+    margin-top: 0;
+  }
+
+  .v2-contact > .v2-footer {
+    width: calc(100% - 2rem);
+    align-items: flex-start;
+  }
+
+  .v2-contact .v2-footer__end {
+    flex-wrap: wrap;
+  }
+}
+
+/* Desktop search: a single white dock, with the route and filter groups
+   separated by hairlines instead of individual input boxes. */
+@media (min-width: 821px) {
+  .v2-search__bar {
+    grid-template-columns: minmax(0, 0.95fr) 3.2rem minmax(0, 1.4fr)
+      minmax(0, 1.5fr) minmax(0, 1.15fr) minmax(0, 1.45fr) auto auto;
+    align-items: center;
+    gap: 0;
+    padding: 1.35rem clamp(1rem, 1.5vw, 1.8rem);
+    border: 1px solid var(--v2-hairline);
+    border-radius: 1.3rem;
+    background: #fff;
+    box-shadow: 0 20px 44px rgba(12, 34, 56, 0.2);
+  }
+
+  .v2-search__bar > .v2-search__field {
+    grid-column: auto;
+    gap: 0.4rem;
+    padding-inline: clamp(0.65rem, 1.25vw, 1.5rem);
+  }
+
+  .v2-search__bar > .v2-search__field--origin {
+    padding-left: 0;
+    padding-right: 0.45rem;
+  }
+
+  .v2-search__field--when,
+  .v2-search__field--trip,
+  .v2-search__field--budget {
+    border-left: 1px solid #e1e6ec;
+  }
+
+  .v2-search__bar .v2-search__route-plane {
+    display: grid;
+    place-items: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 50%;
+    background: #e8f1ff;
+    color: var(--v2-blue-strong);
+  }
+
+  .v2-search__route-plane svg {
+    width: 1.45rem;
+    height: 1.45rem;
+    transform: rotate(45deg);
+  }
+
+  .v2-search__field > span,
+  .v2-search__toggle > span {
+    color: #6a7585;
+    font-size: clamp(0.62rem, 0.65vw, 0.72rem);
+    font-weight: 750;
+    letter-spacing: 0.13em;
+  }
+
+  .v2-search__field--origin strong,
+  .v2-search__custom-select .deals-select__trigger,
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger {
+    min-height: 2.2rem;
+    padding: 0.3rem 1.3rem 0.3rem 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .v2-search__field--origin strong {
+    padding-right: 0;
+  }
+
+  .v2-search__custom-select .deals-select__trigger.has-leading-icon {
+    padding-left: 0;
+  }
+
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-right: 0;
+  }
+
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger > svg:not(.deals-date-picker__chevron) {
+    display: none;
+  }
+
+  .v2-search__field--origin strong,
+  .v2-search__custom-select .deals-select__trigger strong,
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger strong {
+    color: var(--v2-ink);
+    font-size: clamp(0.8rem, 0.94vw, 1rem);
+    font-weight: 650;
+  }
+
+  .v2-search__custom-select .deals-select__leading-icon {
+    display: none;
+  }
+
+  .v2-search__custom-select .deals-select__trigger .deals-select__chevron {
+    right: 0;
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .v2-search__custom-select .deals-select__trigger:is(:hover, .is-open),
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger:is(:hover, .is-open) {
+    background: #f0f5ff;
+    box-shadow: inset 0 -2px 0 #a8c9f2;
+  }
+
+  .v2-search__custom-select .deals-select__trigger:focus-visible,
+  .v2-search__field.deals-date-picker .deals-date-picker__trigger:focus-visible {
+    outline: 2px solid var(--v2-blue-strong);
+    outline-offset: 4px;
+    box-shadow: inset 0 -2px 0 #a8c9f2;
+  }
+
+  .v2-search__field--destination .deals-select__trigger,
+  .v2-search__field.v2-search__field--when .deals-date-picker__trigger,
+  .v2-search__field--trip .deals-select__trigger,
+  .v2-search__field--budget .deals-select__trigger {
+    box-shadow: inset 0 -2px 0 #a8c9f2;
+  }
+
+  .v2-search__bar .v2-search__toggle {
+    min-height: 3.6rem;
+    padding: 0 clamp(0.7rem, 1.2vw, 1.4rem);
+    border: 0;
+    border-left: 1px solid #e1e6ec;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .v2-search__toggle input {
+    flex-shrink: 0;
+  }
+
+  .v2-search__bar .v2-search__cta {
+    grid-column: auto;
+    min-height: 3rem;
+    margin: 0;
+    padding: 0.7rem 1rem;
+    border-radius: 0.8rem;
+    font-size: clamp(0.8rem, 0.94vw, 1rem);
+    box-shadow: none;
+  }
+
+  .v2-search__field--trip .deals-select__menu,
+  .v2-search__field--budget .deals-select__menu {
+    left: 0;
+    top: calc(100% + 0.65rem);
+    max-height: var(--deals-select-max-height, 624px);
+    overflow-y: auto;
+    max-width: calc(100vw - 2rem);
+    display: grid;
+    gap: 0.55rem;
+    padding: 1rem;
+    border: 1px solid rgba(30, 66, 112, 0.14);
+    border-radius: 1.35rem;
+    background: #f8fafc;
+    box-shadow: 0 28px 70px rgba(7, 25, 50, 0.22);
+    animation: destination-popover-in 180ms ease-out both;
+  }
+
+  .v2-search__field--trip .deals-select__menu.is-above,
+  .v2-search__field--budget .deals-select__menu.is-above {
+    top: auto;
+    bottom: calc(100% + 0.65rem);
+  }
+
+  .v2-search__field--trip .deals-select__menu {
+    width: min(28rem, calc(100vw - 2rem));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-search__field--budget .deals-select__menu {
+    width: min(21rem, calc(100vw - 2rem));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-search__field--trip .deals-select__option,
+  .v2-search__field--budget .deals-select__option {
+    justify-content: flex-start;
+    min-height: 3.35rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #dbe3ed;
+    border-radius: 0.9rem;
+    background: #fff;
+    color: var(--v2-ink);
+    font-size: 0.9rem;
+    font-weight: 680;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .v2-search__field--trip .deals-select__option.is-selected,
+  .v2-search__field--budget .deals-select__option.is-selected {
+    border-color: #2364df;
+    background: #eef4ff;
+    color: #184fbd;
+  }
+
+  .v2-search__field--trip .deals-select__option:disabled,
+  .v2-search__field--trip .deals-select__option.is-disabled,
+  .v2-search__field--budget .deals-select__option:disabled,
+  .v2-search__field--budget .deals-select__option.is-disabled {
+    border-color: #e1e5ea;
+    background: #f1f3f6;
+    color: #a4acb6;
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  .v2-search__field--trip .deals-select__option:not(:disabled):hover,
+  .v2-search__field--budget .deals-select__option:not(:disabled):hover {
+    border-color: rgba(35, 100, 223, 0.55);
+    background: #f3f7ff;
+    color: var(--v2-blue-strong);
+    transform: translateY(-1px);
+  }
+
+  .v2-search__field--trip .deals-select__option.is-selected:not(:disabled):hover,
+  .v2-search__field--budget .deals-select__option.is-selected:not(:disabled):hover {
+    border-color: #2364df;
+    background: #e8f0ff;
+    color: #184fbd;
+  }
+
+  .v2-search__field--trip .deals-select__option:focus-visible,
+  .v2-search__field--budget .deals-select__option:focus-visible {
+    outline: 2px solid var(--v2-blue-strong);
+    outline-offset: 2px;
+  }
+
+  .v2-search__field--trip .deals-select__option i,
+  .v2-search__field--budget .deals-select__option i {
+    display: none;
+  }
+
+  .v2-search__field--when .deals-date-picker__popover--home {
+    --v2-accent: #2364df;
+    left: var(--deals-date-picker-left-offset, 0px);
+    top: calc(100% + 0.65rem);
+    border: 1px solid rgba(30, 66, 112, 0.14);
+    border-radius: 1.35rem;
+    background: #f8fafc;
+    box-shadow: 0 28px 70px rgba(7, 25, 50, 0.22);
+    animation: destination-popover-in 180ms ease-out both;
+  }
+
+  .v2-search__field--when .deals-date-picker__popover--home:not(.is-presets-only) {
+    position: absolute;
+    top: calc(100% + 0.65rem);
+    bottom: auto;
+    left: var(--deals-date-picker-left-offset, 0px);
+    height: min(37rem, var(--deals-date-picker-max-height, 40rem));
+    max-height: var(--deals-date-picker-max-height, 40rem);
+    transform: none;
+  }
+
+  .v2-search__field--when .deals-date-picker__popover--home.is-above,
+  .v2-search__field--when .deals-date-picker__popover--home.is-above:not(.is-presets-only) {
+    top: auto;
+    bottom: calc(100% + 0.65rem);
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__presets {
+    gap: 0.55rem;
+    padding: 1rem;
+    border-color: rgba(30, 66, 112, 0.12);
+    background: #f8fafc;
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__intro--desktop {
+    margin: 0 0.15rem 0.35rem;
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__presets
+    button {
+    min-height: 3.35rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #dbe3ed;
+    border-radius: 0.9rem;
+    background: #fff;
+    color: var(--v2-ink);
+    font-weight: 680;
+    transition:
+      border-color 160ms ease,
+      background 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__presets
+    button:hover:not(:disabled) {
+    border-color: rgba(35, 100, 223, 0.55);
+    background: #f3f7ff;
+    color: #184fbd;
+    transform: translateY(-1px);
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__presets
+    button.is-selected {
+    border-color: #2364df;
+    background: #eef4ff;
+    color: #184fbd;
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__presets
+    button:disabled {
+    border-color: #e1e5ea;
+    background: #f1f3f6;
+    color: #a4acb6;
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  .v2-search__field--when
+    .deals-date-picker__popover--home
+    .deals-date-picker__preset-check {
+    color: #2364df;
+  }
+}
+
+/* Keep comfortable targets on compact desktops without horizontal overflow. */

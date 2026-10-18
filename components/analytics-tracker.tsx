@@ -42,7 +42,9 @@ function removeGoogleCookies() {
 function setupGoogleTag(id: string) {
   if (window.gtag) return;
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function (...args: unknown[]) { window.dataLayer!.push(arguments); };
+  // gtag.js only processes the native Arguments object, not a rest-parameter array.
+  // eslint-disable-next-line prefer-rest-params
+  window.gtag = function (..._args: unknown[]) { window.dataLayer!.push(arguments); };
   window.gtag("consent", "default", {
     analytics_storage: "denied", ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied",
   });

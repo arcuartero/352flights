@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { EmailCampaignsBoard } from "@/components/email-campaigns-board";
-import type { OpsEmailCampaignsData } from "@/lib/ops";
+import type { OpsEmailCampaignsData } from "@/lib/ops/types";
 
 type CampaignsResponse =
   | { ok: true; data: OpsEmailCampaignsData }
@@ -27,13 +27,18 @@ export function EmailCampaignsBoardLoader() {
           throw new Error(
             payload.ok
               ? "Campaign data could not be loaded."
-              : payload.detail ?? payload.reason,
+              : (payload.detail ?? payload.reason),
           );
         }
         setData(payload.data);
         setError(null);
       } catch (requestError) {
-        if (!(requestError instanceof DOMException && requestError.name === "AbortError")) {
+        if (
+          !(
+            requestError instanceof DOMException &&
+            requestError.name === "AbortError"
+          )
+        ) {
           setError(
             requestError instanceof Error
               ? requestError.message
@@ -61,7 +66,9 @@ export function EmailCampaignsBoardLoader() {
       <section className="ops-panel" role="status">
         <p className="ops-panel__eyebrow">Email campaigns</p>
         <h2>Loading campaign data</h2>
-        <p>The rest of Operations remains available while this section loads.</p>
+        <p>
+          The rest of Operations remains available while this section loads.
+        </p>
       </section>
     );
   }

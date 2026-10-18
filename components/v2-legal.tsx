@@ -9,6 +9,7 @@ import {
   type LegalPageKey,
 } from "@/lib/legal-localization";
 import { getLocalizedHomePath, type Locale } from "@/lib/locales";
+import { BrandLogo } from "@/components/brand-logo";
 
 type V2LegalProps = {
   locale: Locale;
@@ -24,7 +25,7 @@ export function V2Legal({ locale, page }: V2LegalProps) {
     <div className="v2 v2-legal">
       <header className="v2-topbar">
         <Link className="v2-topbar__brand" href={homePath} aria-label="352 Flights">
-          <img src="/v2-logo.png" alt="352 Flights" />
+          <BrandLogo priority />
         </Link>
         <div className="v2-topbar__actions">
           <LanguageSelector />

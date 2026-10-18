@@ -19,4 +19,3 @@ test("rejects an invalid or stale Creatello revalidation signature", () => {
   const signature = `sha256=${createHmac("sha256", secret).update(`${old}.{}`).digest("hex")}`;
   assert.equal(verifyRevalidationSignature("{}", old, signature, secret, Date.UTC(2026, 8, 9, 12, 0, 0)), false);
 });
-

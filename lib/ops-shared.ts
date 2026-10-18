@@ -1,7 +1,15 @@
-import type { EditorialSection, EditorialSectionKey } from "@/lib/editorial-sections";
+import type {
+  EditorialSection,
+  EditorialSectionKey,
+} from "@/lib/editorial-sections";
 
-export const campaignSendTypes = ["digest", "flash"] as const;
-export const dealLifecycleStates = ["new", "reviewed", "sent", "expired"] as const;
+export const campaignSendTypes = ["digest", "flash", "weekly"] as const;
+export const dealLifecycleStates = [
+  "new",
+  "reviewed",
+  "sent",
+  "expired",
+] as const;
 
 export type CampaignSendType = (typeof campaignSendTypes)[number];
 export type DealLifecycleState = (typeof dealLifecycleStates)[number];
@@ -82,6 +90,8 @@ export type OpsActionState = {
 
 export type DigestAutomationSummary = {
   enabled: boolean;
+  weeklyEnabled: boolean;
+  lastWeeklySentOn: string | null;
   localTime: string;
   testEmail: string | null;
   lastDigestSentOn: string | null;

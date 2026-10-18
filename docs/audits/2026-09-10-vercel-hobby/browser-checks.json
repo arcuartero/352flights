@@ -1,0 +1,42 @@
+{
+  "activePollingMockedMs": [
+    7510,
+    7518,
+    7518,
+    7518
+  ],
+  "idlePollingMockedMs": [
+    60011,
+    60021
+  ],
+  "realTabHidden": {
+    "durationMs": 152434,
+    "requestsBefore": 7,
+    "requestsAfter": 7
+  },
+  "offline": {
+    "minimumDurationMs": 55091,
+    "requestCountUnchanged": 9
+  },
+  "privateScannerPageAuthenticated": true,
+  "consoleErrorsFinal": 0,
+  "mobile": {
+    "viewport": [
+      390,
+      844
+    ],
+    "closedResources": [
+      "scanner-status"
+    ],
+    "datesTabOpenResources": [
+      "pattern-discovery-live-status",
+      "scanner-status"
+    ],
+    "closedAgainResources": [
+      "scanner-status"
+    ]
+  },
+  "sharedFareDialogOpens": true,
+  "manualEmailOrScannerActionsExecuted": false,
+  "opsPrices": "Navigation too slow; cancelled and switched to email campaigns for mobile checks."
+}

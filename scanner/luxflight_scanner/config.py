@@ -19,6 +19,7 @@ def env_flag(name: str, default: bool) -> bool:
 
 @dataclass(frozen=True)
 class ScannerConfig:
+    public_fare_revalidation_enabled: bool = env_flag("PUBLIC_FARE_REVALIDATION_ENABLED", False)
     routes_path: Path = ROOT_DIR / "data" / "lux-routes.json"
     state_path: Path = Path(os.getenv("SCANNER_STATE_FILE", ROOT_DIR / "scanner" / "state.json"))
     currency_code: str = os.getenv("SCANNER_CURRENCY", "EUR")

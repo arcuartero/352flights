@@ -6,17 +6,15 @@ import {
   type CreatelloDeliverySlot,
 } from "@/lib/creatello-daily-selection";
 import { hasCreatelloInboxEnv, hasSupabaseAdminEnv } from "@/lib/env";
-import { validateCronSecret } from "@/lib/ops";
+import { validateCronSecret } from "@/lib/ops/campaigns";
+import { bearerToken } from "@/lib/secret-compare";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 async function handle(request: Request) {
-  const authorization = request.headers.get("authorization");
-  const token = authorization?.startsWith("Bearer ")
-    ? authorization.slice("Bearer ".length)
-    : null;
+  const token = bearerToken(request);
   if (!validateCronSecret(token)) {
     return NextResponse.json(
       { ok: false, reason: "unauthorized" },
@@ -30,8 +28,11 @@ async function handle(request: Request) {
     );
   }
 
-  const requestedSlot = new URL(request.url).searchParams.get("slot") ?? "morning";
-  if (!CREATELLO_DELIVERY_SLOTS.includes(requestedSlot as CreatelloDeliverySlot)) {
+  const requestedSlot =
+    new URL(request.url).searchParams.get("slot") ?? "morning";
+  if (
+    !CREATELLO_DELIVERY_SLOTS.includes(requestedSlot as CreatelloDeliverySlot)
+  ) {
     return NextResponse.json(
       { ok: false, reason: "invalid_delivery_slot" },
       { status: 400, headers: { "Cache-Control": "no-store, max-age=0" } },

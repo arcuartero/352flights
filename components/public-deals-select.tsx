@@ -383,6 +383,7 @@ export function PublicDealsSelect({
         >
           {icon ??
             (flagSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element -- 24px flag icon
               <img
                 alt=""
                 decoding="async"

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { sendResendEmail } from "@/lib/email";
-import { hasResendEnv } from "@/lib/env";
+import { hasResendEnv, hasSupabaseAdminEnv } from "@/lib/env";
 import { locales } from "@/lib/locales";
+import { clientIp, withinRateLimits } from "@/lib/rate-limit";
 
 const CONTACT_EMAIL = "info@352flights.com";
 
@@ -36,6 +37,19 @@ export async function POST(request: Request) {
 
   if (!hasResendEnv()) {
     return NextResponse.json({ error: "Email service unavailable." }, { status: 503 });
+  }
+
+  if (
+    hasSupabaseAdminEnv() &&
+    !(await withinRateLimits([
+      { scope: "contact-ip", identifier: clientIp(request), limit: 5, windowSeconds: 3600 },
+      { scope: "contact-email", identifier: payload.data.email, limit: 3, windowSeconds: 3600 },
+    ]))
+  ) {
+    return NextResponse.json(
+      { error: "Too many messages. Please try again later." },
+      { status: 429, headers: { "Retry-After": "3600" } },
+    );
   }
 
   const { name, email, reason, subject, message, locale } = payload.data;

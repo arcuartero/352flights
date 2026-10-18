@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { getSiteUrl } from "@/lib/env";
-import { getLocalizedHomePath, htmlLangTags, locales, type Locale } from "@/lib/locales";
+import { htmlLangTags, locales, type Locale } from "@/lib/locales";
 
 export type LegalPageKey = "privacy" | "cookies" | "terms";
 
@@ -37,7 +37,7 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
         description: "How +352 Flights uses subscriber preferences and technical data.",
         intro: "+352 Flights uses subscriber preferences, fare data, and essential technical logs to run the service, personalize alerts, and keep the product reliable.",
         sections: [
-          { title: "What we store", body: "We store the preferences you choose, the routes and fare combinations surfaced by the scanner, and minimal technical information needed to operate the product." },
+          { title: "What we store", body: "We store the preferences you choose, the routes and fare combinations surfaced by the scanner, and minimal technical information needed to operate the product. If you opt in to separate travel inspiration and accommodation emails, we also store your choice, its date and the version of the wording shown to you." },
           { title: "Why we store it", body: "This information is used to send relevant fare emails, improve matching, and monitor the health of the service." },
           { title: "Your control", body: "You can update your email preferences at any time from your subscriber link, or stop all emails using the unsubscribe link included in every message." },
         ],
@@ -74,7 +74,7 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
         description: "Comment +352 Flights utilise vos préférences et données techniques.",
         intro: "+352 Flights utilise les préférences des abonnés, les données tarifaires et les journaux techniques essentiels pour faire fonctionner le service, personnaliser les alertes et maintenir sa fiabilité.",
         sections: [
-          { title: "Données enregistrées", body: "Nous enregistrons les préférences que vous choisissez, les itinéraires et combinaisons tarifaires détectés par le scanner, ainsi que les informations techniques minimales nécessaires au fonctionnement du produit." },
+          { title: "Données enregistrées", body: "Nous enregistrons les préférences que vous choisissez, les itinéraires et combinaisons tarifaires détectés par le scanner, ainsi que les informations techniques minimales nécessaires au fonctionnement du produit. Si vous acceptez les emails distincts d’idées de voyage et d’offres d’hébergement, nous enregistrons aussi votre choix, sa date et la version du texte présenté." },
           { title: "Pourquoi nous les utilisons", body: "Ces informations servent à envoyer des emails tarifaires pertinents, améliorer la correspondance et surveiller la fiabilité du service." },
           { title: "Vous gardez le contrôle", body: "Vous pouvez modifier vos préférences à tout moment depuis votre lien privé ou arrêter tous les emails avec le lien de désinscription présent dans chaque message." },
         ],
@@ -111,7 +111,7 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
         description: "Wie +352 Flights Präferenzen und technische Daten verwendet.",
         intro: "+352 Flights verwendet Abonnentenpräferenzen, Tarifdaten und notwendige technische Protokolle, um den Dienst zu betreiben, Alerts zu personalisieren und das Produkt zuverlässig zu halten.",
         sections: [
-          { title: "Was wir speichern", body: "Wir speichern Ihre gewählten Präferenzen, die vom Scanner gefundenen Routen und Tarifkombinationen sowie die minimal erforderlichen technischen Informationen für den Betrieb." },
+          { title: "Was wir speichern", body: "Wir speichern Ihre gewählten Präferenzen, die vom Scanner gefundenen Routen und Tarifkombinationen sowie die minimal erforderlichen technischen Informationen für den Betrieb. Wenn Sie zusätzliche E-Mails mit Reiseideen und Unterkunftsangeboten wählen, speichern wir auch Ihre Entscheidung, das Datum und die Version des angezeigten Textes." },
           { title: "Warum wir es speichern", body: "Diese Informationen werden verwendet, um passende Tarif-E-Mails zu senden, die Zuordnung zu verbessern und die Zuverlässigkeit des Dienstes zu überwachen." },
           { title: "Ihre Kontrolle", body: "Sie können Ihre E-Mail-Präferenzen jederzeit über Ihren privaten Link ändern oder alle E-Mails über den Abmeldelink in jeder Nachricht stoppen." },
         ],
@@ -148,7 +148,7 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
         description: "Como a +352 Flights utiliza preferências e dados técnicos.",
         intro: "A +352 Flights utiliza preferências dos subscritores, dados de tarifas e registos técnicos essenciais para operar o serviço, personalizar alertas e manter o produto fiável.",
         sections: [
-          { title: "O que guardamos", body: "Guardamos as preferências escolhidas, as rotas e combinações de tarifas apresentadas pelo scanner e a informação técnica mínima necessária para operar o produto." },
+          { title: "O que guardamos", body: "Guardamos as preferências escolhidas, as rotas e combinações de tarifas apresentadas pelo scanner e a informação técnica mínima necessária para operar o produto. Se aceitar emails separados com ideias de viagem e ofertas de alojamento, guardamos também a sua escolha, a data e a versão do texto apresentado." },
           { title: "Por que a guardamos", body: "Esta informação é utilizada para enviar emails relevantes, melhorar a correspondência e acompanhar a fiabilidade do serviço." },
           { title: "O seu controlo", body: "Pode atualizar as preferências a qualquer momento através do seu link privado ou parar todos os emails usando o link de cancelamento incluído em cada mensagem." },
         ],
@@ -185,7 +185,7 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
         description: "Come +352 Flights utilizza preferenze e dati tecnici.",
         intro: "+352 Flights utilizza le preferenze degli iscritti, i dati tariffari e i registri tecnici essenziali per gestire il servizio, personalizzare gli avvisi e mantenere affidabile il prodotto.",
         sections: [
-          { title: "Cosa conserviamo", body: "Conserviamo le preferenze scelte, le rotte e le combinazioni tariffarie rilevate dallo scanner e le informazioni tecniche minime necessarie al funzionamento." },
+          { title: "Cosa conserviamo", body: "Conserviamo le preferenze scelte, le rotte e le combinazioni tariffarie rilevate dallo scanner e le informazioni tecniche minime necessarie al funzionamento. Se accetti le email separate con idee di viaggio e offerte di alloggio, registriamo anche la tua scelta, la data e la versione del testo mostrato." },
           { title: "Perché le conserviamo", body: "Queste informazioni servono a inviare email pertinenti, migliorare gli abbinamenti e monitorare l’affidabilità del servizio." },
           { title: "Il tuo controllo", body: "Puoi aggiornare le preferenze in qualsiasi momento dal tuo link privato o interrompere tutte le email usando il link di disiscrizione incluso in ogni messaggio." },
         ],
@@ -222,7 +222,7 @@ export const legalCopy: Record<Locale, LegalLocaleCopy> = {
         description: "Cómo utiliza +352 Flights tus preferencias y datos técnicos.",
         intro: "+352 Flights utiliza las preferencias de suscriptores, los datos de tarifas y los registros técnicos esenciales para prestar el servicio, personalizar alertas y mantener el producto fiable.",
         sections: [
-          { title: "Qué guardamos", body: "Guardamos las preferencias que eliges, las rutas y combinaciones de tarifas detectadas por el escáner y la información técnica mínima necesaria para operar el producto." },
+          { title: "Qué guardamos", body: "Guardamos las preferencias que eliges, las rutas y combinaciones de tarifas detectadas por el escáner y la información técnica mínima necesaria para operar el producto. Si aceptas los emails separados con ideas de viaje y ofertas de alojamiento, guardamos también tu elección, la fecha y la versión del texto mostrado." },
           { title: "Por qué lo guardamos", body: "Esta información se utiliza para enviar emails relevantes, mejorar las coincidencias y supervisar la fiabilidad del servicio." },
           { title: "Tú tienes el control", body: "Puedes actualizar tus preferencias en cualquier momento desde tu enlace privado o detener todos los emails mediante el enlace de baja incluido en cada mensaje." },
         ],

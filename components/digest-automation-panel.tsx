@@ -8,7 +8,11 @@ import {
   type DigestAutomationSummary,
 } from "@/lib/ops-shared";
 
-export function DigestAutomationPanel({ settings }: { settings: DigestAutomationSummary }) {
+export function DigestAutomationPanel({
+  settings,
+}: {
+  settings: DigestAutomationSummary;
+}) {
   const [state, action, isPending] = useActionState(
     saveDigestAutomationAction,
     initialOpsActionState,
@@ -19,20 +23,39 @@ export function DigestAutomationPanel({ settings }: { settings: DigestAutomation
       <div className="ops-panel__header">
         <div>
           <p className="ops-panel__eyebrow">Automation</p>
-          <h2>Daily digest schedule</h2>
+          <h2>Daily and weekly schedule</h2>
         </div>
-        <p>Configure the automatic digest from here. The GitHub cron only triggers the endpoint.</p>
+        <p>
+          Weekly best-of runs on Mondays at the selected Luxembourg time. Missed
+          runs are retried during the same week.
+        </p>
       </div>
 
       <form action={action} className="ops-automation-form">
         <label className="ops-toggle">
-          <input defaultChecked={settings.enabled} name="enabled" type="checkbox" />
+          <input
+            defaultChecked={settings.enabled}
+            name="enabled"
+            type="checkbox"
+          />
           <span>Enable automatic daily digest</span>
         </label>
 
+        <label className="ops-toggle">
+          <input
+            defaultChecked={settings.weeklyEnabled}
+            name="weeklyEnabled"
+            type="checkbox"
+          />
+          <span>Enable weekly best-of (Monday)</span>
+        </label>
         <label className="ops-inline-field">
           <span>Luxembourg local time</span>
-          <input defaultValue={settings.localTime} name="localTime" type="time" />
+          <input
+            defaultValue={settings.localTime}
+            name="localTime"
+            type="time"
+          />
         </label>
 
         <label className="ops-inline-field">
@@ -47,14 +70,30 @@ export function DigestAutomationPanel({ settings }: { settings: DigestAutomation
 
         <div className="ops-pill-row">
           <span className="ops-pill">
-            {settings.enabled ? `Enabled for ${settings.localTime}` : "Automation paused"}
+            {settings.enabled
+              ? `Enabled for ${settings.localTime}`
+              : "Automation paused"}
           </span>
+          <span className="ops-pill">
+            Weekly: {settings.weeklyEnabled ? "enabled" : "paused"}
+          </span>
+          {settings.lastWeeklySentOn ? (
+            <span className="ops-pill">
+              Last weekly period: {settings.lastWeeklySentOn}
+            </span>
+          ) : null}
           {settings.lastDigestSentOn ? (
-            <span className="ops-pill">Last live digest: {settings.lastDigestSentOn}</span>
+            <span className="ops-pill">
+              Last live digest: {settings.lastDigestSentOn}
+            </span>
           ) : null}
         </div>
 
-        <button className="ops-button ops-button--approve" disabled={isPending} type="submit">
+        <button
+          className="ops-button ops-button--approve"
+          disabled={isPending}
+          type="submit"
+        >
           {isPending ? "Saving..." : "Save automation"}
         </button>
 

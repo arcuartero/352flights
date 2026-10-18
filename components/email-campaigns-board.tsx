@@ -1,6 +1,6 @@
 import { CampaignLauncher } from "@/components/campaign-launcher";
 import { DigestAutomationPanel } from "@/components/digest-automation-panel";
-import type { OpsEmailCampaignsData } from "@/lib/ops";
+import type { OpsEmailCampaignsData } from "@/lib/ops/types";
 import { formatStayBucketLabel } from "@/lib/stay-buckets";
 
 type EmailCampaignsBoardProps = {
@@ -107,7 +107,11 @@ function formatCampaignStatus(status: string) {
 }
 
 function formatSendType(sendType: string) {
-  return sendType === "flash" ? "Flash" : "Digest";
+  return sendType === "weekly"
+    ? "Weekly"
+    : sendType === "flash"
+      ? "Flash"
+      : "Digest";
 }
 
 export function EmailCampaignsBoard({ data }: EmailCampaignsBoardProps) {
@@ -121,7 +125,10 @@ export function EmailCampaignsBoard({ data }: EmailCampaignsBoardProps) {
             <p className="ops-panel__eyebrow">Campaigns</p>
             <h2>Send queue</h2>
           </div>
-          <p>Reviewed deals only. Audience counts are matched against saved subscriber filters.</p>
+          <p>
+            Reviewed deals only. Audience counts are matched against saved
+            subscriber filters.
+          </p>
         </div>
         <CampaignLauncher previews={data.sendQueue} />
       </section>
@@ -135,33 +142,52 @@ export function EmailCampaignsBoard({ data }: EmailCampaignsBoardProps) {
         </div>
         {data.subscribers.length === 0 ? (
           <div className="ops-empty">
-            <p>No subscribers yet. Once the landing page is live, new emails will land here.</p>
+            <p>
+              No subscribers yet. Once the landing page is live, new emails will
+              land here.
+            </p>
           </div>
         ) : (
           <div className="ops-list">
             {data.subscribers.map((subscriber) => (
-              <article className="ops-list__item ops-list__item--stacked" key={subscriber.id}>
+              <article
+                className="ops-list__item ops-list__item--stacked"
+                key={subscriber.id}
+              >
                 <div className="ops-list__stack">
                   <div>
                     <h3>{subscriber.email}</h3>
                     <p>
                       {subscriber.source} · {subscriber.status} ·{" "}
-                      {subscriber.emailConfirmed ? "confirmed" : "waiting confirmation"} ·{" "}
-                      {subscriber.onboardingCompleted ? "preferences saved" : "preferences pending"}
+                      {subscriber.emailConfirmed
+                        ? "confirmed"
+                        : "waiting confirmation"}{" "}
+                      ·{" "}
+                      {subscriber.onboardingCompleted
+                        ? "preferences saved"
+                        : "preferences pending"}
                     </p>
                   </div>
                   <div className="ops-pill-row">
-                    <span className="ops-pill">{formatDeliveryModes(subscriber.deliveryModes)}</span>
+                    <span className="ops-pill">
+                      {formatDeliveryModes(subscriber.deliveryModes)}
+                    </span>
                     <span className="ops-pill">
                       {formatStopsPreferences(subscriber.maxStopsPreferences)}
                     </span>
-                    <span className="ops-pill">{formatWeekdays(subscriber.departureWeekdays)}</span>
                     <span className="ops-pill">
-                      {formatTripRange(subscriber.minTripNights, subscriber.maxTripNights)}
+                      {formatWeekdays(subscriber.departureWeekdays)}
+                    </span>
+                    <span className="ops-pill">
+                      {formatTripRange(
+                        subscriber.minTripNights,
+                        subscriber.maxTripNights,
+                      )}
                     </span>
                     {subscriber.budgetCeilingEur !== null ? (
                       <span className="ops-pill">
-                        Budget {new Intl.NumberFormat("en-GB", {
+                        Budget{" "}
+                        {new Intl.NumberFormat("en-GB", {
                           style: "currency",
                           currency: "EUR",
                           maximumFractionDigits: 0,
@@ -170,7 +196,10 @@ export function EmailCampaignsBoard({ data }: EmailCampaignsBoardProps) {
                     ) : null}
                   </div>
                   <p className="ops-subscriber-note">
-                    Buckets: {subscriber.preferredBuckets.map(formatRelativeBucket).join(", ")}
+                    Buckets:{" "}
+                    {subscriber.preferredBuckets
+                      .map(formatRelativeBucket)
+                      .join(", ")}
                   </p>
                   <p className="ops-subscriber-note">
                     Routes:{" "}
@@ -204,19 +233,28 @@ export function EmailCampaignsBoard({ data }: EmailCampaignsBoardProps) {
         </div>
         {data.recentCampaigns.length === 0 ? (
           <div className="ops-empty">
-            <p>No campaigns have been sent yet. Review deals and launch a digest from above.</p>
+            <p>
+              No campaigns have been sent yet. Review deals and launch a digest
+              from above.
+            </p>
           </div>
         ) : (
           <div className="ops-list">
             {data.recentCampaigns.map((campaign) => (
-              <article className="ops-list__item ops-list__item--stacked" key={campaign.id}>
+              <article
+                className="ops-list__item ops-list__item--stacked"
+                key={campaign.id}
+              >
                 <div className="ops-list__stack">
                   <div>
                     <h3>{campaign.subject}</h3>
                     <p>
-                      {formatSendType(campaign.sendType)} · {formatCampaignStatus(campaign.status)} ·{" "}
+                      {formatSendType(campaign.sendType)} ·{" "}
+                      {formatCampaignStatus(campaign.status)} ·{" "}
                       {campaign.sentCount}/{campaign.recipientCount} sent
-                      {campaign.failedCount > 0 ? ` · ${campaign.failedCount} failed` : ""}
+                      {campaign.failedCount > 0
+                        ? ` · ${campaign.failedCount} failed`
+                        : ""}
                     </p>
                   </div>
                   {campaign.routeLabels.length > 0 ? (

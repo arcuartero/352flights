@@ -18,7 +18,7 @@ import {
   htmlLangTags,
   locales,
 } from "@/lib/locales";
-import { getPublicSearchDealsPageData } from "@/lib/ops";
+import { getPublicSearchDealsPageData } from "@/lib/ops/public-data";
 
 export const revalidate = 1800;
 
@@ -32,9 +32,12 @@ function getDestinationLastModified(
   deals: Awaited<ReturnType<typeof getPublicSearchDealsPageData>>["deals"],
 ) {
   const latestVerifiedAt = deals.reduce<string | null>((latest, deal) => {
-    if (!matchesDestinationSlug(deal.destinationCity, slug) || !deal.verifiedAt) return latest;
+    if (!matchesDestinationSlug(deal.destinationCity, slug) || !deal.verifiedAt)
+      return latest;
     if (!latest) return deal.verifiedAt;
-    return Date.parse(deal.verifiedAt) > Date.parse(latest) ? deal.verifiedAt : latest;
+    return Date.parse(deal.verifiedAt) > Date.parse(latest)
+      ? deal.verifiedAt
+      : latest;
   }, null);
 
   return latestVerifiedAt ? new Date(latestVerifiedAt) : HOME_LAST_MODIFIED;
@@ -50,10 +53,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 1,
     alternates: {
       languages: Object.fromEntries(
-        Object.entries(getHomeLanguageAlternates()).map(([language, pathname]) => [
-          language,
-          new URL(pathname, siteUrl).toString(),
-        ]),
+        Object.entries(getHomeLanguageAlternates()).map(
+          ([language, pathname]) => [
+            language,
+            new URL(pathname, siteUrl).toString(),
+          ],
+        ),
       ),
     },
   }));
@@ -68,40 +73,59 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           htmlLangTags[language],
           new URL(getLocalizedDealsSearchPath(language), siteUrl).toString(),
         ]),
-        ["x-default", new URL(getLocalizedDealsSearchPath("en"), siteUrl).toString()],
+        [
+          "x-default",
+          new URL(getLocalizedDealsSearchPath("en"), siteUrl).toString(),
+        ],
       ]),
     },
   }));
-  const cityPages: MetadataRoute.Sitemap = getDestinationSlugs().flatMap((slug) =>
-    locales.map((locale) => ({
-      url: new URL(getLocalizedDestinationPath(locale, slug), siteUrl).toString(),
-      lastModified: getDestinationLastModified(slug, publicDeals.deals),
-      changeFrequency: "hourly" as const,
-      priority: slug === "gran-canaria" ? 0.9 : 0.8,
-      alternates: {
-        languages: Object.fromEntries(
-          Object.entries(getDestinationLanguageAlternates(slug)).map(
-            ([language, pathname]) => [language, new URL(pathname, siteUrl).toString()],
-          ),
-        ),
-      },
-    })),
+  const destinationDates = new Map(
+    getDestinationSlugs().map((slug) => [
+      slug,
+      getDestinationLastModified(slug, publicDeals.deals),
+    ]),
   );
-  const localizedLegalPages: MetadataRoute.Sitemap = legalPages.flatMap((page) =>
-    locales.map((locale) => ({
-      url: new URL(getLocalizedLegalPath(locale, page), siteUrl).toString(),
-      lastModified: LEGAL_LAST_MODIFIED,
-      changeFrequency: "yearly" as const,
-      priority: 0.2,
-      alternates: {
-        languages: Object.fromEntries(
-          Object.entries(getLegalLanguageAlternates(page)).map(([language, pathname]) => [
-            language,
-            new URL(pathname, siteUrl).toString(),
-          ]),
-        ),
-      },
-    })),
+  const cityPages: MetadataRoute.Sitemap = getDestinationSlugs().flatMap(
+    (slug) =>
+      locales.map((locale) => ({
+        url: new URL(
+          getLocalizedDestinationPath(locale, slug),
+          siteUrl,
+        ).toString(),
+        lastModified: destinationDates.get(slug),
+        changeFrequency: "hourly" as const,
+        priority: slug === "gran-canaria" ? 0.9 : 0.8,
+        alternates: {
+          languages: Object.fromEntries(
+            Object.entries(getDestinationLanguageAlternates(slug)).map(
+              ([language, pathname]) => [
+                language,
+                new URL(pathname, siteUrl).toString(),
+              ],
+            ),
+          ),
+        },
+      })),
+  );
+  const localizedLegalPages: MetadataRoute.Sitemap = legalPages.flatMap(
+    (page) =>
+      locales.map((locale) => ({
+        url: new URL(getLocalizedLegalPath(locale, page), siteUrl).toString(),
+        lastModified: LEGAL_LAST_MODIFIED,
+        changeFrequency: "yearly" as const,
+        priority: 0.2,
+        alternates: {
+          languages: Object.fromEntries(
+            Object.entries(getLegalLanguageAlternates(page)).map(
+              ([language, pathname]) => [
+                language,
+                new URL(pathname, siteUrl).toString(),
+              ],
+            ),
+          ),
+        },
+      })),
   );
   const contactPages: MetadataRoute.Sitemap = locales.map((locale) => ({
     url: new URL(getLocalizedContactPath(locale), siteUrl).toString(),
@@ -118,5 +142,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   }));
 
-  return [...homePages, ...searchPages, ...cityPages, ...localizedLegalPages, ...contactPages];
+  return [
+    ...homePages,
+    ...searchPages,
+    ...cityPages,
+    ...localizedLegalPages,
+    ...contactPages,
+  ];
 }

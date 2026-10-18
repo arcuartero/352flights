@@ -1,0 +1,8 @@
+{
+  "platform": "macOS arm64; Vercel Linux sizes will differ",
+  "traces": 65,
+  "uniqueFiles": 747,
+  "uniqueTracedBytes": 32347106,
+  "accidentalFolders": [],
+  "dataRouteSeedRetained": true
+}

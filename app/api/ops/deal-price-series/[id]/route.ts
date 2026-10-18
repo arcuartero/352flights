@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getOpsDealPriceSeries } from "@/lib/ops";
+import { getOpsDealPriceSeries } from "@/lib/ops/queries";
 import { ensureOpsAuthorized } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,11 @@ export async function GET(
   if (result.error) {
     const status = result.error === "Deal not found." ? 404 : 500;
     return NextResponse.json(
-      { ok: false, reason: "deal_price_series_read_failed", detail: result.error },
+      {
+        ok: false,
+        reason: "deal_price_series_read_failed",
+        detail: result.error,
+      },
       { status, headers: { "Cache-Control": "no-store" } },
     );
   }

@@ -1,5 +1,7 @@
 "use client";
 
+import { subscribeOpsPolling } from "@/lib/ops-polling-client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown,
@@ -584,6 +586,7 @@ function PatternAuditTable({ rows }: { rows: PriceScanPatternSummary[] }) {
 }
 
 export function PriceScanRunHistory({ error, runs }: Props) {
+  const pollingRef = useRef<HTMLElement | null>(null);
   const [liveRuns, setLiveRuns] = useState(runs);
   const [liveError, setLiveError] = useState(error);
   const [isInitialLoading, setIsInitialLoading] = useState(runs.length === 0 && !error);
@@ -611,7 +614,10 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     message: string;
   } | null>(null);
   const loadedPatternRunIds = useRef(new Set<string>());
+  const expandedRunIds = useRef(new Set<string>());
   const runningPatternRunIds = useRef(new Set<string>());
+  // Polling starts once; it only needs to know whether the server render had any runs.
+  const startedWithoutRuns = useRef(runs.length === 0);
   const visibleRuns = liveRuns.slice(0, runLimit);
   const resumableRunId = liveRuns.find(
     (run) =>
@@ -624,16 +630,13 @@ export function PriceScanRunHistory({ error, runs }: Props) {
     let disposed = false;
     let controller: AbortController | null = null;
 
-    async function refreshRuns() {
-      if (document.visibilityState === "hidden") return;
+    async function refreshRuns(response: Response) {
+      if (document.hidden || !navigator.onLine) return;
       if (controller) return;
       controller = new AbortController();
       const activeController = controller;
       try {
-        const response = await fetch("/api/ops/price-scan-runs", {
-          cache: "no-store",
-          signal: activeController.signal,
-        });
+
         const payload = (await response.json()) as RunHistoryResponse;
         if (!response.ok || !payload.ok) {
           throw new Error(payload.ok ? "Scan history refresh failed." : payload.detail ?? payload.reason);
@@ -642,14 +645,14 @@ export function PriceScanRunHistory({ error, runs }: Props) {
           setLiveRuns(payload.runs);
           setLiveError(null);
           setRunLimit((current) =>
-            runs.length === 0
+            startedWithoutRuns.current
               ? Math.min(10, Math.max(payload.runs.length, 1))
               : Math.min(current, Math.max(payload.runs.length, 1)),
           );
         }
         const runningLoadedIds = payload.runs
           .filter((run) => {
-            if (!loadedPatternRunIds.current.has(run.id)) return false;
+            if (!loadedPatternRunIds.current.has(run.id) || !expandedRunIds.current.has(run.id)) return false;
             if (run.status === "running") {
               runningPatternRunIds.current.add(run.id);
               return true;
@@ -695,18 +698,11 @@ export function PriceScanRunHistory({ error, runs }: Props) {
       }
     }
 
-    void refreshRuns();
-    const interval = window.setInterval(() => void refreshRuns(), 15_000);
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") void refreshRuns();
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
+    const unsubscribe = subscribeOpsPolling("/api/ops/price-scan-runs", refreshRuns, pollingRef.current);
     return () => {
       disposed = true;
       controller?.abort();
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
+      unsubscribe();
     };
   }, []);
 
@@ -871,7 +867,7 @@ export function PriceScanRunHistory({ error, runs }: Props) {
   }
 
   return (
-    <section className="ops-panel ops-panel--wide price-scan-history">
+    <section ref={pollingRef} className="ops-panel ops-panel--wide price-scan-history">
       <div className="price-scan-history__header">
         <div>
           <p className="ops-panel__eyebrow">Persistent scan history</p>
@@ -968,7 +964,12 @@ export function PriceScanRunHistory({ error, runs }: Props) {
                   className="price-scan-history__run"
                   key={run.id}
                   onToggle={(event) => {
-                    if (event.currentTarget.open) explainRunWhenOpened(run);
+                    if (event.currentTarget.open) {
+                      expandedRunIds.current.add(run.id);
+                      explainRunWhenOpened(run);
+                    } else {
+                      expandedRunIds.current.delete(run.id);
+                    }
                   }}
                 >
                   <summary>

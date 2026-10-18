@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import { rememberNewsletterSubscription } from "@/lib/newsletter-popup-client";
+import { travelEmailConsentCopy, travelEmailExistingSubscriberCopy } from "@/lib/travel-email-consent";
 import {
   subscriptionErrorMessage,
   subscriptionSuccessMessage,
@@ -39,6 +40,7 @@ export function NewsletterForm() {
         const form = event.currentTarget;
         const formData = new FormData(form);
         const email = String(formData.get("email") ?? "").trim();
+        const travelEmailConsent = formData.get("travelEmailConsent") === "on";
 
         startTransition(async () => {
           setStatus({
@@ -52,7 +54,7 @@ export function NewsletterForm() {
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ email, locale }),
+              body: JSON.stringify({ email, locale, travelEmailConsent }),
             });
 
             const payload = (await response.json()) as SubscriptionApiPayload;
@@ -104,6 +106,11 @@ export function NewsletterForm() {
           {isPending ? t("common.joining") : t("common.joinNow")}
         </button>
       </div>
+      <label className="travel-email-consent travel-email-consent--newsletter">
+        <input name="travelEmailConsent" type="checkbox" />
+        <span>{travelEmailConsentCopy[locale]}</span>
+      </label>
+      <p className="travel-email-consent__hint">{travelEmailExistingSubscriberCopy[locale]}</p>
       <p className={`newsletter-form__status newsletter-form__status--${status.tone}`}>
         {status.message}
       </p>

@@ -32,13 +32,13 @@ export async function GET() {
       },
     );
   } catch (error) {
+    console.error("[api/destination-photos] load failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         photos: {},
-        error:
-          error instanceof Error
-            ? error.message
-            : "Destination photos could not be loaded.",
+        error: "Destination photos could not be loaded.",
       },
       { status: 500 },
     );

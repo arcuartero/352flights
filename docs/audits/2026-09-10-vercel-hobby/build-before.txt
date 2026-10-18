@@ -1,0 +1,95 @@
+
+> 352flights@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.14
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 6.4s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/23) ...
+   Generating static pages (5/23) 
+   Generating static pages (11/23) 
+   Generating static pages (17/23) 
+ ✓ Generating static pages (23/23)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                    Size  First Load JS  Revalidate  Expire
+┌ ○ /                                         150 B         193 kB          1h      1y
+├ ○ /_not-found                               188 B         103 kB
+├ ● /[locale]                                 150 B         193 kB          1h      1y
+├   ├ /fr                                                                   1h      1y
+├   ├ /de                                                                   1h      1y
+├   ├ /pt                                                                   1h      1y
+├   └ [+2 more paths]
+├ ƒ /[locale]/[...segments]                   225 B         217 kB
+├ ƒ /api/contact                              222 B         103 kB
+├ ƒ /api/cron/creatello-daily                 222 B         103 kB
+├ ƒ /api/cron/digest                          222 B         103 kB
+├ ƒ /api/cron/ops-alerts                      222 B         103 kB
+├ ƒ /api/destination-photos                   222 B         103 kB
+├ ƒ /api/landmark-photo                       222 B         103 kB
+├ ƒ /api/monthly-prices                       222 B         103 kB
+├ ƒ /api/ops/creatello-inbox                  222 B         103 kB
+├ ƒ /api/ops/date-scan-runs                   222 B         103 kB
+├ ƒ /api/ops/deal-price-series/[id]           222 B         103 kB
+├ ƒ /api/ops/destination-photos               222 B         103 kB
+├ ƒ /api/ops/email-campaigns-data             222 B         103 kB
+├ ƒ /api/ops/indicative-price-stats           222 B         103 kB
+├ ƒ /api/ops/pattern-discovery-live-status    222 B         103 kB
+├ ƒ /api/ops/pattern-discovery-run            222 B         103 kB
+├ ƒ /api/ops/pattern-discovery-status         222 B         103 kB
+├ ƒ /api/ops/pattern-discovery-stop           222 B         103 kB
+├ ƒ /api/ops/price-scan-runs                  222 B         103 kB
+├ ƒ /api/ops/price-scan-runs/[id]             222 B         103 kB
+├ ƒ /api/ops/price-scan-runs/[id]/resume      222 B         103 kB
+├ ƒ /api/ops/recent-price-snapshots           222 B         103 kB
+├ ƒ /api/ops/route-rules/automatic            222 B         103 kB
+├ ƒ /api/ops/scanner-run                      222 B         103 kB
+├ ƒ /api/ops/scanner-status                   222 B         103 kB
+├ ƒ /api/ops/scanner-stop                     222 B         103 kB
+├ ƒ /api/ops/tiktok-json                      222 B         103 kB
+├ ƒ /api/ops/vps-scanner/start                222 B         103 kB
+├ ƒ /api/ops/vps-scanner/status               222 B         103 kB
+├ ƒ /api/ops/vps-scanner/stop                 222 B         103 kB
+├ ƒ /api/preferences                          222 B         103 kB
+├ ƒ /api/public-deals/revalidate              222 B         103 kB
+├ ƒ /api/public-deals/search                  222 B         103 kB
+├ ƒ /api/social-image                         222 B         103 kB
+├ ƒ /api/subscribe                            222 B         103 kB
+├ ƒ /confirm                                  984 B         148 kB
+├ ○ /contact                                  356 B         174 kB
+├ ○ /cookies                                  984 B         148 kB
+├ ƒ /deals/[city]                             723 B         191 kB
+├ ƒ /deals/search                             711 B         191 kB
+├ ○ /icon.png                                   0 B            0 B
+├ ƒ /ops                                    9.38 kB         119 kB
+├ ƒ /ops/active-routes                        12 kB         122 kB
+├ ƒ /ops/dates-scanner                      3.89 kB         116 kB
+├ ƒ /ops/destinations                       2.78 kB         112 kB
+├ ƒ /ops/email-campaigns                    4.35 kB         114 kB
+├ ƒ /ops/prices                             6.53 kB         116 kB
+├ ƒ /ops/scanner-live                       12.1 kB         122 kB
+├ ƒ /ops/tiktok-json                        9.88 kB         120 kB
+├ ƒ /preferences                              135 B         170 kB
+├ ƒ /preferences/concept                      135 B         170 kB
+├ ○ /privacy                                  984 B         148 kB
+├ ○ /robots.txt                               222 B         103 kB
+├ ○ /sitemap.xml                              222 B         103 kB         30m      1y
+├ ○ /terms                                    984 B         148 kB
+└ ƒ /unsubscribe                              984 B         148 kB
++ First Load JS shared by all                103 kB
+  ├ chunks/1255-aadf393aa3a56bfa.js           46 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js     54.2 kB
+  └ other shared chunks (total)             2.57 kB
+
+
+ƒ Middleware                                34.9 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

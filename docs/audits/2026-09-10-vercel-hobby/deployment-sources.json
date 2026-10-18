@@ -1,0 +1,21 @@
+{
+  "project": "352flights",
+  "commit": "a994f1f3323c30b6bdae3b7a532f4b850a69da0f",
+  "verifiedVia": "Vercel connector get_deployment (read-only)",
+  "deployments": [
+    {
+      "id": "dpl_63P9gzSH85mpN5ytUEQVCe4aw4Yt",
+      "source": "git",
+      "target": "production",
+      "createdAt": 1788973128518
+    },
+    {
+      "id": "dpl_ETTUYvEapr43q7uSgfrfSUEGkRQN",
+      "source": "cli",
+      "actor": "codex",
+      "target": "production",
+      "createdAt": 1788973171108
+    }
+  ],
+  "deltaSeconds": 42.59
+}

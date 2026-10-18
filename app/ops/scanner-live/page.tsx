@@ -1,3 +1,4 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import { OpsSubnav } from "@/components/ops-subnav";
 import { IndicativePriceCoverage } from "@/components/indicative-price-coverage";
 import { PriceScanRunHistory } from "@/components/price-scan-run-history";
@@ -5,7 +6,8 @@ import { RecentSnapshotsPanel } from "@/components/recent-snapshots-panel";
 
 export const dynamic = "force-dynamic";
 
-export default function OpsScannerLivePage() {
+export default async function OpsScannerLivePage() {
+  await assertOpsAccess();
   return (
     <main className="ops-shell ops-shell--scanner-live">
       <OpsSubnav />

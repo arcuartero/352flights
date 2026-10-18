@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { hasCronSecret, hasSupabaseAdminEnv } from "@/lib/env";
 import { revalidateDestinationFares } from "@/lib/public-fare-cache";
+import { bearerToken, matchesAnySecret } from "@/lib/secret-compare";
 
 export const dynamic = "force-dynamic";
 
 function isAuthorized(request: NextRequest) {
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    return false;
-  }
-
-  const token = authorization.slice("Bearer ".length);
-  return (
-    (hasCronSecret() && token === process.env.CRON_SECRET) ||
-    (hasSupabaseAdminEnv() && token === process.env.SUPABASE_SERVICE_ROLE_KEY)
-  );
+  // The Supabase service-role key is deliberately not accepted: it must never travel to the web app.
+  return matchesAnySecret(bearerToken(request), [
+    process.env.PUBLIC_CACHE_REVALIDATION_SECRET,
+    process.env.CRON_SECRET,
+  ]);
 }
 
 export async function POST(request: NextRequest) {

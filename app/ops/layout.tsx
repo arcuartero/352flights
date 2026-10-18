@@ -1,3 +1,4 @@
+import { assertOpsAccess } from "@/lib/ops-access";
 import type { Metadata } from "next";
 
 import { OpsScannerStatusHub } from "@/components/ops-scanner-status-hub";
@@ -17,11 +18,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function OpsLayout({
+export default async function OpsLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await assertOpsAccess();
   return (
     <RootDocument locale="en">
       <div className="ops-app">

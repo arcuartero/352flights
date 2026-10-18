@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- ImageResponse (Satori) only renders plain <img>. */
 import { ImageResponse } from "next/og";
 
 import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";

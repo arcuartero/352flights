@@ -1,0 +1,44 @@
+[
+  {
+    "locale": "en",
+    "path": "/deals/search",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "lang": "en-LU"
+  },
+  {
+    "locale": "fr",
+    "path": "/fr/offres/recherche",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "lang": "fr-LU"
+  },
+  {
+    "locale": "de",
+    "path": "/de/angebote/suche",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "lang": "de-LU"
+  },
+  {
+    "locale": "pt",
+    "path": "/pt/ofertas/pesquisa",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "lang": "pt-LU"
+  },
+  {
+    "locale": "it",
+    "path": "/it/offerte/ricerca",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "lang": "it-LU"
+  },
+  {
+    "locale": "es",
+    "path": "/es/ofertas/busqueda",
+    "status": 200,
+    "cache": "s-maxage=1800, stale-while-revalidate=1800",
+    "lang": "es-LU"
+  }
+]

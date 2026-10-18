@@ -1,68 +1,41 @@
-import { redirect } from "next/navigation";
-
+import { z } from "zod";
 import { V2Status } from "@/components/v2-status";
-import { confirmSubscriberByToken } from "@/lib/subscriptions";
+import { SubscriptionConfirmationForm } from "@/components/subscription-confirmation-form";
 
 export const dynamic = "force-dynamic";
 
-type ConfirmPageProps = {
-  searchParams: Promise<{
-    token?: string;
-  }>;
-};
-
-export default async function ConfirmPage({ searchParams }: ConfirmPageProps) {
-  const params = await searchParams;
-  const token = params.token;
-
-  if (!token) {
-    return (
-      <V2Status
-        tone="error"
-        eyebrow="Confirmation"
-        title="That confirmation link is missing a token."
-        body={<p>Go back to the homepage and subscribe again to generate a fresh email.</p>}
-        actions={[{ href: "/", label: "Back to homepage", variant: "primary" }]}
-      />
-    );
-  }
-
-  let result: Awaited<ReturnType<typeof confirmSubscriberByToken>>;
-
-  try {
-    result = await confirmSubscriberByToken(token);
-  } catch (error) {
-    return (
-      <V2Status
-        tone="error"
-        eyebrow="Confirmation"
-        title="We could not confirm that email right now."
-        body={
-          <p>
-            {error instanceof Error
-              ? error.message
-              : "Try opening the latest email from +352 Flights or subscribe again."}
-          </p>
-        }
-        actions={[{ href: "/", label: "Back to homepage", variant: "primary" }]}
-      />
-    );
-  }
-
-  if (result.status === "unsubscribed") {
-    return (
-      <V2Status
-        eyebrow="Subscription confirmed"
-        title="This address is currently unsubscribed."
-        body={<p>{`If you want back in for ${result.email}, subscribe again from the homepage.`}</p>}
-        notes={[
-          { label: "Status", value: result.status },
-          { label: "Profile", value: result.onboardingCompleted ? "Saved" : "Needs setup" },
-        ]}
-        actions={[{ href: "/", label: "Back to homepage", variant: "ghost" }]}
-      />
-    );
-  }
-
-  redirect(result.preferencePath);
+export default async function SubscriptionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
+  const token = z
+    .string()
+    .uuid()
+    .safeParse((await searchParams).token);
+  return (
+    <V2Status
+      eyebrow="Confirmation"
+      title={
+        token.success
+          ? "Confirm your email address"
+          : "This link is incomplete or invalid."
+      }
+      tone={token.success ? "default" : "error"}
+      body={
+        token.success ? (
+          <>
+            <p>
+              Click below to confirm your subscription and choose your flight
+              preferences.
+            </p>
+            <SubscriptionConfirmationForm token={token.data} kind="confirm" />
+          </>
+        ) : (
+          <p>Open the latest link in your email or return to the homepage.</p>
+        )
+      }
+      actions={[{ href: "/", label: "Back to homepage", variant: "ghost" }]}
+    />
+  );
 }

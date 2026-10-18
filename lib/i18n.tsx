@@ -8,7 +8,6 @@ import {
   htmlLangTags,
   isLocale,
   localeCookieName,
-  locales,
   type Locale,
 } from "@/lib/locales";
 

@@ -1,28 +1,28 @@
-import { PublicDealsExplorer } from "@/components/public-deals-explorer";
+import { PublicDealsExplorer } from "@/components/public-deals/explorer";
 import { getDestinationPhotoUrlMap } from "@/lib/destination-photo-storage";
 import { getLocalizedDealsSearchPath, type Locale } from "@/lib/locales";
-import { getPublicSearchDealsPageData } from "@/lib/ops";
+import { getPublicSearchDealsPageData } from "@/lib/ops/public-data";
 import {
   buildPublicDealsSearchResult,
   PUBLIC_DEALS_SEARCH_PAGE_SIZE,
 } from "@/lib/public-deals-query";
-import { parseDealSearchFilters, parseDealSearchSort } from "@/lib/public-deals-search";
+import {
+  parseDealSearchFilters,
+  parseDealSearchSort,
+} from "@/lib/public-deals-search";
 type DealsSearchPageContentProps = {
   locale: Locale;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function DealsSearchPageContent({
   locale,
-  searchParams,
 }: DealsSearchPageContentProps) {
-  const [fullData, destinationPhotoUrls, resolvedSearchParams] = await Promise.all([
+  const [fullData, destinationPhotoUrls] = await Promise.all([
     getPublicSearchDealsPageData(),
     getDestinationPhotoUrlMap(),
-    searchParams,
   ]);
-  const initialFilters = parseDealSearchFilters(resolvedSearchParams);
-  const initialSort = parseDealSearchSort(resolvedSearchParams);
+  const initialFilters = parseDealSearchFilters({});
+  const initialSort = parseDealSearchSort({});
   const initialSearchResult = buildPublicDealsSearchResult(
     fullData,
     initialFilters,

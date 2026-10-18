@@ -7,9 +7,11 @@ import { toDestinationSlug } from "@/lib/destination-slugs";
 
 export const revalidate = 1800;
 
+// Generate public paths on demand, then reuse the ISR result.
+export function generateStaticParams() { return []; }
+
 type DealsCityPageProps = {
   params: Promise<{ city: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function generateMetadata({
@@ -28,6 +30,6 @@ export async function generateMetadata({
   return getDealsCityMetadata("en", cityName, citySlug);
 }
 
-export default function DealsCityPage({ params, searchParams }: DealsCityPageProps) {
-  return <DealsCityPageContent locale="en" params={params} searchParams={searchParams} />;
+export default function DealsCityPage({ params }: DealsCityPageProps) {
+  return <DealsCityPageContent locale="en" params={params} />;
 }

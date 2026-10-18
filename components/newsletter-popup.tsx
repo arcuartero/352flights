@@ -8,6 +8,7 @@ import { useI18n, type Locale } from "@/lib/i18n";
 import { getHomeLocaleFromPathname, parseLocalizedDealsPathname } from "@/lib/locales";
 import { newsletterSubscribedEvent, newsletterSubscribedKey, rememberNewsletterSubscription } from "@/lib/newsletter-popup-client";
 import { subscriptionErrorMessage, subscriptionSuccessMessage, type SubscriptionApiPayload } from "@/lib/subscription-response";
+import { travelEmailConsentCopy, travelEmailExistingSubscriberCopy } from "@/lib/travel-email-consent";
 
 import "./newsletter-popup.css";
 
@@ -130,10 +131,11 @@ export function NewsletterPopup() {
           event.preventDefault();
           if (isPending) return;
           const email = String(new FormData(event.currentTarget).get("email") ?? "").trim();
+          const travelEmailConsent = new FormData(event.currentTarget).get("travelEmailConsent") === "on";
           startTransition(async () => {
             setStatus(null);
             try {
-              const response = await fetch("/api/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, locale }) });
+              const response = await fetch("/api/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, locale, travelEmailConsent }) });
               const payload = await response.json() as SubscriptionApiPayload;
               if (!response.ok) {
                 setStatus({ tone: "error", message: subscriptionErrorMessage(payload, { generic: t("newsletter.error"), invalidEmail: t("newsletter.invalidEmail") }) });
@@ -151,6 +153,11 @@ export function NewsletterPopup() {
             <Mail size={23} aria-hidden="true" />
             <input autoComplete="email" name="email" type="email" placeholder={content.email} required disabled={isPending} aria-describedby={status?.tone === "error" ? "newsletter-popup-error" : undefined} />
           </label>
+          <label className="travel-email-consent travel-email-consent--popup">
+            <input name="travelEmailConsent" type="checkbox" />
+            <span>{travelEmailConsentCopy[locale]}</span>
+          </label>
+          <p className="travel-email-consent__hint">{travelEmailExistingSubscriberCopy[locale]}</p>
           <button className="newsletter-popup__submit" disabled={isPending} type="submit"><span>{isPending ? t("alerts.sending") : content.submit}</span><ArrowRight size={24} aria-hidden="true" /></button>
           {status?.tone === "error" && <p id="newsletter-popup-error" className="newsletter-popup__error" role="alert">{status.message}</p>}
         </form>
