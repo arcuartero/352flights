@@ -18,6 +18,7 @@ from luxflight_scanner.config import ScannerConfig
 
 AGENT_ID = "mac"
 PRICE_SCANNER_LABEL = "com.luxcheapflights.scanner"
+PRICE_SCANNER_PLIST = Path.home() / "Library" / "LaunchAgents" / f"{PRICE_SCANNER_LABEL}.plist"
 LOCK_DIR = Path("/tmp/luxcheapflights-scanner.lock")
 LIVE_EVENT_LIMIT = 18
 LOG_TAIL_BYTES = 384 * 1024
@@ -397,21 +398,48 @@ class MacScannerControlAgent:
                     "checkpoint is not available."
                 )
 
-        completed = subprocess.run(
+        completed = self._kickstart_price_scanner()
+        if completed.returncode != 0 and "Could not find service" in self._launchctl_detail(completed):
+            # macOS sometimes leaves the scanner agent unloaded after a restart while the
+            # control agent is loaded; load the installed plist and try once more.
+            if not PRICE_SCANNER_PLIST.exists():
+                raise RuntimeError(
+                    "Could not start the Mac Price Scanner: its launch agent is not installed "
+                    f"({PRICE_SCANNER_PLIST}). Run scripts/install-local-scanner-launchd.sh."
+                )
+            loaded = subprocess.run(
+                ["launchctl", "bootstrap", self.gui_domain, str(PRICE_SCANNER_PLIST)],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
+            )
+            if loaded.returncode != 0:
+                raise RuntimeError(
+                    "Could not load the Mac Price Scanner launch agent: "
+                    f"{self._launchctl_detail(loaded)}"
+                )
+            completed = self._kickstart_price_scanner()
+        if completed.returncode != 0:
+            raise RuntimeError(f"Could not start the Mac Price Scanner: {self._launchctl_detail(completed)}")
+        return {
+            "reason": "resumed" if resume_run_key else "started",
+            "launchd_label": PRICE_SCANNER_LABEL,
+            "run_key": resume_run_key,
+        }
+
+    def _kickstart_price_scanner(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
             ["launchctl", "kickstart", f"{self.gui_domain}/{PRICE_SCANNER_LABEL}"],
             capture_output=True,
             text=True,
             timeout=15,
             check=False,
         )
-        if completed.returncode != 0:
-            detail = completed.stderr.strip() or completed.stdout.strip() or "unknown launchctl error"
-            raise RuntimeError(f"Could not start the Mac Price Scanner: {detail}")
-        return {
-            "reason": "resumed" if resume_run_key else "started",
-            "launchd_label": PRICE_SCANNER_LABEL,
-            "run_key": resume_run_key,
-        }
+
+    @staticmethod
+    def _launchctl_detail(completed: Any) -> str:
+        return completed.stderr.strip() or completed.stdout.strip() or "unknown launchctl error"
 
     @staticmethod
     def stop_price_scanner() -> dict[str, Any]:

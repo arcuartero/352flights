@@ -40,6 +40,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
   const [controlAvailable, setControlAvailable] = useState(true);
   const [pendingAction, setPendingAction] = useState<"start" | "stop" | null>(null);
   const [buttonLabel, setButtonLabel] = useState("Run scan on Mac");
+  const [failureDetail, setFailureDetail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -59,6 +60,7 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
           running?: boolean;
           controlAvailable?: boolean;
           pendingAction?: "start" | "stop" | null;
+          lastCommandFailure?: { action: "start" | "stop"; error: string } | null;
         };
         if (!isMounted) {
           return;
@@ -70,10 +72,15 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
         setIsRunning(running);
         setControlAvailable(canControl);
         setPendingAction(nextPendingAction);
+        // The Mac marks a command failed after the web queued it; without this the
+        // button silently reverted to "Run scan" and looked like it did nothing.
+        const failure = nextPendingAction ? null : (payload.lastCommandFailure ?? null);
+        setFailureDetail(failure?.error ?? null);
         if (!isBusy) {
           if (nextPendingAction === "start") setButtonLabel("Starting on Mac...");
           else if (nextPendingAction === "stop") setButtonLabel("Stopping on Mac...");
           else if (!canControl) setButtonLabel("Mac offline");
+          else if (failure && !running) setButtonLabel(failure.action === "stop" ? "Stop failed" : "Start failed");
           else setButtonLabel(running ? "Stop Mac scan" : "Run scan on Mac");
         }
       } catch {
@@ -170,7 +177,13 @@ function ManualScanTrigger({ enabled }: { enabled: boolean }) {
       className={`site-chrome__scan-trigger ${isRunning ? "site-chrome__scan-trigger--danger" : ""}`}
       disabled={isBusy || pendingAction !== null || !controlAvailable}
       onClick={handleClick}
-      title={!controlAvailable ? "The Mac controller is offline." : undefined}
+      title={
+        !controlAvailable
+          ? "The Mac controller is offline."
+          : failureDetail
+            ? `${failureDetail} Click to try again.`
+            : undefined
+      }
       type="button"
     >
       <span className="site-chrome__scan-trigger-label site-chrome__scan-trigger-label--desktop">

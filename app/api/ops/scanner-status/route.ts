@@ -173,6 +173,7 @@ export async function GET(request: Request) {
         ...status,
         pendingAction: control.pendingCommand?.action ?? null,
         pendingCommandStatus: control.pendingCommand?.status ?? null,
+        lastCommandFailure: control.recentFailure,
         controllerLastSeenAt: control.lastSeenAt,
       },
       {
