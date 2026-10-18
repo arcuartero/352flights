@@ -47,6 +47,56 @@ class MacScannerControlAgentTests(unittest.TestCase):
             ],
         )
 
+    def test_start_loads_an_unloaded_launch_agent_and_retries(self) -> None:
+        agent = MacScannerControlAgent.__new__(MacScannerControlAgent)
+        agent.gui_domain = "gui/501"
+        missing = Mock(returncode=113, stderr='Could not find service "com.luxcheapflights.scanner" in domain for user gui: 501', stdout="")
+        ok = Mock(returncode=0, stderr="", stdout="")
+        with tempfile.TemporaryDirectory() as directory:
+            plist = Path(directory) / "com.luxcheapflights.scanner.plist"
+            plist.write_text("<plist/>", encoding="utf-8")
+            with (
+                patch("luxflight_scanner.control_agent.PRICE_SCANNER_PLIST", plist),
+                patch("luxflight_scanner.control_agent.read_lock_state", return_value=(None, None, False)),
+                patch("luxflight_scanner.control_agent.subprocess.run", side_effect=[missing, ok, ok]) as run,
+            ):
+                result = agent.start_price_scanner()
+
+        self.assertEqual(result["reason"], "started")
+        self.assertEqual(
+            [call.args[0] for call in run.call_args_list],
+            [
+                ["launchctl", "kickstart", "gui/501/com.luxcheapflights.scanner"],
+                ["launchctl", "bootstrap", "gui/501", str(plist)],
+                ["launchctl", "kickstart", "gui/501/com.luxcheapflights.scanner"],
+            ],
+        )
+
+    def test_start_explains_a_missing_launch_agent(self) -> None:
+        agent = MacScannerControlAgent.__new__(MacScannerControlAgent)
+        agent.gui_domain = "gui/501"
+        missing = Mock(returncode=113, stderr='Could not find service "com.luxcheapflights.scanner"', stdout="")
+        with (
+            patch("luxflight_scanner.control_agent.PRICE_SCANNER_PLIST", Path("/nonexistent/x.plist")),
+            patch("luxflight_scanner.control_agent.read_lock_state", return_value=(None, None, False)),
+            patch("luxflight_scanner.control_agent.subprocess.run", return_value=missing) as run,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "install-local-scanner-launchd.sh"):
+                agent.start_price_scanner()
+        run.assert_called_once()
+
+    def test_other_launchctl_errors_are_not_retried(self) -> None:
+        agent = MacScannerControlAgent.__new__(MacScannerControlAgent)
+        agent.gui_domain = "gui/501"
+        denied = Mock(returncode=1, stderr="Operation not permitted", stdout="")
+        with (
+            patch("luxflight_scanner.control_agent.read_lock_state", return_value=(None, None, False)),
+            patch("luxflight_scanner.control_agent.subprocess.run", return_value=denied) as run,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Operation not permitted"):
+                agent.start_price_scanner()
+        run.assert_called_once()
+
     def test_resume_rejects_a_missing_or_different_checkpoint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state_path = Path(directory) / "state.json"
